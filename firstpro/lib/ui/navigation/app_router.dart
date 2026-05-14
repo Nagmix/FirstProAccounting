@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/customers/customers_screen.dart';
+import '../screens/customers/add_customer_sheet.dart';
+import '../screens/products/products_screen.dart';
+import '../screens/products/add_product_sheet.dart';
+import '../screens/invoices/invoices_screen.dart';
+import '../screens/invoices/create_invoice_screen.dart';
+import '../screens/pos/pos_screen.dart';
 import '../screens/reports/reports_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/currencies/currencies_screen.dart';
 import '../screens/support/support_screen.dart';
 
 /// Named-route definitions and route-generation helper for FirstPro.
@@ -22,6 +30,7 @@ class AppRouter {
   static const String pos = '/pos';
   static const String settings = '/settings';
   static const String support = '/support';
+  static const String currencies = '/currencies';
   static const String newSaleInvoice = '/invoices/new-sale';
   static const String newPurchaseInvoice = '/invoices/new-purchase';
   static const String addCustomer = '/customers/add';
@@ -38,31 +47,31 @@ class AppRouter {
   // ── Route map ──────────────────────────────────────────────────
   static Map<String, WidgetBuilder> get routes => {
         dashboard: (_) => const DashboardScreen(),
-        customers: (_) => const _PlaceholderScreen(title: 'قائمة العملاء'),
-        products: (_) => const _PlaceholderScreen(title: 'قائمة المنتجات'),
-        invoices: (_) => const _PlaceholderScreen(title: 'الفواتير'),
+        customers: (_) => const CustomersScreen(),
+        products: (_) => const ProductsScreen(),
+        invoices: (_) => const InvoicesScreen(),
         reports: (_) => const ReportsScreen(),
-        pos: (_) => const _PlaceholderScreen(title: 'نقطة البيع'),
+        pos: (_) => const PosScreen(),
         settings: (_) => const SettingsScreen(),
         support: (_) => const SupportScreen(),
-        newSaleInvoice: (_) => const _PlaceholderScreen(title: 'فاتورة بيع جديدة'),
-        newPurchaseInvoice: (_) =>
-            const _PlaceholderScreen(title: 'فاتورة شراء جديدة'),
-        addCustomer: (_) => const _PlaceholderScreen(title: 'إضافة عميل'),
-        addProduct: (_) => const _PlaceholderScreen(title: 'إضافة منتج'),
-        inventory: (_) => const _PlaceholderScreen(title: 'عرض المخزون'),
-        statistics: (_) => const _PlaceholderScreen(title: 'الإحصائيات'),
-        dailySalesReport: (_) =>
-            const _PlaceholderScreen(title: 'تقرير المبيعات اليومية'),
-        delegates: (_) => const _PlaceholderScreen(title: 'قائمة المندوبين'),
-        customerImport: (_) =>
-            const _PlaceholderScreen(title: 'استيراد بيانات العميل'),
-        customerLoad: (_) =>
-            const _PlaceholderScreen(title: 'تحميل بيانات العميل'),
-        customerPrint: (_) =>
-            const _PlaceholderScreen(title: 'طباعة قائمة العملاء'),
-        financialOrders: (_) =>
-            const _PlaceholderScreen(title: 'الطلبات المالية'),
+        currencies: (_) => const CurrenciesScreen(),
+        newSaleInvoice: (_) => const CreateInvoiceScreen(
+              invoiceType: 'sale',
+            ),
+        newPurchaseInvoice: (_) => const CreateInvoiceScreen(
+              invoiceType: 'purchase',
+            ),
+        addCustomer: (_) => const AddCustomerSheet(),
+        addProduct: (_) => const AddProductSheet(),
+        // Routes without dedicated screens point to related screens
+        inventory: (_) => const ProductsScreen(),
+        statistics: (_) => const DashboardScreen(),
+        dailySalesReport: (_) => const ReportsScreen(),
+        delegates: (_) => const SettingsScreen(),
+        customerImport: (_) => const CustomersScreen(),
+        customerLoad: (_) => const CustomersScreen(),
+        customerPrint: (_) => const CustomersScreen(),
+        financialOrders: (_) => const SettingsScreen(),
       };
 
   /// Convenience method – pushes a named route onto the navigator.
@@ -85,36 +94,6 @@ class AppRouter {
       routeName,
       arguments: arguments,
       result: result,
-    );
-  }
-}
-
-/// Temporary placeholder screen used for routes that haven't been
-/// fully implemented yet.
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.construction, size: 64, color: theme.disabledColor),
-            const SizedBox(height: 16),
-            Text(
-              '$title — قيد التطوير',
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

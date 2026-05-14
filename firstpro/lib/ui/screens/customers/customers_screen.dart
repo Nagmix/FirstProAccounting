@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/customer_model.dart';
 import '../../widgets/empty_state.dart';
 import 'add_customer_sheet.dart';
@@ -25,51 +27,8 @@ class _CustomersScreenState extends State<CustomersScreen>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-
-  // ── Demo data (will be replaced by real data source) ─────────
-  final List<Customer> _customers = [
-    Customer(
-      id: 1,
-      name: 'أحمد محمد العلي',
-      phone: '0501234567',
-      address: 'الرياض - حي النزهة',
-      email: 'ahmed@example.com',
-      balance: -1500.00,
-      gender: 'male',
-    ),
-    Customer(
-      id: 2,
-      name: 'فاطمة عبدالله السعيد',
-      phone: '0559876543',
-      address: 'جدة - حي الروضة',
-      email: 'fatima@example.com',
-      balance: 3200.00,
-      gender: 'female',
-    ),
-    Customer(
-      id: 3,
-      name: 'خالد سعد الدوسري',
-      phone: '0541112233',
-      address: 'الدمام - حي الفيصلية',
-      balance: -750.50,
-    ),
-    Customer(
-      id: 4,
-      name: 'نورة إبراهيم القحطاني',
-      phone: '0567891234',
-      email: 'noura@example.com',
-      balance: 0.0,
-      gender: 'female',
-    ),
-    Customer(
-      id: 5,
-      name: 'محمد يوسف الحربي',
-      phone: '0533334444',
-      address: 'مكة - العزيزية',
-      balance: 4500.00,
-      gender: 'male',
-    ),
-  ];
+  List<Customer> _customers = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -78,6 +37,7 @@ class _CustomersScreenState extends State<CustomersScreen>
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.trim());
     });
+    _loadCustomers();
   }
 
   @override
@@ -85,6 +45,16 @@ class _CustomersScreenState extends State<CustomersScreen>
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCustomers() async {
+    setState(() => _isLoading = true);
+    final db = DatabaseHelper();
+    final maps = await db.getAllCustomers();
+    setState(() {
+      _customers = maps.map((m) => Customer.fromMap(m)).toList();
+      _isLoading = false;
+    });
   }
 
   // ── Filter logic ──────────────────────────────────────────────
@@ -116,24 +86,61 @@ class _CustomersScreenState extends State<CustomersScreen>
   }
 
   // ── Open add-customer bottom sheet ────────────────────────────
-  void _showAddCustomerSheet() {
-    showModalBottomSheet(
+  Future<void> _showAddCustomerSheet() async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) => const AddCustomerSheet(),
     );
+    _loadCustomers();
+  }
+
+  // ── Delete customer ───────────────────────────────────────────
+  Future<void> _deleteCustomer(Customer customer) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(PhosphorIconsRegular.warning, color: AppColors.error, size: 40),
+        title: const Text('حذف العميل'),
+        content: Text('هل أنت متأكد من حذف العميل "${customer.name}"؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final db = DatabaseHelper();
+      await db.deleteCustomer(customer.id!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم حذف العميل "${customer.name}"'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+      _loadCustomers();
+    }
   }
 
   // ── Avatar color based on name ────────────────────────────────
   static const List<Color> _avatarColors = [
-    Color(0xFF1B5E20),
+    Color(0xFF1A237E),
     Color(0xFF0D47A1),
     Color(0xFF4A148C),
     Color(0xFFB71C1C),
     Color(0xFFE65100),
     Color(0xFF006064),
-    Color(0xFF1A237E),
+    Color(0xFF1B5E20),
     Color(0xFF33691E),
   ];
 
@@ -149,22 +156,21 @@ class _CustomersScreenState extends State<CustomersScreen>
         title: const Text('قائمة العملاء'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(PhosphorIconsRegular.magnifyingGlass),
             tooltip: 'بحث',
             onPressed: () {
-              // Focus the search bar below
               FocusScope.of(context).unfocus();
             },
           ),
           IconButton(
-            icon: const Icon(Icons.filter_list),
+            icon: const Icon(PhosphorIconsRegular.funnel),
             tooltip: 'تصفية',
             onPressed: () {
               // TODO: Implement advanced filter dialog
             },
           ),
           IconButton(
-            icon: const Icon(Icons.person_add),
+            icon: const Icon(PhosphorIconsRegular.userPlus),
             tooltip: 'إضافة عميل',
             onPressed: _showAddCustomerSheet,
           ),
@@ -178,73 +184,76 @@ class _CustomersScreenState extends State<CustomersScreen>
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // ── Search bar ────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: SearchBar(
-              controller: _searchController,
-              hintText: 'بحث عن عميل...',
-              leading: const Icon(Icons.search),
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(horizontal: 16),
-              ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // ── Search bar ────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: SearchBar(
+                    controller: _searchController,
+                    hintText: 'بحث عن عميل...',
+                    leading: const Icon(PhosphorIconsRegular.magnifyingGlass),
+                    padding: WidgetStateProperty.all(
+                      const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                  ),
+                ),
+
+                // ── Customer list ─────────────────────────────────────
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: List.generate(3, (tabIndex) {
+                      final filtered = _filterCustomers(tabIndex);
+
+                      if (filtered.isEmpty) {
+                        return EmptyState(
+                          icon: tabIndex == 0
+                              ? PhosphorIconsRegular.users
+                              : tabIndex == 1
+                                  ? PhosphorIconsRegular.trendDown
+                                  : PhosphorIconsRegular.trendUp,
+                          title: tabIndex == 0
+                              ? 'لا يوجد عملاء'
+                              : tabIndex == 1
+                                  ? 'لا يوجد عملاء مدينون'
+                                  : 'لا يوجد عملاء دائنون',
+                          subtitle: tabIndex == 0
+                              ? 'قم بإضافة عملاء جدد لبدء إدارة حساباتك'
+                              : 'لم يتم العثور على نتائج مطابقة',
+                          actionLabel: tabIndex == 0 ? 'إضافة عميل' : null,
+                          onAction: tabIndex == 0 ? _showAddCustomerSheet : null,
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final customer = filtered[index];
+                          return _CustomerCard(
+                            customer: customer,
+                            avatarColor: _avatarColor(customer.name),
+                            onTap: () {
+                              // TODO: Navigate to customer detail screen
+                            },
+                            onDelete: () => _deleteCustomer(customer),
+                          );
+                        },
+                      );
+                    }),
+                  ),
+                ),
+              ],
             ),
-          ),
-
-          // ── Customer list ─────────────────────────────────────
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: List.generate(3, (tabIndex) {
-                final filtered = _filterCustomers(tabIndex);
-
-                if (filtered.isEmpty) {
-                  return EmptyState(
-                    icon: tabIndex == 0
-                        ? Icons.people_outline
-                        : tabIndex == 1
-                            ? Icons.trending_down
-                            : Icons.trending_up,
-                    title: tabIndex == 0
-                        ? 'لا يوجد عملاء'
-                        : tabIndex == 1
-                            ? 'لا يوجد عملاء مدينون'
-                            : 'لا يوجد عملاء دائنون',
-                    subtitle: tabIndex == 0
-                        ? 'قم بإضافة عملاء جدد لبدء إدارة حساباتك'
-                        : 'لم يتم العثور على نتائج مطابقة',
-                    actionLabel: tabIndex == 0 ? 'إضافة عميل' : null,
-                    onAction: tabIndex == 0 ? _showAddCustomerSheet : null,
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 80),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final customer = filtered[index];
-                    return _CustomerCard(
-                      customer: customer,
-                      avatarColor: _avatarColor(customer.name),
-                      onTap: () {
-                        // TODO: Navigate to customer detail screen
-                      },
-                    );
-                  },
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddCustomerSheet,
         tooltip: 'إضافة عميل',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.person_add),
+        child: const Icon(PhosphorIconsRegular.userPlus),
       ),
     );
   }
@@ -258,11 +267,13 @@ class _CustomerCard extends StatelessWidget {
     required this.customer,
     required this.avatarColor,
     this.onTap,
+    this.onDelete,
   });
 
   final Customer customer;
   final Color avatarColor;
   final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -283,6 +294,7 @@ class _CustomerCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
+        onLongPress: onDelete,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -318,7 +330,7 @@ class _CustomerCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          Icons.phone_android,
+                          PhosphorIconsRegular.phone,
                           size: 14,
                           color: isLight
                               ? AppColors.textHint
@@ -363,7 +375,7 @@ class _CustomerCard extends StatelessWidget {
 
               // ── Arrow icon (RTL – points left visually) ─────
               Icon(
-                Icons.arrow_back_ios,
+                PhosphorIconsRegular.caretLeft,
                 size: 16,
                 color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
               ),

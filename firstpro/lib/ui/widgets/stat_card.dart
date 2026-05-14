@@ -8,6 +8,9 @@ import '../../core/utils/currency_formatter.dart';
 /// Displays a large numeric [value], a [title], an [icon] inside a
 /// coloured circle, and an optional trend indicator (percentage with
 /// up/down arrow).
+///
+/// When [isCount] is `true`, the value is shown as a plain integer
+/// without a currency symbol (e.g. "156" instead of "156 ر.س").
 class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
@@ -18,6 +21,7 @@ class StatCard extends StatelessWidget {
     this.trendPercentage,
     this.trendIsUp = true,
     this.subtitle,
+    this.isCount = false,
   });
 
   final String title;
@@ -27,6 +31,10 @@ class StatCard extends StatelessWidget {
   final double? trendPercentage;
   final bool trendIsUp;
   final String? subtitle;
+
+  /// When `true`, display the value as a plain integer without the
+  /// currency symbol.  Useful for counts (e.g. number of customers).
+  final bool isCount;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +71,9 @@ class StatCard extends StatelessWidget {
 
             // ── Value ───────────────────────────────────────────
             Text(
-              CurrencyFormatter.formatCompactWithSymbol(value),
+              isCount
+                  ? value.toInt().toString()
+                  : CurrencyFormatter.formatCompactWithSymbol(value),
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,

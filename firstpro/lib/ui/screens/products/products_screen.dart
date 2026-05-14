@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/empty_state.dart';
 import 'add_product_sheet.dart';
@@ -9,11 +11,12 @@ import 'add_product_sheet.dart';
 /// Products / inventory management screen for the FirstPro accounting app.
 ///
 /// Features:
-/// - Search bar for filtering by name or barcode.
+/// - Search bar for filtering by name, barcode, or item code.
 /// - Tab bar: الكل / متوفر / نفذ / قارب النفاد.
-/// - Horizontal scrollable category chips.
+/// - Horizontal scrollable category chips loaded from DB.
 /// - 2-column product grid with price, stock, and category.
 /// - FAB for adding a new product via [AddProductSheet].
+/// - All data loaded from DatabaseHelper (no mock data).
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
 
@@ -28,99 +31,13 @@ class _ProductsScreenState extends State<ProductsScreen>
   String _searchQuery = '';
   int _selectedCategoryIndex = 0;
 
-  // ── Demo categories ──────────────────────────────────────────
-  static const _categories = [
-    'الكل',
-    'إلكترونيات',
-    'أجهزة منزلية',
-    'ملابس',
-    'مواد غذائية',
-    'مستلزمات مكتبية',
-  ];
+  // ── Data from DB ──────────────────────────────────────────────
+  List<Product> _products = [];
+  List<Map<String, dynamic>> _categories = [];
+  bool _isLoading = true;
 
-  // ── Demo products ────────────────────────────────────────────
-  final List<Product> _products = [
-    Product(
-      id: 1,
-      nameAr: 'هاتف سامسونج A54',
-      nameEn: 'Samsung A54',
-      barcode: '6901234567890',
-      categoryId: 1,
-      costPrice: 1200.00,
-      sellPrice: 1499.00,
-      wholesalePrice: 1350.00,
-      currentStock: 25,
-      minStock: 5,
-    ),
-    Product(
-      id: 2,
-      nameAr: 'لابتوب HP Pavilion',
-      nameEn: 'HP Pavilion Laptop',
-      barcode: '6909876543210',
-      categoryId: 1,
-      costPrice: 2800.00,
-      sellPrice: 3499.00,
-      wholesalePrice: 3100.00,
-      currentStock: 8,
-      minStock: 3,
-    ),
-    Product(
-      id: 3,
-      nameAr: 'غسالة LG 8 كجم',
-      nameEn: 'LG Washer 8kg',
-      categoryId: 2,
-      costPrice: 1500.00,
-      sellPrice: 1999.00,
-      wholesalePrice: 1750.00,
-      currentStock: 0,
-      minStock: 2,
-    ),
-    Product(
-      id: 4,
-      nameAr: 'قميص رجالي قطني',
-      nameEn: 'Men Cotton Shirt',
-      categoryId: 3,
-      costPrice: 45.00,
-      sellPrice: 89.00,
-      wholesalePrice: 65.00,
-      currentStock: 120,
-      minStock: 20,
-    ),
-    Product(
-      id: 5,
-      nameAr: 'أرز بسمتي 5 كجم',
-      nameEn: 'Basmati Rice 5kg',
-      categoryId: 4,
-      costPrice: 22.00,
-      sellPrice: 35.00,
-      wholesalePrice: 28.00,
-      currentStock: 3,
-      minStock: 10,
-    ),
-    Product(
-      id: 6,
-      nameAr: 'دبابة ورق A4',
-      nameEn: 'Paper Clip A4',
-      categoryId: 5,
-      costPrice: 8.00,
-      sellPrice: 15.00,
-      wholesalePrice: 11.00,
-      currentStock: 200,
-      minStock: 50,
-    ),
-    Product(
-      id: 7,
-      nameAr: 'شاحن سريع 65W',
-      nameEn: 'Fast Charger 65W',
-      barcode: '6901112223334',
-      categoryId: 1,
-      costPrice: 55.00,
-      sellPrice: 95.00,
-      wholesalePrice: 72.00,
-      currentStock: 0,
-      minStock: 10,
-    ),
-  ];
+  // Resolved category names by id
+  final Map<int, String> _categoryNames = {};
 
   @override
   void initState() {
@@ -129,6 +46,7 @@ class _ProductsScreenState extends State<ProductsScreen>
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.trim());
     });
+    _loadData();
   }
 
   @override
@@ -136,6 +54,40 @@ class _ProductsScreenState extends State<ProductsScreen>
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  // ── Load products and categories from DB ──────────────────────
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+
+    final db = DatabaseHelper();
+    final results = await Future.wait([
+      db.getAllProducts(),
+      db.getAllCategories(),
+    ]);
+
+    if (!mounted) return;
+
+    final productsRaw = results[0];
+    final categoriesRaw = results[1];
+
+    final products =
+        productsRaw.map((m) => Product.fromMap(m)).toList();
+
+    // Build category name lookup
+    final catNames = <int, String>{};
+    for (final c in categoriesRaw) {
+      catNames[c['id'] as int] = c['name'] as String;
+    }
+
+    setState(() {
+      _products = products;
+      _categories = categoriesRaw;
+      _categoryNames
+        ..clear()
+        ..addAll(catNames);
+      _isLoading = false;
+    });
   }
 
   // ── Stock status helper ──────────────────────────────────────
@@ -154,67 +106,70 @@ class _ProductsScreenState extends State<ProductsScreen>
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery;
       filtered = filtered.where((p) {
-        final nameMatch = p.nameAr.contains(q) || p.nameEn.contains(q);
+        final nameMatch = p.nameAr.contains(q) ||
+            p.nameEn.contains(q) ||
+            (p.itemCode?.contains(q) ?? false);
         final barcodeMatch = p.barcode?.contains(q) ?? false;
         return nameMatch || barcodeMatch;
       }).toList();
     }
 
     // Category
-    if (_selectedCategoryIndex > 0) {
-      filtered = filtered
-          .where((p) => p.categoryId == _selectedCategoryIndex)
-          .toList();
+    if (_selectedCategoryIndex > 0 && _categories.isNotEmpty) {
+      final selectedCatId = _categories[_selectedCategoryIndex - 1]['id'] as int;
+      filtered =
+          filtered.where((p) => p.categoryId == selectedCatId).toList();
     }
 
     // Tab filter
     switch (tabIndex) {
       case 1: // متوفر
-        filtered =
-            filtered.where((p) => _stockStatus(p) == 0).toList();
+        filtered = filtered.where((p) => _stockStatus(p) == 0).toList();
         break;
       case 2: // نفذ
-        filtered =
-            filtered.where((p) => _stockStatus(p) == 1).toList();
+        filtered = filtered.where((p) => _stockStatus(p) == 1).toList();
         break;
       case 3: // قارب النفاد
-        filtered =
-            filtered.where((p) => _stockStatus(p) == 2).toList();
+        filtered = filtered.where((p) => _stockStatus(p) == 2).toList();
         break;
     }
 
     return filtered;
   }
 
-  // ── Open add-product bottom sheet ────────────────────────────
-  void _showAddProductSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) => const AddProductSheet(),
+  // ── Open add-product screen ───────────────────────────────────
+  Future<void> _showAddProductSheet() async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const AddProductSheet()),
     );
+    // Refresh list if a product was added
+    if (result == true) {
+      _loadData();
+    }
+  }
+
+  // ── Get category name for product ─────────────────────────────
+  String _getCategoryName(Product p) {
+    if (p.categoryId != null && _categoryNames.containsKey(p.categoryId)) {
+      return _categoryNames[p.categoryId]!;
+    }
+    return 'غير مصنف';
+  }
+
+  // ── Category chip labels ──────────────────────────────────────
+  List<String> get _categoryChipLabels {
+    return ['الكل', ..._categories.map((c) => c['name'] as String)];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('قائمة المنتجات'),
+        title: const Text('قائمة الأصناف'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'بحث',
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'تصفية',
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_box_outlined),
-            tooltip: 'إضافة منتج',
+            icon: const Icon(PhosphorIconsRegular.plusSquare),
+            tooltip: 'إضافة صنف',
             onPressed: _showAddProductSheet,
           ),
         ],
@@ -230,109 +185,120 @@ class _ProductsScreenState extends State<ProductsScreen>
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // ── Search bar ────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: SearchBar(
-              controller: _searchController,
-              hintText: 'بحث بالاسم أو الباركود...',
-              leading: const Icon(Icons.search),
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ),
-          ),
-
-          // ── Category chips ────────────────────────────────────
-          SizedBox(
-            height: 48,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              itemCount: _categories.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final selected = _selectedCategoryIndex == index;
-                return FilterChip(
-                  label: Text(_categories[index]),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() => _selectedCategoryIndex = index);
-                  },
-                  selectedColor: AppColors.primary.withValues(alpha: 0.12),
-                  checkmarkColor: AppColors.primary,
-                  labelStyle: TextStyle(
-                    color: selected ? AppColors.primary : null,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // ── Search bar ──────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: SearchBar(
+                    controller: _searchController,
+                    hintText: 'بحث بالاسم، الباركود، أو رمز الصنف...',
+                    leading: const Icon(PhosphorIconsRegular.magnifyingGlass),
+                    padding: WidgetStateProperty.all(
+                      const EdgeInsets.symmetric(horizontal: 16),
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
+                ),
 
-          // ── Product grid ──────────────────────────────────────
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: List.generate(4, (tabIndex) {
-                final filtered = _filterProducts(tabIndex);
-
-                if (filtered.isEmpty) {
-                  return EmptyState(
-                    icon: tabIndex == 0
-                        ? Icons.inventory_2_outlined
-                        : tabIndex == 2
-                            ? Icons.block
-                            : Icons.warning_amber,
-                    title: tabIndex == 0
-                        ? 'لا يوجد منتجات'
-                        : tabIndex == 1
-                            ? 'لا يوجد منتجات متوفرة'
-                            : tabIndex == 2
-                                ? 'لا يوجد منتجات نفذت'
-                                : 'لا يوجد منتجات قاربت النفاد',
-                    subtitle: tabIndex == 0
-                        ? 'قم بإضافة منتجات جديدة لبدء إدارة المخزون'
-                        : 'لم يتم العثور على نتائج مطابقة',
-                    actionLabel: tabIndex == 0 ? 'إضافة منتج' : null,
-                    onAction: tabIndex == 0 ? _showAddProductSheet : null,
-                  );
-                }
-
-                return GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.68,
+                // ── Category chips ──────────────────────────────
+                SizedBox(
+                  height: 48,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 6),
+                    itemCount: _categoryChipLabels.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final selected = _selectedCategoryIndex == index;
+                      return FilterChip(
+                        label: Text(_categoryChipLabels[index]),
+                        selected: selected,
+                        onSelected: (_) {
+                          setState(() => _selectedCategoryIndex = index);
+                        },
+                        selectedColor:
+                            AppColors.primary.withValues(alpha: 0.12),
+                        checkmarkColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: selected ? AppColors.primary : null,
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      );
+                    },
                   ),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    return _ProductCard(
-                      product: filtered[index],
-                      categoryName:
-                          _categories[filtered[index].categoryId ?? 0],
-                      onTap: () {
-                        // TODO: Navigate to product detail
-                      },
-                    );
-                  },
-                );
-              }),
+                ),
+
+                // ── Product grid ────────────────────────────────
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: List.generate(4, (tabIndex) {
+                      final filtered = _filterProducts(tabIndex);
+
+                      if (filtered.isEmpty) {
+                        return EmptyState(
+                          icon: tabIndex == 0
+                              ? PhosphorIconsRegular.package
+                              : tabIndex == 2
+                                  ? PhosphorIconsRegular.prohibit
+                                  : PhosphorIconsRegular.warning,
+                          title: tabIndex == 0
+                              ? 'لا يوجد أصناف'
+                              : tabIndex == 1
+                                  ? 'لا يوجد أصناف متوفرة'
+                                  : tabIndex == 2
+                                      ? 'لا يوجد أصناف نفذت'
+                                      : 'لا يوجد أصناف قاربت النفاد',
+                          subtitle: tabIndex == 0
+                              ? 'قم بإضافة أصناف جديدة لبدء إدارة المخزون'
+                              : 'لم يتم العثور على نتائج مطابقة',
+                          actionLabel:
+                              tabIndex == 0 ? 'إضافة صنف' : null,
+                          onAction:
+                              tabIndex == 0 ? _showAddProductSheet : null,
+                        );
+                      }
+
+                      return RefreshIndicator(
+                        onRefresh: _loadData,
+                        child: GridView.builder(
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                            childAspectRatio: 0.68,
+                          ),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            return _ProductCard(
+                              product: filtered[index],
+                              categoryName:
+                                  _getCategoryName(filtered[index]),
+                              onTap: () {
+                                // TODO: Navigate to product detail
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddProductSheet,
-        tooltip: 'إضافة منتج',
+        tooltip: 'إضافة صنف',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+        child: const Icon(PhosphorIconsRegular.plus),
       ),
     );
   }
@@ -352,13 +318,18 @@ class _ProductCard extends StatelessWidget {
   final String categoryName;
   final VoidCallback? onTap;
 
+  int _stockStatusValue(Product p) {
+    if (p.currentStock <= 0) return 1;
+    if (p.currentStock <= p.minStock) return 2;
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
     final status = _stockStatusValue(product);
 
-    // Stock indicator colors
     final stockColor = status == 0
         ? AppColors.success
         : status == 1
@@ -397,7 +368,7 @@ class _ProductCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.inventory_2_outlined,
+                    PhosphorIconsRegular.package,
                     size: 36,
                     color: AppColors.primary.withValues(alpha: 0.4),
                   ),
@@ -414,6 +385,19 @@ class _ProductCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (product.nameEn.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  product.nameEn,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isLight
+                        ? AppColors.textSecondary
+                        : AppColors.darkTextSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
               const SizedBox(height: 2),
 
               // ── Category ─────────────────────────────────────
@@ -444,8 +428,8 @@ class _ProductCard extends StatelessWidget {
                 children: [
                   // Stock badge
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: stockBgColor.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(6),
@@ -466,10 +450,10 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  // Barcode icon
-                  if (product.barcode != null)
+                  // Barcode / item code icon
+                  if (product.barcode != null || product.itemCode != null)
                     Icon(
-                      Icons.qr_code,
+                      PhosphorIconsRegular.barcode,
                       size: 18,
                       color: isLight
                           ? AppColors.textHint
@@ -482,11 +466,5 @@ class _ProductCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  int _stockStatusValue(Product p) {
-    if (p.currentStock <= 0) return 1;
-    if (p.currentStock <= p.minStock) return 2;
-    return 0;
   }
 }

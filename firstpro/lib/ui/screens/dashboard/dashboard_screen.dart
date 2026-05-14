@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../navigation/app_router.dart';
 import '../../widgets/quick_action_button.dart';
 import '../../widgets/stat_card.dart';
@@ -15,8 +16,66 @@ import '../../widgets/transaction_tile.dart';
 /// 2. Quick-action grid (3 × 3)
 /// 3. Statistics cards (2 × 2)
 /// 4. Recent transactions list
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  // ── Dashboard data loaded from database ───────────────────────
+  double _todaySales = 0.0;
+  int _todayInvoiceCount = 0;
+  double _monthSales = 0.0;
+  double _monthPurchases = 0.0;
+  int _customerCount = 0;
+  double _cashBalance = 0.0;
+  List<Map<String, dynamic>> _recentInvoices = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  /// Loads all dashboard statistics from the database.
+  Future<void> _loadDashboardData() async {
+    try {
+      final db = DatabaseHelper();
+      final now = DateTime.now();
+
+      final results = await Future.wait([
+        db.getTotalSalesForDate(now),
+        db.getInvoiceCountForDate(now),
+        db.getTotalSalesThisMonth(),
+        db.getTotalPurchasesThisMonth(),
+        db.getCustomerCount(),
+        db.getCashBalance(),
+        db.getRecentInvoices(limit: 5),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _todaySales = results[0] as double;
+          _todayInvoiceCount = results[1] as int;
+          _monthSales = results[2] as double;
+          _monthPurchases = results[3] as double;
+          _customerCount = results[4] as int;
+          _cashBalance = results[5] as double;
+          _recentInvoices = results[6] as List<Map<String, dynamic>>;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +84,7 @@ class DashboardScreen extends StatelessWidget {
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Trigger data refresh
-        },
+        onRefresh: _loadDashboardData,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -131,7 +188,7 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        CurrencyFormatter.format(12580.75),
+                        CurrencyFormatter.format(_todaySales),
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -152,7 +209,7 @@ class DashboardScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '14',
+                      '$_todayInvoiceCount',
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -284,41 +341,34 @@ class DashboardScreen extends StatelessWidget {
         mainAxisSpacing: 2,
         crossAxisSpacing: 2,
         childAspectRatio: 1.15,
-        children: const [
+        children: [
           StatCard(
             title: 'إجمالي المبيعات',
-            value: 48250.00,
+            value: _monthSales,
             icon: Icons.shopping_cart_outlined,
             color: AppColors.primary,
-            trendPercentage: 12.5,
-            trendIsUp: true,
             subtitle: 'هذا الشهر',
           ),
           StatCard(
             title: 'إجمالي المشتريات',
-            value: 22180.50,
+            value: _monthPurchases,
             icon: Icons.receipt_outlined,
             color: AppColors.info,
-            trendPercentage: 3.2,
-            trendIsUp: false,
             subtitle: 'هذا الشهر',
           ),
           StatCard(
             title: 'عدد العملاء',
-            value: 156,
+            value: _customerCount.toDouble(),
             icon: Icons.people_outline,
             color: AppColors.secondaryDark,
-            trendPercentage: 8.0,
-            trendIsUp: true,
+            isCount: true,
             subtitle: 'إجمالي',
           ),
           StatCard(
             title: 'رصيد الصندوق',
-            value: 31420.25,
+            value: _cashBalance,
             icon: Icons.account_balance_wallet_outlined,
             color: AppColors.accent,
-            trendPercentage: 5.7,
-            trendIsUp: true,
             subtitle: 'الرصيد الحالي',
           ),
         ],
@@ -330,18 +380,55 @@ class DashboardScreen extends StatelessWidget {
   //  RECENT TRANSACTIONS
   // ══════════════════════════════════════════════════════════════
   Widget _buildRecentTransactions(BuildContext context, bool isDark) {
-    final transactions = _sampleTransactions();
+    if (_isLoading) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    if (_recentInvoices.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+          child: Column(
+            children: [
+              Icon(
+                Icons.receipt_long_outlined,
+                size: 48,
+                color: AppColors.textHint,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'لا توجد معاملات بعد',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textHint,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          if (index < transactions.length) {
-            final t = transactions[index];
+          if (index < _recentInvoices.length) {
+            final invoice = _recentInvoices[index];
+            final statusStr = invoice['status'] as String? ?? 'pending';
+            final transactionStatus = _mapInvoiceStatus(statusStr);
+
             return TransactionTile(
-              customerName: t.customerName,
-              amount: t.amount,
-              date: t.date,
-              status: t.status,
+              customerName: invoice['entity_name'] as String? ?? '—',
+              amount: (invoice['total'] as num?)?.toDouble() ?? 0.0,
+              date: DateTime.tryParse(
+                      invoice['created_at'] as String? ?? '') ??
+                  DateTime.now(),
+              status: transactionStatus,
               onTap: () {
                 // TODO: Navigate to invoice detail
               },
@@ -366,50 +453,27 @@ class DashboardScreen extends StatelessWidget {
             ),
           );
         },
-        childCount: transactions.length + 1,
+        childCount: _recentInvoices.length + 1,
       ),
     );
   }
 
-  // ── Sample data (will be replaced with real DB data later) ────
-  List<_TransactionSample> _sampleTransactions() {
-    final now = DateTime.now();
-    return [
-      _TransactionSample(
-        customerName: 'شركة النور للتجارة',
-        amount: 3250.00,
-        date: now.subtract(const Duration(hours: 2)),
-        status: TransactionStatus.paid,
-      ),
-      _TransactionSample(
-        customerName: 'مؤسسة الأمل',
-        amount: 1870.50,
-        date: now.subtract(const Duration(hours: 5)),
-        status: TransactionStatus.pending,
-      ),
-      _TransactionSample(
-        customerName: 'محلات الرياض',
-        amount: 5420.00,
-        date: now.subtract(const Duration(days: 1)),
-        status: TransactionStatus.paid,
-      ),
-      _TransactionSample(
-        customerName: 'شركة الفجر',
-        amount: 980.75,
-        date: now.subtract(const Duration(days: 1, hours: 3)),
-        status: TransactionStatus.unpaid,
-      ),
-      _TransactionSample(
-        customerName: 'مصنع الخليج',
-        amount: 7650.00,
-        date: now.subtract(const Duration(days: 2)),
-        status: TransactionStatus.paid,
-      ),
-    ];
+  /// Maps a database invoice status string to [TransactionStatus].
+  TransactionStatus _mapInvoiceStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return TransactionStatus.paid;
+      case 'unpaid':
+        return TransactionStatus.unpaid;
+      case 'partial':
+        return TransactionStatus.pending;
+      default:
+        return TransactionStatus.pending;
+    }
   }
 }
 
-// ── Internal helper classes ──────────────────────────────────────
+// ── Internal helper class ────────────────────────────────────────
 
 class _QuickActionData {
   const _QuickActionData({
@@ -423,18 +487,4 @@ class _QuickActionData {
   final IconData icon;
   final Color color;
   final String route;
-}
-
-class _TransactionSample {
-  const _TransactionSample({
-    required this.customerName,
-    required this.amount,
-    required this.date,
-    required this.status,
-  });
-
-  final String customerName;
-  final double amount;
-  final DateTime date;
-  final TransactionStatus status;
 }

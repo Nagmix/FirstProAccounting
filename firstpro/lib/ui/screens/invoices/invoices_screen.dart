@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
-import '../../../data/models/invoice_model.dart';
+import '../../../data/datasources/database_helper.dart';
 import 'create_invoice_screen.dart';
 
 /// Invoices list screen – displays all invoices with tab-based filtering,
@@ -30,8 +31,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   final _searchController = TextEditingController();
   bool _isSearching = false;
 
-  // ── Demo data ───────────────────────────────────────────────────
-  final List<Invoice> _invoices = [];
+  // ── Data from DB ────────────────────────────────────────────────
+  List<Map<String, dynamic>> _invoices = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -40,7 +42,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
-    _loadDemoData();
+    _loadInvoices();
   }
 
   @override
@@ -50,96 +52,30 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     super.dispose();
   }
 
-  void _loadDemoData() {
-    // Demo invoices for UI preview
-    _invoices.addAll([
-      Invoice(
-        id: 'INV-001',
-        type: AppConstants.saleInvoice,
-        paymentType: 'cash',
-        customerId: 1,
-        subtotal: 1000,
-        discountAmount: 50,
-        taxAmount: 142.5,
-        total: 1092.5,
-        paidAmount: 1092.5,
-        remaining: 0,
-        status: 'paid',
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-      Invoice(
-        id: 'INV-002',
-        type: AppConstants.purchaseInvoice,
-        paymentType: 'credit',
-        supplierId: 1,
-        subtotal: 3500,
-        discountAmount: 0,
-        taxAmount: 525,
-        total: 4025,
-        paidAmount: 0,
-        remaining: 4025,
-        status: 'unpaid',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      Invoice(
-        id: 'INV-003',
-        type: AppConstants.saleInvoice,
-        paymentType: 'bank',
-        customerId: 2,
-        subtotal: 750,
-        discountAmount: 25,
-        taxAmount: 108.75,
-        total: 833.75,
-        paidAmount: 400,
-        remaining: 433.75,
-        status: 'pending',
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      Invoice(
-        id: 'INV-004',
-        type: AppConstants.returnInvoice,
-        paymentType: 'cash',
-        customerId: 1,
-        subtotal: 200,
-        discountAmount: 0,
-        taxAmount: 30,
-        total: 230,
-        paidAmount: 230,
-        remaining: 0,
-        status: 'paid',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-      Invoice(
-        id: 'INV-005',
-        type: AppConstants.saleInvoice,
-        paymentType: 'check',
-        customerId: 3,
-        subtotal: 5200,
-        discountAmount: 200,
-        taxAmount: 750,
-        total: 5750,
-        paidAmount: 0,
-        remaining: 5750,
-        status: 'unpaid',
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-    ]);
+  Future<void> _loadInvoices() async {
+    setState(() => _isLoading = true);
+    final db = DatabaseHelper();
+    final maps = await db.getAllInvoices();
+    setState(() {
+      _invoices = maps;
+      _isLoading = false;
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════
   //  FILTERING
   // ═══════════════════════════════════════════════════════════════════
-  List<Invoice> get _filteredInvoices {
+  List<Map<String, dynamic>> get _filteredInvoices {
     var result = _invoices;
 
     // Tab filter
     switch (_tabController.index) {
       case 1:
-        result = result.where((i) => i.type == AppConstants.saleInvoice).toList();
+        result = result.where((i) => i['type'] == AppConstants.saleInvoice).toList();
       case 2:
-        result = result.where((i) => i.type == AppConstants.purchaseInvoice).toList();
+        result = result.where((i) => i['type'] == AppConstants.purchaseInvoice).toList();
       case 3:
-        result = result.where((i) => i.type == AppConstants.returnInvoice).toList();
+        result = result.where((i) => i['type'] == AppConstants.returnInvoice).toList();
     }
 
     // Payment status filter
@@ -151,7 +87,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       };
       final status = statusMap[_paymentStatusFilter];
       if (status != null) {
-        result = result.where((i) => i.status == status).toList();
+        result = result.where((i) => i['status'] == status).toList();
       }
     }
 
@@ -165,15 +101,17 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       };
       final method = methodMap[_paymentMethodFilter];
       if (method != null) {
-        result = result.where((i) => i.paymentType == method).toList();
+        result = result.where((i) => i['payment_type'] == method).toList();
       }
     }
 
     // Date range filter
     if (_dateRange != null) {
       result = result.where((i) {
-        return !i.createdAt.isBefore(_dateRange!.start) &&
-            !i.createdAt.isAfter(_dateRange!.end);
+        final createdAt = DateTime.tryParse(i['created_at'] as String? ?? '');
+        if (createdAt == null) return false;
+        return !createdAt.isBefore(_dateRange!.start) &&
+            !createdAt.isAfter(_dateRange!.end);
       }).toList();
     }
 
@@ -181,7 +119,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     if (_searchController.text.isNotEmpty) {
       final query = _searchController.text.toLowerCase();
       result = result.where((i) {
-        return i.id.toLowerCase().contains(query);
+        final id = (i['id'] as String? ?? '').toLowerCase();
+        final entityName = (i['entity_name'] as String? ?? '').toLowerCase();
+        return id.contains(query) || entityName.contains(query);
       }).toList();
     }
 
@@ -197,53 +137,58 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: _buildAppBar(),
-        body: Column(
-          children: [
-            // ── Tab bar ─────────────────────────────────────────
-            Container(
-              color: AppColors.primary,
-              child: TabBar(
-                controller: _tabController,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                indicatorColor: AppColors.secondary,
-                indicatorWeight: 3,
-                tabs: const [
-                  Tab(text: 'الكل'),
-                  Tab(text: 'مبيعات'),
-                  Tab(text: 'مشتريات'),
-                  Tab(text: 'مرتجعات'),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // ── Tab bar ─────────────────────────────────────────
+                  Container(
+                    color: AppColors.primary,
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white70,
+                      indicatorColor: AppColors.secondary,
+                      indicatorWeight: 3,
+                      tabs: const [
+                        Tab(text: 'الكل'),
+                        Tab(text: 'مبيعات'),
+                        Tab(text: 'مشتريات'),
+                        Tab(text: 'مرتجعات'),
+                      ],
+                    ),
+                  ),
+
+                  // ── Filter bar ──────────────────────────────────────
+                  _buildFilterBar(),
+
+                  // ── Invoice list ────────────────────────────────────
+                  Expanded(
+                    child: _filteredInvoices.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                            onRefresh: _loadInvoices,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 80),
+                              itemCount: _filteredInvoices.length,
+                              itemBuilder: (context, index) {
+                                return _InvoiceCard(
+                                  invoiceData: _filteredInvoices[index],
+                                  onTap: () {
+                                    // TODO: navigate to invoice detail
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                  ),
                 ],
               ),
-            ),
-
-            // ── Filter bar ──────────────────────────────────────
-            _buildFilterBar(),
-
-            // ── Invoice list ────────────────────────────────────
-            Expanded(
-              child: _filteredInvoices.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 80),
-                      itemCount: _filteredInvoices.length,
-                      itemBuilder: (context, index) {
-                        return _InvoiceCard(
-                          invoice: _filteredInvoices[index],
-                          onTap: () {
-                            // TODO: navigate to invoice detail
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
 
         // ── FAB ─────────────────────────────────────────────────
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _showAddInvoiceMenu,
-          icon: const Icon(Icons.add),
+          icon: const Icon(PhosphorIconsRegular.plus),
           label: const Text('فاتورة جديدة'),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
@@ -278,11 +223,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               }
             });
           },
-          icon: Icon(_isSearching ? Icons.close : Icons.search),
+          icon: Icon(_isSearching ? PhosphorIconsRegular.x : PhosphorIconsRegular.magnifyingGlass),
         ),
         IconButton(
           onPressed: _showFilterDialog,
-          icon: const Icon(Icons.filter_list),
+          icon: const Icon(PhosphorIconsRegular.funnel),
         ),
       ],
     );
@@ -300,7 +245,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             // Payment status dropdown
             _buildFilterChip(
               label: 'حالة الدفع: $_paymentStatusFilter',
-              icon: Icons.payments_outlined,
+              icon: PhosphorIconsRegular.money,
               items: const ['الكل', 'مدفوع', 'غير مدفوع', 'معلق'],
               selected: _paymentStatusFilter,
               onChanged: (v) => setState(() => _paymentStatusFilter = v),
@@ -310,7 +255,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             // Payment method dropdown
             _buildFilterChip(
               label: 'طريقة الدفع: $_paymentMethodFilter',
-              icon: Icons.credit_card,
+              icon: PhosphorIconsRegular.creditCard,
               items: const ['الكل', 'نقدي', 'آجل', 'بنك', 'شيك'],
               selected: _paymentMethodFilter,
               onChanged: (v) => setState(() => _paymentMethodFilter = v),
@@ -319,7 +264,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
             // Date range
             ActionChip(
-              avatar: const Icon(Icons.date_range, size: 18),
+              avatar: const Icon(PhosphorIconsRegular.calendar, size: 18),
               label: Text(
                 _dateRange != null
                     ? '${DateFormatter.formatDate(_dateRange!.start)} – ${DateFormatter.formatDate(_dateRange!.end)}'
@@ -331,7 +276,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             if (_dateRange != null) ...[
               const SizedBox(width: 4),
               IconButton(
-                icon: const Icon(Icons.close, size: 18),
+                icon: const Icon(PhosphorIconsRegular.x, size: 18),
                 onPressed: () => setState(() => _dateRange = null),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -367,7 +312,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                       child: Row(
                         children: [
                           if (item == selected)
-                            const Icon(Icons.check, size: 18, color: AppColors.primary),
+                            const Icon(PhosphorIconsRegular.check, size: 18, color: AppColors.primary),
                           if (item == selected) const SizedBox(width: 8),
                           Text(item),
                         ],
@@ -386,7 +331,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 72, color: AppColors.textHint),
+          Icon(PhosphorIconsRegular.receipt, size: 72, color: AppColors.textHint),
           const SizedBox(height: 16),
           Text('لا توجد فواتير', style: context.textTheme.titleMedium),
           const SizedBox(height: 4),
@@ -408,7 +353,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.sell, color: AppColors.success),
+              leading: const Icon(PhosphorIconsRegular.receipt, color: AppColors.success),
               title: const Text('فاتورة بيع جديدة'),
               subtitle: const Text('إنشاء فاتورة مبيعات'),
               onTap: () {
@@ -420,11 +365,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                       invoiceType: AppConstants.saleInvoice,
                     ),
                   ),
-                );
+                ).then((_) => _loadInvoices());
               },
             ),
             ListTile(
-              leading: const Icon(Icons.shopping_cart, color: AppColors.info),
+              leading: const Icon(PhosphorIconsRegular.shoppingCart, color: AppColors.info),
               title: const Text('فاتورة شراء جديدة'),
               subtitle: const Text('إنشاء فاتورة مشتريات'),
               onTap: () {
@@ -436,7 +381,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                       invoiceType: AppConstants.purchaseInvoice,
                     ),
                   ),
-                );
+                ).then((_) => _loadInvoices());
               },
             ),
           ],
@@ -517,9 +462,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 //  INVOICE CARD
 // ═══════════════════════════════════════════════════════════════════════════
 class _InvoiceCard extends StatelessWidget {
-  const _InvoiceCard({required this.invoice, this.onTap});
+  const _InvoiceCard({required this.invoiceData, this.onTap});
 
-  final Invoice invoice;
+  final Map<String, dynamic> invoiceData;
   final VoidCallback? onTap;
 
   @override
@@ -548,7 +493,7 @@ class _InvoiceCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          invoice.id,
+                          invoiceData['id'] as String? ?? '',
                           style: context.textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -559,12 +504,14 @@ class _InvoiceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _entityName,
+                      invoiceData['entity_name'] as String? ?? 'بدون عميل',
                       style: context.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      DateFormatter.formatDateTime(invoice.createdAt),
+                      DateFormatter.formatDateTime(
+                        DateTime.tryParse(invoiceData['created_at'] as String? ?? '') ?? DateTime.now(),
+                      ),
                       style: context.textTheme.bodySmall?.copyWith(
                         color: isDark
                             ? AppColors.darkTextSecondary
@@ -580,7 +527,7 @@ class _InvoiceCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    CurrencyFormatter.format(invoice.total),
+                    CurrencyFormatter.format((invoiceData['total'] as num?)?.toDouble() ?? 0.0),
                     style: context.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
@@ -599,11 +546,12 @@ class _InvoiceCard extends StatelessWidget {
 
   // ── Type icon ────────────────────────────────────────────────────
   Widget _buildTypeIcon() {
-    final (icon, color) = switch (invoice.type) {
-      AppConstants.saleInvoice => (Icons.sell, AppColors.success),
-      AppConstants.purchaseInvoice => (Icons.shopping_cart_outlined, AppColors.info),
-      AppConstants.returnInvoice => (Icons.undo, AppColors.warning),
-      _ => (Icons.receipt_outlined, AppColors.textSecondary),
+    final type = invoiceData['type'] as String? ?? '';
+    final (icon, color) = switch (type) {
+      'sale' => (PhosphorIconsRegular.receipt, AppColors.success),
+      'purchase' => (PhosphorIconsRegular.shoppingCart, AppColors.info),
+      'return' => (PhosphorIconsRegular.arrowCounterClockwise, AppColors.warning),
+      _ => (PhosphorIconsRegular.receipt, AppColors.textSecondary),
     };
 
     return Container(
@@ -619,13 +567,14 @@ class _InvoiceCard extends StatelessWidget {
 
   // ── Payment method badge ─────────────────────────────────────────
   Widget _buildPaymentMethodBadge(bool isDark) {
-    final methodAr = switch (invoice.paymentType) {
+    final paymentType = invoiceData['payment_type'] as String? ?? 'cash';
+    final methodAr = switch (paymentType) {
       'cash' => 'نقدي',
       'credit' => 'آجل',
       'bank' => 'بنك',
       'check' => 'شيك',
       'card' => 'بطاقة',
-      _ => invoice.paymentType,
+      _ => paymentType,
     };
 
     return Container(
@@ -643,11 +592,13 @@ class _InvoiceCard extends StatelessWidget {
 
   // ── Status chip ──────────────────────────────────────────────────
   Widget _buildStatusChip() {
-    final (label, bgColor, fgColor) = switch (invoice.status) {
+    final status = invoiceData['status'] as String? ?? 'pending';
+    final (label, bgColor, fgColor) = switch (status) {
       'paid' => ('مدفوع', AppColors.successLight, AppColors.success),
       'unpaid' => ('غير مدفوع', AppColors.errorLight, AppColors.error),
       'pending' => ('معلق', AppColors.warningLight, AppColors.warning),
-      _ => (invoice.status, AppColors.surfaceVariant, AppColors.textSecondary),
+      'partial' => ('مدفوع جزئياً', AppColors.infoLight, AppColors.info),
+      _ => (status, AppColors.surfaceVariant, AppColors.textSecondary),
     };
 
     return Container(
@@ -665,12 +616,5 @@ class _InvoiceCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  // ── Entity name helper ───────────────────────────────────────────
-  String get _entityName {
-    if (invoice.customerId != null) return 'عميل #${invoice.customerId}';
-    if (invoice.supplierId != null) return 'مورد #${invoice.supplierId}';
-    return 'بدون عميل';
   }
 }

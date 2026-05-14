@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/invoice_item_model.dart';
 import '../../../data/models/invoice_model.dart';
 import '../../widgets/invoice_item_card.dart';
@@ -39,21 +41,27 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   int? _selectedCustomerId;
   final List<InvoiceItem> _items = [];
 
-  // ── Demo customers ───────────────────────────────────────────────
-  final List<Map<String, dynamic>> _customers = const [
-    {'id': 1, 'name': 'أحمد محمد العلي'},
-    {'id': 2, 'name': 'شركة النور للتجارة'},
-    {'id': 3, 'name': 'مؤسسة الفجر'},
-    {'id': 4, 'name': 'عبدالله الخالدي'},
-    {'id': 5, 'name': 'محمد السعيد'},
-  ];
+  // ── Data from DB ─────────────────────────────────────────────────
+  List<Map<String, dynamic>> _customers = [];
+  List<Map<String, dynamic>> _suppliers = [];
+  bool _isLoading = true;
 
-  // ── Demo suppliers (for purchase invoices) ───────────────────────
-  final List<Map<String, dynamic>> _suppliers = const [
-    {'id': 1, 'name': 'مورد المواد الخام'},
-    {'id': 2, 'name': 'شركة التوريدات المتحدة'},
-    {'id': 3, 'name': 'مؤسسة الجودة'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadEntities();
+  }
+
+  Future<void> _loadEntities() async {
+    final db = DatabaseHelper();
+    final customers = await db.getAllCustomers();
+    final suppliers = await db.getAllSuppliers();
+    setState(() {
+      _customers = customers;
+      _suppliers = suppliers;
+      _isLoading = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -108,39 +116,41 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           actions: [
             IconButton(
               onPressed: _saveInvoice,
-              icon: const Icon(Icons.save_outlined),
+              icon: const Icon(PhosphorIconsRegular.floppyDisk),
               tooltip: 'حفظ',
             ),
             IconButton(
               onPressed: () {
                 // TODO: more options
               },
-              icon: const Icon(Icons.more_vert),
+              icon: const Icon(PhosphorIconsRegular.dotsThreeVertical),
             ),
           ],
         ),
-        body: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildCustomerSection(),
-                      _buildPaymentMethodSection(),
-                      _buildItemsSection(),
-                      _buildSummarySection(),
-                    ],
-                  ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildCustomerSection(),
+                            _buildPaymentMethodSection(),
+                            _buildItemsSection(),
+                            _buildSummarySection(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    _buildBottomBar(),
+                  ],
                 ),
               ),
-              _buildBottomBar(),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -168,7 +178,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             decoration: InputDecoration(
               hintText: 'اختر $label',
               prefixIcon: Icon(
-                _isSale ? Icons.person_outline : Icons.business_outlined,
+                _isSale ? PhosphorIconsRegular.user : PhosphorIconsRegular.buildings,
               ),
             ),
             items: entities.map((e) {
@@ -188,9 +198,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: () {
-                // TODO: navigate to add customer
+                // TODO: navigate to add customer/supplier
               },
-              icon: const Icon(Icons.add, size: 18),
+              icon: const Icon(PhosphorIconsRegular.plus, size: 18),
               label: Text(
                 _isSale ? 'إضافة عميل جديد' : 'إضافة مورد جديد',
               ),
@@ -204,11 +214,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // ── Payment method section ───────────────────────────────────────
   Widget _buildPaymentMethodSection() {
     const methods = [
-      ('cash', 'نقد', Icons.money),
-      ('credit', 'أجل', Icons.schedule),
-      ('bank', 'بنك', Icons.account_balance),
-      ('check', 'شيك', Icons.description_outlined),
-      ('card', 'كاش', Icons.credit_card),
+      ('cash', 'نقد', PhosphorIconsRegular.money),
+      ('credit', 'أجل', PhosphorIconsRegular.clock),
+      ('bank', 'بنك', PhosphorIconsRegular.bank),
+      ('check', 'شيك', PhosphorIconsRegular.note),
+      ('card', 'بطاقة', PhosphorIconsRegular.creditCard),
     ];
 
     return Container(
@@ -277,7 +287,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.add_shopping_cart_outlined,
+                    Icon(PhosphorIconsRegular.shoppingCart,
                         size: 48, color: AppColors.textHint),
                     const SizedBox(height: 8),
                     Text('لم يتم إضافة أصناف بعد',
@@ -313,7 +323,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: _addItem,
-              icon: const Icon(Icons.add_circle_outline),
+              icon: const Icon(PhosphorIconsRegular.plusCircle),
               label: const Text('إضافة صنف'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -455,7 +465,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               onPressed: () {
                 // TODO: share invoice
               },
-              icon: const Icon(Icons.share),
+              icon: const Icon(PhosphorIconsRegular.shareNetwork),
               tooltip: 'مشاركة',
             ),
             const SizedBox(width: 8),
@@ -466,7 +476,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 onPressed: () {
                   // TODO: print invoice
                 },
-                icon: const Icon(Icons.print),
+                icon: const Icon(PhosphorIconsRegular.printer),
                 label: const Text('طباعة'),
               ),
             ),
@@ -476,7 +486,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: _saveInvoice,
-                icon: const Icon(Icons.save),
+                icon: const Icon(PhosphorIconsRegular.floppyDisk),
                 label: const Text('حفظ'),
               ),
             ),
@@ -500,13 +510,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   }
 
   // ── Save invoice ─────────────────────────────────────────────────
-  void _saveInvoice() {
+  Future<void> _saveInvoice() async {
     if (_items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة صنف واحد على الأقل');
-      return;
-    }
-    if (_selectedCustomerId == null) {
-      context.showErrorSnackBar('الرجاء اختيار العميل');
       return;
     }
 
@@ -530,10 +536,22 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       notes: _notesController.text.isEmpty ? null : _notesController.text,
     );
 
-    // TODO: persist invoice via provider / database
-    debugPrint('Invoice saved: ${invoice.toMap()}');
+    final itemsMaps = _items.map((item) => {
+      'invoice_id': invoice.id,
+      'product_id': item.productId,
+      'product_name': item.productName,
+      'quantity': item.quantity,
+      'unit_price': item.unitPrice,
+      'total_price': item.totalPrice,
+      'notes': item.notes,
+    }).toList();
 
-    context.showSuccessSnackBar('تم حفظ الفاتورة بنجاح');
-    Navigator.pop(context);
+    final db = DatabaseHelper();
+    await db.insertInvoiceWithItems(invoice.toMap(), itemsMaps);
+
+    if (mounted) {
+      context.showSuccessSnackBar('تم حفظ الفاتورة بنجاح');
+      Navigator.pop(context);
+    }
   }
 }

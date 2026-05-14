@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
@@ -8,10 +9,6 @@ import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/customers/customers_screen.dart';
 import '../screens/invoices/invoices_screen.dart';
 import '../screens/reports/reports_screen.dart';
-import '../screens/settings/settings_screen.dart';
-import '../screens/products/products_screen.dart';
-import '../screens/pos/pos_screen.dart';
-import '../screens/support/support_screen.dart';
 
 /// The main scaffold that wraps every "tab" screen.
 ///
@@ -41,28 +38,28 @@ class _MainScaffoldState extends State<MainScaffold> {
   // ── Bottom nav items ──────────────────────────────────────────
   static const _navItems = [
     BottomNavigationBarItem(
-      icon: Icon(Icons.home_outlined),
-      activeIcon: Icon(Icons.home),
+      icon: Icon(PhosphorIconsRegular.house),
+      activeIcon: Icon(PhosphorIconsFill.house),
       label: 'الرئيسية',
     ),
     BottomNavigationBarItem(
-      icon: Icon(Icons.people_outline),
-      activeIcon: Icon(Icons.people),
+      icon: Icon(PhosphorIconsRegular.users),
+      activeIcon: Icon(PhosphorIconsFill.users),
       label: 'العملاء',
     ),
     BottomNavigationBarItem(
-      icon: Icon(Icons.receipt_long_outlined),
-      activeIcon: Icon(Icons.receipt_long),
+      icon: Icon(PhosphorIconsRegular.receipt),
+      activeIcon: Icon(PhosphorIconsFill.receipt),
       label: 'الفواتير',
     ),
     BottomNavigationBarItem(
-      icon: Icon(Icons.bar_chart_outlined),
-      activeIcon: Icon(Icons.bar_chart),
+      icon: Icon(PhosphorIconsRegular.chartBar),
+      activeIcon: Icon(PhosphorIconsFill.chartBar),
       label: 'التقارير',
     ),
     BottomNavigationBarItem(
-      icon: Icon(Icons.more_horiz_outlined),
-      activeIcon: Icon(Icons.more_horiz),
+      icon: Icon(PhosphorIconsRegular.dotsThree),
+      activeIcon: Icon(PhosphorIconsFill.dotsThree),
       label: 'المزيد',
     ),
   ];
@@ -70,52 +67,52 @@ class _MainScaffoldState extends State<MainScaffold> {
   // ── Drawer menu items ─────────────────────────────────────────
   final _drawerItems = const <_DrawerMenuItem>[
     _DrawerMenuItem(
-      icon: Icons.cloud_download_outlined,
+      icon: PhosphorIconsRegular.arrowDown,
       label: 'تحميل بيانات العميل',
       route: AppRouter.customerLoad,
     ),
     _DrawerMenuItem(
-      icon: Icons.upload_file_outlined,
+      icon: PhosphorIconsRegular.uploadSimple,
       label: 'استيراد بيانات العميل',
       route: AppRouter.customerImport,
     ),
     _DrawerMenuItem(
-      icon: Icons.people_outline,
+      icon: PhosphorIconsRegular.users,
       label: 'قائمة العملاء',
       route: AppRouter.customers,
     ),
     _DrawerMenuItem(
-      icon: Icons.badge_outlined,
+      icon: PhosphorIconsRegular.identificationCard,
       label: 'قائمة المندوبين',
       route: AppRouter.delegates,
     ),
     _DrawerMenuItem(
-      icon: Icons.print_outlined,
+      icon: PhosphorIconsRegular.printer,
       label: 'طباعة قائمة العملاء',
       route: AppRouter.customerPrint,
     ),
     _DrawerMenuItem(
-      icon: Icons.add_business_outlined,
+      icon: PhosphorIconsRegular.receipt,
       label: 'فاتورة بيع جديدة',
       route: AppRouter.newSaleInvoice,
     ),
     _DrawerMenuItem(
-      icon: Icons.summarize_outlined,
+      icon: PhosphorIconsRegular.chartLine,
       label: 'تقرير المبيعات اليومية',
       route: AppRouter.dailySalesReport,
     ),
     _DrawerMenuItem(
-      icon: Icons.inventory_2_outlined,
+      icon: PhosphorIconsRegular.package,
       label: 'قائمة المنتجات',
       route: AppRouter.products,
     ),
     _DrawerMenuItem(
-      icon: Icons.request_quote_outlined,
+      icon: PhosphorIconsRegular.money,
       label: 'الطلبات المالية',
       route: AppRouter.financialOrders,
     ),
     _DrawerMenuItem(
-      icon: Icons.settings_outlined,
+      icon: PhosphorIconsRegular.gear,
       label: 'الإعدادات',
       route: AppRouter.settings,
     ),
@@ -159,7 +156,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             onPressed: () {
               // TODO: Open WhatsApp support
             },
-            icon: const Icon(Icons.chat_outlined),
+            icon: const Icon(PhosphorIconsRegular.whatsappLogo),
             tooltip: 'واتساب',
           ),
           // Notifications with badge
@@ -169,14 +166,14 @@ class _MainScaffoldState extends State<MainScaffold> {
             },
             icon: Badge(
               label: const Text('3'),
-              child: const Icon(Icons.notifications_outlined),
+              child: const Icon(PhosphorIconsRegular.bell),
             ),
             tooltip: 'الإشعارات',
           ),
           // More / drawer toggle
           IconButton(
             onPressed: () => _openDrawer(context),
-            icon: const Icon(Icons.menu),
+            icon: const Icon(PhosphorIconsRegular.list),
             tooltip: 'القائمة',
           ),
           const SizedBox(width: 4),
@@ -330,17 +327,18 @@ class _MoreTab extends StatelessWidget {
       children: [
         Text('المزيد من الخدمات', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 16),
-        _MoreTile(icon: Icons.point_of_sale, title: 'نقطة البيع', subtitle: 'واجهة بيع سريعة', onTap: () => Navigator.pushNamed(context, AppRouter.pos)),
-        _MoreTile(icon: Icons.inventory_2_outlined, title: 'المنتجات والمخزون', subtitle: 'إدارة الأصناف والمخازن', onTap: () => Navigator.pushNamed(context, AppRouter.products)),
-        _MoreTile(icon: Icons.settings_outlined, title: 'الإعدادات', subtitle: 'تخصيص التطبيق', onTap: () => Navigator.pushNamed(context, AppRouter.settings)),
-        _MoreTile(icon: Icons.support_agent_outlined, title: 'الدعم الفني', subtitle: 'الشكاوى والملاحظات', onTap: () => Navigator.pushNamed(context, AppRouter.support)),
-        _MoreTile(icon: Icons.add_business_outlined, title: 'فاتورة بيع جديدة', subtitle: 'إنشاء فاتورة بيع', onTap: () => Navigator.pushNamed(context, AppRouter.newSaleInvoice)),
-        _MoreTile(icon: Icons.summarize_outlined, title: 'تقرير المبيعات اليومية', subtitle: 'ملخص اليوم', onTap: () => Navigator.pushNamed(context, AppRouter.dailySalesReport)),
+        _MoreTile(icon: PhosphorIconsRegular.storefront, title: 'نقطة البيع', subtitle: 'واجهة بيع سريعة', onTap: () => Navigator.pushNamed(context, AppRouter.pos)),
+        _MoreTile(icon: PhosphorIconsRegular.package, title: 'المنتجات والمخزون', subtitle: 'إدارة الأصناف والمخازن', onTap: () => Navigator.pushNamed(context, AppRouter.products)),
+        _MoreTile(icon: PhosphorIconsRegular.currencyDollar, title: 'إدارة العملات', subtitle: 'العملات وأسعار الصرف', onTap: () => Navigator.pushNamed(context, AppRouter.currencies)),
+        _MoreTile(icon: PhosphorIconsRegular.gear, title: 'الإعدادات', subtitle: 'تخصيص التطبيق', onTap: () => Navigator.pushNamed(context, AppRouter.settings)),
+        _MoreTile(icon: PhosphorIconsRegular.headset, title: 'الدعم الفني', subtitle: 'الشكاوى والملاحظات', onTap: () => Navigator.pushNamed(context, AppRouter.support)),
+        _MoreTile(icon: PhosphorIconsRegular.receipt, title: 'فاتورة بيع جديدة', subtitle: 'إنشاء فاتورة بيع', onTap: () => Navigator.pushNamed(context, AppRouter.newSaleInvoice)),
+        _MoreTile(icon: PhosphorIconsRegular.chartLine, title: 'تقرير المبيعات اليومية', subtitle: 'ملخص اليوم', onTap: () => Navigator.pushNamed(context, AppRouter.dailySalesReport)),
         const Divider(height: 32),
         Text('حول التطبيق', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         ListTile(
-          leading: const Icon(Icons.info_outline),
+          leading: const Icon(PhosphorIconsRegular.info),
           title: Text('الإصدار ${AppConstants.appVersion}'),
           subtitle: Text(AppConstants.appFullName),
         ),
@@ -364,7 +362,7 @@ class _MoreTile extends StatelessWidget {
         leading: Icon(icon, color: AppColors.primary),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_back_ios_new, size: 16),
+        trailing: const Icon(PhosphorIconsRegular.caretLeft, size: 16),
         onTap: onTap,
       ),
     );

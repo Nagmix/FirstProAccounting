@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/datasources/database_helper.dart';
+import '../../../data/models/customer_model.dart';
 
 /// Modal bottom sheet for adding a new customer.
 ///
@@ -22,9 +25,12 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _address2Controller = TextEditingController();
   final _emailController = TextEditingController();
+  final _countryController = TextEditingController();
   final _notesController = TextEditingController();
   final _balanceController = TextEditingController();
+  final _creditLimitController = TextEditingController();
 
   // ── State ─────────────────────────────────────────────────────
   String _gender = 'male'; // male | female
@@ -36,9 +42,12 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _address2Controller.dispose();
     _emailController.dispose();
+    _countryController.dispose();
     _notesController.dispose();
     _balanceController.dispose();
+    _creditLimitController.dispose();
     super.dispose();
   }
 
@@ -48,8 +57,22 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
     setState(() => _isSaving = true);
 
-    // TODO: Replace with actual data-source insertion
-    await Future.delayed(const Duration(milliseconds: 500));
+    final customer = Customer(
+      name: _nameController.text.trim(),
+      phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+      address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+      address2: _address2Controller.text.trim().isEmpty ? null : _address2Controller.text.trim(),
+      email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      country: _countryController.text.trim().isEmpty ? null : _countryController.text.trim(),
+      gender: _gender,
+      notificationMethod: _notificationMethod,
+      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      balance: double.tryParse(_balanceController.text) ?? 0.0,
+      creditLimit: double.tryParse(_creditLimitController.text) ?? 0.0,
+    );
+
+    final db = DatabaseHelper();
+    await db.insertCustomer(customer.toMap());
 
     if (!mounted) return;
     setState(() => _isSaving = false);
@@ -95,7 +118,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'الاسم',
-                  prefixIcon: Icon(Icons.person_outline),
+                  prefixIcon: Icon(PhosphorIconsRegular.user),
                 ),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
@@ -113,18 +136,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 ],
                 decoration: const InputDecoration(
                   labelText: 'رقم الهاتف',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // ── العنوان ───────────────────────────────────────
-              TextFormField(
-                controller: _addressController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'العنوان',
-                  prefixIcon: Icon(Icons.location_on_outlined),
+                  prefixIcon: Icon(PhosphorIconsRegular.phone),
                 ),
               ),
               const SizedBox(height: 14),
@@ -136,7 +148,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'البريد الإلكتروني',
-                  prefixIcon: Icon(Icons.email_outlined),
+                  prefixIcon: Icon(PhosphorIconsRegular.envelope),
                 ),
                 validator: (v) {
                   if (v != null && v.trim().isNotEmpty) {
@@ -150,15 +162,35 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
               const SizedBox(height: 14),
 
-              // ── الملاحظات ─────────────────────────────────────
+              // ── العنوان ───────────────────────────────────────
               TextFormField(
-                controller: _notesController,
-                maxLines: 3,
-                textInputAction: TextInputAction.newline,
+                controller: _addressController,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  labelText: 'الملاحظات',
-                  prefixIcon: Icon(Icons.notes),
-                  alignLabelWithHint: true,
+                  labelText: 'العنوان',
+                  prefixIcon: Icon(PhosphorIconsRegular.mapPin),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // ── العنوان 2 ─────────────────────────────────────
+              TextFormField(
+                controller: _address2Controller,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'العنوان - سطر ثاني',
+                  prefixIcon: Icon(PhosphorIconsRegular.mapPinLine),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // ── البلد ──────────────────────────────────────────
+              TextFormField(
+                controller: _countryController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'البلد',
+                  prefixIcon: Icon(PhosphorIconsRegular.globe),
                 ),
               ),
               const SizedBox(height: 14),
@@ -168,14 +200,44 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 controller: _balanceController,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                textInputAction: TextInputAction.done,
+                textInputAction: TextInputAction.next,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
+                ],
+                decoration: InputDecoration(
+                  labelText: 'الرصيد الافتتاحي',
+                  prefixIcon: const Icon(PhosphorIconsRegular.calculator),
+                  suffixText: AppConstants.currency,
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // ── حد الائتمان ────────────────────────────────────
+              TextFormField(
+                controller: _creditLimitController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.next,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                 ],
                 decoration: InputDecoration(
-                  labelText: 'الرصيد الافتتاحي',
-                  prefixIcon: const Icon(Icons.calculate_outlined),
+                  labelText: 'حد الائتمان',
+                  prefixIcon: const Icon(PhosphorIconsRegular.creditCard),
                   suffixText: AppConstants.currency,
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // ── الملاحظات ─────────────────────────────────────
+              TextFormField(
+                controller: _notesController,
+                maxLines: 3,
+                textInputAction: TextInputAction.newline,
+                decoration: const InputDecoration(
+                  labelText: 'الملاحظات',
+                  prefixIcon: Icon(PhosphorIconsRegular.notepad),
+                  alignLabelWithHint: true,
                 ),
               ),
               const SizedBox(height: 20),
@@ -259,7 +321,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(Icons.check, size: 20),
+                          : const Icon(PhosphorIconsRegular.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,

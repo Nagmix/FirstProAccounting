@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/cart_item_tile.dart';
 
@@ -32,34 +35,27 @@ class _PosScreenState extends State<PosScreen> {
   // ── Held orders ──────────────────────────────────────────────────
   final List<_HeldOrder> _heldOrders = [];
 
-  // ── Demo categories ──────────────────────────────────────────────
-  final List<Map<String, dynamic>> _categories = const [
-    {'id': null, 'name': 'الكل', 'icon': Icons.apps},
-    {'id': 1, 'name': 'أدوات مكتبية', 'icon': Icons.edit},
-    {'id': 2, 'name': 'دهانات', 'icon': Icons.format_paint},
-    {'id': 3, 'name': 'أدوات بناء', 'icon': Icons.construction},
-    {'id': 4, 'name': 'كهربائيات', 'icon': Icons.electrical_services},
-    {'id': 5, 'name': 'سباكة', 'icon': Icons.plumbing},
-  ];
+  // ── Data from DB ─────────────────────────────────────────────────
+  List<Map<String, dynamic>> _categories = [];
+  List<Product> _products = [];
+  bool _isLoading = true;
 
-  // ── Demo products ────────────────────────────────────────────────
-  final List<Product> _products = [
-    Product(id: 1, nameAr: 'قلم حبر أزرق', nameEn: 'Blue Pen', categoryId: 1, sellPrice: 5.0, currentStock: 200),
-    Product(id: 2, nameAr: 'دفتر A4', nameEn: 'A4 Notebook', categoryId: 1, sellPrice: 15.0, currentStock: 150),
-    Product(id: 3, nameAr: 'حبر طابعة HP', nameEn: 'HP Ink', categoryId: 1, sellPrice: 120.0, currentStock: 30),
-    Product(id: 4, nameAr: 'ورق طباعة A4', nameEn: 'A4 Paper', categoryId: 1, sellPrice: 45.0, currentStock: 500),
-    Product(id: 5, nameAr: 'مجلد بلاستيك', nameEn: 'Plastic Folder', categoryId: 1, sellPrice: 8.0, currentStock: 300),
-    Product(id: 6, nameAr: 'طلاء أبيض 4لتر', nameEn: 'White Paint 4L', categoryId: 2, sellPrice: 95.0, currentStock: 50),
-    Product(id: 7, nameAr: 'طلاء أزرق 4لتر', nameEn: 'Blue Paint 4L', categoryId: 2, sellPrice: 95.0, currentStock: 35),
-    Product(id: 8, nameAr: 'فرشاة دهان', nameEn: 'Paint Brush', categoryId: 2, sellPrice: 25.0, currentStock: 80),
-    Product(id: 9, nameAr: 'مسامير 5سم', nameEn: '5cm Nails', categoryId: 3, sellPrice: 3.5, currentStock: 1000),
-    Product(id: 10, nameAr: 'مطرقة 500غ', nameEn: 'Hammer 500g', categoryId: 3, sellPrice: 45.0, currentStock: 60),
-    Product(id: 11, nameAr: 'كابل كهربائي 10م', nameEn: 'Electric Cable 10m', categoryId: 4, sellPrice: 55.0, currentStock: 120),
-    Product(id: 12, nameAr: 'مقبس كهربائي', nameEn: 'Electric Socket', categoryId: 4, sellPrice: 12.0, currentStock: 200),
-    Product(id: 13, nameAr: 'أنبوب PVC 4م', nameEn: 'PVC Pipe 4m', categoryId: 5, sellPrice: 30.0, currentStock: 90),
-    Product(id: 14, nameAr: 'صنبور مياه', nameEn: 'Water Tap', categoryId: 5, sellPrice: 65.0, currentStock: 45),
-    Product(id: 15, nameAr: 'صمام تحكم', nameEn: 'Control Valve', categoryId: 5, sellPrice: 38.0, currentStock: 70),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final db = DatabaseHelper();
+    final catMaps = await db.getAllCategories();
+    final prodMaps = await db.getAllProducts(activeOnly: true);
+    setState(() {
+      _categories = catMaps;
+      _products = prodMaps.map((m) => Product.fromMap(m)).toList();
+      _isLoading = false;
+    });
+  }
 
   List<Product> get _filteredProducts {
     var result = _products;
@@ -95,15 +91,17 @@ class _PosScreenState extends State<PosScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: _buildAppBar(),
-        body: context.isMobile
-            ? _buildMobileLayout()
-            : _buildTabletLayout(),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : context.isMobile
+                ? _buildMobileLayout()
+                : _buildTabletLayout(),
         floatingActionButton: FloatingActionButton(
           onPressed: _scanBarcode,
           backgroundColor: AppColors.secondary,
           foregroundColor: Colors.white,
           tooltip: 'مسح باركود',
-          child: const Icon(Icons.qr_code_scanner),
+          child: const Icon(PhosphorIconsRegular.barcode),
         ),
       ),
     );
@@ -120,14 +118,14 @@ class _PosScreenState extends State<PosScreen> {
           label: Text('${_heldOrders.length}'),
           child: IconButton(
             onPressed: _showHeldOrders,
-            icon: const Icon(Icons.pause_circle_outlined),
+            icon: const Icon(PhosphorIconsRegular.pauseCircle),
             tooltip: 'طلبات معلقة',
           ),
         ),
         // Discount
         IconButton(
           onPressed: _showDiscountDialog,
-          icon: const Icon(Icons.discount_outlined),
+          icon: const Icon(PhosphorIconsRegular.tag),
           tooltip: 'خصم',
         ),
       ],
@@ -193,7 +191,7 @@ class _PosScreenState extends State<PosScreen> {
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 hintText: 'بحث عن منتج أو باركود...',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(PhosphorIconsRegular.magnifyingGlass),
                 filled: true,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
@@ -209,7 +207,7 @@ class _PosScreenState extends State<PosScreen> {
             height: 48,
             child: ElevatedButton.icon(
               onPressed: _scanBarcode,
-              icon: const Icon(Icons.qr_code_scanner, size: 20),
+              icon: const Icon(PhosphorIconsRegular.barcode, size: 20),
               label: const Text('مسح'),
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(
@@ -230,13 +228,26 @@ class _PosScreenState extends State<PosScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        itemCount: _categories.length,
+        itemCount: _categories.length + 1, // +1 for "الكل"
         separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (context, index) {
-          final cat = _categories[index];
+          if (index == 0) {
+            // "الكل" chip
+            final isSelected = _selectedCategoryId == null;
+            return FilterChip(
+              avatar: const Icon(PhosphorIconsRegular.squaresFour, size: 16),
+              label: const Text('الكل'),
+              selected: isSelected,
+              onSelected: (_) {
+                setState(() => _selectedCategoryId = null);
+              },
+              selectedColor: AppColors.primary.withValues(alpha: 0.15),
+              checkmarkColor: AppColors.primary,
+            );
+          }
+          final cat = _categories[index - 1];
           final isSelected = _selectedCategoryId == cat['id'];
           return FilterChip(
-            avatar: Icon(cat['icon'] as IconData, size: 16),
             label: Text(cat['name'] as String),
             selected: isSelected,
             onSelected: (_) {
@@ -259,29 +270,34 @@ class _PosScreenState extends State<PosScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 64, color: AppColors.textHint),
+            Icon(PhosphorIconsRegular.magnifyingGlass, size: 64, color: AppColors.textHint),
             const SizedBox(height: 12),
             Text('لا توجد منتجات', style: context.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text('أضف منتجات من شاشة المنتجات', style: context.textTheme.bodySmall),
           ],
         ),
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.78,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: GridView.builder(
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 0.78,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: products.length,
+        itemBuilder: (context, index) {
+          return _ProductCard(
+            product: products[index],
+            onTap: () => _addToCart(products[index]),
+          );
+        },
       ),
-      itemCount: products.length,
-      itemBuilder: (context, index) {
-        return _ProductCard(
-          product: products[index],
-          onTap: () => _addToCart(products[index]),
-        );
-      },
     );
   }
 
@@ -320,7 +336,7 @@ class _PosScreenState extends State<PosScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.shopping_cart_outlined,
+                        Icon(PhosphorIconsRegular.shoppingCart,
                             size: 56, color: AppColors.textHint),
                         const SizedBox(height: 8),
                         Text('السلة فارغة',
@@ -373,11 +389,11 @@ class _PosScreenState extends State<PosScreen> {
             color: isDark ? AppColors.darkSurface : AppColors.surface,
             child: Row(
               children: [
-                _paymentButton('نقدي', 'cash', Icons.money),
+                _paymentButton('نقدي', 'cash', PhosphorIconsRegular.money),
                 const SizedBox(width: 6),
-                _paymentButton('آجل', 'credit', Icons.schedule),
+                _paymentButton('آجل', 'credit', PhosphorIconsRegular.clock),
                 const SizedBox(width: 6),
-                _paymentButton('بطاقة', 'card', Icons.credit_card),
+                _paymentButton('بطاقة', 'card', PhosphorIconsRegular.creditCard),
               ],
             ),
           ),
@@ -453,7 +469,7 @@ class _PosScreenState extends State<PosScreen> {
                     height: 44,
                     child: OutlinedButton.icon(
                       onPressed: _cart.isEmpty ? null : _holdOrder,
-                      icon: const Icon(Icons.pause_circle_outline, size: 20),
+                      icon: const Icon(PhosphorIconsRegular.pauseCircle, size: 20),
                       label: const Text('تعليق الطلب'),
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(
@@ -554,8 +570,55 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
-  void _checkout() {
-    // TODO: create invoice and navigate to receipt
+  Future<void> _checkout() async {
+    // Save invoice to DB
+    final invoiceId = const Uuid().v4();
+    final invoice = {
+      'id': invoiceId,
+      'type': 'sale',
+      'payment_type': _paymentMethod,
+      'customer_id': null,
+      'supplier_id': null,
+      'subtotal': _subtotal,
+      'discount_rate': 0.0,
+      'discount_amount': _orderDiscount,
+      'tax_amount': _tax,
+      'total': _total,
+      'paid_amount': _paymentMethod == 'cash' || _paymentMethod == 'card' ? _total : 0.0,
+      'remaining': _paymentMethod == 'credit' ? _total : 0.0,
+      'status': _paymentMethod == 'credit' ? 'unpaid' : 'paid',
+      'cashier_id': null,
+      'warehouse_id': null,
+      'notes': null,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+    final items = _cart.map((item) => {
+      'invoice_id': invoiceId,
+      'product_id': item.productId,
+      'product_name': item.name,
+      'quantity': item.quantity,
+      'unit_price': item.unitPrice,
+      'total_price': item.total,
+      'notes': null,
+    }).toList();
+
+    final db = DatabaseHelper();
+    await db.insertInvoiceWithItems(invoice, items);
+
+    // Update product stock
+    for (final item in _cart) {
+      final productMap = await db.getProductById(item.productId);
+      if (productMap != null) {
+        final currentStock = (productMap['current_stock'] as num?)?.toDouble() ?? 0.0;
+        await db.updateProduct(item.productId, {
+          'current_stock': (currentStock - item.quantity).clamp(0.0, double.infinity),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+    }
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -653,7 +716,7 @@ class _PosScreenState extends State<PosScreen> {
                           });
                           Navigator.pop(ctx);
                         },
-                        icon: const Icon(Icons.restore,
+                        icon: const Icon(PhosphorIconsRegular.arrowCounterClockwise,
                             color: AppColors.primary),
                         tooltip: 'استرجاع',
                       ),
@@ -662,7 +725,7 @@ class _PosScreenState extends State<PosScreen> {
                           setState(() => _heldOrders.removeAt(idx));
                           Navigator.pop(ctx);
                         },
-                        icon: const Icon(Icons.delete_outline,
+                        icon: const Icon(PhosphorIconsRegular.trash,
                             color: AppColors.error),
                         tooltip: 'حذف',
                       ),
@@ -759,7 +822,7 @@ class _ProductCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.inventory_2_outlined,
+                  PhosphorIconsRegular.package,
                   color: AppColors.primary,
                   size: 22,
                 ),

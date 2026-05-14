@@ -10,6 +10,7 @@ class Customer {
   final String? notes;
   final double balance;
   final String? country;
+  final double creditLimit;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +26,7 @@ class Customer {
     this.notes,
     this.balance = 0.0,
     this.country,
+    this.creditLimit = 0.0,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : createdAt = createdAt ?? DateTime.now(),
@@ -43,6 +45,7 @@ class Customer {
       'notes': notes,
       'balance': balance,
       'country': country,
+      'credit_limit': creditLimit,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -61,6 +64,7 @@ class Customer {
       notes: map['notes'],
       balance: (map['balance'] ?? 0.0).toDouble(),
       country: map['country'],
+      creditLimit: (map['credit_limit'] ?? 0.0).toDouble(),
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
     );
@@ -69,7 +73,7 @@ class Customer {
   Customer copyWith({
     int? id, String? name, String? phone, String? address, String? address2,
     String? email, String? gender, String? notificationMethod, String? notes,
-    double? balance, String? country, DateTime? createdAt, DateTime? updatedAt,
+    double? balance, String? country, double? creditLimit, DateTime? createdAt, DateTime? updatedAt,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -83,6 +87,7 @@ class Customer {
       notes: notes ?? this.notes,
       balance: balance ?? this.balance,
       country: country ?? this.country,
+      creditLimit: creditLimit ?? this.creditLimit,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

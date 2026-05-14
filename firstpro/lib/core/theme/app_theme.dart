@@ -95,7 +95,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 1,
         shadowColor: isLight
-            ? Colors.black.withValues(alpha: 0.08)
+            ? Colors.black.withValues(alpha: 0.06)
             : Colors.black.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -107,7 +107,7 @@ class AppTheme {
 
       // ── Floating Action Button ──────────────────────────────
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.secondary,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(
@@ -465,14 +465,14 @@ class AppTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.horizontal(
             left: Radius.circular(20),
-          ), // RTL: will be mirrored automatically
+          ),
         ),
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  TEXT THEME
+  //  TEXT THEME – all styles include fontFamily: 'Cairo'
   // ══════════════════════════════════════════════════════════════
   static TextTheme _buildTextTheme(Brightness brightness) {
     final baseColor =
@@ -484,11 +484,9 @@ class AppTheme {
             ? AppColors.textSecondary
             : AppColors.darkTextSecondary;
 
-    // Use Cairo as the Arabic font family
     const fontFamily = 'Cairo';
 
     return TextTheme(
-      // ── Display ─────────────────────────────────────────────
       displayLarge: TextStyle(
         fontFamily: fontFamily, fontSize: 57,
         fontWeight: FontWeight.w400,
@@ -510,8 +508,6 @@ class AppTheme {
         letterSpacing: 0,
         color: baseColor,
       ),
-
-      // ── Headline ────────────────────────────────────────────
       headlineLarge: TextStyle(
         fontFamily: fontFamily, fontSize: 32,
         fontWeight: FontWeight.w600,
@@ -533,8 +529,6 @@ class AppTheme {
         letterSpacing: 0,
         color: baseColor,
       ),
-
-      // ── Title ───────────────────────────────────────────────
       titleLarge: TextStyle(
         fontFamily: fontFamily, fontSize: 22,
         fontWeight: FontWeight.w700,
@@ -543,60 +537,56 @@ class AppTheme {
         color: baseColor,
       ),
       titleMedium: TextStyle(
-        fontSize: 16,
+        fontFamily: fontFamily, fontSize: 16,
         fontWeight: FontWeight.w600,
         height: 1.50,
         letterSpacing: 0.15,
         color: baseColor,
       ),
       titleSmall: TextStyle(
-        fontSize: 14,
+        fontFamily: fontFamily, fontSize: 14,
         fontWeight: FontWeight.w600,
         height: 1.43,
         letterSpacing: 0.1,
         color: baseColor,
       ),
-
-      // ── Body ────────────────────────────────────────────────
       bodyLarge: TextStyle(
-        fontSize: 16,
+        fontFamily: fontFamily, fontSize: 16,
         fontWeight: FontWeight.w400,
         height: 1.50,
         letterSpacing: 0.5,
         color: baseColor,
       ),
       bodyMedium: TextStyle(
-        fontSize: 14,
+        fontFamily: fontFamily, fontSize: 14,
         fontWeight: FontWeight.w400,
         height: 1.43,
         letterSpacing: 0.25,
         color: baseColor,
       ),
       bodySmall: TextStyle(
-        fontSize: 12,
+        fontFamily: fontFamily, fontSize: 12,
         fontWeight: FontWeight.w400,
         height: 1.33,
         letterSpacing: 0.4,
         color: secondaryColor,
       ),
-
-      // ── Label ───────────────────────────────────────────────
       labelLarge: TextStyle(
-        fontSize: 14,
+        fontFamily: fontFamily, fontSize: 14,
         fontWeight: FontWeight.w600,
         height: 1.43,
         letterSpacing: 0.1,
         color: baseColor,
       ),
       labelMedium: TextStyle(
-        fontSize: 12,
+        fontFamily: fontFamily, fontSize: 12,
         fontWeight: FontWeight.w600,
         height: 1.33,
         letterSpacing: 0.5,
         color: secondaryColor,
       ),
       labelSmall: TextStyle(
-        fontSize: 11,
+        fontFamily: fontFamily, fontSize: 11,
         fontWeight: FontWeight.w500,
         height: 1.45,
         letterSpacing: 0.5,
