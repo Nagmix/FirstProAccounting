@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#1E6B23"/>
+      <stop offset="100%" stop-color="#145218"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D9B85C"/>
+      <stop offset="100%" stop-color="#B8943F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="72" fill="url(#bg)"/>
+
+  <!-- Subtle inner border -->
+  <rect x="14" y="14" width="484" height="484" rx="62" fill="none" stroke="#C9A84C" stroke-width="1" opacity="0.18"/>
+
+  <!-- FP Monogram -->
+  <g fill="url(#g)">
+    <!-- Vertical stem (shared by F and P) -->
+    <rect x="230" y="72" width="46" height="238" rx="5"/>
+
+    <!-- F: Top horizontal bar -->
+    <rect x="140" y="72" width="136" height="46" rx="5"/>
+
+    <!-- F: Middle horizontal bar -->
+    <rect x="140" y="194" width="96" height="40" rx="5"/>
+
+    <!-- P: Bowl with counter (hole) -->
+    <path fill-rule="evenodd" d="
+      M 276,118 L 318,118 A 56,74 0 0,1 318,266 L 276,266 Z
+      M 276,166 L 292,166 A 38,40 0 0,1 292,244 L 276,244 Z
+    "/>
+  </g>
+
+  <!-- Accent line -->
+  <line x1="182" y1="330" x2="330" y2="330" stroke="#C9A84C" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- Chart bars (ascending — accounting/growth motif) -->
+  <g fill="#C9A84C" opacity="0.3">
+    <rect x="190" y="376" width="24" height="22" rx="4"/>
+    <rect x="222" y="362" width="24" height="36" rx="4"/>
+    <rect x="254" y="348" width="24" height="50" rx="4"/>
+    <rect x="286" y="334" width="24" height="64" rx="4"/>
+    <rect x="318" y="342" width="24" height="56" rx="4"/>
+  </g>
+
+  <!-- Growth trend line -->
+  <polyline points="202,372 234,358 266,344 298,330 330,338"
+            fill="none" stroke="#C9A84C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+
+  <!-- Brand name -->
+  <text x="256" y="438" text-anchor="middle"
+        font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif"
+        font-size="36" font-weight="700" fill="#C9A84C" letter-spacing="2">FirstPro</text>
+
+  <!-- Arabic subtitle -->
+  <text x="256" y="468" text-anchor="middle"
+        font-family="'Segoe UI','Noto Sans Arabic',Arial,sans-serif"
+        font-size="17" fill="#C9A84C" opacity="0.55" letter-spacing="0.5">الأول برو المحاسبي</text>
+</svg>

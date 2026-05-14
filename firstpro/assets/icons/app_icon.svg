@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#1E6B23"/>
+      <stop offset="100%" stop-color="#145218"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D9B85C"/>
+      <stop offset="100%" stop-color="#B8943F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="72" fill="url(#bg)"/>
+
+  <!-- Subtle inner border -->
+  <rect x="14" y="14" width="484" height="484" rx="62" fill="none" stroke="#C9A84C" stroke-width="1" opacity="0.15"/>
+
+  <!-- FP Monogram (larger, centered for app icon) -->
+  <g fill="url(#g)">
+    <!-- Vertical stem -->
+    <rect x="226" y="68" width="52" height="286" rx="6"/>
+
+    <!-- F: Top horizontal bar -->
+    <rect x="120" y="68" width="158" height="54" rx="6"/>
+
+    <!-- F: Middle horizontal bar -->
+    <rect x="120" y="208" width="114" height="46" rx="6"/>
+
+    <!-- P: Bowl with counter (hole) -->
+    <path fill-rule="evenodd" d="
+      M 278,122 L 326,122 A 62,82 0 0,1 326,286 L 278,286 Z
+      M 278,172 L 298,172 A 44,50 0 0,1 298,272 L 278,272 Z
+    "/>
+  </g>
+
+  <!-- Small chart bars (subtle accent at bottom) -->
+  <g fill="#C9A84C" opacity="0.25">
+    <rect x="194" y="398" width="20" height="18" rx="3"/>
+    <rect x="222" y="386" width="20" height="30" rx="3"/>
+    <rect x="250" y="374" width="20" height="42" rx="3"/>
+    <rect x="278" y="364" width="20" height="52" rx="3"/>
+    <rect x="306" y="372" width="20" height="44" rx="3"/>
+  </g>
+</svg>
