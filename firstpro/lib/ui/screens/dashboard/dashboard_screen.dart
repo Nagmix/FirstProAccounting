@@ -335,10 +335,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  QUICK ACTIONS (3×4 grid – 12 items)
+  //  QUICK ACTIONS - Categorized sections
   // ══════════════════════════════════════════════════════════════════
   Widget _buildQuickActions(BuildContext context) {
-    final actions = [
+    // Main services (always visible on home)
+    final mainServices = [
       _QuickActionData(
         label: 'فاتورة بيع',
         icon: PhosphorIconsFill.receipt,
@@ -370,7 +371,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         route: AppConstants.suppliers,
       ),
       _QuickActionData(
-        label: 'المنتجات والمخزون',
+        label: 'المنتجات',
         icon: PhosphorIconsFill.package,
         color: AppColors.accentOrange,
         route: AppConstants.products,
@@ -382,7 +383,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         route: AppConstants.expenses,
       ),
       _QuickActionData(
-        label: 'الصناديق والبنوك',
+        label: 'الصناديق',
         icon: PhosphorIconsFill.vault,
         color: AppColors.accentGreen,
         route: AppConstants.cashBoxes,
@@ -393,6 +394,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppColors.primaryLight,
         route: AppConstants.chartOfAccounts,
       ),
+    ];
+
+    // Financial & Analytics services
+    final financialServices = [
       _QuickActionData(
         label: 'التقارير',
         icon: PhosphorIconsFill.chartBar,
@@ -411,27 +416,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppColors.warning,
         route: AppConstants.employees,
       ),
+      _QuickActionData(
+        label: 'المستودعات',
+        icon: PhosphorIconsFill.warehouse,
+        color: AppColors.secondaryDark,
+        route: AppConstants.warehouses,
+      ),
+      _QuickActionData(
+        label: 'العملات',
+        icon: PhosphorIconsFill.coins,
+        color: AppColors.success,
+        route: AppConstants.currencies,
+      ),
+      _QuickActionData(
+        label: 'الإعدادات',
+        icon: PhosphorIconsFill.gear,
+        color: AppColors.textSecondary,
+        route: AppConstants.settings,
+      ),
     ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: GridView.count(
-        crossAxisCount: 3,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 0.85,
-        children: actions
-            .map(
-              (a) => QuickActionButton(
-                label: a.label,
-                icon: a.icon,
-                color: a.color,
-                onTap: () => AppRouter.push(context, a.route),
-              ),
-            )
-            .toList(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main services grid
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.85,
+            children: mainServices
+                .map(
+                  (a) => QuickActionButton(
+                    label: a.label,
+                    icon: a.icon,
+                    color: a.color,
+                    onTap: () => AppRouter.push(context, a.route),
+                  ),
+                )
+                .toList(),
+          ),
+
+          // Financial & Analytics section title
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 3,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryLight],
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'المالية والتحليلات',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Financial services grid
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.85,
+            children: financialServices
+                .map(
+                  (a) => QuickActionButton(
+                    label: a.label,
+                    icon: a.icon,
+                    color: a.color,
+                    onTap: () => AppRouter.push(context, a.route),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
       ),
     );
   }

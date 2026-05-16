@@ -89,7 +89,11 @@ class CustomBottomBar extends StatelessWidget {
               // ── Center FAB ───────────────────────────────────────
               Positioned(
                 top: 0,
-                child: CenterFabButton(onTap: onFabTap),
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: CenterFabButton(onTap: onFabTap),
+                ),
               ),
             ],
           ),
