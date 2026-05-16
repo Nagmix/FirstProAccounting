@@ -232,3 +232,125 @@
 
 ### Git Commit
 - `8a3c04a` - "إعادة تصميم شاشة المصروفات مع حسابات المصروفات والعمليات المالية"
+
+---
+
+## Task 7 - Verify Accounting Operations and Fix Compilation Errors
+**Date:** 2026-03-05
+**Agent:** Code Agent
+
+### Changes Made
+
+#### 1. Fixed Compilation Errors
+
+**Added `path_provider` dependency** (`pubspec.yaml`):
+- Added `path_provider: ^2.1.1` as a direct dependency
+- This fixes 3 `uri_does_not_exist` errors and 2 `undefined_method` errors for `getApplicationDocumentsDirectory()`
+- Affected files: `add_expense_screen.dart`, `expense_account_detail_screen.dart`, `create_invoice_screen.dart`
+
+**Fixed `XFile.copy()` undefined method** (`create_invoice_screen.dart`):
+- Replaced `image.copy(newPath)` with `File(image.path).copy(newPath)`
+- The `copy()` method doesn't exist on `XFile`; must use `dart:io` `File.copy()` instead
+
+**Added missing `getEmployees()` method** (`database_helper.dart`):
+- Added as an alias for `getAllEmployees()` to satisfy the required API
+- Some screens reference `getEmployees()` by name
+
+#### 2. Fixed `saveExpenseWithJournalEntry` Method
+
+**Updated to support both operation types** (`database_helper.dart`):
+- Previously only handled صرف (disburse): debit expense, credit cash
+- Now also handles قبض (receive): debit cash, credit expense
+- Reads `operation_type` from expenseMap (defaults to 'صرف')
+- Updates cash box balance correctly for both operation types (+ for قبض, - for صرف)
+- Uses currency-specific account codes for expense and cash/bank accounts
+
+#### 3. Fixed `add_expense_screen.dart` Issues
+
+- Removed `db_instance` global variable (non-camelCase naming)
+- Replaced with `DatabaseHelper().database` inline call
+- Commented out unused `_existingExpense` field and its assignments
+- Commented out unused `theme` and `isDark` local variables
+- Removed unused `app_constants.dart` import
+
+#### 4. Fixed `expense_account_detail_screen.dart` Issues
+
+- Removed unused imports: `dart:io`, `image_picker`, `path`, `path_provider`, `context_extensions`
+- Commented out unused `_expenses` field and its assignments
+- Commented out unused `isDebit` local variable
+
+#### 5. Fixed `expenses_screen.dart`
+
+- Removed unused import of `add_expense_screen.dart`
+
+#### 6. Fixed `create_invoice_screen.dart`
+
+- Added `// ignore: unused_element` comment for `_getEntityBalanceText` method (kept for future use)
+- Fixed `XFile.copy()` → `File(image.path).copy()`
+
+#### 7. Fixed `chart_of_accounts_screen.dart`
+
+- Removed unused import of `app_constants.dart`
+- Replaced `account_ledger_screen.dart` import with `app_router.dart` (which contains `pushAccountLedger`)
+
+#### 8. Fixed `add_account_sheet.dart`
+
+- Removed unused import of `app_constants.dart`
+- Added `// ignore: unused_local_variable` for `now` variable
+
+#### 9. Fixed Other Screens
+
+- `cash_boxes_screen.dart`: Removed unused `app_constants.dart` import
+- `statistics_screen.dart`: Removed unused `app_constants.dart` import; commented out unused `_customerCount` and `_supplierCount` fields; commented out `suppliers` local variable
+- `employees_screen.dart`: Removed unused `app_constants.dart` import; removed unused `empAccounts` variable; removed unused `empId` variable
+- `main_scaffold.dart`: Removed unused `isDark` local variable in `_MoreTab`
+
+#### 10. Verified Accounting Operations
+
+**Invoice Journal Entries** (currency-specific):
+- YER accounts use code offset 0 (e.g., 4100 for Sales, 3100 for Purchases)
+- SAR accounts use code offset 1 (e.g., 4101, 3101)
+- USD accounts use code offset 2 (e.g., 4102, 3102)
+- Sale: Debit Customer/Cash (1200+offset / 1100+offset), Credit Sales (4100+offset)
+- Purchase: Debit Purchases (3100+offset), Credit Cash/Supplier (1100+offset / 2100+offset)
+- Transport: Debit Transport (5200+offset), Credit Cash (1100+offset)
+
+**Expense Journal Entries** (currency-specific):
+- صرف (disburse): Debit Expense (5000+offset), Credit Cash/Bank (1100+offset)
+- قبض (receive): Debit Cash/Bank (1100+offset), Credit Expense (5000+offset)
+- Cash box balance updated accordingly
+
+#### 11. Verified All Required Database Methods
+
+All 28 required methods confirmed present in `database_helper.dart`:
+- `getExpenseAccounts()` ✅ | `getExpensesByAccountId()` ✅ | `getAccountTransactions()` ✅
+- `getAccountBalance()` ✅ | `createExpenseAccount()` ✅ | `getAccountsByType()` ✅
+- `getAccountsByCurrency()` ✅ | `saveExpenseWithJournalEntry()` ✅ | `saveInvoiceWithJournalEntries()` ✅
+- `getTotalSalesForDate()` ✅ | `getInvoiceCountForDate()` ✅ | `getTotalSalesThisMonth()` ✅
+- `getTotalPurchasesThisMonth()` ✅ | `getCustomerCount()` ✅ | `getCashBalance()` ✅
+- `getRecentInvoices()` ✅ | `getExpenseById()` ✅ | `getAllExpenses()` ✅
+- `getTotalExpensesThisMonth()` ✅ | `getTotalExpensesForDate()` ✅ | `getTotalExpensesByCategory()` ✅
+- `updateExpense()` ✅ | `insertEmployee()` ✅ | `updateEmployee()` ✅
+- `deleteEmployee()` ✅ | `getEmployees()` ✅ (newly added)
+
+### Files Modified
+- `pubspec.yaml`
+- `lib/data/datasources/database_helper.dart`
+- `lib/ui/screens/invoices/create_invoice_screen.dart`
+- `lib/ui/screens/expenses/add_expense_screen.dart`
+- `lib/ui/screens/expenses/expense_account_detail_screen.dart`
+- `lib/ui/screens/expenses/expenses_screen.dart`
+- `lib/ui/screens/accounts/add_account_sheet.dart`
+- `lib/ui/screens/accounts/chart_of_accounts_screen.dart`
+- `lib/ui/screens/cash_boxes/cash_boxes_screen.dart`
+- `lib/ui/screens/employees/employees_screen.dart`
+- `lib/ui/screens/statistics/statistics_screen.dart`
+- `lib/ui/navigation/main_scaffold.dart`
+
+### Analysis Results
+- **Errors**: 0 (down from 7)
+- **Warnings**: 3 (down from 14) — only minor unused local variables remain
+- **Info**: 72 (mostly deprecation notices for Flutter 3.41+ API changes)
+
+### Git Commit
+- `fc0aa74` - "فحص وإصلاح العمليات المحاسبية والأخطاء البرمجية"
