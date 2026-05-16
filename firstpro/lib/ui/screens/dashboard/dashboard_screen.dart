@@ -17,8 +17,8 @@ import '../../widgets/transaction_tile.dart';
 ///
 /// Layout (all RTL):
 /// 1. Gradient Header – greeting + date + today's sales summary
-/// 2. Quick-action grid (3 × 3) with animated entry
-/// 3. Statistics cards (2 × 2) with accent bars
+/// 2. Quick-action grid with all services
+/// 3. Statistics cards (2 × 2)
 /// 4. Recent transactions list
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -95,30 +95,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // ── Gradient Header ──────────────────────────────────
             SliverToBoxAdapter(child: _buildHeader(context, isDark)),
 
-            // ── Quick actions ────────────────────────────────────
+            // ── Main services ────────────────────────────────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
                 delay: const Duration(milliseconds: 100),
-                child: _buildSectionTitle(context, 'إجراءات سريعة'),
+                child: _buildSectionTitle(context, 'الخدمات الرئيسية'),
               ),
             ),
             SliverToBoxAdapter(
               child: AnimatedEntry(
+                delay: const Duration(milliseconds: 150),
+                child: _buildMainServices(context),
+              ),
+            ),
+
+            // ── Financial & Analytics ─────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
                 delay: const Duration(milliseconds: 200),
-                child: _buildQuickActions(context),
+                child: _buildSectionTitle(context, 'المالية والتحليلات'),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 250),
+                child: _buildFinancialServices(context),
+              ),
+            ),
+
+            // ── Management & Settings ─────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 300),
+                child: _buildSectionTitle(context, 'الإدارة'),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 350),
+                child: _buildManagementServices(context),
               ),
             ),
 
             // ── Statistics ───────────────────────────────────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
-                delay: const Duration(milliseconds: 300),
+                delay: const Duration(milliseconds: 400),
                 child: _buildSectionTitle(context, 'الإحصائيات'),
               ),
             ),
             SliverToBoxAdapter(
               child: AnimatedEntry(
-                delay: const Duration(milliseconds: 400),
+                delay: const Duration(milliseconds: 450),
                 child: _buildStatCards(context, isDark),
               ),
             ),
@@ -133,7 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildRecentTransactions(context, isDark),
 
             // ── Bottom spacing ───────────────────────────────────
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
       ),
@@ -335,10 +363,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  QUICK ACTIONS - Categorized sections
+  //  MAIN SERVICES - Primary actions always visible
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildQuickActions(BuildContext context) {
-    // Main services (always visible on home)
+  Widget _buildMainServices(BuildContext context) {
     final mainServices = [
       _QuickActionData(
         label: 'فاتورة بيع',
@@ -383,21 +410,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
         route: AppConstants.expenses,
       ),
       _QuickActionData(
+        label: 'الفواتير',
+        icon: PhosphorIconsFill.invoice,
+        color: AppColors.primary,
+        route: AppConstants.invoices,
+      ),
+      _QuickActionData(
         label: 'الصناديق',
         icon: PhosphorIconsFill.vault,
         color: AppColors.accentGreen,
         route: AppConstants.cashBoxes,
       ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 0.85,
+        children: mainServices
+            .map(
+              (a) => QuickActionButton(
+                label: a.label,
+                icon: a.icon,
+                color: a.color,
+                onTap: () => AppRouter.push(context, a.route),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  FINANCIAL & ANALYTICS SERVICES
+  // ══════════════════════════════════════════════════════════════════
+  Widget _buildFinancialServices(BuildContext context) {
+    final services = [
       _QuickActionData(
         label: 'دليل الحسابات',
         icon: PhosphorIconsFill.chartPie,
         color: AppColors.primaryLight,
         route: AppConstants.chartOfAccounts,
       ),
-    ];
-
-    // Financial & Analytics services
-    final financialServices = [
       _QuickActionData(
         label: 'التقارير',
         icon: PhosphorIconsFill.chartBar,
@@ -410,6 +469,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: const Color(0xFF7B1FA2),
         route: AppConstants.statistics,
       ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 0.85,
+        children: services
+            .map(
+              (a) => QuickActionButton(
+                label: a.label,
+                icon: a.icon,
+                color: a.color,
+                onTap: () => AppRouter.push(context, a.route),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  MANAGEMENT SERVICES
+  // ══════════════════════════════════════════════════════════════════
+  Widget _buildManagementServices(BuildContext context) {
+    final services = [
       _QuickActionData(
         label: 'الموظفين',
         icon: PhosphorIconsFill.user,
@@ -434,82 +523,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppColors.textSecondary,
         route: AppConstants.settings,
       ),
+      _QuickActionData(
+        label: 'الدعم الفني',
+        icon: PhosphorIconsFill.headset,
+        color: AppColors.warning,
+        route: AppConstants.support,
+      ),
     ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Main services grid
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 0.85,
-            children: mainServices
-                .map(
-                  (a) => QuickActionButton(
-                    label: a.label,
-                    icon: a.icon,
-                    color: a.color,
-                    onTap: () => AppRouter.push(context, a.route),
-                  ),
-                )
-                .toList(),
-          ),
-
-          // Financial & Analytics section title
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                Container(
-                  width: 3,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryLight],
-                    ),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'المالية والتحليلات',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Financial services grid
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 0.85,
-            children: financialServices
-                .map(
-                  (a) => QuickActionButton(
-                    label: a.label,
-                    icon: a.icon,
-                    color: a.color,
-                    onTap: () => AppRouter.push(context, a.route),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
+      child: GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 0.85,
+        children: services
+            .map(
+              (a) => QuickActionButton(
+                label: a.label,
+                icon: a.icon,
+                color: a.color,
+                onTap: () => AppRouter.push(context, a.route),
+              ),
+            )
+            .toList(),
       ),
     );
   }
