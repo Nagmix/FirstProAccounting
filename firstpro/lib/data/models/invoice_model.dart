@@ -2,7 +2,7 @@ class Invoice {
   final String id;
   final String type;
   final String paymentMechanism; // 'cash' or 'credit'
-  final String paymentMethod; // 'cash', 'check', 'transfer', 'bank'
+  final String paymentMethod; // 'cash', 'check', 'transfer', 'bank', 'ewallet', 'bank_transfer'
   final bool isReturn;
   final int? cashBoxId;
   final int? customerId;
@@ -21,6 +21,10 @@ class Invoice {
   final String currency;
   final double exchangeRate;
   final double transportCharges;
+  final String? ewalletProvider;
+  final String? bankTransferProvider;
+  final String? transferNumber;
+  final String? attachmentPath;
   final DateTime createdAt;
 
   Invoice({
@@ -46,6 +50,10 @@ class Invoice {
     this.currency = 'YER',
     this.exchangeRate = 1.0,
     this.transportCharges = 0.0,
+    this.ewalletProvider,
+    this.bankTransferProvider,
+    this.transferNumber,
+    this.attachmentPath,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -81,6 +89,10 @@ class Invoice {
       'currency': currency,
       'exchange_rate': exchangeRate,
       'transport_charges': transportCharges,
+      'ewallet_provider': ewalletProvider,
+      'bank_transfer_provider': bankTransferProvider,
+      'transfer_number': transferNumber,
+      'attachment_path': attachmentPath,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -109,6 +121,10 @@ class Invoice {
       currency: map['currency'] ?? 'YER',
       exchangeRate: (map['exchange_rate'] ?? 1.0).toDouble(),
       transportCharges: (map['transport_charges'] ?? 0.0).toDouble(),
+      ewalletProvider: map['ewallet_provider'],
+      bankTransferProvider: map['bank_transfer_provider'],
+      transferNumber: map['transfer_number'],
+      attachmentPath: map['attachment_path'],
       createdAt: DateTime.parse(map['created_at']),
     );
   }
@@ -119,7 +135,10 @@ class Invoice {
     double? subtotal, double? discountRate, double? discountAmount,
     double? taxAmount, double? total, double? paidAmount, double? remaining,
     String? status, int? cashierId, int? warehouseId, String? notes,
-    String? currency, double? exchangeRate, double? transportCharges, DateTime? createdAt,
+    String? currency, double? exchangeRate, double? transportCharges,
+    String? ewalletProvider, String? bankTransferProvider,
+    String? transferNumber, String? attachmentPath,
+    DateTime? createdAt,
   }) {
     return Invoice(
       id: id ?? this.id, type: type ?? this.type,
@@ -135,6 +154,10 @@ class Invoice {
       notes: notes ?? this.notes, currency: currency ?? this.currency,
       exchangeRate: exchangeRate ?? this.exchangeRate, 
       transportCharges: transportCharges ?? this.transportCharges,
+      ewalletProvider: ewalletProvider ?? this.ewalletProvider,
+      bankTransferProvider: bankTransferProvider ?? this.bankTransferProvider,
+      transferNumber: transferNumber ?? this.transferNumber,
+      attachmentPath: attachmentPath ?? this.attachmentPath,
       createdAt: createdAt ?? this.createdAt,
     );
   }

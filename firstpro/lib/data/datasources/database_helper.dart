@@ -8,7 +8,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  static const int _databaseVersion = 6;
+  static const int _databaseVersion = 7;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -137,6 +137,10 @@ class DatabaseHelper {
         currency TEXT NOT NULL DEFAULT 'YER',
         exchange_rate REAL NOT NULL DEFAULT 1.0,
         transport_charges REAL NOT NULL DEFAULT 0.0,
+        ewallet_provider TEXT,
+        bank_transfer_provider TEXT,
+        transfer_number TEXT,
+        attachment_path TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (customer_id) REFERENCES customers (id),
         FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
@@ -659,6 +663,13 @@ class DatabaseHelper {
       await _seedAccountsForCurrency(db, 'YER', 'ر.ي', 0);
       await _seedAccountsForCurrency(db, 'SAR', 'ر.س', 1);
       await _seedAccountsForCurrency(db, 'USD', r'$', 2);
+    }
+    if (oldVersion < 7) {
+      // Add e-wallet and bank transfer columns to invoices
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN ewallet_provider TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN bank_transfer_provider TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN transfer_number TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN attachment_path TEXT'); } catch (_) {}
     }
   }
 
