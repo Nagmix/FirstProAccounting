@@ -5,7 +5,6 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
-import 'add_expense_screen.dart';
 import 'expense_account_detail_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {

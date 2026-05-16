@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -49,7 +48,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   bool _isLoading = true;
   bool _isEditing = false;
 
-  Map<String, dynamic>? _existingExpense;
+  // Map<String, dynamic>? _existingExpense; // Used in _loadData for editing
 
   @override
   void initState() {
@@ -77,7 +76,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       final expense = await db2.getExpenseById(widget.expenseId!);
       if (expense != null) {
         setState(() {
-          _existingExpense = expense;
+          // _existingExpense = expense;
           _titleController.text = expense['title'] as String? ?? '';
           _amountController.text = (expense['amount'] as num?)?.toDouble().toStringAsFixed(2) ?? '';
           _selectedCurrency = expense['currency'] as String? ?? 'YER';
@@ -170,8 +169,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    // final theme = Theme.of(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Directionality(
@@ -780,7 +778,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   Future<void> _saveExpenseWithAccountTransaction(Map<String, dynamic> expenseMap, int? expenseAccountId) async {
-    final db = await db_instance.database;
+    final db = await DatabaseHelper().database;
     final amountBase = (expenseMap['amount_base'] as num?)?.toDouble() ?? 0.0;
     final now = DateTime.now().toIso8601String();
 
@@ -912,6 +910,3 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     });
   }
 }
-
-// Helper to access the DatabaseHelper instance
-final db_instance = DatabaseHelper();

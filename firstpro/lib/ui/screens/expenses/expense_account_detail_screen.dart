@@ -1,12 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-
-import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -24,7 +17,7 @@ class ExpenseAccountDetailScreen extends StatefulWidget {
 
 class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen> {
   List<Map<String, dynamic>> _transactions = [];
-  List<Map<String, dynamic>> _expenses = [];
+  // List<Map<String, dynamic>> _expenses = [];
   bool _isLoading = true;
   double _currentBalance = 0.0;
   double _totalDebit = 0.0;
@@ -64,7 +57,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
 
     setState(() {
       _transactions = results[0];
-      _expenses = results[1];
+      // _expenses = results[1];
       _totalDebit = totalDebit;
       _totalCredit = totalCredit;
       _currentBalance = totalDebit - totalCredit;
@@ -409,7 +402,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
 
     final formattedDate = txDate != null ? DateFormatter.formatDate(txDate) : '';
     final formattedTime = txDate != null ? DateFormatter.formatTime(txDate) : '';
-    final isDebit = debit > 0;
+    // final isDebit = debit > 0;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

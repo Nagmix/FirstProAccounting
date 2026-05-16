@@ -436,13 +436,13 @@ class DatabaseHelper {
       final codeOffset = config[2] as int;
 
       for (final template in templates) {
-        final baseCode = int.parse(template[2] as String);
+        final baseCode = int.parse(template[2]);
         final actualCode = (baseCode + codeOffset).toString();
         final account = makeAccount(
-          template[0] as String,
-          template[1] as String,
+          template[0],
+          template[1],
           actualCode,
-          template[3] as String,
+          template[3],
           currencyCode,
           currencySymbol,
         );
@@ -1234,11 +1234,13 @@ class DatabaseHelper {
     return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
-  /// Save expense with journal entry: Debit expense account, Credit cash/bank.
+  /// Save expense with journal entry.
+  /// Supports operation_type: 'صرف' (disburse - debit expense, credit cash) or 'قبض' (receive - debit cash, credit expense).
   Future<void> saveExpenseWithJournalEntry(Map<String, dynamic> expenseMap) async {
     final db = await database;
     final amountBase = (expenseMap['amount_base'] as num?)?.toDouble() ?? 0.0;
     final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
+    final operationType = (expenseMap['operation_type'] as String?) ?? 'صرف';
     final now = DateTime.now().toIso8601String();
 
     await db.transaction((txn) async {
@@ -1253,69 +1255,94 @@ class DatabaseHelper {
 
       // Get expense account (code 5000+offset) or use provided account_id
       final expenseAccountId = expenseMap['account_id'] as int?;
-      int? debitAccountId = expenseAccountId;
+      int? expenseAccId = expenseAccountId;
 
-      if (debitAccountId == null) {
+      if (expenseAccId == null) {
         final expenseAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5000 + codeOffset).toString(), expenseCurrency], limit: 1);
-        debitAccountId = expenseAccount.isNotEmpty ? expenseAccount.first['id'] as int : null;
+        expenseAccId = expenseAccount.isNotEmpty ? expenseAccount.first['id'] as int : null;
       }
 
       // Get cash/bank account (code 1100+offset) or use cash box linked account
-      int? creditAccountId;
+      int? cashAccountId;
       final cashBoxId = expenseMap['cash_box_id'] as int?;
       if (cashBoxId != null) {
         final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
         if (cashBox.isNotEmpty) {
           final linkedAccountId = cashBox.first['linked_account_id'] as int?;
           if (linkedAccountId != null) {
-            creditAccountId = linkedAccountId;
+            cashAccountId = linkedAccountId;
           }
         }
       }
-      if (creditAccountId == null) {
+      if (cashAccountId == null) {
         final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), expenseCurrency], limit: 1);
-        creditAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
+        cashAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
       }
 
       final title = expenseMap['title'] as String? ?? 'مصروف';
+      final isSarf = operationType == 'صرف';
 
-      // Debit expense account
-      if (debitAccountId != null && amountBase > 0) {
-        await txn.insert('transactions', {
-          'account_id': debitAccountId,
-          'journal_id': journalId,
-          'debit': amountBase,
-          'credit': 0.0,
-          'description': 'مصروف: $title',
-          'date': now,
-          'created_at': now,
-        });
-      }
-
-      // Credit cash/bank account
-      if (creditAccountId != null && amountBase > 0) {
-        await txn.insert('transactions', {
-          'account_id': creditAccountId,
-          'journal_id': journalId,
-          'debit': 0.0,
-          'credit': amountBase,
-          'description': 'مصروف: $title',
-          'date': now,
-          'created_at': now,
-        });
-      }
-
-      // Update account balances
-      if (debitAccountId != null) {
-        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, debitAccountId]);
-      }
-      if (creditAccountId != null) {
-        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, creditAccountId]);
+      if (isSarf) {
+        // صرف (disburse): Debit expense account, Credit cash/bank
+        if (expenseAccId != null && amountBase > 0) {
+          await txn.insert('transactions', {
+            'account_id': expenseAccId,
+            'journal_id': journalId,
+            'debit': amountBase,
+            'credit': 0.0,
+            'description': 'مصروف: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, expenseAccId]);
+        }
+        if (cashAccountId != null && amountBase > 0) {
+          await txn.insert('transactions', {
+            'account_id': cashAccountId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': amountBase,
+            'description': 'مصروف: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, cashAccountId]);
+        }
+      } else {
+        // قبض (receive): Debit cash/bank, Credit expense account
+        if (cashAccountId != null && amountBase > 0) {
+          await txn.insert('transactions', {
+            'account_id': cashAccountId,
+            'journal_id': journalId,
+            'debit': amountBase,
+            'credit': 0.0,
+            'description': 'قبض: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, cashAccountId]);
+        }
+        if (expenseAccId != null && amountBase > 0) {
+          await txn.insert('transactions', {
+            'account_id': expenseAccId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': amountBase,
+            'description': 'قبض: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, expenseAccId]);
+        }
       }
 
       // Update cash box balance
       if (cashBoxId != null && amountBase > 0) {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+        if (isSarf) {
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+        } else {
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+        }
       }
     });
   }
@@ -1580,6 +1607,11 @@ class DatabaseHelper {
   Future<int> deleteEmployee(int id) async {
     final db = await database;
     return await db.delete('employees', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Alias for getAllEmployees - used by some screens
+  Future<List<Map<String, dynamic>>> getEmployees() async {
+    return getAllEmployees();
   }
 
   // ══════════════════════════════════════════════════════════════

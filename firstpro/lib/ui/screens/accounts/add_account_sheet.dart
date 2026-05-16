@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/account_model.dart';
@@ -75,6 +74,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     setState(() => _isSaving = true);
 
     final now = DateTime.now().toIso8601String();
+    // ignore: unused_local_variable
     final account = Account(
       id: widget.existing?.id,
       nameAr: _nameController.text.trim(),

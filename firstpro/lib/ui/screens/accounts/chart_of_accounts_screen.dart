@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/account_model.dart';
 import 'add_account_sheet.dart';
 import '../../../ui/navigation/app_router.dart';
-import 'account_ledger_screen.dart';
 
 class ChartOfAccountsScreen extends StatefulWidget {
   const ChartOfAccountsScreen({super.key});

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -18,7 +16,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _filteredEmployees = [];
   bool _isLoading = true;
-  String _searchQuery = '';
+  String _searchQuery = ''; // Used in filter
 
   @override
   void initState() {
@@ -389,7 +387,6 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     // Get the employee account for this currency
     int? accountId;
     final accounts = await db.getAccountsByCurrency(_currency);
-    final empAccounts = accounts.where((a) => a['account_code']?.toString().endsWith('100') == true && a['name_ar']?.toString().contains('الموظفين') == true);
     // Try to find account code like 5100/5101/5102 based on currency
     int accountCodeSuffix = _currency == 'YER' ? 5100 : (_currency == 'SAR' ? 5101 : 5102);
     final empAccount = accounts.where((a) => a['account_code'] == accountCodeSuffix.toString()).firstOrNull;
@@ -414,7 +411,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       await db.updateEmployee(widget.employee!['id'] as int, data);
     } else {
       data['created_at'] = now;
-      final empId = await db.insertEmployee(data);
+      await db.insertEmployee(data);
 
       // If opening balance > 0, post journal entry
       if (balance > 0 && accountId != null) {

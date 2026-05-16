@@ -129,6 +129,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   double get _paidAmount => double.tryParse(_paidController.text) ?? 0;
   double get _remaining => _total - _paidAmount;
 
+  // Unused but kept for potential future use
+  // ignore: unused_element
   String _getEntityBalanceText(int? entityId) {
     if (entityId == null) return '';
     final entities = _isSale ? _customers : _suppliers;
@@ -173,7 +175,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       }
       final fileName = 'inv_${DateTime.now().millisecondsSinceEpoch}${p.extension(image.path)}';
       final newPath = '${attachmentsDir.path}/$fileName';
-      await image.copy(newPath);
+      await File(image.path).copy(newPath);
       return newPath;
     } catch (e) {
       if (mounted) {

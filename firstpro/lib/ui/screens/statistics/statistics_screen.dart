@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -22,8 +21,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   double _monthSales = 0.0;
   double _monthPurchases = 0.0;
   double _monthExpenses = 0.0;
-  int _customerCount = 0;
-  int _supplierCount = 0;
+  // int _customerCount = 0;
+  // int _supplierCount = 0;
   double _cashBalance = 0.0;
   List<Map<String, dynamic>> _topCustomers = [];
   List<Map<String, dynamic>> _recentActivity = [];
@@ -49,8 +48,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         db.getRecentInvoices(limit: 5),
       ]);
 
-      // Get supplier count
-      final suppliers = await db.getAllSuppliers();
+      // Get supplier count (for potential future use)
+      // final suppliers = await db.getAllSuppliers();
 
       // Get top customers by sales
       final dbInstance = await db.database;
@@ -80,10 +79,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           _monthSales = results[0] as double;
           _monthPurchases = results[1] as double;
           _monthExpenses = results[2] as double;
-          _customerCount = results[3] as int;
+          // _customerCount = results[3] as int;
           _cashBalance = results[4] as double;
           _recentActivity = results[5] as List<Map<String, dynamic>>;
-          _supplierCount = suppliers.length;
+          // _supplierCount = suppliers.length;
           _topCustomers = topCustomersResult;
           _currencyBreakdown = currencyBreakdownResult;
           _isLoading = false;
