@@ -16,6 +16,9 @@ class Expense {
   final String? notes;
   final bool isRecurring;
   final String? recurringPeriod;
+  final String? attachmentPath;
+  final String operationType; // 'قبض' or 'صرف'
+  final int? expenseAccountId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -37,6 +40,9 @@ class Expense {
     this.notes,
     this.isRecurring = false,
     this.recurringPeriod,
+    this.attachmentPath,
+    this.operationType = 'صرف',
+    this.expenseAccountId,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -85,6 +91,9 @@ class Expense {
       'notes': notes,
       'is_recurring': isRecurring ? 1 : 0,
       'recurring_period': recurringPeriod,
+      'attachment_path': attachmentPath,
+      'operation_type': operationType,
+      'expense_account_id': expenseAccountId,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -109,6 +118,9 @@ class Expense {
       notes: map['notes'],
       isRecurring: (map['is_recurring'] ?? 0) == 1,
       recurringPeriod: map['recurring_period'],
+      attachmentPath: map['attachment_path'],
+      operationType: map['operation_type'] ?? 'صرف',
+      expenseAccountId: map['expense_account_id'],
       createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
       updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : DateTime.now(),
     );
@@ -132,6 +144,9 @@ class Expense {
     String? notes,
     bool? isRecurring,
     String? recurringPeriod,
+    String? attachmentPath,
+    String? operationType,
+    int? expenseAccountId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -153,6 +168,9 @@ class Expense {
       notes: notes ?? this.notes,
       isRecurring: isRecurring ?? this.isRecurring,
       recurringPeriod: recurringPeriod ?? this.recurringPeriod,
+      attachmentPath: attachmentPath ?? this.attachmentPath,
+      operationType: operationType ?? this.operationType,
+      expenseAccountId: expenseAccountId ?? this.expenseAccountId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -65,3 +65,71 @@
 
 ### Git Commit
 - `7471c84` - "تحسين الشاشة الرئيسية وإصلاح شريط التنقل والإحصائيات"
+
+---
+
+## Task 5 - Add E-Wallets and Bank Transfers Payment Methods to Invoice Screen
+**Date:** 2026-03-05
+**Agent:** Code Agent
+
+### Changes Made
+
+#### 1. Database (`lib/data/datasources/database_helper.dart`)
+- Incremented `_databaseVersion` from 6 to 7
+- Added 4 new columns to the `invoices` table in `_onCreate`:
+  - `ewallet_provider TEXT` - the selected e-wallet provider name
+  - `bank_transfer_provider TEXT` - the selected bank transfer provider name
+  - `transfer_number TEXT` - the transfer reference number
+  - `attachment_path TEXT` - path to the receipt/attachment image
+- Added upgrade logic in `_onUpgrade` for `oldVersion < 7` with safe `ALTER TABLE` statements wrapped in try-catch
+
+#### 2. Invoice Model (`lib/data/models/invoice_model.dart`)
+- Added 4 new optional fields to the `Invoice` class:
+  - `ewalletProvider` (String?)
+  - `bankTransferProvider` (String?)
+  - `transferNumber` (String?)
+  - `attachmentPath` (String?)
+- Updated `toMap()`, `fromMap()`, and `copyWith()` to include the new fields
+- Updated `paymentMethod` comment to include 'ewallet' and 'bank_transfer'
+
+#### 3. Create Invoice Screen (`lib/ui/screens/invoices/create_invoice_screen.dart`)
+- Added imports: `dart:io`, `image_picker`, `path` (as p), `path_provider`
+- Added state variables:
+  - `_selectedEwalletProvider` (String?)
+  - `_selectedBankTransferProvider` (String?)
+  - `_attachmentPath` (String?)
+  - `_transferNumberController` (TextEditingController)
+- Added static provider lists:
+  - `_ewalletProviders`: جيب, فلوسك, كاش, ون كاش, جوالي, الكريمي, موبايل موني, محفظتي, شامل موني, سبأ كاش, ايزي, يمن والت, أخرى
+  - `_bankTransferProviders`: الامتياز, النجم, يمن اكسبرس, الحزمي اكسبرس, الاكوع كوني, السريع للحوالات, ياه موني, عامري كاش, الناصر اكسبرس, المحيط اكسبرس, تحويل, أخرى
+- Updated `_buildPaymentMethodSection()`:
+  - Added 2 new payment methods: 'ewallet' (محفظة إلكترونية, PhosphorIconsFill.wallet, AppColors.accentGreen) and 'bank_transfer' (حوالة مصرفية, PhosphorIconsFill.buildings, Color(0xFF6A1B9A))
+  - Changed layout from `Row` with `Expanded` to `GridView.count` with 3 columns (3x2 grid) and `childAspectRatio: 1.1`
+  - Updated `_PaymentMethodChip` to support `maxLines: 2` for longer labels
+- Added `_buildEwalletSection()`:
+  - Green-themed container with e-wallet provider dropdown
+  - Optional attachment buttons (gallery + camera)
+- Added `_buildBankTransferSection()`:
+  - Purple-themed container with bank transfer provider dropdown
+  - Optional transfer number text field
+  - Optional attachment buttons (gallery + camera) with label "رفق صورة الإشعار من المعرض"
+- Added `_buildAttachmentButtons()` shared widget:
+  - Shows preview of attached image with remove button
+  - Two buttons: gallery picker and camera picker
+- Added `_pickImageFromGallery()`, `_pickImageFromCamera()`, `_saveImageLocally()` helper methods
+  - Images saved to app documents directory under `/attachments/` subfolder
+- Updated `build()` to conditionally show `_buildEwalletSection()` and `_buildBankTransferSection()`
+- Updated `_saveInvoice()` to pass new fields (`ewalletProvider`, `bankTransferProvider`, `transferNumber`, `attachmentPath`) to the Invoice model
+- Provider selections and attachment reset when switching payment methods
+
+#### 4. Dependencies (`pubspec.yaml`)
+- Added `image_picker: ^1.0.4`
+
+### Files Modified
+- `lib/data/datasources/database_helper.dart`
+- `lib/data/models/invoice_model.dart`
+- `lib/ui/screens/invoices/create_invoice_screen.dart`
+- `pubspec.yaml`
+
+### Git Commit
+- `2f72c31` - "إضافة محافظ إلكترونية وحوالات مصرفية في الفواتير مع المرفقات"

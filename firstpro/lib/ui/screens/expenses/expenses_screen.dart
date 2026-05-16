@@ -3,11 +3,10 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
-import '../../../data/models/expense_model.dart';
 import 'add_expense_screen.dart';
+import 'expense_account_detail_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
@@ -17,15 +16,10 @@ class ExpensesScreen extends StatefulWidget {
 }
 
 class _ExpensesScreenState extends State<ExpensesScreen> {
-  List<Map<String, dynamic>> _expenses = [];
+  List<Map<String, dynamic>> _expenseAccounts = [];
   bool _isLoading = true;
-  double _totalThisMonth = 0.0;
-  double _totalToday = 0.0;
-  String _mostSpentCategory = '';
-  double _mostSpentAmount = 0.0;
-
-  String? _filterCategory;
-  String? _filterPaymentMethod;
+  double _totalExpenseBalance = 0.0;
+  int _totalAccounts = 0;
 
   @override
   void initState() {
@@ -35,83 +29,40 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
   Future<void> _loadData() async {
     final db = DatabaseHelper();
-    final now = DateTime.now();
+    final accounts = await db.getExpenseAccounts();
 
-    final results = await Future.wait([
-      db.getAllExpenses(),
-      db.getTotalExpensesThisMonth(),
-      db.getTotalExpensesForDate(now),
-    ]);
-
-    // Find most spent category this month
-    String topCategory = '';
-    double topAmount = 0.0;
-    for (final cat in Expense.categoriesAr.keys) {
-      final amount = await db.getTotalExpensesByCategory(cat);
-      if (amount > topAmount) {
-        topAmount = amount;
-        topCategory = cat;
+    double totalBalance = 0.0;
+    for (final account in accounts) {
+      final balance = (account['balance'] as num?)?.toDouble() ?? 0.0;
+      final balanceType = account['balance_type'] as String? ?? 'credit';
+      if (balanceType == 'credit') {
+        totalBalance += balance;
+      } else {
+        totalBalance -= balance;
       }
     }
 
     setState(() {
-      _expenses = results[0] as List<Map<String, dynamic>>;
-      _totalThisMonth = (results[1] as num?)?.toDouble() ?? 0.0;
-      _totalToday = (results[2] as num?)?.toDouble() ?? 0.0;
-      _mostSpentCategory = topCategory;
-      _mostSpentAmount = topAmount;
+      _expenseAccounts = accounts;
+      _totalExpenseBalance = totalBalance;
+      _totalAccounts = accounts.length;
       _isLoading = false;
     });
   }
 
-  List<Map<String, dynamic>> get _filteredExpenses {
-    var filtered = _expenses;
-    if (_filterCategory != null) {
-      filtered = filtered.where((e) => e['category'] == _filterCategory).toList();
-    }
-    if (_filterPaymentMethod != null) {
-      filtered = filtered.where((e) => e['payment_method'] == _filterPaymentMethod).toList();
-    }
-    return filtered;
-  }
-
-  IconData _getCategoryIcon(String? category) {
-    switch (category) {
-      case 'rent': return PhosphorIconsRegular.house;
-      case 'salary': return PhosphorIconsRegular.users;
-      case 'utility': return PhosphorIconsRegular.lightning;
-      case 'transport': return PhosphorIconsRegular.truck;
-      case 'office': return PhosphorIconsRegular.desktop;
-      case 'maintenance': return PhosphorIconsRegular.wrench;
-      case 'marketing': return PhosphorIconsRegular.megaphone;
-      case 'insurance': return PhosphorIconsRegular.shieldCheck;
-      case 'tax': return PhosphorIconsRegular.bank;
-      default: return PhosphorIconsRegular.currencyDollar;
+  String _getCurrencySymbol(String? currency) {
+    switch (currency) {
+      case 'SAR': return 'ر.س';
+      case 'USD': return r'$';
+      case 'YER': default: return 'ر.ي';
     }
   }
 
-  Color _getCategoryColor(String? category) {
-    switch (category) {
-      case 'rent': return AppColors.accentBlue;
-      case 'salary': return AppColors.accentGreen;
-      case 'utility': return AppColors.warning;
-      case 'transport': return AppColors.accentOrange;
-      case 'office': return AppColors.info;
-      case 'maintenance': return AppColors.accentPink;
-      case 'marketing': return AppColors.primary;
-      case 'insurance': return AppColors.success;
-      case 'tax': return AppColors.error;
-      default: return AppColors.textSecondary;
-    }
-  }
-
-  String _getPaymentMethodAr(String? method) {
-    switch (method) {
-      case 'cash': return 'نقدي';
-      case 'check': return 'شيك';
-      case 'transfer': return 'حوالة';
-      case 'bank': return 'بنك';
-      default: return 'نقدي';
+  Color _getCurrencyColor(String? currency) {
+    switch (currency) {
+      case 'SAR': return AppColors.accentGreen;
+      case 'USD': return AppColors.accentOrange;
+      case 'YER': default: return AppColors.primary;
     }
   }
 
@@ -125,39 +76,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('المصروفات'),
-          actions: [
-            PopupMenuButton<String>(
-              icon: const Icon(PhosphorIconsRegular.funnel),
-              tooltip: 'تصفية',
-              onSelected: (value) {
-                if (value == 'clear') {
-                  setState(() {
-                    _filterCategory = null;
-                    _filterPaymentMethod = null;
-                  });
-                } else if (value.startsWith('cat:')) {
-                  setState(() => _filterCategory = value.substring(4));
-                } else if (value.startsWith('pay:')) {
-                  setState(() => _filterPaymentMethod = value.substring(4));
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'clear', child: Text('إلغاء التصفية')),
-                const PopupMenuDivider(),
-                const PopupMenuItem(enabled: false, child: Text('التصنيف:', style: TextStyle(fontWeight: FontWeight.w700))),
-                ...Expense.categoriesAr.entries.map((e) =>
-                  PopupMenuItem(value: 'cat:${e.key}', child: Text(e.value)),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(enabled: false, child: Text('طريقة الدفع:', style: TextStyle(fontWeight: FontWeight.w700))),
-                const PopupMenuItem(value: 'pay:cash', child: Text('نقدي')),
-                const PopupMenuItem(value: 'pay:check', child: Text('شيك')),
-                const PopupMenuItem(value: 'pay:transfer', child: Text('حوالة')),
-                const PopupMenuItem(value: 'pay:bank', child: Text('بنك')),
-              ],
-            ),
-          ],
+          title: const Text('حسابات المصروفات'),
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -165,23 +84,19 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 onRefresh: _loadData,
                 child: CustomScrollView(
                   slivers: [
-                    // Summary cards
-                    SliverToBoxAdapter(child: _buildSummaryCards(theme, isDark)),
+                    // Summary header
+                    SliverToBoxAdapter(child: _buildSummaryHeader(theme, isDark)),
 
-                    // Active filters
-                    if (_filterCategory != null || _filterPaymentMethod != null)
-                      SliverToBoxAdapter(child: _buildActiveFilters()),
-
-                    // Expenses list
-                    _filteredExpenses.isEmpty
+                    // Expense accounts list
+                    _expenseAccounts.isEmpty
                         ? SliverFillRemaining(
                             hasScrollBody: false,
                             child: _buildEmptyState(theme),
                           )
                         : SliverList(
                             delegate: SliverChildBuilderDelegate(
-                              (context, index) => _buildExpenseCard(_filteredExpenses[index], theme, isDark),
-                              childCount: _filteredExpenses.length,
+                              (context, index) => _buildExpenseAccountCard(_expenseAccounts[index], theme, isDark),
+                              childCount: _expenseAccounts.length,
                             ),
                           ),
 
@@ -191,7 +106,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 ),
               ),
         floatingActionButton: FloatingActionButton(
-          onPressed: _navigateToAddExpense,
+          onPressed: _showAddExpenseAccountDialog,
           backgroundColor: AppColors.primary,
           child: const Icon(PhosphorIconsFill.plus, color: Colors.white),
         ),
@@ -199,84 +114,132 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  Widget _buildSummaryCards(ThemeData theme, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: _SummaryCard(
-              title: 'مصروفات الشهر',
-              value: CurrencyFormatter.format(_totalThisMonth),
-              icon: PhosphorIconsRegular.chartLine,
-              color: AppColors.error,
-              isDark: isDark,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _SummaryCard(
-              title: 'مصروفات اليوم',
-              value: CurrencyFormatter.format(_totalToday),
-              icon: PhosphorIconsRegular.calendarBlank,
-              color: AppColors.accentOrange,
-              isDark: isDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActiveFilters() {
+  Widget _buildSummaryHeader(ThemeData theme, bool isDark) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(PhosphorIconsRegular.funnel, size: 16, color: AppColors.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Wrap(
-              spacing: 8,
-              children: [
-                if (_filterCategory != null)
-                  Chip(
-                    label: Text(Expense.getCategoryAr(_filterCategory), style: const TextStyle(fontSize: 12)),
-                    onDeleted: () => setState(() => _filterCategory = null),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                if (_filterPaymentMethod != null)
-                  Chip(
-                    label: Text(_getPaymentMethodAr(_filterPaymentMethod), style: const TextStyle(fontSize: 12)),
-                    onDeleted: () => setState(() => _filterPaymentMethod = null),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-              ],
-            ),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(PhosphorIconsFill.wallet, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'إجمالي المصروفات',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      CurrencyFormatter.format(_totalExpenseBalance.abs()),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildSummaryChip(
+                icon: PhosphorIconsRegular.bank,
+                label: 'عدد الحسابات',
+                value: _totalAccounts.toString(),
+              ),
+              const SizedBox(width: 12),
+              _buildSummaryChip(
+                icon: PhosphorIconsRegular.trendDown,
+                label: 'الحالة',
+                value: _totalExpenseBalance >= 0 ? 'له' : 'عليه',
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildExpenseCard(Map<String, dynamic> expense, ThemeData theme, bool isDark) {
-    final category = expense['category'] as String?;
-    final amount = (expense['amount'] as num?)?.toDouble() ?? 0.0;
-    final amountBase = (expense['amount_base'] as num?)?.toDouble() ?? 0.0;
-    final currency = expense['currency'] as String? ?? 'YER';
-    final title = expense['title'] as String? ?? '';
-    final expenseDate = expense['expense_date'] as String? ?? '';
-    final paymentMethod = expense['payment_method'] as String? ?? 'cash';
-    final beneficiary = expense['beneficiary'] as String?;
-    final categoryColor = _getCategoryColor(category);
-    final categoryIcon = _getCategoryIcon(category);
+  Widget _buildSummaryChip({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.9)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpenseAccountCard(Map<String, dynamic> account, ThemeData theme, bool isDark) {
+    final name = account['name_ar'] as String? ?? '';
+    final currency = account['currency'] as String? ?? 'YER';
+    final debtCeiling = (account['debt_ceiling'] as num?)?.toDouble() ?? 0.0;
+    final balance = (account['balance'] as num?)?.toDouble() ?? 0.0;
+    final balanceType = account['balance_type'] as String? ?? 'credit';
+    final accountCode = account['account_code'] as String? ?? '';
+    final isSystem = (account['is_system'] as int?) == 1;
+    final currencyColor = _getCurrencyColor(currency);
+    final currencySymbol = _getCurrencySymbol(currency);
+
+    final isCredit = balanceType == 'credit';
+    final balanceColor = isCredit ? AppColors.success : AppColors.error;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -292,98 +255,150 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         ],
       ),
       child: InkWell(
-        onTap: () => _navigateToEditExpense(expense),
+        onTap: () => _navigateToAccountDetail(account),
         borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Category icon
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: categoryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(categoryIcon, color: categoryColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-
-              // Title and info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              // Row 1: Account name and balance type
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: currencyColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
+                    child: Icon(
+                      isSystem ? PhosphorIconsFill.wallet : PhosphorIconsFill.folderOpen,
+                      color: currencyColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          Expense.getCategoryAr(category),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: categoryColor,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          name,
+                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            _getPaymentMethodAr(paymentMethod),
-                            style: theme.textTheme.labelSmall?.copyWith(fontSize: 10),
-                          ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: currencyColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                accountCode,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: currencyColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceVariant,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                currencySymbol,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        if (beneficiary != null && beneficiary.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            beneficiary,
-                            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              // Amount and date
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    CurrencyFormatter.format(amount),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.error,
-                    ),
                   ),
-                  if (currency != 'YER' && amountBase > 0)
-                    Text(
-                      CurrencyFormatter.format(amountBase),
-                      style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint),
-                    ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatDate(expenseDate),
-                    style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint),
+                  // Balance amount
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        CurrencyFormatter.format(balance),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: balanceColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: balanceColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isCredit ? 'له' : 'عليه',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: balanceColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(width: 4),
+                  Icon(PhosphorIconsRegular.caretLeft, size: 16, color: AppColors.textHint),
                 ],
               ),
 
-              const SizedBox(width: 4),
-              Icon(PhosphorIconsRegular.caretLeft, size: 16, color: AppColors.textHint),
+              // Row 2: Debt ceiling info
+              if (debtCeiling > 0) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(PhosphorIconsRegular.shieldWarning, size: 16, color: AppColors.warning),
+                      const SizedBox(width: 8),
+                      Text(
+                        'سقف المديونية: ',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(debtCeiling),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (debtCeiling > 0 && balance > 0)
+                        Text(
+                          '${(balance / debtCeiling * 100).toStringAsFixed(0)}%',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: balance / debtCeiling > 0.9 ? AppColors.error : AppColors.warning,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -405,16 +420,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: Icon(PhosphorIconsRegular.currencyDollar, size: 40, color: AppColors.primary),
+              child: Icon(PhosphorIconsRegular.wallet, size: 40, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
             Text(
-              'لا توجد مصروفات',
+              'لا توجد حسابات مصروفات',
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
-              'أضف مصروف جديد بالضغط على زر الإضافة',
+              'أضف حساب مصروف جديد بالضغط على زر الإضافة',
               style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
               textAlign: TextAlign.center,
             ),
@@ -424,85 +439,283 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-    } catch (_) {
-      return dateStr;
-    }
-  }
-
-  Future<void> _navigateToAddExpense() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
-    );
-    if (result == true) _loadData();
-  }
-
-  Future<void> _navigateToEditExpense(Map<String, dynamic> expense) async {
+  Future<void> _navigateToAccountDetail(Map<String, dynamic> account) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AddExpenseScreen(expenseId: expense['id'] as int),
+        builder: (_) => ExpenseAccountDetailScreen(account: account),
       ),
     );
     if (result == true) _loadData();
   }
-}
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-    required this.isDark,
-  });
+  void _showAddExpenseAccountDialog() {
+    final nameController = TextEditingController();
+    final debtCeilingController = TextEditingController();
+    final openingBalanceController = TextEditingController();
+    final notesController = TextEditingController();
+    String selectedCurrency = 'YER';
+    String balanceType = 'credit'; // له
 
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final bool isDark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.divider),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+      builder: (ctx) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: StatefulBuilder(
+            builder: (ctx, setModalState) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                  left: 16,
+                  right: 16,
+                  top: 16,
                 ),
-              ),
-            ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.divider,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      // Title
+                      Row(
+                        children: [
+                          Icon(PhosphorIconsFill.folderPlus, color: AppColors.primary, size: 24),
+                          const SizedBox(width: 10),
+                          Text(
+                            'إضافة حساب مصروف جديد',
+                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Account name
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'اسم الحساب *',
+                          prefixIcon: Icon(PhosphorIconsRegular.textAa),
+                          hintText: 'مثال: مصاريف إيجار',
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Currency selection
+                      DropdownButtonFormField<String>(
+                        value: selectedCurrency,
+                        decoration: const InputDecoration(
+                          labelText: 'العملة',
+                          prefixIcon: Icon(PhosphorIconsRegular.coin),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'YER', child: Text('ريال يمني (ر.ي)')),
+                          DropdownMenuItem(value: 'SAR', child: Text('ريال سعودي (ر.س)')),
+                          DropdownMenuItem(value: 'USD', child: Text('دولار أمريكي (\$)')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => selectedCurrency = val);
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Debt ceiling
+                      TextFormField(
+                        controller: debtCeilingController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'سقف المديونية',
+                          prefixIcon: Icon(PhosphorIconsRegular.shieldWarning),
+                          hintText: '0.00',
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Opening balance
+                      TextFormField(
+                        controller: openingBalanceController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'الرصيد الافتتاحي',
+                          prefixIcon: Icon(PhosphorIconsRegular.currencyDollar),
+                          hintText: '0.00',
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Balance type selector (له / عليه)
+                      Text(
+                        'نوع الرصيد الافتتاحي',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setModalState(() => balanceType = 'credit'),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: balanceType == 'credit'
+                                      ? AppColors.success.withValues(alpha: 0.08)
+                                      : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: balanceType == 'credit' ? AppColors.success : AppColors.divider,
+                                    width: balanceType == 'credit' ? 2 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      PhosphorIconsFill.arrowDownRight,
+                                      size: 20,
+                                      color: balanceType == 'credit' ? AppColors.success : AppColors.textHint,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'له',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: balanceType == 'credit' ? FontWeight.w700 : FontWeight.w500,
+                                        color: balanceType == 'credit' ? AppColors.success : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    Text(
+                                      '(دائن)',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: balanceType == 'credit' ? AppColors.success : AppColors.textHint,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setModalState(() => balanceType = 'debit'),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: balanceType == 'debit'
+                                      ? AppColors.error.withValues(alpha: 0.08)
+                                      : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: balanceType == 'debit' ? AppColors.error : AppColors.divider,
+                                    width: balanceType == 'debit' ? 2 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      PhosphorIconsFill.arrowUpLeft,
+                                      size: 20,
+                                      color: balanceType == 'debit' ? AppColors.error : AppColors.textHint,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'عليه',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: balanceType == 'debit' ? FontWeight.w700 : FontWeight.w500,
+                                        color: balanceType == 'debit' ? AppColors.error : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    Text(
+                                      '(مدين)',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: balanceType == 'debit' ? AppColors.error : AppColors.textHint,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Notes
+                      TextFormField(
+                        controller: notesController,
+                        decoration: const InputDecoration(
+                          labelText: 'ملاحظات',
+                          prefixIcon: Icon(PhosphorIconsRegular.notepad),
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Save button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            if (nameController.text.trim().isEmpty) {
+                              context.showErrorSnackBar('اسم الحساب مطلوب');
+                              return;
+                            }
+                            final db = DatabaseHelper();
+                            await db.createExpenseAccount(
+                              nameAr: nameController.text.trim(),
+                              currency: selectedCurrency,
+                              debtCeiling: double.tryParse(debtCeilingController.text),
+                              openingBalance: double.tryParse(openingBalanceController.text) ?? 0.0,
+                              balanceType: balanceType,
+                              notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
+                            );
+                            if (mounted) {
+                              Navigator.pop(ctx);
+                              context.showSuccessSnackBar('تم إنشاء حساب المصروف بنجاح');
+                              _loadData();
+                            }
+                          },
+                          icon: const Icon(PhosphorIconsRegular.floppyDisk),
+                          label: const Text('حفظ الحساب'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -18,6 +18,7 @@ import '../screens/accounts/account_ledger_screen.dart';
 import '../screens/suppliers/suppliers_screen.dart';
 import '../screens/warehouses/warehouses_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
+import '../screens/expenses/expense_account_detail_screen.dart';
 import '../screens/employees/employees_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
 
@@ -69,6 +70,13 @@ class AppRouter {
   static Future<void> pushAccountLedger(BuildContext context, Account account) {
     return Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => AccountLedgerScreen(account: account)),
+    );
+  }
+
+  /// Push the ExpenseAccountDetailScreen directly (requires an account map).
+  static Future<void> pushExpenseAccountDetail(BuildContext context, Map<String, dynamic> account) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ExpenseAccountDetailScreen(account: account)),
     );
   }
 }

@@ -8,7 +8,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  static const int _databaseVersion = 7;
+  static const int _databaseVersion = 8;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -44,6 +44,8 @@ class DatabaseHelper {
         linked_cash_box_id INTEGER,
         is_active INTEGER NOT NULL DEFAULT 1,
         is_system INTEGER NOT NULL DEFAULT 0,
+        debt_ceiling REAL NOT NULL DEFAULT 0.0,
+        balance_type TEXT NOT NULL DEFAULT 'credit',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (parent_id) REFERENCES accounts (id)
@@ -313,10 +315,14 @@ class DatabaseHelper {
         notes TEXT,
         is_recurring INTEGER NOT NULL DEFAULT 0,
         recurring_period TEXT,
+        attachment_path TEXT,
+        operation_type TEXT NOT NULL DEFAULT 'صرف',
+        expense_account_id INTEGER,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id),
-        FOREIGN KEY (account_id) REFERENCES accounts (id)
+        FOREIGN KEY (account_id) REFERENCES accounts (id),
+        FOREIGN KEY (expense_account_id) REFERENCES accounts (id)
       )
     ''');
 
@@ -359,6 +365,7 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_expenses_account_id ON expenses (account_id)');
     await db.execute('CREATE INDEX idx_employees_name ON employees (name)');
     await db.execute('CREATE INDEX idx_employees_is_active ON employees (is_active)');
+    await db.execute('CREATE INDEX idx_expenses_expense_account_id ON expenses (expense_account_id)');
 
     // Seed default data
     await _seedCurrencies(db);
@@ -670,6 +677,19 @@ class DatabaseHelper {
       try { await db.execute('ALTER TABLE invoices ADD COLUMN bank_transfer_provider TEXT'); } catch (_) {}
       try { await db.execute('ALTER TABLE invoices ADD COLUMN transfer_number TEXT'); } catch (_) {}
       try { await db.execute('ALTER TABLE invoices ADD COLUMN attachment_path TEXT'); } catch (_) {}
+    }
+    if (oldVersion < 8) {
+      // Add debt_ceiling and balance_type to accounts
+      try { await db.execute('ALTER TABLE accounts ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE accounts ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (_) {}
+
+      // Add attachment_path, operation_type, expense_account_id to expenses
+      try { await db.execute('ALTER TABLE expenses ADD COLUMN attachment_path TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE expenses ADD COLUMN operation_type TEXT NOT NULL DEFAULT \'صرف\''); } catch (_) {}
+      try { await db.execute('ALTER TABLE expenses ADD COLUMN expense_account_id INTEGER'); } catch (_) {}
+
+      // Add index for expense_account_id
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_expenses_expense_account_id ON expenses (expense_account_id)'); } catch (_) {}
     }
   }
 
@@ -1298,6 +1318,118 @@ class DatabaseHelper {
         await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
       }
     });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Expense Account methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// Get all expense accounts (accounts with type='EXPENSE')
+  Future<List<Map<String, dynamic>>> getExpenseAccounts() async {
+    final db = await database;
+    return await db.query('accounts', where: 'is_active = ? AND account_type = ?', whereArgs: [1, 'EXPENSE'], orderBy: 'account_code ASC');
+  }
+
+  /// Get all expenses for a specific expense account
+  Future<List<Map<String, dynamic>>> getExpensesByAccountId(int accountId, {String orderBy = 'expense_date DESC'}) async {
+    final db = await database;
+    return await db.query('expenses', where: 'expense_account_id = ?', whereArgs: [accountId], orderBy: orderBy);
+  }
+
+  /// Get all transactions for an account with running balance calculated
+  Future<List<Map<String, dynamic>>> getAccountTransactions(int accountId) async {
+    final db = await database;
+    return await db.query('transactions', where: 'account_id = ?', whereArgs: [accountId], orderBy: 'date ASC, id ASC');
+  }
+
+  /// Get current balance of an account (computed from transactions)
+  Future<double> getAccountBalance(int accountId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      "SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS balance FROM transactions WHERE account_id = ?",
+      [accountId],
+    );
+    return (result.first['balance'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  /// Create an expense account with optional opening balance
+  Future<int> createExpenseAccount({
+    required String nameAr,
+    required String currency,
+    double? debtCeiling,
+    double openingBalance = 0.0,
+    String balanceType = 'credit', // 'credit' = له, 'debit' = عليه
+    String? notes,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    // Get next account code for EXPENSE type
+    final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+    final currencySymbol = currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
+
+    // Find the max existing expense account code for this currency
+    final existingExpenseAccounts = await db.query(
+      'accounts',
+      where: 'account_type = ? AND currency = ?',
+      whereArgs: ['EXPENSE', currency],
+      orderBy: 'account_code DESC',
+      limit: 1,
+    );
+
+    String newCode;
+    if (existingExpenseAccounts.isNotEmpty) {
+      final lastCode = int.tryParse(existingExpenseAccounts.first['account_code'] as String) ?? 5000;
+      newCode = (lastCode + 1).toString();
+    } else {
+      newCode = (5000 + codeOffset).toString();
+    }
+
+    // Create the account
+    final accountId = await db.insert('accounts', {
+      'name_ar': '$nameAr ($currencySymbol)',
+      'name_en': nameAr,
+      'account_code': newCode,
+      'account_type': 'EXPENSE',
+      'balance': openingBalance,
+      'currency': currency,
+      'is_active': 1,
+      'is_system': 0,
+      'debt_ceiling': debtCeiling ?? 0.0,
+      'balance_type': balanceType,
+      'created_at': now,
+      'updated_at': now,
+    });
+
+    // Create opening balance transaction if > 0
+    if (openingBalance > 0) {
+      final journalId = DateTime.now().millisecondsSinceEpoch;
+      if (balanceType == 'credit') {
+        // له (credit) - the account has credit balance
+        await db.insert('transactions', {
+          'account_id': accountId,
+          'journal_id': journalId,
+          'debit': 0.0,
+          'credit': openingBalance,
+          'description': 'رصيد افتتاحي - $nameAr',
+          'date': now,
+          'created_at': now,
+        });
+      } else {
+        // عليه (debit) - the account has debit balance
+        await db.insert('transactions', {
+          'account_id': accountId,
+          'journal_id': journalId,
+          'debit': openingBalance,
+          'credit': 0.0,
+          'description': 'رصيد افتتاحي - $nameAr',
+          'date': now,
+          'created_at': now,
+        });
+      }
+    }
+
+    return accountId;
   }
 
   // ══════════════════════════════════════════════════════════════

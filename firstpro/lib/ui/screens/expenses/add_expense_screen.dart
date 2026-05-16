@@ -1,4 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -6,12 +11,12 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
-import '../../../data/models/expense_model.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key, this.expenseId});
-
   final int? expenseId;
+  final int? expenseAccountId;
+
+  const AddExpenseScreen({super.key, this.expenseId, this.expenseAccountId});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -25,23 +30,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _beneficiaryController = TextEditingController();
   final _referenceNumberController = TextEditingController();
   final _notesController = TextEditingController();
-  final _descriptionController = TextEditingController();
 
   String _selectedCurrency = 'YER';
   double _selectedExchangeRate = 1.0;
   double _amountBase = 0.0;
   DateTime _selectedDate = DateTime.now();
-  String? _selectedCategory;
-  String _paymentMethod = 'cash';
   int? _selectedCashBoxId;
-  int? _selectedAccountId;
   bool _isRecurring = false;
   String? _recurringPeriod;
+
+  // New fields
+  String _operationType = 'صرف'; // 'صرف' or 'قبض'
+  String? _attachmentPath;
 
   // Data from DB
   List<Map<String, dynamic>> _currencies = [];
   List<Map<String, dynamic>> _cashBoxes = [];
-  List<Map<String, dynamic>> _expenseAccounts = [];
   bool _isLoading = true;
   bool _isEditing = false;
 
@@ -59,13 +63,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final results = await Future.wait([
       db.getAllCurrencies(),
       db.getAllCashBoxes(),
-      db.getAccountsByType('EXPENSE'),
     ]);
 
     setState(() {
       _currencies = results[0];
       _cashBoxes = results[1];
-      _expenseAccounts = results[2];
       _isLoading = false;
     });
 
@@ -77,21 +79,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         setState(() {
           _existingExpense = expense;
           _titleController.text = expense['title'] as String? ?? '';
-          _descriptionController.text = expense['description'] as String? ?? '';
           _amountController.text = (expense['amount'] as num?)?.toDouble().toStringAsFixed(2) ?? '';
           _selectedCurrency = expense['currency'] as String? ?? 'YER';
           _selectedExchangeRate = (expense['exchange_rate'] as num?)?.toDouble() ?? 1.0;
           _exchangeRateController.text = _selectedExchangeRate.toStringAsFixed(4);
           _amountBase = (expense['amount_base'] as num?)?.toDouble() ?? 0.0;
-          _selectedCategory = expense['category'] as String?;
-          _paymentMethod = expense['payment_method'] as String? ?? 'cash';
           _selectedCashBoxId = expense['cash_box_id'] as int?;
-          _selectedAccountId = expense['account_id'] as int?;
           _beneficiaryController.text = expense['beneficiary'] as String? ?? '';
           _referenceNumberController.text = expense['reference_number'] as String? ?? '';
           _notesController.text = expense['notes'] as String? ?? '';
           _isRecurring = (expense['is_recurring'] as int?) == 1;
           _recurringPeriod = expense['recurring_period'] as String?;
+          _operationType = expense['operation_type'] as String? ?? 'صرف';
+          _attachmentPath = expense['attachment_path'] as String?;
           try {
             _selectedDate = DateTime.parse(expense['expense_date'] as String? ?? '');
           } catch (_) {}
@@ -108,7 +108,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     _beneficiaryController.dispose();
     _referenceNumberController.dispose();
     _notesController.dispose();
-    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -124,7 +123,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     if (code == null) return;
     setState(() {
       _selectedCurrency = code;
-      // Auto-fill exchange rate from currencies table
       final currency = _currencies.where((c) => c['code'] == code).firstOrNull;
       if (currency != null) {
         _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
@@ -132,6 +130,42 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       }
       _updateAmountBase();
     });
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked != null) {
+      final savedPath = await _saveImageLocally(picked.path);
+      if (savedPath != null) {
+        setState(() => _attachmentPath = savedPath);
+      }
+    }
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    if (picked != null) {
+      final savedPath = await _saveImageLocally(picked.path);
+      if (savedPath != null) {
+        setState(() => _attachmentPath = savedPath);
+      }
+    }
+  }
+
+  Future<String?> _saveImageLocally(String sourcePath) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final attachmentsDir = p.join(dir.path, 'attachments');
+      await Directory(attachmentsDir).create(recursive: true);
+      final fileName = 'expense_${DateTime.now().millisecondsSinceEpoch}${p.extension(sourcePath)}';
+      final destPath = p.join(attachmentsDir, fileName);
+      await File(sourcePath).copy(destPath);
+      return destPath;
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
@@ -164,19 +198,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     children: [
                       _buildTitleSection(),
                       const SizedBox(height: 12),
+                      _buildAttachmentSection(),
+                      const SizedBox(height: 12),
                       _buildAmountSection(),
                       const SizedBox(height: 12),
+                      _buildCashBoxSection(),
+                      const SizedBox(height: 12),
                       _buildDateSection(),
-                      const SizedBox(height: 12),
-                      _buildCategorySection(),
-                      const SizedBox(height: 12),
-                      _buildPaymentMethodSection(),
-                      if (_paymentMethod == 'cash' || _paymentMethod == 'transfer') ...[
-                        const SizedBox(height: 12),
-                        _buildCashBoxSection(),
-                      ],
-                      const SizedBox(height: 12),
-                      _buildExpenseAccountSection(),
                       const SizedBox(height: 12),
                       _buildDetailsSection(),
                       const SizedBox(height: 12),
@@ -220,26 +248,101 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     return _buildSectionCard(
       title: 'بيانات المصروف',
       icon: PhosphorIconsRegular.article,
+      child: TextFormField(
+        controller: _titleController,
+        decoration: const InputDecoration(
+          labelText: 'العنوان *',
+          prefixIcon: Icon(PhosphorIconsRegular.textAa),
+          hintText: 'مثال: إيجار المحل',
+        ),
+        validator: (v) => v == null || v.trim().isEmpty ? 'العنوان مطلوب' : null,
+      ),
+    );
+  }
+
+  Widget _buildAttachmentSection() {
+    return _buildSectionCard(
+      title: 'إرفاق صورة أو مرفق',
+      icon: PhosphorIconsRegular.paperclip,
       child: Column(
         children: [
-          TextFormField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'العنوان *',
-              prefixIcon: Icon(PhosphorIconsRegular.textAa),
-              hintText: 'مثال: إيجار المحل',
+          if (_attachmentPath != null) ...[
+            Container(
+              height: 120,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.dividerColor),
+              ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(_attachmentPath!),
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(PhosphorIconsRegular.file, size: 32, color: AppColors.textHint),
+                            const SizedBox(height: 8),
+                            Text(
+                              p.basename(_attachmentPath!),
+                              style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    left: 4,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _attachmentPath = null),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(PhosphorIconsFill.x, color: Colors.white, size: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            validator: (v) => v == null || v.trim().isEmpty ? 'العنوان مطلوب' : null,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _descriptionController,
-            decoration: const InputDecoration(
-              labelText: 'الوصف',
-              prefixIcon: Icon(PhosphorIconsRegular.notepad),
-              hintText: 'وصف اختياري للمصروف',
-            ),
-            maxLines: 2,
+            const SizedBox(height: 12),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pickImageFromGallery,
+                  icon: const Icon(PhosphorIconsRegular.image, size: 18),
+                  label: const Text('رفع من المعرض'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pickImageFromCamera,
+                  icon: const Icon(PhosphorIconsRegular.camera, size: 18),
+                  label: const Text('تصوير بالكاميرا'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -333,6 +436,140 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
+  Widget _buildCashBoxSection() {
+    return _buildSectionCard(
+      title: 'الصندوق ونوع العملية',
+      icon: PhosphorIconsRegular.vault,
+      child: Column(
+        children: [
+          // Cash box dropdown
+          DropdownButtonFormField<int>(
+            value: _selectedCashBoxId,
+            decoration: const InputDecoration(
+              labelText: 'الصندوق',
+              prefixIcon: Icon(PhosphorIconsRegular.vault),
+              hintText: 'اختر الصندوق',
+            ),
+            items: _cashBoxes.map((cb) {
+              final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+              final bt = cb['balance_type'] as String? ?? 'credit';
+              return DropdownMenuItem<int>(
+                value: cb['id'] as int,
+                child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})', overflow: TextOverflow.ellipsis),
+              );
+            }).toList(),
+            onChanged: (val) => setState(() => _selectedCashBoxId = val),
+          ),
+          const SizedBox(height: 12),
+          // Operation type: قبض or صرف
+          Text(
+            'نوع العملية',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // صرف (disburse) - عليه (debit)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _operationType = 'صرف'),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: _operationType == 'صرف'
+                          ? AppColors.error.withValues(alpha: 0.08)
+                          : context.surfaceColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _operationType == 'صرف' ? AppColors.error : context.dividerColor,
+                        width: _operationType == 'صرف' ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          PhosphorIconsFill.arrowUpLeft,
+                          size: 22,
+                          color: _operationType == 'صرف' ? AppColors.error : AppColors.textHint,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'صرف',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: _operationType == 'صرف' ? FontWeight.w700 : FontWeight.w500,
+                            color: _operationType == 'صرف' ? AppColors.error : AppColors.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          '(عليه)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: _operationType == 'صرف' ? AppColors.error : AppColors.textHint,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // قبض (receive) - له (credit)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _operationType = 'قبض'),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: _operationType == 'قبض'
+                          ? AppColors.success.withValues(alpha: 0.08)
+                          : context.surfaceColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _operationType == 'قبض' ? AppColors.success : context.dividerColor,
+                        width: _operationType == 'قبض' ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          PhosphorIconsFill.arrowDownRight,
+                          size: 22,
+                          color: _operationType == 'قبض' ? AppColors.success : AppColors.textHint,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'قبض',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: _operationType == 'قبض' ? FontWeight.w700 : FontWeight.w500,
+                            color: _operationType == 'قبض' ? AppColors.success : AppColors.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          '(له)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: _operationType == 'قبض' ? AppColors.success : AppColors.textHint,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDateSection() {
     final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
     return _buildSectionCard(
@@ -365,124 +602,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCategorySection() {
-    return _buildSectionCard(
-      title: 'التصنيف',
-      icon: PhosphorIconsRegular.tag,
-      child: DropdownButtonFormField<String>(
-        value: _selectedCategory,
-        decoration: const InputDecoration(
-          labelText: 'تصنيف المصروف',
-          prefixIcon: Icon(PhosphorIconsRegular.tag),
-          hintText: 'اختر التصنيف',
-        ),
-        items: Expense.categoryList.map((e) => DropdownMenuItem<String>(
-          value: e.key,
-          child: Text(e.value),
-        )).toList(),
-        onChanged: (val) => setState(() => _selectedCategory = val),
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodSection() {
-    const methods = [
-      ('cash', 'نقدي', PhosphorIconsFill.money, AppColors.success),
-      ('check', 'شيك', PhosphorIconsFill.note, AppColors.accentBlue),
-      ('transfer', 'حوالة', PhosphorIconsFill.arrowsLeftRight, AppColors.accentOrange),
-      ('bank', 'بنك', PhosphorIconsFill.bank, AppColors.primary),
-    ];
-
-    return _buildSectionCard(
-      title: 'طريقة الدفع',
-      icon: PhosphorIconsRegular.creditCard,
-      child: Row(
-        children: methods.map((m) {
-          final selected = _paymentMethod == m.$1;
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: GestureDetector(
-                onTap: () => setState(() => _paymentMethod = m.$1),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: selected ? m.$4.withValues(alpha: 0.08) : context.surfaceColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: selected ? m.$4 : context.dividerColor,
-                      width: selected ? 2 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(m.$3, size: 20, color: selected ? m.$4 : AppColors.textHint),
-                      const SizedBox(height: 6),
-                      Text(
-                        m.$2,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                          color: selected ? m.$4 : AppColors.textSecondary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildCashBoxSection() {
-    if (_cashBoxes.isEmpty) return const SizedBox.shrink();
-    return _buildSectionCard(
-      title: 'صندوق الدفع',
-      icon: PhosphorIconsRegular.vault,
-      child: DropdownButtonFormField<int>(
-        value: _selectedCashBoxId,
-        decoration: const InputDecoration(
-          hintText: 'اختر الصندوق',
-          prefixIcon: Icon(PhosphorIconsRegular.vault),
-        ),
-        items: _cashBoxes.map((cb) {
-          final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
-          final bt = cb['balance_type'] as String? ?? 'credit';
-          return DropdownMenuItem<int>(
-            value: cb['id'] as int,
-            child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})', overflow: TextOverflow.ellipsis),
-          );
-        }).toList(),
-        onChanged: (val) => setState(() => _selectedCashBoxId = val),
-      ),
-    );
-  }
-
-  Widget _buildExpenseAccountSection() {
-    if (_expenseAccounts.isEmpty) return const SizedBox.shrink();
-    return _buildSectionCard(
-      title: 'حساب المصروف',
-      icon: PhosphorIconsRegular.chartPie,
-      child: DropdownButtonFormField<int>(
-        value: _selectedAccountId,
-        decoration: const InputDecoration(
-          hintText: 'اختر الحساب',
-          prefixIcon: Icon(PhosphorIconsRegular.chartPie),
-        ),
-        items: _expenseAccounts.map((a) => DropdownMenuItem<int>(
-          value: a['id'] as int,
-          child: Text('${a['account_code']} - ${a['name_ar']}', overflow: TextOverflow.ellipsis),
-        )).toList(),
-        onChanged: (val) => setState(() => _selectedAccountId = val),
       ),
     );
   }
@@ -608,33 +727,50 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final now = DateTime.now().toIso8601String();
     final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
+    // Determine the expense account based on currency
+    final codeOffset = _selectedCurrency == 'SAR' ? 1 : (_selectedCurrency == 'USD' ? 2 : 0);
+    final db = DatabaseHelper();
+
+    // Get the system expense account for this currency
+    final expenseAccounts = await db.getAccountsByType('EXPENSE');
+    int? systemExpenseAccountId;
+    for (final acc in expenseAccounts) {
+      if (acc['account_code'] == (5000 + codeOffset).toString() && acc['currency'] == _selectedCurrency) {
+        systemExpenseAccountId = acc['id'] as int;
+        break;
+      }
+    }
+
+    // Use the provided expense account ID or fall back to the system one
+    final effectiveExpenseAccountId = widget.expenseAccountId ?? systemExpenseAccountId;
+
     final expenseMap = {
       'title': _titleController.text.trim(),
-      'description': _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
       'amount': amount,
       'currency': _selectedCurrency,
       'exchange_rate': exchangeRate,
       'amount_base': amountBase,
       'expense_date': dateStr,
-      'category': _selectedCategory,
-      'payment_method': _paymentMethod,
+      'payment_method': 'cash',
       'cash_box_id': _selectedCashBoxId,
-      'account_id': _selectedAccountId,
+      'account_id': systemExpenseAccountId,
       'beneficiary': _beneficiaryController.text.trim().isEmpty ? null : _beneficiaryController.text.trim(),
       'reference_number': _referenceNumberController.text.trim().isEmpty ? null : _referenceNumberController.text.trim(),
       'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       'is_recurring': _isRecurring ? 1 : 0,
       'recurring_period': _isRecurring ? _recurringPeriod : null,
+      'attachment_path': _attachmentPath,
+      'operation_type': _operationType,
+      'expense_account_id': effectiveExpenseAccountId,
       'updated_at': now,
     };
-
-    final db = DatabaseHelper();
 
     if (_isEditing && widget.expenseId != null) {
       await db.updateExpense(widget.expenseId!, expenseMap);
     } else {
       expenseMap['created_at'] = now;
-      await db.saveExpenseWithJournalEntry(expenseMap);
+      // Save expense with journal entries, using the expense account for the transaction
+      await _saveExpenseWithAccountTransaction(expenseMap, effectiveExpenseAccountId);
     }
 
     if (mounted) {
@@ -642,4 +778,140 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       Navigator.pop(context, true);
     }
   }
+
+  Future<void> _saveExpenseWithAccountTransaction(Map<String, dynamic> expenseMap, int? expenseAccountId) async {
+    final db = await db_instance.database;
+    final amountBase = (expenseMap['amount_base'] as num?)?.toDouble() ?? 0.0;
+    final now = DateTime.now().toIso8601String();
+
+    await db.transaction((txn) async {
+      // Insert expense
+      await txn.insert('expenses', expenseMap);
+
+      if (expenseAccountId == null || amountBase <= 0) return;
+
+      final journalId = DateTime.now().millisecondsSinceEpoch;
+      final title = expenseMap['title'] as String? ?? 'مصروف';
+      final isSarf = expenseMap['operation_type'] == 'صرف';
+
+      if (isSarf) {
+        // صرف (disburse): debit the expense account (عليه)
+        await txn.insert('transactions', {
+          'account_id': expenseAccountId,
+          'journal_id': journalId,
+          'debit': amountBase,
+          'credit': 0.0,
+          'description': 'مصروف: $title',
+          'date': now,
+          'created_at': now,
+        });
+        // Update account balance
+        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, expenseAccountId]);
+      } else {
+        // قبض (receive): credit the expense account (له)
+        await txn.insert('transactions', {
+          'account_id': expenseAccountId,
+          'journal_id': journalId,
+          'debit': 0.0,
+          'credit': amountBase,
+          'description': 'قبض: $title',
+          'date': now,
+          'created_at': now,
+        });
+        // Update account balance
+        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, expenseAccountId]);
+      }
+
+      // Also update the system expense account and cash/bank account for double-entry
+      final codeOffset = _selectedCurrency == 'SAR' ? 1 : (_selectedCurrency == 'USD' ? 2 : 0);
+
+      // Get system expense account (5000+offset)
+      final systemExpenseAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5000 + codeOffset).toString(), _selectedCurrency], limit: 1);
+      final systemExpenseAccountId = systemExpenseAccount.isNotEmpty ? systemExpenseAccount.first['id'] as int : null;
+
+      // Get cash/bank account
+      int? creditAccountId;
+      final cashBoxId = expenseMap['cash_box_id'] as int?;
+      if (cashBoxId != null) {
+        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+        if (cashBox.isNotEmpty) {
+          final linkedAccountId = cashBox.first['linked_account_id'] as int?;
+          if (linkedAccountId != null) {
+            creditAccountId = linkedAccountId;
+          }
+        }
+      }
+      if (creditAccountId == null) {
+        final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), _selectedCurrency], limit: 1);
+        creditAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
+      }
+
+      if (isSarf) {
+        // Debit system expense account
+        if (systemExpenseAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': systemExpenseAccountId,
+            'journal_id': journalId,
+            'debit': amountBase,
+            'credit': 0.0,
+            'description': 'مصروف: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, systemExpenseAccountId]);
+        }
+        // Credit cash/bank
+        if (creditAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': creditAccountId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': amountBase,
+            'description': 'مصروف: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, creditAccountId]);
+        }
+      } else {
+        // قبض: Credit system expense account, Debit cash/bank
+        if (systemExpenseAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': systemExpenseAccountId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': amountBase,
+            'description': 'قبض: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, systemExpenseAccountId]);
+        }
+        if (creditAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': creditAccountId,
+            'journal_id': journalId,
+            'debit': amountBase,
+            'credit': 0.0,
+            'description': 'قبض: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, creditAccountId]);
+        }
+      }
+
+      // Update cash box balance
+      if (cashBoxId != null && amountBase > 0) {
+        if (isSarf) {
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+        } else {
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+        }
+      }
+    });
+  }
 }
+
+// Helper to access the DatabaseHelper instance
+final db_instance = DatabaseHelper();
