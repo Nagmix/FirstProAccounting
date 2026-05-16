@@ -145,31 +145,11 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
             ),
       endDrawer: _buildDrawer(theme, isDark),
       body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.bottomCenter,
-            children: [
-              // Bottom bar
-              CustomBottomBar(
-                selectedIndex: _currentIndex,
-                onTap: (index) => setState(() => _currentIndex = index),
-                onFabTap: _showQuickAddSheet,
-                items: _bottomBarItems,
-              ),
-
-              // Center FAB overlapping the bottom bar
-              Positioned(
-                top: -28,
-                child: CenterFabButton(
-                  onTap: _showQuickAddSheet,
-                ),
-              ),
-            ],
-          ),
-        ],
+      bottomNavigationBar: CustomBottomBar(
+        selectedIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        onFabTap: _showQuickAddSheet,
+        items: _bottomBarItems,
       ),
     );
   }
@@ -414,11 +394,9 @@ class _MoreTab extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 120 + bottomPadding),
         children: [
-          Text(
-            'المزيد من الخدمات',
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
+          // ── Section: المبيعات والشراء ────────────────────────────
+          _buildSectionHeader(context, 'المبيعات والشراء'),
+          const SizedBox(height: 8),
           _MoreTile(
             icon: PhosphorIconsRegular.storefront,
             title: 'نقطة البيع',
@@ -426,19 +404,17 @@ class _MoreTab extends StatelessWidget {
             color: AppColors.accentBlue,
             onTap: () => Navigator.pushNamed(context, AppConstants.pos),
           ),
+
+          // ── Section: إدارة الأعمال ───────────────────────────────
+          const SizedBox(height: 16),
+          _buildSectionHeader(context, 'إدارة الأعمال'),
+          const SizedBox(height: 8),
           _MoreTile(
             icon: PhosphorIconsRegular.package,
             title: 'المنتجات والمخزون',
             subtitle: 'إدارة الأصناف والمخازن',
             color: AppColors.accentOrange,
             onTap: () => Navigator.pushNamed(context, AppConstants.products),
-          ),
-          _MoreTile(
-            icon: PhosphorIconsRegular.vault,
-            title: 'الصناديق والبنوك',
-            subtitle: 'إدارة الصناديق والبنوك والأرصدة',
-            color: AppColors.accentGreen,
-            onTap: () => Navigator.pushNamed(context, AppConstants.cashBoxes),
           ),
           _MoreTile(
             icon: PhosphorIconsRegular.currencyDollar,
@@ -468,6 +444,18 @@ class _MoreTab extends StatelessWidget {
             color: AppColors.secondaryDark,
             onTap: () => Navigator.pushNamed(context, AppConstants.warehouses),
           ),
+
+          // ── Section: المالية والحسابات ──────────────────────────
+          const SizedBox(height: 16),
+          _buildSectionHeader(context, 'المالية والحسابات'),
+          const SizedBox(height: 8),
+          _MoreTile(
+            icon: PhosphorIconsRegular.vault,
+            title: 'الصناديق والبنوك',
+            subtitle: 'إدارة الصناديق والبنوك والأرصدة',
+            color: AppColors.accentGreen,
+            onTap: () => Navigator.pushNamed(context, AppConstants.cashBoxes),
+          ),
           _MoreTile(
             icon: PhosphorIconsRegular.chartPie,
             title: 'دليل الحسابات',
@@ -482,20 +470,11 @@ class _MoreTab extends StatelessWidget {
             color: AppColors.success,
             onTap: () => Navigator.pushNamed(context, AppConstants.currencies),
           ),
-          _MoreTile(
-            icon: PhosphorIconsRegular.receipt,
-            title: 'فاتورة بيع جديدة',
-            subtitle: 'إنشاء فاتورة بيع',
-            color: AppColors.accentBlue,
-            onTap: () => Navigator.pushNamed(context, AppConstants.newSaleInvoice),
-          ),
-          _MoreTile(
-            icon: PhosphorIconsRegular.shoppingCart,
-            title: 'فاتورة شراء جديدة',
-            subtitle: 'إنشاء فاتورة شراء',
-            color: AppColors.accentPink,
-            onTap: () => Navigator.pushNamed(context, AppConstants.newPurchaseInvoice),
-          ),
+
+          // ── Section: أخرى ────────────────────────────────────────
+          const SizedBox(height: 16),
+          _buildSectionHeader(context, 'أخرى'),
+          const SizedBox(height: 8),
           _MoreTile(
             icon: PhosphorIconsRegular.gear,
             title: 'الإعدادات',
@@ -510,6 +489,7 @@ class _MoreTab extends StatelessWidget {
             color: AppColors.warning,
             onTap: () => Navigator.pushNamed(context, AppConstants.support),
           ),
+
           const Divider(height: 32),
           Text(
             'حول التطبيق',
@@ -523,6 +503,34 @@ class _MoreTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
+          ),
+        ),
+      ],
     );
   }
 }

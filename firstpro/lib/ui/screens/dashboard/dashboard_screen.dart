@@ -335,7 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  QUICK ACTIONS (3×3 grid)
+  //  QUICK ACTIONS (3×4 grid – 12 items)
   // ══════════════════════════════════════════════════════════════════
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
@@ -358,40 +358,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
         route: AppConstants.pos,
       ),
       _QuickActionData(
-        label: 'إضافة عميل',
-        icon: PhosphorIconsFill.userPlus,
+        label: 'العملاء',
+        icon: PhosphorIconsFill.users,
         color: AppColors.accentGreen,
-        route: AppConstants.addCustomer,
+        route: AppConstants.customers,
       ),
       _QuickActionData(
-        label: 'إضافة منتج',
+        label: 'الموردون',
+        icon: PhosphorIconsFill.truck,
+        color: AppColors.info,
+        route: AppConstants.suppliers,
+      ),
+      _QuickActionData(
+        label: 'المنتجات والمخزون',
         icon: PhosphorIconsFill.package,
         color: AppColors.accentOrange,
-        route: AppConstants.addProduct,
+        route: AppConstants.products,
       ),
       _QuickActionData(
-        label: 'عرض المخزون',
-        icon: PhosphorIconsFill.warehouse,
-        color: const Color(0xFF7B1FA2),
-        route: AppConstants.inventory,
+        label: 'المصروفات',
+        icon: PhosphorIconsFill.currencyDollar,
+        color: AppColors.error,
+        route: AppConstants.expenses,
+      ),
+      _QuickActionData(
+        label: 'الصناديق والبنوك',
+        icon: PhosphorIconsFill.vault,
+        color: AppColors.accentGreen,
+        route: AppConstants.cashBoxes,
+      ),
+      _QuickActionData(
+        label: 'دليل الحسابات',
+        icon: PhosphorIconsFill.chartPie,
+        color: AppColors.primaryLight,
+        route: AppConstants.chartOfAccounts,
       ),
       _QuickActionData(
         label: 'التقارير',
         icon: PhosphorIconsFill.chartBar,
-        color: AppColors.info,
+        color: AppColors.primary,
         route: AppConstants.reports,
       ),
       _QuickActionData(
         label: 'الإحصائيات',
-        icon: PhosphorIconsFill.chartPie,
-        color: AppColors.primaryLight,
+        icon: PhosphorIconsFill.chartLineUp,
+        color: const Color(0xFF7B1FA2),
         route: AppConstants.statistics,
       ),
       _QuickActionData(
-        label: 'الدعم الفني',
-        icon: PhosphorIconsFill.headset,
-        color: AppColors.error,
-        route: AppConstants.support,
+        label: 'الموظفين',
+        icon: PhosphorIconsFill.user,
+        color: AppColors.warning,
+        route: AppConstants.employees,
       ),
     ];
 
@@ -403,7 +421,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         physics: const NeverScrollableScrollPhysics(),
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
-        childAspectRatio: 0.9,
+        childAspectRatio: 0.85,
         children: actions
             .map(
               (a) => QuickActionButton(

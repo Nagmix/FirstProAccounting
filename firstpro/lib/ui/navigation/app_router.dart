@@ -19,6 +19,7 @@ import '../screens/suppliers/suppliers_screen.dart';
 import '../screens/warehouses/warehouses_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
 import '../screens/employees/employees_screen.dart';
+import '../screens/statistics/statistics_screen.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../data/models/account_model.dart';
@@ -47,7 +48,7 @@ class AppRouter {
         AppConstants.addCustomer: (_) => const AddCustomerSheet(),
         AppConstants.addProduct: (_) => const AddProductSheet(),
         AppConstants.inventory: (_) => const ProductsScreen(),
-        AppConstants.statistics: (_) => const DashboardScreen(),
+        AppConstants.statistics: (_) => const StatisticsScreen(),
         AppConstants.dailySalesReport: (_) => const ReportsScreen(),
         AppConstants.delegates: (_) => const SettingsScreen(),
         AppConstants.customerImport: (_) => const CustomersScreen(),
