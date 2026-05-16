@@ -133,3 +133,102 @@
 
 ### Git Commit
 - `2f72c31` - "إضافة محافظ إلكترونية وحوالات مصرفية في الفواتير مع المرفقات"
+
+---
+
+## Task 6 - Redesign Expenses Screen with Expense Accounts and Financial Operations
+**Date:** 2026-03-05
+**Agent:** Code Agent
+
+### Changes Made
+
+#### 1. Database (`lib/data/datasources/database_helper.dart`)
+- Incremented `_databaseVersion` from 7 to 8
+- Added 2 new columns to the `accounts` table in `_onCreate`:
+  - `debt_ceiling REAL NOT NULL DEFAULT 0.0` - debt ceiling for expense accounts
+  - `balance_type TEXT NOT NULL DEFAULT 'credit'` - balance type indicator (له/عليه)
+- Added 3 new columns to the `expenses` table in `_onCreate`:
+  - `attachment_path TEXT` - path to attached image/file
+  - `operation_type TEXT NOT NULL DEFAULT 'صرف'` - operation type ('قبض' or 'صرف')
+  - `expense_account_id INTEGER` - links expense to its expense account in accounts table
+- Added foreign key from `expenses.expense_account_id` to `accounts.id`
+- Added index `idx_expenses_expense_account_id`
+- Added upgrade logic in `_onUpgrade` for `oldVersion < 8` with safe `ALTER TABLE` statements
+- Added new methods:
+  - `getExpenseAccounts()` - get all accounts with type='EXPENSE'
+  - `getExpensesByAccountId(int accountId)` - get all expenses for a specific expense account
+  - `getAccountTransactions(int accountId)` - get all transactions for an account
+  - `getAccountBalance(int accountId)` - get current balance of an account
+  - `createExpenseAccount()` - create an expense account with optional opening balance, debt ceiling, and balance type
+
+#### 2. Expense Model (`lib/data/models/expense_model.dart`)
+- Added 3 new fields to the `Expense` class:
+  - `attachmentPath` (String?)
+  - `operationType` (String, default 'صرف')
+  - `expenseAccountId` (int?)
+- Updated `toMap()`, `fromMap()`, and `copyWith()` to include the new fields
+
+#### 3. Expenses Screen (`lib/ui/screens/expenses/expenses_screen.dart`)
+- **COMPLETE REDESIGN**: Changed from showing a flat list of individual expenses to showing expense ACCOUNTS
+- New gradient summary header showing total expense balance, account count, and status (له/عليه)
+- Each expense account card shows:
+  - Account name (اسم الحساب) with currency symbol badge
+  - Account code badge
+  - Current balance with color-coded balance type indicator (له/عليه)
+  - Debt ceiling info bar (if set) with usage percentage
+  - Currency color coding (YER=primary, SAR=green, USD=orange)
+- FAB now opens a bottom sheet to "إضافة حساب مصروف جديد" (Add new expense account)
+- Bottom sheet dialog includes:
+  - Account name (required)
+  - Currency selector (YER/SAR/USD)
+  - Debt ceiling (optional)
+  - Opening balance with balance type toggle (له/عليه)
+  - Notes field
+- Tapping an account navigates to the new ExpenseAccountDetailScreen
+
+#### 4. Expense Account Detail Screen (`lib/ui/screens/expenses/expense_account_detail_screen.dart`)
+- **NEW FILE**: Created expense account detail screen
+- Shows account header with name, code, currency, debt ceiling
+- Current balance with color-coded balance type (له/عليه)
+- Summary row with total صرف (debits), قبض (credits), and net balance
+- Transaction list showing all financial operations within the account:
+  - Date badge with time
+  - Description
+  - Debit (صرف) and Credit (قبض) amounts with color coding
+  - Running balance for each transaction
+- FAB to add new expense linked to this account
+- Empty state with Arabic messaging
+
+#### 5. Add Expense Screen (`lib/ui/screens/expenses/add_expense_screen.dart`)
+- **REDESIGNED**: Removed category, payment method, description sections
+- Added `expenseAccountId` parameter to link expense to specific account
+- Added "إرفاق صورة أو مرفق" (Attach image/file) section with:
+  - Image preview with remove button
+  - Gallery upload button (رفع صورة من المعرض)
+  - Camera capture button (تصوير بالكاميرا)
+- Replaced exchange rate section with:
+  - Cash box dropdown (الصندوق) listing all active cash boxes
+  - Operation type selector: صرف (disburse/عليه) and قبض (receive/له)
+- Expense automatically linked to:
+  - The EXPENSE account based on currency (YER→5000, SAR→5001, USD→5002)
+  - The provided `expenseAccountId` for detailed account transactions
+- Save logic creates double-entry journal entries:
+  - Debits/credits the specific expense account based on operation type
+  - Also records in the system expense account and cash/bank account
+
+#### 6. App Router (`lib/ui/navigation/app_router.dart`)
+- Added import for `ExpenseAccountDetailScreen`
+- Added `pushExpenseAccountDetail()` static method for navigation
+
+### Files Modified
+- `lib/data/datasources/database_helper.dart`
+- `lib/data/models/expense_model.dart`
+- `lib/ui/screens/expenses/expenses_screen.dart`
+- `lib/ui/screens/expenses/add_expense_screen.dart`
+- `lib/ui/navigation/app_router.dart`
+
+### Files Created
+- `lib/ui/screens/expenses/expense_account_detail_screen.dart`
+
+### Git Commit
+- `8a3c04a` - "إعادة تصميم شاشة المصروفات مع حسابات المصروفات والعمليات المالية"
