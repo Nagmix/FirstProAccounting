@@ -96,7 +96,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      extendBody: false,
+      extendBody: true,
       extendBodyBehindAppBar: true,
       appBar: _currentIndex == 0
           ? null

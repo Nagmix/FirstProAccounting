@@ -6,8 +6,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/design_system.dart';
 
 /// Custom bottom navigation bar with a notched center for the FAB button.
-/// Uses [BottomBarClipper] to create a semicircular notch at the top center
-/// where the FAB sits, ensuring proper RTL layout and even item distribution.
 class CustomBottomBar extends StatelessWidget {
   const CustomBottomBar({
     super.key,
@@ -27,13 +25,17 @@ class CustomBottomBar extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final barHeight = 64.0;
+
+    // The FAB size and notch dimensions
+    const fabSize = 56.0;
+    const fabTopOffset = 12.0; // How far FAB extends above bar
+    const barHeight = 60.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: barHeight + bottomPadding,
+          height: barHeight + bottomPadding + fabTopOffset,
           child: Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.topCenter,
@@ -42,10 +44,10 @@ class CustomBottomBar extends StatelessWidget {
               Positioned(
                 left: 0,
                 right: 0,
-                top: 28, // Space for FAB above
+                top: fabTopOffset,
                 bottom: 0,
                 child: ClipPath(
-                  clipper: BottomBarClipper(notchRadius: 30),
+                  clipper: BottomBarClipper(notchRadius: fabSize / 2 + 6),
                   child: Container(
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.darkSurface : AppColors.surface,
@@ -68,7 +70,7 @@ class CustomBottomBar extends StatelessWidget {
               Positioned(
                 left: 0,
                 right: 0,
-                top: 28,
+                top: fabTopOffset,
                 bottom: bottomPadding,
                 child: Row(
                   children: [
@@ -77,7 +79,7 @@ class CustomBottomBar extends StatelessWidget {
                       Expanded(child: _buildNavItem(i, theme, isDark)),
 
                     // Center space for FAB
-                    const SizedBox(width: 64),
+                    const SizedBox(width: fabSize + 16),
 
                     // Right items (indices 2, 3, 4)
                     for (int i = 2; i < items.length; i++)
@@ -89,11 +91,7 @@ class CustomBottomBar extends StatelessWidget {
               // ── Center FAB ───────────────────────────────────────
               Positioned(
                 top: 0,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: CenterFabButton(onTap: onFabTap),
-                ),
+                child: CenterFabButton(onTap: onFabTap),
               ),
             ],
           ),
@@ -183,8 +181,8 @@ class CenterFabButton extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withValues(alpha: 0.4),
-              offset: const Offset(0, 8),
-              blurRadius: 16,
+              offset: const Offset(0, 6),
+              blurRadius: 14,
             ),
           ],
         ),
@@ -221,54 +219,55 @@ class BottomBarClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
-    final v = notchRadius * 2;
+    final notchWidth = notchRadius * 2;
+    final centerX = size.width / 2;
 
-    // Start from top-left, going right
-    path.moveTo(0, notchRadius);
+    // Start from top-left corner
+    path.moveTo(0, notchRadius * 0.8);
 
     // Top-left corner radius
     path.arcTo(
-      Rect.fromLTWH(0, 0, notchRadius, notchRadius),
+      Rect.fromLTWH(0, 0, notchRadius * 0.8, notchRadius * 0.8),
       degreeToRadians(180),
       degreeToRadians(90),
       false,
     );
 
     // Line to left side of notch
-    final notchLeft = (size.width / 2) - v / 2 - notchRadius * 0.8;
+    final notchLeft = centerX - notchWidth / 2 - notchRadius * 0.5;
     path.lineTo(notchLeft, 0);
 
     // Left curve into notch
-    path.arcTo(
-      Rect.fromLTWH(notchLeft, 0, notchRadius, notchRadius),
-      degreeToRadians(270),
-      degreeToRadians(70),
-      false,
+    path.quadraticBezierTo(
+      centerX - notchWidth / 2 - notchRadius * 0.15,
+      0,
+      centerX - notchWidth / 2,
+      notchRadius * 0.4,
     );
 
-    // Semicircular notch cutout
+    // Semicircular notch cutout (bottom arc)
     path.arcTo(
-      Rect.fromLTWH((size.width / 2) - v / 2, -v / 2, v, v),
-      degreeToRadians(160),
+      Rect.fromLTWH(centerX - notchWidth / 2, -notchRadius * 0.1, notchWidth, notchRadius * 1.2),
+      degreeToRadians(200),
       degreeToRadians(-140),
       false,
     );
 
     // Right curve out of notch
-    final notchRight = (size.width / 2) + v / 2 - notchRadius * 0.2;
-    path.arcTo(
-      Rect.fromLTWH(notchRight, 0, notchRadius, notchRadius),
-      degreeToRadians(200),
-      degreeToRadians(70),
-      false,
+    final notchRight = centerX + notchWidth / 2 + notchRadius * 0.15;
+    path.quadraticBezierTo(
+      notchRight,
+      0,
+      centerX + notchWidth / 2 + notchRadius * 0.5,
+      0,
     );
 
     // Line to right side
-    path.lineTo(size.width - notchRadius, 0);
+    path.lineTo(size.width - notchRadius * 0.8, 0);
 
     // Top-right corner radius
     path.arcTo(
-      Rect.fromLTWH(size.width - notchRadius, 0, notchRadius, notchRadius),
+      Rect.fromLTWH(size.width - notchRadius * 0.8, 0, notchRadius * 0.8, notchRadius * 0.8),
       degreeToRadians(270),
       degreeToRadians(90),
       false,
