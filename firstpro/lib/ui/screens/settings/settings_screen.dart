@@ -4,7 +4,6 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
-import '../../navigation/app_router.dart';
 
 /// Professional settings screen for the FirstPro accounting app.
 ///
@@ -124,7 +123,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('الإعدادات'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: EdgeInsets.only(bottom: 32 + MediaQuery.of(context).padding.bottom),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -145,6 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   isDark: isDark,
                 ),
                 _buildCurrencyLink(isDark),
+                _buildExchangeRatesLink(isDark),
                 _buildTaxSlider(isDark),
                 _buildReadOnlySetting(
                   label: 'اللغة',
@@ -478,7 +478,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
         size: 16,
         color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
       ),
-      onTap: () => Navigator.pushNamed(context, AppRouter.currencies),
+      onTap: () => Navigator.pushNamed(context, AppConstants.currencies),
+    );
+  }
+
+  /// Exchange rates management link.
+  Widget _buildExchangeRatesLink(bool isDark) {
+    return ListTile(
+      leading: Icon(PhosphorIconsRegular.arrowsLeftRight, color: AppColors.primary, size: 22),
+      title: const Text('أسعار الصرف'),
+      subtitle: const Text('تعديل أسعار الصرف للعملات'),
+      trailing: Icon(
+        PhosphorIconsRegular.caretLeft,
+        size: 16,
+        color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+      ),
+      onTap: () => _showExchangeRatesDialog(),
+    );
+  }
+
+  /// Show exchange rates management dialog.
+  Future<void> _showExchangeRatesDialog() async {
+    final db = DatabaseHelper();
+    final currencies = await db.getAllCurrencies();
+
+    if (!mounted) return;
+
+    final controllers = <String, TextEditingController>{};
+    for (final c in currencies) {
+      final code = c['code'] as String;
+      controllers[code] = TextEditingController(
+        text: (c['exchange_rate'] as num?)?.toDouble().toStringAsFixed(6) ?? '1.0',
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('أسعار الصرف'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: currencies.map((c) {
+              final code = c['code'] as String;
+              final symbol = c['symbol'] as String;
+              final isDefault = (c['is_default'] as int?) == 1;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: controllers[code],
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: '$code ($symbol)',
+                    prefixIcon: const Icon(PhosphorIconsRegular.coin, size: 20),
+                    suffixText: isDefault ? 'افتراضي' : '',
+                    enabled: !isDefault,
+                    helperText: isDefault ? 'العملة الافتراضية - سعر الصرف = 1' : 'سعر الصرف مقابل العملة الافتراضية',
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              controllers.values.forEach((c) => c.dispose());
+              Navigator.pop(ctx);
+            },
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              for (final c in currencies) {
+                final code = c['code'] as String;
+                final rate = double.tryParse(controllers[code]?.text ?? '1.0') ?? 1.0;
+                await db.updateCurrency(c['id'] as int, {
+                  'exchange_rate': rate,
+                });
+              }
+              controllers.values.forEach((c) => c.dispose());
+              Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تم تحديث أسعار الصرف بنجاح'), backgroundColor: AppColors.success),
+                );
+              }
+            },
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
     );
   }
 

@@ -337,7 +337,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: currency.code == 'SAR'
+                                            color: currency.isDefault
                                                 ? AppColors.primary.withValues(alpha: 0.1)
                                                 : AppColors.surfaceVariant,
                                             borderRadius: BorderRadius.circular(6),
@@ -346,7 +346,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                             currency.code,
                                             style: theme.textTheme.labelSmall?.copyWith(
                                               fontWeight: FontWeight.w600,
-                                              color: currency.code == 'SAR'
+                                              color: currency.isDefault
                                                   ? AppColors.primary
                                                   : null,
                                             ),

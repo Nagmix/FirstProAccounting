@@ -71,11 +71,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     // Tab filter
     switch (_tabController.index) {
       case 1:
-        result = result.where((i) => i['type'] == AppConstants.saleInvoice).toList();
+        result = result.where((i) => i['type'] == AppConstants.saleInvoice || i['type'] == 'sale_return').toList();
       case 2:
-        result = result.where((i) => i['type'] == AppConstants.purchaseInvoice).toList();
+        result = result.where((i) => i['type'] == AppConstants.purchaseInvoice || i['type'] == 'purchase_return').toList();
       case 3:
-        result = result.where((i) => i['type'] == AppConstants.returnInvoice).toList();
+        result = result.where((i) => (i['is_return'] ?? 0) == 1).toList();
     }
 
     // Payment status filter
@@ -91,17 +91,15 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       }
     }
 
-    // Payment method filter
+    // Payment mechanism filter
     if (_paymentMethodFilter != 'الكل') {
       final methodMap = {
-        'نقدي': 'cash',
+        'نقداً': 'cash',
         'آجل': 'credit',
-        'بنك': 'bank',
-        'شيك': 'check',
       };
       final method = methodMap[_paymentMethodFilter];
       if (method != null) {
-        result = result.where((i) => i['payment_type'] == method).toList();
+        result = result.where((i) => i['payment_mechanism'] == method).toList();
       }
     }
 
@@ -252,11 +250,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             ),
             const SizedBox(width: 8),
 
-            // Payment method dropdown
+            // Payment mechanism dropdown
             _buildFilterChip(
-              label: 'طريقة الدفع: $_paymentMethodFilter',
+              label: 'آلية الدفع: $_paymentMethodFilter',
               icon: PhosphorIconsRegular.creditCard,
-              items: const ['الكل', 'نقدي', 'آجل', 'بنك', 'شيك'],
+              items: const ['الكل', 'نقداً', 'آجل'],
               selected: _paymentMethodFilter,
               onChanged: (v) => setState(() => _paymentMethodFilter = v),
             ),
@@ -418,11 +416,11 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             ),
             const SizedBox(height: 16),
             // Payment method
-            Text('طريقة الدفع', style: context.textTheme.titleSmall),
+            Text('آلية الدفع', style: context.textTheme.titleSmall),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: ['الكل', 'نقدي', 'آجل', 'بنك', 'شيك'].map((s) {
+              children: ['الكل', 'نقداً', 'آجل'].map((s) {
                 return ChoiceChip(
                   label: Text(s),
                   selected: _paymentMethodFilter == s,
@@ -547,9 +545,12 @@ class _InvoiceCard extends StatelessWidget {
   // ── Type icon ────────────────────────────────────────────────────
   Widget _buildTypeIcon() {
     final type = invoiceData['type'] as String? ?? '';
+    final isReturn = (invoiceData['is_return'] as int?) == 1;
     final (icon, color) = switch (type) {
-      'sale' => (PhosphorIconsRegular.receipt, AppColors.success),
-      'purchase' => (PhosphorIconsRegular.shoppingCart, AppColors.info),
+      'sale' => isReturn ? (PhosphorIconsRegular.arrowCounterClockwise, AppColors.warning) : (PhosphorIconsRegular.receipt, AppColors.success),
+      'purchase' => isReturn ? (PhosphorIconsRegular.arrowCounterClockwise, AppColors.warning) : (PhosphorIconsRegular.shoppingCart, AppColors.info),
+      'sale_return' => (PhosphorIconsRegular.arrowCounterClockwise, AppColors.warning),
+      'purchase_return' => (PhosphorIconsRegular.arrowCounterClockwise, AppColors.warning),
       'return' => (PhosphorIconsRegular.arrowCounterClockwise, AppColors.warning),
       _ => (PhosphorIconsRegular.receipt, AppColors.textSecondary),
     };
@@ -567,14 +568,11 @@ class _InvoiceCard extends StatelessWidget {
 
   // ── Payment method badge ─────────────────────────────────────────
   Widget _buildPaymentMethodBadge(bool isDark) {
-    final paymentType = invoiceData['payment_type'] as String? ?? 'cash';
-    final methodAr = switch (paymentType) {
-      'cash' => 'نقدي',
+    final paymentMechanism = invoiceData['payment_mechanism'] as String? ?? 'cash';
+    final methodAr = switch (paymentMechanism) {
+      'cash' => 'نقداً',
       'credit' => 'آجل',
-      'bank' => 'بنك',
-      'check' => 'شيك',
-      'card' => 'بطاقة',
-      _ => paymentType,
+      _ => paymentMechanism,
     };
 
     return Container(

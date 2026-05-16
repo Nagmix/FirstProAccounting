@@ -1,0 +1,231 @@
+import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+
+import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/datasources/database_helper.dart';
+import '../../../data/models/account_model.dart';
+
+class AddAccountSheet extends StatefulWidget {
+  final Account? existing;
+  const AddAccountSheet({super.key, this.existing});
+
+  @override
+  State<AddAccountSheet> createState() => _AddAccountSheetState();
+}
+
+class _AddAccountSheetState extends State<AddAccountSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _codeController = TextEditingController();
+
+  AccountType _selectedType = AccountType.ASSET;
+  int? _selectedCashBoxId;
+  bool _isSaving = false;
+
+  List<Map<String, dynamic>> _cashBoxes = [];
+
+  final _typeOptions = [
+    (AccountType.ASSET, 'الأصول', PhosphorIconsRegular.buildings),
+    (AccountType.LIABILITY, 'الخصوم', PhosphorIconsRegular.handCoins),
+    (AccountType.COST, 'التكاليف', PhosphorIconsRegular.arrowDownLeft),
+    (AccountType.REVENUE, 'الإيرادات', PhosphorIconsRegular.arrowUpRight),
+    (AccountType.EXPENSE, 'المصاريف', PhosphorIconsRegular.arrowDown),
+  ];
+
+  bool get _isEdit => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existing != null) {
+      _selectedType = widget.existing!.accountType;
+      _nameController.text = widget.existing!.nameAr;
+      _codeController.text = widget.existing!.accountCode;
+      _selectedCashBoxId = widget.existing!.linkedCashBoxId;
+    }
+    _loadCashBoxes();
+    _generateCode();
+  }
+
+  Future<void> _loadCashBoxes() async {
+    final db = DatabaseHelper();
+    final cashBoxes = await db.getAllCashBoxes();
+    setState(() => _cashBoxes = cashBoxes);
+  }
+
+  Future<void> _generateCode() async {
+    if (_isEdit) return;
+    final db = DatabaseHelper();
+    final code = await db.getNextAccountCode(_selectedType.name);
+    if (mounted) {
+      _codeController.text = code;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isSaving = true);
+
+    final now = DateTime.now().toIso8601String();
+    final account = Account(
+      id: widget.existing?.id,
+      nameAr: _nameController.text.trim(),
+      nameEn: _nameController.text.trim(),
+      accountCode: _codeController.text.trim(),
+      accountType: _selectedType,
+      currency: 'YER',
+      linkedCashBoxId: _selectedCashBoxId,
+      isSystem: false,
+      isActive: true,
+      createdAt: widget.existing?.createdAt ?? DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    final db = DatabaseHelper();
+    if (_isEdit) {
+      await db.updateAccount(account.id!, account.toMap());
+    } else {
+      await db.insertAccount(account.toMap());
+    }
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} الحساب بنجاح'), backgroundColor: AppColors.success),
+    );
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(_isEdit ? 'تعديل حساب' : 'إضافة حساب جديد',
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+
+              // Main account type
+              Text('الحساب الرئيسي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _typeOptions.map((opt) {
+                  final selected = _selectedType == opt.$1;
+                  return ChoiceChip(
+                    avatar: Icon(opt.$3, size: 16),
+                    label: Text(opt.$2),
+                    selected: selected,
+                    onSelected: (_) {
+                      setState(() => _selectedType = opt.$1);
+                      _generateCode();
+                    },
+                    selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 14),
+
+              // Account name
+              TextFormField(
+                controller: _nameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'اسم الحساب',
+                  prefixIcon: Icon(PhosphorIconsRegular.textAa),
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'اسم الحساب مطلوب' : null,
+              ),
+              const SizedBox(height: 14),
+
+              // Account code
+              TextFormField(
+                controller: _codeController,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: 'رقم الترتيب',
+                  prefixIcon: const Icon(PhosphorIconsRegular.hash),
+                  suffixIcon: IconButton(
+                    icon: const Icon(PhosphorIconsRegular.arrowClockwise, size: 18),
+                    tooltip: 'توليد رقم جديد',
+                    onPressed: _generateCode,
+                  ),
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'رقم الترتيب مطلوب' : null,
+              ),
+              const SizedBox(height: 14),
+
+              // Linked cash box
+              DropdownButtonFormField<int>(
+                value: _selectedCashBoxId,
+                decoration: const InputDecoration(
+                  labelText: 'حساب الصندوق المرتبط',
+                  prefixIcon: Icon(PhosphorIconsRegular.link),
+                ),
+                items: [
+                  const DropdownMenuItem<int>(value: null, child: Text('بدون ربط')),
+                  ..._cashBoxes.map((cb) => DropdownMenuItem<int>(
+                    value: cb['id'] as int,
+                    child: Text(cb['name'] as String, overflow: TextOverflow.ellipsis),
+                  )),
+                ],
+                onChanged: (v) => setState(() => _selectedCashBoxId = v),
+              ),
+              const SizedBox(height: 24),
+
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: _isSaving ? null : _save,
+                      icon: _isSaving
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(PhosphorIconsRegular.check, size: 20),
+                      label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      child: const Text('إلغاء'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

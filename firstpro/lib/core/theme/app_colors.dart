@@ -1,29 +1,35 @@
 import 'package:flutter/material.dart';
 
-/// Color constants for the FirstPro accounting app.
-/// Modern indigo-blue palette for a professional, contemporary look.
+/// Modern color palette for the FirstPro accounting app.
+/// Inspired by 2026 design trends with deep blue-purple gradients,
+/// warm amber accents, and clean surface colors.
 class AppColors {
   AppColors._();
 
-  // ── Primary (Deep Indigo) ──────────────────────────────────────
-  static const Color primary = Color(0xFF1A237E);
-  static const Color primaryLight = Color(0xFF3949AB);
-  static const Color primaryDark = Color(0xFF0D1442);
+  // ── Primary (Deep Blue-Purple Gradient) ──────────────────────────
+  static const Color primary = Color(0xFF2633C5);
+  static const Color primaryLight = Color(0xFF6A88E5);
+  static const Color primaryDark = Color(0xFF1A237E);
+  static const Color primaryGradientStart = Color(0xFF2633C5);
+  static const Color primaryGradientEnd = Color(0xFF6A88E5);
 
-  // ── Secondary (Amber/Gold) ──────────────────────────────────────
-  static const Color secondary = Color(0xFFFFB300);
+  // ── Secondary (Warm Amber/Gold) ──────────────────────────────────
+  static const Color secondary = Color(0xFFF1B440);
   static const Color secondaryLight = Color(0xFFFFD54F);
   static const Color secondaryDark = Color(0xFFFF8F00);
 
-  // ── Accent ────────────────────────────────────────────────────
-  static const Color accent = Color(0xFF5C6BC0);
+  // ── Accent Colors ────────────────────────────────────────────────
+  static const Color accentBlue = Color(0xFF87A0E5);
+  static const Color accentPink = Color(0xFFF56E98);
+  static const Color accentOrange = Color(0xFFF1B440);
+  static const Color accentGreen = Color(0xFF4CAF50);
 
-  // ── Light theme surfaces ──────────────────────────────────────
-  static const Color background = Color(0xFFF5F6FA);
+  // ── Light theme surfaces ─────────────────────────────────────────
+  static const Color background = Color(0xFFF2F3F8);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFEEF0F6);
+  static const Color surfaceVariant = Color(0xFFF5F6FA);
 
-  // ── Semantic / status ─────────────────────────────────────────
+  // ── Semantic / status ────────────────────────────────────────────
   static const Color error = Color(0xFFE53935);
   static const Color errorLight = Color(0xFFFFCDD2);
   static const Color warning = Color(0xFFFF9800);
@@ -33,17 +39,20 @@ class AppColors {
   static const Color info = Color(0xFF1E88E5);
   static const Color infoLight = Color(0xFFBBDEFB);
 
-  // ── Text ──────────────────────────────────────────────────────
-  static const Color textPrimary = Color(0xFF1A1A2E);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textHint = Color(0xFF9CA3AF);
+  // ── Text ─────────────────────────────────────────────────────────
+  static const Color textPrimary = Color(0xFF17262A);
+  static const Color textSecondary = Color(0xFF4A6572);
+  static const Color textHint = Color(0xFF767676);
   static const Color textDisabled = Color(0xFFBDBDBD);
+  static const Color darkText = Color(0xFF253840);
+  static const Color darkerText = Color(0xFF17262A);
 
-  // ── Dividers & borders ────────────────────────────────────────
+  // ── Dividers & borders ───────────────────────────────────────────
   static const Color divider = Color(0xFFE5E7EB);
   static const Color border = Color(0xFFE5E7EB);
+  static const Color spacer = Color(0xFFF2F2F2);
 
-  // ── Dark theme ────────────────────────────────────────────────
+  // ── Dark theme ───────────────────────────────────────────────────
   static const Color darkBackground = Color(0xFF0F0F1A);
   static const Color darkSurface = Color(0xFF1A1A2E);
   static const Color darkSurfaceVariant = Color(0xFF262640);
@@ -51,4 +60,33 @@ class AppColors {
   static const Color darkTextSecondary = Color(0xFF9CA3AF);
   static const Color darkDivider = Color(0xFF3A3A5C);
   static const Color darkBorder = Color(0xFF3A3A5C);
+
+  // ── Gradients ────────────────────────────────────────────────────
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [primaryGradientStart, primaryGradientEnd],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient primaryGradientVertical = LinearGradient(
+    colors: [primaryGradientStart, primaryGradientEnd],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    colors: [accentBlue, primaryLight],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // ── Chart / Data Visualization Colors ────────────────────────────
+  static const List<Color> chartColors = [
+    Color(0xFF87A0E5),
+    Color(0xFFF56E98),
+    Color(0xFFF1B440),
+    Color(0xFF4CAF50),
+    Color(0xFF2633C5),
+    Color(0xFFFF9800),
+  ];
 }

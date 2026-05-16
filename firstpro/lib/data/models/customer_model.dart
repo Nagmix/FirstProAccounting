@@ -5,10 +5,11 @@ class Customer {
   final String? address;
   final String? address2;
   final String? email;
-  final String? gender; // male, female
-  final String? notificationMethod; // sms, notification
+  final String? gender;
+  final String? notificationMethod;
   final String? notes;
   final double balance;
+  final String balanceType; // 'debit' or 'credit'
   final String? country;
   final double creditLimit;
   final DateTime createdAt;
@@ -25,6 +26,7 @@ class Customer {
     this.notificationMethod,
     this.notes,
     this.balance = 0.0,
+    this.balanceType = 'credit',
     this.country,
     this.creditLimit = 0.0,
     DateTime? createdAt,
@@ -44,6 +46,7 @@ class Customer {
       'notification_method': notificationMethod,
       'notes': notes,
       'balance': balance,
+      'balance_type': balanceType,
       'country': country,
       'credit_limit': creditLimit,
       'created_at': createdAt.toIso8601String(),
@@ -63,6 +66,7 @@ class Customer {
       notificationMethod: map['notification_method'],
       notes: map['notes'],
       balance: (map['balance'] ?? 0.0).toDouble(),
+      balanceType: map['balance_type'] ?? 'credit',
       country: map['country'],
       creditLimit: (map['credit_limit'] ?? 0.0).toDouble(),
       createdAt: DateTime.parse(map['created_at']),
@@ -73,23 +77,18 @@ class Customer {
   Customer copyWith({
     int? id, String? name, String? phone, String? address, String? address2,
     String? email, String? gender, String? notificationMethod, String? notes,
-    double? balance, String? country, double? creditLimit, DateTime? createdAt, DateTime? updatedAt,
+    double? balance, String? balanceType, String? country, double? creditLimit,
+    DateTime? createdAt, DateTime? updatedAt,
   }) {
     return Customer(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      phone: phone ?? this.phone,
-      address: address ?? this.address,
-      address2: address2 ?? this.address2,
-      email: email ?? this.email,
-      gender: gender ?? this.gender,
+      id: id ?? this.id, name: name ?? this.name, phone: phone ?? this.phone,
+      address: address ?? this.address, address2: address2 ?? this.address2,
+      email: email ?? this.email, gender: gender ?? this.gender,
       notificationMethod: notificationMethod ?? this.notificationMethod,
-      notes: notes ?? this.notes,
-      balance: balance ?? this.balance,
-      country: country ?? this.country,
+      notes: notes ?? this.notes, balance: balance ?? this.balance,
+      balanceType: balanceType ?? this.balanceType, country: country ?? this.country,
       creditLimit: creditLimit ?? this.creditLimit,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

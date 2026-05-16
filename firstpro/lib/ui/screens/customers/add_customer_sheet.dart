@@ -7,10 +7,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/customer_model.dart';
 
-/// Modal bottom sheet for adding a new customer.
-///
-/// All fields are in Arabic and RTL. Includes form validation
-/// and radio buttons for gender and notification method.
 class AddCustomerSheet extends StatefulWidget {
   const AddCustomerSheet({super.key});
 
@@ -20,8 +16,6 @@ class AddCustomerSheet extends StatefulWidget {
 
 class _AddCustomerSheetState extends State<AddCustomerSheet> {
   final _formKey = GlobalKey<FormState>();
-
-  // ── Controllers ───────────────────────────────────────────────
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
@@ -32,9 +26,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   final _balanceController = TextEditingController();
   final _creditLimitController = TextEditingController();
 
-  // ── State ─────────────────────────────────────────────────────
-  String _gender = 'male'; // male | female
-  String _notificationMethod = 'sms'; // sms | notification
+  String _gender = 'male';
+  String _notificationMethod = 'sms';
+  String _balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
   bool _isSaving = false;
 
   @override
@@ -51,10 +45,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     super.dispose();
   }
 
-  // ── Save handler ──────────────────────────────────────────────
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isSaving = true);
 
     final customer = Customer(
@@ -68,6 +60,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       notificationMethod: _notificationMethod,
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       balance: double.tryParse(_balanceController.text) ?? 0.0,
+      balanceType: _balanceType,
       creditLimit: double.tryParse(_creditLimitController.text) ?? 0.0,
     );
 
@@ -78,12 +71,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     setState(() => _isSaving = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('تم إضافة العميل "${_nameController.text}" بنجاح'),
-        backgroundColor: AppColors.success,
-      ),
+      SnackBar(content: Text('تم إضافة العميل "${_nameController.text}" بنجاح'), backgroundColor: AppColors.success),
     );
-
     Navigator.of(context).pop();
   }
 
@@ -91,136 +80,170 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('إضافة عميل جديد'),
+        leading: IconButton(
+          icon: const Icon(PhosphorIconsRegular.arrowRight),
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: _isSaving ? null : _save,
+            icon: _isSaving
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(PhosphorIconsRegular.check, size: 20),
+            label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Header ─────────────────────────────────────────
-              Text(
-                'إضافة عميل جديد',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-
-              // ── الاسم ─────────────────────────────────────────
               TextFormField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'الاسم',
-                  prefixIcon: Icon(PhosphorIconsRegular.user),
-                ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                decoration: const InputDecoration(labelText: 'الاسم *', prefixIcon: Icon(PhosphorIconsRegular.user)),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
               ),
               const SizedBox(height: 14),
 
-              // ── رقم الهاتف ────────────────────────────────────
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(15),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'رقم الهاتف',
-                  prefixIcon: Icon(PhosphorIconsRegular.phone),
-                ),
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(15)],
+                decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixIcon: Icon(PhosphorIconsRegular.phone)),
               ),
               const SizedBox(height: 14),
 
-              // ── البريد الإلكتروني ─────────────────────────────
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'البريد الإلكتروني',
-                  prefixIcon: Icon(PhosphorIconsRegular.envelope),
-                ),
+                decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(PhosphorIconsRegular.envelope)),
                 validator: (v) {
                   if (v != null && v.trim().isNotEmpty) {
                     final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                    if (!regex.hasMatch(v.trim())) {
-                      return 'البريد الإلكتروني غير صالح';
-                    }
+                    if (!regex.hasMatch(v.trim())) return 'البريد الإلكتروني غير صالح';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 14),
 
-              // ── العنوان ───────────────────────────────────────
               TextFormField(
                 controller: _addressController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'العنوان',
-                  prefixIcon: Icon(PhosphorIconsRegular.mapPin),
-                ),
+                decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(PhosphorIconsRegular.mapPin)),
               ),
               const SizedBox(height: 14),
 
-              // ── العنوان 2 ─────────────────────────────────────
-              TextFormField(
-                controller: _address2Controller,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'العنوان - سطر ثاني',
-                  prefixIcon: Icon(PhosphorIconsRegular.mapPinLine),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // ── البلد ──────────────────────────────────────────
               TextFormField(
                 controller: _countryController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'البلد',
-                  prefixIcon: Icon(PhosphorIconsRegular.globe),
-                ),
+                decoration: const InputDecoration(labelText: 'البلد', prefixIcon: Icon(PhosphorIconsRegular.globe)),
               ),
               const SizedBox(height: 14),
 
-              // ── الرصيد الافتتاحي ──────────────────────────────
-              TextFormField(
-                controller: _balanceController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
+              // الرصيد الافتتاحي + له/عليه
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _balanceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      textInputAction: TextInputAction.next,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                      decoration: InputDecoration(
+                        labelText: 'الرصيد الافتتاحي',
+                        prefixIcon: const Icon(PhosphorIconsRegular.calculator),
+                        suffixText: AppConstants.currency,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text('الحالة', style: theme.textTheme.labelLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: _balanceType == 'credit' ? AppColors.success : AppColors.error),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _balanceType = 'credit'),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: _balanceType == 'credit' ? AppColors.success.withValues(alpha: 0.1) : Colors.transparent,
+                                      borderRadius: const BorderRadius.only(topRight: Radius.circular(9), bottomRight: Radius.circular(9)),
+                                    ),
+                                    child: Text(
+                                      'له',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: _balanceType == 'credit' ? AppColors.success : AppColors.textHint,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _balanceType = 'debit'),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: _balanceType == 'debit' ? AppColors.error.withValues(alpha: 0.1) : Colors.transparent,
+                                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(9), bottomLeft: Radius.circular(9)),
+                                    ),
+                                    child: Text(
+                                      'عليه',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: _balanceType == 'debit' ? AppColors.error : AppColors.textHint,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
-                decoration: InputDecoration(
-                  labelText: 'الرصيد الافتتاحي',
-                  prefixIcon: const Icon(PhosphorIconsRegular.calculator),
-                  suffixText: AppConstants.currency,
-                ),
               ),
               const SizedBox(height: 14),
 
-              // ── حد الائتمان ────────────────────────────────────
               TextFormField(
                 controller: _creditLimitController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                ],
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
                 decoration: InputDecoration(
                   labelText: 'حد الائتمان',
                   prefixIcon: const Icon(PhosphorIconsRegular.creditCard),
@@ -229,7 +252,6 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
               const SizedBox(height: 14),
 
-              // ── الملاحظات ─────────────────────────────────────
               TextFormField(
                 controller: _notesController,
                 maxLines: 3,
@@ -242,29 +264,20 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
               const SizedBox(height: 20),
 
-              // ── الجنس (Radio) ─────────────────────────────────
               _SectionLabel(label: 'الجنس'),
               Row(
                 children: [
                   Expanded(
                     child: RadioListTile<String>(
-                      value: 'male',
-                      groupValue: _gender,
-                      title: const Text('ذكر'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      activeColor: AppColors.primary,
+                      value: 'male', groupValue: _gender, title: const Text('ذكر'),
+                      contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
                       onChanged: (v) => setState(() => _gender = v!),
                     ),
                   ),
                   Expanded(
                     child: RadioListTile<String>(
-                      value: 'female',
-                      groupValue: _gender,
-                      title: const Text('أنثى'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      activeColor: AppColors.primary,
+                      value: 'female', groupValue: _gender, title: const Text('أنثى'),
+                      contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
                       onChanged: (v) => setState(() => _gender = v!),
                     ),
                   ),
@@ -272,78 +285,56 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
               const SizedBox(height: 8),
 
-              // ── طريقة التواصل (Radio) ─────────────────────────
               _SectionLabel(label: 'طريقة التواصل'),
               Row(
                 children: [
                   Expanded(
                     child: RadioListTile<String>(
-                      value: 'sms',
-                      groupValue: _notificationMethod,
-                      title: const Text('رسائل نصية'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      activeColor: AppColors.primary,
-                      onChanged: (v) =>
-                          setState(() => _notificationMethod = v!),
+                      value: 'sms', groupValue: _notificationMethod, title: const Text('رسائل نصية'),
+                      contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
+                      onChanged: (v) => setState(() => _notificationMethod = v!),
                     ),
                   ),
                   Expanded(
                     child: RadioListTile<String>(
-                      value: 'notification',
-                      groupValue: _notificationMethod,
-                      title: const Text('إشعارات'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      activeColor: AppColors.primary,
-                      onChanged: (v) =>
-                          setState(() => _notificationMethod = v!),
+                      value: 'notification', groupValue: _notificationMethod, title: const Text('إشعارات'),
+                      contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
+                      onChanged: (v) => setState(() => _notificationMethod = v!),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // ── Action buttons ─────────────────────────────────
               Row(
                 children: [
-                  // حفظ
                   Expanded(
                     flex: 2,
                     child: ElevatedButton.icon(
                       onPressed: _isSaving ? null : _save,
                       icon: _isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(PhosphorIconsRegular.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // إلغاء
                   Expanded(
                     child: OutlinedButton(
-                      onPressed:
-                          _isSaving ? null : () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
+                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                       child: const Text('إلغاء'),
                     ),
                   ),
                 ],
               ),
+
+              // Extra bottom safe area for gesture nav
+              SizedBox(height: bottomPadding),
             ],
           ),
         ),
@@ -352,12 +343,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  SECTION LABEL
-// ═══════════════════════════════════════════════════════════════════
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel({required this.label});
-
   final String label;
 
   @override
@@ -365,13 +352,7 @@ class _SectionLabel extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        label,
-        style: theme.textTheme.labelLarge?.copyWith(
-          color: AppColors.primary,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+      child: Text(label, style: theme.textTheme.labelLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
     );
   }
 }

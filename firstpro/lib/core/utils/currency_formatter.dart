@@ -1,31 +1,21 @@
 import '../constants/app_constants.dart';
 
 /// Utility class for formatting currency values in Arabic context.
-///
-/// All methods return strings suitable for display in RTL layouts.
 class CurrencyFormatter {
   CurrencyFormatter._();
 
   /// Formats [amount] with two decimal places and the given [symbol].
-  ///
-  /// Example: `format(1250.5)` → `'1,250.50 ر.س'`
   static String format(double amount, {String symbol = AppConstants.currency}) {
     final formatted = _addCommas(amount.toStringAsFixed(2));
     return '$formatted $symbol';
   }
 
   /// Formats [amount] without the currency symbol.
-  ///
-  /// Example: `formatValue(1250.5)` → `'1,250.50'`
   static String formatValue(double amount) {
     return _addCommas(amount.toStringAsFixed(2));
   }
 
   /// Formats [amount] with a compact representation for dashboards.
-  ///
-  /// - ≥ 1,000,000 → e.g. `1.5M`
-  /// - ≥ 1,000     → e.g. `3.2K`
-  /// - otherwise   → e.g. `950`
   static String formatCompact(double amount) {
     if (amount >= 1000000) {
       return '${(amount / 1000000).toStringAsFixed(1)}M';
@@ -37,8 +27,6 @@ class CurrencyFormatter {
   }
 
   /// Formats [amount] as a compact string with the currency symbol.
-  ///
-  /// Example: `formatCompactWithSymbol(2500000)` → `'2.5M ر.س'`
   static String formatCompactWithSymbol(
     double amount, {
     String symbol = AppConstants.currency,
@@ -47,8 +35,6 @@ class CurrencyFormatter {
   }
 
   /// Parses a formatted currency string back to a double.
-  ///
-  /// Strips commas and the currency symbol before parsing.
   static double parse(String value) {
     final cleaned = value
         .replaceAll(',', '')
@@ -63,7 +49,7 @@ class CurrencyFormatter {
     return amount.abs() < epsilon;
   }
 
-  /// Returns a signed display string, e.g. `+1,250.00 ر.س` or `-300.00 ر.س`.
+  /// Returns a signed display string.
   static String formatSigned(
     double amount, {
     String symbol = AppConstants.currency,
@@ -73,9 +59,6 @@ class CurrencyFormatter {
   }
 
   // ── Private helpers ────────────────────────────────────────────
-
-  /// Adds thousand-separator commas to the integer portion of a
-  /// decimal string like `"1234567.89"` → `"1,234,567.89"`.
   static String _addCommas(String value) {
     final parts = value.split('.');
     final integerPart = parts[0];

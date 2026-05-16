@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../navigation/app_router.dart';
+import '../../widgets/animated_entry.dart';
 import '../../widgets/quick_action_button.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/transaction_tile.dart';
 
-/// The main dashboard screen – the first thing the user sees after login.
+/// The main dashboard screen – the first thing the user sees.
 ///
 /// Layout (all RTL):
-/// 1. Header – greeting + date + today's sales summary
-/// 2. Quick-action grid (3 × 3)
-/// 3. Statistics cards (2 × 2)
+/// 1. Gradient Header – greeting + date + today's sales summary
+/// 2. Quick-action grid (3 × 3) with animated entry
+/// 3. Statistics cards (2 × 2) with accent bars
 /// 4. Recent transactions list
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,7 +28,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // ── Dashboard data loaded from database ───────────────────────
   double _todaySales = 0.0;
   int _todayInvoiceCount = 0;
   double _monthSales = 0.0;
@@ -40,7 +43,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadDashboardData();
   }
 
-  /// Loads all dashboard statistics from the database.
   Future<void> _loadDashboardData() async {
     try {
       final db = DatabaseHelper();
@@ -83,37 +85,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       body: RefreshIndicator(
         onRefresh: _loadDashboardData,
+        color: AppColors.primary,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // ── Header section ─────────────────────────────────
+            // ── Gradient Header ──────────────────────────────────
             SliverToBoxAdapter(child: _buildHeader(context, isDark)),
 
-            // ── Quick actions ──────────────────────────────────
-            SliverToBoxAdapter(child: _buildSectionTitle(context, 'إجراءات سريعة')),
-            SliverToBoxAdapter(child: _buildQuickActions(context)),
+            // ── Quick actions ────────────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 100),
+                child: _buildSectionTitle(context, 'إجراءات سريعة'),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 200),
+                child: _buildQuickActions(context),
+              ),
+            ),
 
-            // ── Statistics ─────────────────────────────────────
-            SliverToBoxAdapter(child: _buildSectionTitle(context, 'الإحصائيات')),
-            SliverToBoxAdapter(child: _buildStatCards(context, isDark)),
+            // ── Statistics ───────────────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 300),
+                child: _buildSectionTitle(context, 'الإحصائيات'),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 400),
+                child: _buildStatCards(context, isDark),
+              ),
+            ),
 
-            // ── Recent transactions ────────────────────────────
-            SliverToBoxAdapter(child: _buildSectionTitle(context, 'آخر المعاملات')),
+            // ── Recent transactions ──────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 500),
+                child: _buildSectionTitle(context, 'آخر المعاملات'),
+              ),
+            ),
             _buildRecentTransactions(context, isDark),
 
-            // ── Bottom spacing ─────────────────────────────────
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            // ── Bottom spacing ───────────────────────────────────
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  HEADER
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
+  //  GRADIENT HEADER
+  // ══════════════════════════════════════════════════════════════════
   Widget _buildHeader(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
     final now = DateTime.now();
@@ -123,59 +152,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(24),
-        ),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.of(context).padding.top + 16,
+        20,
+        28,
       ),
+      decoration: DesignSystem.headerGradientDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting
-          Text(
-            greeting,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
+          // ── Top bar ────────────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Greeting
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      greeting,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dateStr,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-          // Date
-          Text(
-            dateStr,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white70,
-            ),
+              // Action icons
+              Row(
+                children: [
+                  _HeaderIconButton(
+                    icon: PhosphorIconsRegular.whatsappLogo,
+                    onTap: () {},
+                  ),
+                  _HeaderIconButton(
+                    icon: PhosphorIconsRegular.bell,
+                    onTap: () {},
+                  ),
+                  _HeaderIconButton(
+                    icon: PhosphorIconsRegular.list,
+                    onTap: () => Scaffold.of(context).openEndDrawer(),
+                  ),
+                ],
+              ),
+            ],
           ),
           const SizedBox(height: 20),
 
-          // Today's sales summary card
+          // ── Today's sales summary card ─────────────────────────
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: DesignSystem.asymmetricTopRight(large: 50, small: 14),
             ),
             child: Row(
               children: [
+                // Sales icon with gradient circle
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.25),
+                    gradient: const LinearGradient(
+                      colors: [AppColors.secondary, AppColors.secondaryLight],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.secondary.withValues(alpha: 0.3),
+                        offset: const Offset(0, 4),
+                        blurRadius: 12,
+                      ),
+                    ],
                   ),
                   child: const Icon(
-                    Icons.point_of_sale,
+                    PhosphorIconsFill.chartLineUp,
                     color: Colors.white,
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,9 +254,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'إجمالي مبيعات اليوم',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.white70,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         CurrencyFormatter.format(_todaySales),
                         style: theme.textTheme.titleLarge?.copyWith(
@@ -198,24 +269,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 // Invoice count
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'فاتورة',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white70,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '$_todayInvoiceCount',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$_todayInvoiceCount',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
+                      Text(
+                        'فاتورة',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.white70,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -225,95 +301,109 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  SECTION TITLE
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   Widget _buildSectionTitle(BuildContext context, String title) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-      child: Text(
-        title,
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryLight],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  QUICK ACTIONS (3×3 grid)
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
-      // Row 1
       _QuickActionData(
         label: 'فاتورة بيع',
-        icon: Icons.receipt_long_outlined,
-        color: AppColors.primary,
-        route: AppRouter.newSaleInvoice,
+        icon: PhosphorIconsFill.receipt,
+        color: AppColors.accentBlue,
+        route: AppConstants.newSaleInvoice,
       ),
       _QuickActionData(
         label: 'فاتورة شراء',
-        icon: Icons.assignment_outlined,
-        color: AppColors.info,
-        route: AppRouter.newPurchaseInvoice,
+        icon: PhosphorIconsFill.shoppingCart,
+        color: AppColors.accentPink,
+        route: AppConstants.newPurchaseInvoice,
       ),
       _QuickActionData(
         label: 'نقطة البيع',
-        icon: Icons.point_of_sale_outlined,
+        icon: PhosphorIconsFill.storefront,
         color: AppColors.secondaryDark,
-        route: AppRouter.pos,
+        route: AppConstants.pos,
       ),
-      // Row 2
       _QuickActionData(
         label: 'إضافة عميل',
-        icon: Icons.person_add_outlined,
-        color: AppColors.accent,
-        route: AppRouter.addCustomer,
+        icon: PhosphorIconsFill.userPlus,
+        color: AppColors.accentGreen,
+        route: AppConstants.addCustomer,
       ),
       _QuickActionData(
         label: 'إضافة منتج',
-        icon: Icons.add_box_outlined,
-        color: AppColors.warning,
-        route: AppRouter.addProduct,
+        icon: PhosphorIconsFill.package,
+        color: AppColors.accentOrange,
+        route: AppConstants.addProduct,
       ),
       _QuickActionData(
         label: 'عرض المخزون',
-        icon: Icons.warehouse_outlined,
+        icon: PhosphorIconsFill.warehouse,
         color: const Color(0xFF7B1FA2),
-        route: AppRouter.inventory,
+        route: AppConstants.inventory,
       ),
-      // Row 3
       _QuickActionData(
         label: 'التقارير',
-        icon: Icons.bar_chart_outlined,
+        icon: PhosphorIconsFill.chartBar,
         color: AppColors.info,
-        route: AppRouter.reports,
+        route: AppConstants.reports,
       ),
       _QuickActionData(
         label: 'الإحصائيات',
-        icon: Icons.analytics_outlined,
+        icon: PhosphorIconsFill.chartPie,
         color: AppColors.primaryLight,
-        route: AppRouter.statistics,
+        route: AppConstants.statistics,
       ),
       _QuickActionData(
         label: 'الدعم الفني',
-        icon: Icons.support_agent_outlined,
+        icon: PhosphorIconsFill.headset,
         color: AppColors.error,
-        route: AppRouter.support,
+        route: AppConstants.support,
       ),
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: GridView.count(
         crossAxisCount: 3,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 2,
-        crossAxisSpacing: 2,
-        childAspectRatio: 0.85,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 0.9,
         children: actions
             .map(
               (a) => QuickActionButton(
@@ -328,87 +418,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  STATISTICS CARDS (2×2)
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   Widget _buildStatCards(BuildContext context, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: GridView.count(
         crossAxisCount: 2,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 2,
-        crossAxisSpacing: 2,
-        childAspectRatio: 1.15,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1.1,
         children: [
           StatCard(
             title: 'إجمالي المبيعات',
             value: _monthSales,
-            icon: Icons.shopping_cart_outlined,
-            color: AppColors.primary,
+            icon: PhosphorIconsFill.chartLineUp,
+            color: AppColors.accentBlue,
             subtitle: 'هذا الشهر',
+            accentBarColor: AppColors.accentBlue,
           ),
           StatCard(
             title: 'إجمالي المشتريات',
             value: _monthPurchases,
-            icon: Icons.receipt_outlined,
-            color: AppColors.info,
+            icon: PhosphorIconsFill.shoppingCart,
+            color: AppColors.accentPink,
             subtitle: 'هذا الشهر',
+            accentBarColor: AppColors.accentPink,
           ),
           StatCard(
             title: 'عدد العملاء',
             value: _customerCount.toDouble(),
-            icon: Icons.people_outline,
-            color: AppColors.secondaryDark,
+            icon: PhosphorIconsFill.users,
+            color: AppColors.accentGreen,
             isCount: true,
             subtitle: 'إجمالي',
+            accentBarColor: AppColors.accentGreen,
           ),
           StatCard(
             title: 'رصيد الصندوق',
             value: _cashBalance,
-            icon: Icons.account_balance_wallet_outlined,
-            color: AppColors.accent,
+            icon: PhosphorIconsFill.vault,
+            color: AppColors.accentOrange,
             subtitle: 'الرصيد الحالي',
+            accentBarColor: AppColors.accentOrange,
           ),
         ],
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  RECENT TRANSACTIONS
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   Widget _buildRecentTransactions(BuildContext context, bool isDark) {
     if (_isLoading) {
       return const SliverToBoxAdapter(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 32),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
         ),
       );
     }
 
     if (_recentInvoices.isEmpty) {
       return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-          child: Column(
-            children: [
-              Icon(
-                Icons.receipt_long_outlined,
-                size: 48,
-                color: AppColors.textHint,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'لا توجد معاملات بعد',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textHint,
-                  fontWeight: FontWeight.w500,
+        child: AnimatedEntry(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+            child: Column(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    PhosphorIconsRegular.receipt,
+                    size: 36,
+                    color: AppColors.primary,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  'لا توجد معاملات بعد',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textHint,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -422,26 +526,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
             final statusStr = invoice['status'] as String? ?? 'pending';
             final transactionStatus = _mapInvoiceStatus(statusStr);
 
-            return TransactionTile(
-              customerName: invoice['entity_name'] as String? ?? '—',
-              amount: (invoice['total'] as num?)?.toDouble() ?? 0.0,
-              date: DateTime.tryParse(
-                      invoice['created_at'] as String? ?? '') ??
-                  DateTime.now(),
-              status: transactionStatus,
-              onTap: () {
-                // TODO: Navigate to invoice detail
-              },
+            return AnimatedEntry(
+              delay: Duration(milliseconds: 100 * index),
+              child: TransactionTile(
+                customerName: invoice['entity_name'] as String? ?? '—',
+                amount: (invoice['total'] as num?)?.toDouble() ?? 0.0,
+                date: DateTime.tryParse(
+                        invoice['created_at'] as String? ?? '') ??
+                    DateTime.now(),
+                status: transactionStatus,
+                onTap: () {
+                  // TODO: Navigate to invoice detail
+                },
+              ),
             );
           }
 
-          // "عرض الكل" button at the end
+          // "عرض الكل" button
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () => AppRouter.push(context, AppRouter.invoices),
+                onPressed: () => AppRouter.push(context, AppConstants.invoices),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -458,7 +565,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  /// Maps a database invoice status string to [TransactionStatus].
   TransactionStatus _mapInvoiceStatus(String status) {
     switch (status.toLowerCase()) {
       case 'paid':
@@ -473,7 +579,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// ── Internal helper class ────────────────────────────────────────
+// ── Internal helper classes ────────────────────────────────────────
 
 class _QuickActionData {
   const _QuickActionData({
@@ -487,4 +593,29 @@ class _QuickActionData {
   final IconData icon;
   final Color color;
   final String route;
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 4),
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
 }

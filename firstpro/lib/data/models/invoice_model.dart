@@ -1,7 +1,10 @@
 class Invoice {
-  final String id; // UUID
-  final String type; // sale, purchase, return
-  final String paymentType; // cash, credit, partial, card
+  final String id;
+  final String type;
+  final String paymentMechanism; // 'cash' or 'credit'
+  final String paymentMethod; // 'cash', 'check', 'transfer', 'bank'
+  final bool isReturn;
+  final int? cashBoxId;
   final int? customerId;
   final int? supplierId;
   final double subtotal;
@@ -11,16 +14,22 @@ class Invoice {
   final double total;
   final double paidAmount;
   final double remaining;
-  final String status; // paid, unpaid, pending
+  final String status;
   final int? cashierId;
   final int? warehouseId;
   final String? notes;
+  final String currency;
+  final double exchangeRate;
+  final double transportCharges;
   final DateTime createdAt;
 
   Invoice({
     required this.id,
     required this.type,
-    this.paymentType = 'cash',
+    this.paymentMechanism = 'cash',
+    this.paymentMethod = 'cash',
+    this.isReturn = false,
+    this.cashBoxId,
     this.customerId,
     this.supplierId,
     this.subtotal = 0.0,
@@ -34,14 +43,28 @@ class Invoice {
     this.cashierId,
     this.warehouseId,
     this.notes,
+    this.currency = 'YER',
+    this.exchangeRate = 1.0,
+    this.transportCharges = 0.0,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
+
+  String get effectiveType {
+    if (isReturn) {
+      if (type == 'sale') return 'sale_return';
+      if (type == 'purchase') return 'purchase_return';
+    }
+    return type;
+  }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'type': type,
-      'payment_type': paymentType,
+      'payment_mechanism': paymentMechanism,
+      'payment_method': paymentMethod,
+      'is_return': isReturn ? 1 : 0,
+      'cash_box_id': cashBoxId,
       'customer_id': customerId,
       'supplier_id': supplierId,
       'subtotal': subtotal,
@@ -55,6 +78,9 @@ class Invoice {
       'cashier_id': cashierId,
       'warehouse_id': warehouseId,
       'notes': notes,
+      'currency': currency,
+      'exchange_rate': exchangeRate,
+      'transport_charges': transportCharges,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -63,7 +89,10 @@ class Invoice {
     return Invoice(
       id: map['id'],
       type: map['type'],
-      paymentType: map['payment_type'] ?? 'cash',
+      paymentMechanism: map['payment_mechanism'] ?? 'cash',
+      paymentMethod: map['payment_method'] ?? 'cash',
+      isReturn: (map['is_return'] ?? 0) == 1,
+      cashBoxId: map['cash_box_id'],
       customerId: map['customer_id'],
       supplierId: map['supplier_id'],
       subtotal: (map['subtotal'] ?? 0.0).toDouble(),
@@ -77,46 +106,35 @@ class Invoice {
       cashierId: map['cashier_id'],
       warehouseId: map['warehouse_id'],
       notes: map['notes'],
+      currency: map['currency'] ?? 'YER',
+      exchangeRate: (map['exchange_rate'] ?? 1.0).toDouble(),
+      transportCharges: (map['transport_charges'] ?? 0.0).toDouble(),
       createdAt: DateTime.parse(map['created_at']),
     );
   }
 
   Invoice copyWith({
-    String? id,
-    String? type,
-    String? paymentType,
-    int? customerId,
-    int? supplierId,
-    double? subtotal,
-    double? discountRate,
-    double? discountAmount,
-    double? taxAmount,
-    double? total,
-    double? paidAmount,
-    double? remaining,
-    String? status,
-    int? cashierId,
-    int? warehouseId,
-    String? notes,
-    DateTime? createdAt,
+    String? id, String? type, String? paymentMechanism, String? paymentMethod,
+    bool? isReturn, int? cashBoxId, int? customerId, int? supplierId,
+    double? subtotal, double? discountRate, double? discountAmount,
+    double? taxAmount, double? total, double? paidAmount, double? remaining,
+    String? status, int? cashierId, int? warehouseId, String? notes,
+    String? currency, double? exchangeRate, double? transportCharges, DateTime? createdAt,
   }) {
     return Invoice(
-      id: id ?? this.id,
-      type: type ?? this.type,
-      paymentType: paymentType ?? this.paymentType,
-      customerId: customerId ?? this.customerId,
-      supplierId: supplierId ?? this.supplierId,
-      subtotal: subtotal ?? this.subtotal,
-      discountRate: discountRate ?? this.discountRate,
-      discountAmount: discountAmount ?? this.discountAmount,
-      taxAmount: taxAmount ?? this.taxAmount,
-      total: total ?? this.total,
-      paidAmount: paidAmount ?? this.paidAmount,
-      remaining: remaining ?? this.remaining,
-      status: status ?? this.status,
-      cashierId: cashierId ?? this.cashierId,
-      warehouseId: warehouseId ?? this.warehouseId,
-      notes: notes ?? this.notes,
+      id: id ?? this.id, type: type ?? this.type,
+      paymentMechanism: paymentMechanism ?? this.paymentMechanism,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      isReturn: isReturn ?? this.isReturn, cashBoxId: cashBoxId ?? this.cashBoxId,
+      customerId: customerId ?? this.customerId, supplierId: supplierId ?? this.supplierId,
+      subtotal: subtotal ?? this.subtotal, discountRate: discountRate ?? this.discountRate,
+      discountAmount: discountAmount ?? this.discountAmount, taxAmount: taxAmount ?? this.taxAmount,
+      total: total ?? this.total, paidAmount: paidAmount ?? this.paidAmount,
+      remaining: remaining ?? this.remaining, status: status ?? this.status,
+      cashierId: cashierId ?? this.cashierId, warehouseId: warehouseId ?? this.warehouseId,
+      notes: notes ?? this.notes, currency: currency ?? this.currency,
+      exchangeRate: exchangeRate ?? this.exchangeRate, 
+      transportCharges: transportCharges ?? this.transportCharges,
       createdAt: createdAt ?? this.createdAt,
     );
   }

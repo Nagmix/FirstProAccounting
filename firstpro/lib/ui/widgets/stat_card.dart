@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/design_system.dart';
 import '../../core/utils/currency_formatter.dart';
 
-/// A reusable statistics card for the dashboard.
-///
-/// Displays a large numeric [value], a [title], an [icon] inside a
-/// coloured circle, and an optional trend indicator (percentage with
-/// up/down arrow).
-///
-/// When [isCount] is `true`, the value is shown as a plain integer
-/// without a currency symbol (e.g. "156" instead of "156 ر.س").
+/// A modern statistics card with accent bar, gradient icon background,
+/// and smooth entry animation. Inspired by the fitness app UI design.
 class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
@@ -22,6 +17,7 @@ class StatCard extends StatelessWidget {
     this.trendIsUp = true,
     this.subtitle,
     this.isCount = false,
+    this.accentBarColor,
   });
 
   final String title;
@@ -31,82 +27,130 @@ class StatCard extends StatelessWidget {
   final double? trendPercentage;
   final bool trendIsUp;
   final String? subtitle;
-
-  /// When `true`, display the value as a plain integer without the
-  /// currency symbol.  Useful for counts (e.g. number of customers).
   final bool isCount;
+  final Color? accentBarColor;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final effectiveAccentColor = accentBarColor ?? color;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        borderRadius: DesignSystem.borderRadius16,
+        boxShadow: DesignSystem.cardShadow(isLight: !isDark),
+      ),
+      child: ClipRRect(
+        borderRadius: DesignSystem.borderRadius16,
+        child: Stack(
           children: [
-            // ── Icon + Trend row ────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Colored circle with icon
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+            // ── Accent bar on the right side (RTL) ────────────────
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: effectiveAccentColor.withValues(alpha: 0.6),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    bottomLeft: Radius.circular(4),
                   ),
-                  child: Icon(icon, color: color, size: 22),
-                ),
-
-                // Trend indicator
-                if (trendPercentage != null) _buildTrend(isDark),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // ── Value ───────────────────────────────────────────
-            Text(
-              isCount
-                  ? value.toInt().toString()
-                  : CurrencyFormatter.formatCompactWithSymbol(value),
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-
-            // ── Title ───────────────────────────────────────────
-            Text(
-              title,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-
-            // ── Optional subtitle ───────────────────────────────
-            if (subtitle != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                subtitle!,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                 ),
               ),
-            ],
+            ),
+
+            // ── Card content ──────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Icon + Trend row ────────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Gradient icon container
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              color.withValues(alpha: 0.15),
+                              color.withValues(alpha: 0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(icon, color: color, size: 22),
+                      ),
+
+                      // Trend indicator
+                      if (trendPercentage != null) _buildTrend(isDark),
+                    ],
+                  ),
+                  const Spacer(),
+
+                  // ── Value ───────────────────────────────────────
+                  Text(
+                    isCount
+                        ? value.toInt().toString()
+                        : CurrencyFormatter.formatCompactWithSymbol(value),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+
+                  // ── Title ───────────────────────────────────────
+                  Text(
+                    title,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+
+                  // ── Optional subtitle with progress bar ─────────
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          subtitle!,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DesignSystem.progressBar(
+                            progress: 0.6, // Placeholder
+                            color: color,
+                            width: double.infinity,
+                            height: 3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// Builds the trend arrow + percentage badge.
   Widget _buildTrend(bool isDark) {
     final isPositive = trendIsUp;
     final trendColor = isPositive ? AppColors.success : AppColors.error;

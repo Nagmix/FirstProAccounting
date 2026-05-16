@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../data/datasources/database_helper.dart';
 
 /// Support and complaints screen for the FirstPro accounting app.
 ///
-/// Features a TabBar with three tabs:
+/// Features a TabBar with two tabs:
 /// 1. شكوى جديدة – New complaint form
 /// 2. شكاوى سابقة – Previous complaints list
-/// 3. السلة – Cart
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
 
@@ -20,56 +19,22 @@ class SupportScreen extends StatefulWidget {
 class _SupportScreenState extends State<SupportScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _dbHelper = DatabaseHelper();
 
   // ── New complaint form controllers ──────────────────────────────
   final _customerNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _subjectController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String _selectedCountry = 'السعودية';
+  String _selectedCountry = 'اليمن';
   String _complaintType = 'فني'; // فني / مالي / خدمي
 
-  // ── Sample previous complaints ──────────────────────────────────
-  final List<_Complaint> _previousComplaints = [
-    _Complaint(
-      customerName: 'أحمد محمد',
-      subject: 'مشكلة في طباعة الفاتورة',
-      type: 'فني',
-      status: ComplaintStatus.open,
-      date: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-    _Complaint(
-      customerName: 'فاطمة العلي',
-      subject: 'خطأ في حساب الضريبة',
-      type: 'مالي',
-      status: ComplaintStatus.inProgress,
-      date: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-    _Complaint(
-      customerName: 'خالد الدوسري',
-      subject: 'تأخر في الرد على الاستفسار',
-      type: 'خدمي',
-      status: ComplaintStatus.closed,
-      date: DateTime.now().subtract(const Duration(days: 14)),
-    ),
-    _Complaint(
-      customerName: 'نورة القحطاني',
-      subject: 'مشكلة في تصدير التقارير',
-      type: 'فني',
-      status: ComplaintStatus.open,
-      date: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-  ];
-
-  // ── Cart items (support cart) ───────────────────────────────────
-  final List<_CartItem> _cartItems = [
-    _CartItem(name: 'استشارة فنية', quantity: 1, price: 150.0),
-    _CartItem(name: 'صيانة دورية', quantity: 2, price: 200.0),
-    _CartItem(name: 'تدريب على النظام', quantity: 1, price: 500.0),
-  ];
+  // ── Previous complaints (loaded from DB) ────────────────────────
+  final List<_Complaint> _previousComplaints = [];
 
   // ── Country options with flags ──────────────────────────────────
   static const List<_CountryOption> _countries = [
+    _CountryOption(name: 'اليمن', flag: '🇾🇪'),
     _CountryOption(name: 'السعودية', flag: '🇸🇦'),
     _CountryOption(name: 'الإمارات', flag: '🇦🇪'),
     _CountryOption(name: 'مصر', flag: '🇪🇬'),
@@ -85,7 +50,8 @@ class _SupportScreenState extends State<SupportScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
+    _loadComplaintsFromDb();
   }
 
   @override
@@ -96,6 +62,18 @@ class _SupportScreenState extends State<SupportScreen>
     _subjectController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  // ── Load complaints from notifications table ────────────────────
+  Future<void> _loadComplaintsFromDb() async {
+    final rows = await _dbHelper.getNotificationsByType('complaint');
+    if (!mounted) return;
+    setState(() {
+      _previousComplaints.clear();
+      for (final row in rows) {
+        _previousComplaints.add(_Complaint.fromMap(row));
+      }
+    });
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -122,7 +100,6 @@ class _SupportScreenState extends State<SupportScreen>
           tabs: const [
             Tab(text: 'شكوى جديدة'),
             Tab(text: 'شكاوى سابقة'),
-            Tab(text: 'السلة'),
           ],
         ),
       ),
@@ -131,7 +108,6 @@ class _SupportScreenState extends State<SupportScreen>
         children: [
           _buildNewComplaintTab(theme),
           _buildPreviousComplaintsTab(theme),
-          _buildCartTab(theme),
         ],
       ),
     );
@@ -400,96 +376,24 @@ class _SupportScreenState extends State<SupportScreen>
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _previousComplaints.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final complaint = _previousComplaints[index];
-        return _ComplaintCard(complaint: complaint, isDark: isDark);
-      },
-    );
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  TAB 3: CART
-  // ════════════════════════════════════════════════════════════════
-  Widget _buildCartTab(ThemeData theme) {
-    final isDark = theme.brightness == Brightness.dark;
-    final total = _cartItems.fold<double>(0, (sum, item) => sum + item.price * item.quantity);
-
-    if (_cartItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.shopping_cart_outlined, size: 64, color: AppColors.textHint),
-            const SizedBox(height: 12),
-            Text(
-              'السلة فارغة',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: AppColors.textHint,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: _cartItems.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final item = _cartItems[index];
-              return _CartItemCard(item: item, isDark: isDark);
-            },
-          ),
-        ),
-
-        // ── Cart total ────────────────────────────────────────
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkSurface : AppColors.surface,
-            border: Border(
-              top: BorderSide(
-                color: isDark ? AppColors.darkBorder : AppColors.border,
-              ),
-            ),
-          ),
-          child: SafeArea(
-            child: Row(
-              children: [
-                Text(
-                  'الإجمالي',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${total.toStringAsFixed(2)} ${AppConstants.currency}',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+    return RefreshIndicator(
+      onRefresh: _loadComplaintsFromDb,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: _previousComplaints.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final complaint = _previousComplaints[index];
+          return _ComplaintCard(complaint: complaint, isDark: isDark);
+        },
+      ),
     );
   }
 
   // ════════════════════════════════════════════════════════════════
   //  ACTIONS
   // ════════════════════════════════════════════════════════════════
-  void _submitComplaint() {
+  Future<void> _submitComplaint() async {
     if (_customerNameController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -501,17 +405,41 @@ class _SupportScreenState extends State<SupportScreen>
       return;
     }
 
+    final customerName = _customerNameController.text.trim();
+    final subject = _subjectController.text.trim().isEmpty
+        ? 'شكوى جديدة'
+        : _subjectController.text.trim();
+    final phone = _phoneController.text.trim();
+    final description = _descriptionController.text.trim();
+    final now = DateTime.now();
+
+    // Build the notification body with all complaint details
+    final body = 'العميل: $customerName'
+        '${phone.isNotEmpty ? ' | الهاتف: $phone' : ''}'
+        ' | الدولة: $_selectedCountry'
+        ' | النوع: $_complaintType'
+        '\n$description';
+
+    // Save to notifications table in the database
+    await _dbHelper.insertNotification({
+      'title': subject,
+      'body': body,
+      'type': 'complaint',
+      'reference_id': 'CMP-${now.millisecondsSinceEpoch}',
+      'is_read': 0,
+      'created_at': now.toIso8601String(),
+    });
+
+    // Add to local list and update UI
     setState(() {
       _previousComplaints.insert(
         0,
         _Complaint(
-          customerName: _customerNameController.text.trim(),
-          subject: _subjectController.text.trim().isEmpty
-              ? 'شكوى جديدة'
-              : _subjectController.text.trim(),
+          customerName: customerName,
+          subject: subject,
           type: _complaintType,
           status: ComplaintStatus.open,
-          date: DateTime.now(),
+          date: now,
         ),
       );
     });
@@ -522,6 +450,7 @@ class _SupportScreenState extends State<SupportScreen>
     _subjectController.clear();
     _descriptionController.clear();
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('تم إرسال الشكوى بنجاح'),
@@ -553,6 +482,42 @@ class _Complaint {
   final String type;
   final ComplaintStatus status;
   final DateTime date;
+
+  /// Create a _Complaint from a notifications table row.
+  factory _Complaint.fromMap(Map<String, dynamic> map) {
+    final body = (map['body'] as String?) ?? '';
+    // Parse customer name from the stored body format:
+    // "العميل: أحمد | الهاتف: 05XX | الدولة: اليمن | النوع: فني\nDescription"
+    String customerName = '';
+    String type = 'فني';
+    final bodyParts = body.split('\n');
+    if (bodyParts.isNotEmpty) {
+      final metaLine = bodyParts[0];
+      final metaParts = metaLine.split(' | ');
+      for (final part in metaParts) {
+        if (part.startsWith('العميل:')) {
+          customerName = part.replaceFirst('العميل:', '').trim();
+        }
+        if (part.startsWith('النوع:')) {
+          type = part.replaceFirst('النوع:', '').trim();
+        }
+      }
+    }
+
+    // Determine status: newly inserted complaints are always "open"
+    // (status changes would need a separate column or be managed server-side)
+    ComplaintStatus status = ComplaintStatus.open;
+
+    return _Complaint(
+      customerName: customerName,
+      subject: (map['title'] as String?) ?? 'شكوى جديدة',
+      type: type,
+      status: status,
+      date: map['created_at'] != null
+          ? DateTime.tryParse(map['created_at'] as String) ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -670,87 +635,6 @@ class _ComplaintCard extends StatelessWidget {
       default:
         return Icons.help_outline;
     }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  CART ITEM MODEL & CARD
-// ═══════════════════════════════════════════════════════════════════
-class _CartItem {
-  const _CartItem({
-    required this.name,
-    required this.quantity,
-    required this.price,
-  });
-
-  final String name;
-  final int quantity;
-  final double price;
-}
-
-class _CartItemCard extends StatelessWidget {
-  const _CartItemCard({
-    required this.item,
-    required this.isDark,
-  });
-
-  final _CartItem item;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.inventory_2_outlined,
-                color: AppColors.primary,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'الكمية: ${item.quantity}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '${(item.price * item.quantity).toStringAsFixed(2)} ${AppConstants.currency}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

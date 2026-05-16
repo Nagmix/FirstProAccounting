@@ -6,35 +6,59 @@ class AppConstants {
   static const String appName = 'الأول برو';
   static const String appNameEn = 'FirstPro';
   static const String appFullName = 'الأول برو المحاسبي';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '2.0.0';
   static const String appSlogan = 'حلول محاسبية احترافية';
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 1;
+  static const int dbVersion = 5;
 
   // ── Locale & currency ─────────────────────────────────────────
-  static const String currency = 'ر.س';
-  static const String currencyEn = 'SAR';
+  static const String currency = 'ر.ي';
+  static const String currencyEn = 'YER';
   static const String defaultLanguage = 'ar';
   static const String localeAr = 'ar';
   static const String localeEn = 'en';
 
+  // ── Payment mechanisms ────────────────────────────────────────
+  static const String cashMechanism = 'cash';
+  static const String creditMechanism = 'credit';
+
   // ── Payment methods ───────────────────────────────────────────
-  static const String cashPayment = 'نقدي';
-  static const String creditPayment = 'آجل';
-  static const String bankPayment = 'بنك';
-  static const String checkPayment = 'شيك';
+  static const String cashPayment = 'cash';
+  static const String checkPayment = 'check';
+  static const String transferPayment = 'transfer';
+  static const String bankPayment = 'bank';
 
   // ── Invoice types ─────────────────────────────────────────────
   static const String saleInvoice = 'sale';
   static const String purchaseInvoice = 'purchase';
   static const String returnInvoice = 'return';
+  static const String saleReturnInvoice = 'sale_return';
+  static const String purchaseReturnInvoice = 'purchase_return';
 
   // ── Invoice type display names ────────────────────────────────
   static const String saleInvoiceAr = 'فاتورة مبيعات';
   static const String purchaseInvoiceAr = 'فاتورة مشتريات';
   static const String returnInvoiceAr = 'فاتورة مرتجع';
+
+  // ── Account types ─────────────────────────────────────────────
+  static const String assetAccount = 'ASSET';
+  static const String liabilityAccount = 'LIABILITY';
+  static const String costAccount = 'COST';
+  static const String revenueAccount = 'REVENUE';
+  static const String expenseAccount = 'EXPENSE';
+
+  // ── Account type Arabic names ─────────────────────────────────
+  static const String assetAccountAr = 'الأصول';
+  static const String liabilityAccountAr = 'الخصوم';
+  static const String costAccountAr = 'التكاليف';
+  static const String revenueAccountAr = 'الإيرادات';
+  static const String expenseAccountAr = 'المصاريف';
+
+  // ── Balance types ─────────────────────────────────────────────
+  static const String debitBalance = 'debit';
+  static const String creditBalance = 'credit';
 
   // ── Status ────────────────────────────────────────────────────
   static const String statusPaid = 'مدفوع';
@@ -62,5 +86,35 @@ class AppConstants {
   static const int quantityDecimalPlaces = 3;
 
   // ── Tax ───────────────────────────────────────────────────────
-  static const double defaultVatRate = 15.0; // Saudi VAT rate
+  static const double defaultVatRate = 0.0; // Yemen has no VAT
+
+  // ── Route names ───────────────────────────────────────────────
+  static const String dashboard = '/dashboard';
+  static const String customers = '/customers';
+  static const String products = '/products';
+  static const String invoices = '/invoices';
+  static const String reports = '/reports';
+  static const String pos = '/pos';
+  static const String settings = '/settings';
+  static const String support = '/support';
+  static const String currencies = '/currencies';
+  static const String cashBoxes = '/cash-boxes';
+  static const String chartOfAccounts = '/chart-of-accounts';
+  static const String newSaleInvoice = '/invoices/new-sale';
+  static const String newPurchaseInvoice = '/invoices/new-purchase';
+  static const String addCustomer = '/customers/add';
+  static const String addProduct = '/products/add';
+  static const String inventory = '/products/inventory';
+  static const String statistics = '/statistics';
+  static const String dailySalesReport = '/reports/daily-sales';
+  static const String delegates = '/delegates';
+  static const String customerImport = '/customers/import';
+  static const String customerLoad = '/customers/load';
+  static const String customerPrint = '/customers/print';
+  static const String financialOrders = '/financial-orders';
+  static const String suppliers = '/suppliers';
+  static const String warehouses = '/warehouses';
+  static const String accountLedger = '/accounts/ledger';
+  static const String expenses = '/expenses';
+  static const String employees = '/employees';
 }

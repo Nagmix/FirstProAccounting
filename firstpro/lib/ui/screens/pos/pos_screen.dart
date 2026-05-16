@@ -9,6 +9,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/product_model.dart';
+import '../../widgets/barcode_scanner_screen.dart';
 import '../../widgets/cart_item_tile.dart';
 
 /// Point of Sale (POS) screen – optimized for speed with large touch targets.
@@ -571,12 +572,15 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _checkout() async {
-    // Save invoice to DB
     final invoiceId = const Uuid().v4();
-    final invoice = {
+    final isCash = _paymentMethod == 'cash' || _paymentMethod == 'card';
+    final invoiceMap = {
       'id': invoiceId,
       'type': 'sale',
-      'payment_type': _paymentMethod,
+      'payment_mechanism': _paymentMethod == 'credit' ? 'credit' : 'cash',
+      'payment_method': _paymentMethod == 'card' ? 'bank' : _paymentMethod,
+      'is_return': 0,
+      'cash_box_id': null,
       'customer_id': null,
       'supplier_id': null,
       'subtotal': _subtotal,
@@ -584,7 +588,7 @@ class _PosScreenState extends State<PosScreen> {
       'discount_amount': _orderDiscount,
       'tax_amount': _tax,
       'total': _total,
-      'paid_amount': _paymentMethod == 'cash' || _paymentMethod == 'card' ? _total : 0.0,
+      'paid_amount': isCash ? _total : 0.0,
       'remaining': _paymentMethod == 'credit' ? _total : 0.0,
       'status': _paymentMethod == 'credit' ? 'unpaid' : 'paid',
       'cashier_id': null,
@@ -603,7 +607,13 @@ class _PosScreenState extends State<PosScreen> {
     }).toList();
 
     final db = DatabaseHelper();
-    await db.insertInvoiceWithItems(invoice, items);
+    await db.saveInvoiceWithJournalEntries(
+      invoiceMap,
+      items,
+      invoiceType: 'sale',
+      paymentMechanism: _paymentMethod == 'credit' ? 'credit' : 'cash',
+      isReturn: false,
+    );
 
     // Update product stock
     for (final item in _cart) {
@@ -782,9 +792,24 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  void _scanBarcode() {
-    // TODO: integrate barcode scanner
-    context.showSnackBar('ماسح الباركود قيد التطوير');
+  void _scanBarcode() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+    );
+    if (result != null && result.isNotEmpty) {
+      // Search for product by barcode
+      final db = DatabaseHelper();
+      final maps = await db.searchProducts(result);
+      if (maps.isNotEmpty) {
+        final product = Product.fromMap(maps.first);
+        _addToCart(product);
+      } else {
+        if (mounted) {
+          context.showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
+        }
+      }
+    }
   }
 }
 

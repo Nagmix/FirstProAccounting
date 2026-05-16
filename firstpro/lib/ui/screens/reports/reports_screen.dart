@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../widgets/bar_chart_widget.dart';
 
 /// Comprehensive reports and statistics screen for the FirstPro app.
@@ -24,6 +25,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // ── Filter state ────────────────────────────────────────────────
   String _selectedReportType = 'المبيعات';
   String _selectedPaymentStatus = 'الكل';
+  String _selectedCurrency = 'الكل';
   DateTime? _dateFrom;
   DateTime? _dateTo;
 
@@ -44,8 +46,81 @@ class _ReportsScreenState extends State<ReportsScreen> {
     'معلق',
   ];
 
-  // ── Sample daily sales data for the past 7 days ────────────────
-  List<BarData> get _dailySalesData {
+  // ── Currency filter options ──────────────────────────────────
+  static const List<String> _currencyOptions = [
+    'الكل',
+    'ر.ي',
+    'ر.س',
+    r'$',
+  ];
+
+  // ── Real data from DB ──────────────────────────────────────────
+  bool _isLoading = true;
+  double _totalRevenue = 0.0;
+  double _totalExpenses = 0.0;
+  double _netProfit = 0.0;
+  int _invoiceCount = 0;
+  List<BarData> _dailySalesData = [];
+  List<_TopProduct> _topProducts = [];
+  List<_RecentInvoice> _recentInvoices = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReportData();
+  }
+
+  // ── Load report data from the database ─────────────────────────
+  Future<void> _loadReportData() async {
+    final db = await DatabaseHelper().database;
+
+    // Build optional date filter clause
+    String dateFilter = '';
+    List<dynamic> dateArgs = [];
+    if (_dateFrom != null) {
+      dateFilter += ' AND created_at >= ?';
+      dateArgs.add(_dateFrom!.toIso8601String());
+    }
+    if (_dateTo != null) {
+      // Add one day to include the entire "to" date
+      final toDate = _dateTo!.add(const Duration(days: 1));
+      dateFilter += ' AND created_at < ?';
+      dateArgs.add(toDate.toIso8601String());
+    }
+
+    // Build optional currency filter clause
+    String currencyFilter = '';
+    if (_selectedCurrency != 'الكل') {
+      final currencyCode = _selectedCurrency == 'ر.ي' ? 'YER' : (_selectedCurrency == 'ر.س' ? 'SAR' : 'USD');
+      currencyFilter = ' AND currency = ?';
+      dateArgs.add(currencyCode);
+    }
+
+    // Total revenue from sales (non-return)
+    final revenueResult = await db.rawQuery(
+      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type = 'sale' AND is_return = 0$dateFilter$currencyFilter",
+      dateArgs,
+    );
+    final totalRevenue = (revenueResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // Total expenses from purchases
+    final expenseResult = await db.rawQuery(
+      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type = 'purchase' AND is_return = 0$dateFilter$currencyFilter",
+      dateArgs,
+    );
+    final totalExpenses = (expenseResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // Net profit
+    final netProfit = totalRevenue - totalExpenses;
+
+    // Invoice count (all types, non-return)
+    final countResult = await db.rawQuery(
+      "SELECT COUNT(*) AS cnt FROM invoices WHERE is_return = 0$dateFilter$currencyFilter",
+      dateArgs,
+    );
+    final invoiceCount = (countResult.first['cnt'] as num?)?.toInt() ?? 0;
+
+    // Daily sales for the last 7 days
     final now = DateTime.now();
     const dayLabels = [
       'السبت',
@@ -56,12 +131,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'الخميس',
       'الجمعة',
     ];
-    // Sample values – in production these come from DB
-    const sampleValues = [1850.0, 2200.0, 1400.0, 3100.0, 2750.0, 3600.0, 1950.0];
-
-    final List<BarData> data = [];
+    final List<BarData> dailySales = [];
     for (int i = 6; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
+      final dayStart = DateTime(date.year, date.month, date.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+
+      final dayResult = await db.rawQuery(
+        "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type = 'sale' AND is_return = 0 AND created_at >= ? AND created_at < ?",
+        [dayStart.toIso8601String(), dayEnd.toIso8601String()],
+      );
+      final dayTotal = (dayResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
       // weekday: 1=Mon..7=Sun → map to our labels array (0=Sat..6=Fri)
       int labelIndex;
       if (date.weekday == 6) {
@@ -71,52 +152,79 @@ class _ReportsScreenState extends State<ReportsScreen> {
       } else {
         labelIndex = date.weekday + 1; // Mon=2..Fri=6
       }
-      data.add(BarData(
+      dailySales.add(BarData(
         label: dayLabels[labelIndex],
-        value: sampleValues[6 - i],
+        value: dayTotal,
       ));
     }
-    return data;
-  }
 
-  // ── Sample top products ─────────────────────────────────────────
-  static const List<_TopProduct> _topProducts = [
-    _TopProduct(name: 'قلم حبر أزرق', quantity: 320, revenue: 1920.0),
-    _TopProduct(name: 'دفتر A4', quantity: 245, revenue: 3675.0),
-    _TopProduct(name: 'حبر طابعة HP', quantity: 180, revenue: 5400.0),
-    _TopProduct(name: 'ورق طباعة A4', quantity: 150, revenue: 2250.0),
-    _TopProduct(name: 'مجلد بلاستيك', quantity: 120, revenue: 720.0),
-  ];
+    // Top 5 products by quantity sold
+    final topProductsResult = await db.rawQuery('''
+      SELECT product_id, product_name,
+             SUM(quantity) AS total_quantity,
+             SUM(total_price) AS total_revenue
+      FROM invoice_items
+      GROUP BY product_id
+      ORDER BY total_quantity DESC
+      LIMIT 5
+    ''');
+    final List<_TopProduct> topProducts = topProductsResult.map((row) => _TopProduct(
+      name: row['product_name'] as String? ?? 'منتج غير معروف',
+      quantity: (row['total_quantity'] as num?)?.toInt() ?? 0,
+      revenue: (row['total_revenue'] as num?)?.toDouble() ?? 0.0,
+    )).toList();
 
-  // ── Sample recent reports ───────────────────────────────────────
-  List<_RecentReport> get _recentReports {
-    final now = DateTime.now();
-    return [
-      _RecentReport(
-        icon: Icons.today_outlined,
-        title: 'التقرير اليومي',
-        subtitle: DateFormatter.formatDate(now),
-        color: AppColors.primary,
-      ),
-      _RecentReport(
-        icon: Icons.calendar_view_week_outlined,
-        title: 'تقرير المبيعات الأسبوعي',
-        subtitle: DateFormatter.formatDate(now.subtract(const Duration(days: 7))),
-        color: AppColors.info,
-      ),
-      _RecentReport(
-        icon: Icons.account_balance_outlined,
-        title: 'تقرير الأرباح والخسائر',
-        subtitle: DateFormatter.formatDate(now.subtract(const Duration(days: 14))),
-        color: AppColors.secondaryDark,
-      ),
-      _RecentReport(
-        icon: Icons.scale_outlined,
-        title: 'ميزان المراجعة',
-        subtitle: DateFormatter.formatDate(now.subtract(const Duration(days: 30))),
-        color: AppColors.warning,
-      ),
-    ];
+    // Recent invoices (last 5)
+    final recentResult = await db.rawQuery('''
+      SELECT i.id, i.type, i.total, i.is_return, i.created_at,
+        CASE
+          WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل')
+          WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد')
+          ELSE 'بدون عميل'
+        END AS entity_name
+      FROM invoices i
+      LEFT JOIN customers c ON i.customer_id = c.id
+      LEFT JOIN suppliers s ON i.supplier_id = s.id
+      ORDER BY i.created_at DESC
+      LIMIT 5
+    ''');
+    final List<_RecentInvoice> recentInvoices = recentResult.map((row) {
+      final type = row['type'] as String? ?? 'sale';
+      final isReturn = (row['is_return'] as int?) == 1;
+      final IconData icon;
+      final Color color;
+      if (type == 'sale') {
+        icon = isReturn ? Icons.undo : Icons.receipt_long_outlined;
+        color = isReturn ? AppColors.warning : AppColors.success;
+      } else {
+        icon = isReturn ? Icons.undo : Icons.shopping_cart_outlined;
+        color = isReturn ? AppColors.warning : AppColors.error;
+      }
+      return _RecentInvoice(
+        id: row['id'] as String? ?? '',
+        title: type == 'sale'
+            ? (isReturn ? 'مرتجع مبيعات' : 'فاتورة مبيعات')
+            : (isReturn ? 'مرتجع مشتريات' : 'فاتورة مشتريات'),
+        subtitle: row['entity_name'] as String? ?? '',
+        date: row['created_at'] as String? ?? '',
+        total: (row['total'] as num?)?.toDouble() ?? 0.0,
+        icon: icon,
+        color: color,
+      );
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _totalRevenue = totalRevenue;
+        _totalExpenses = totalExpenses;
+        _netProfit = netProfit;
+        _invoiceCount = invoiceCount;
+        _dailySalesData = dailySales;
+        _topProducts = topProducts;
+        _recentInvoices = recentInvoices;
+        _isLoading = false;
+      });
+    }
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -132,6 +240,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
     if (picked != null) {
       setState(() => _dateFrom = picked);
+      _loadReportData();
     }
   }
 
@@ -145,6 +254,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
     if (picked != null) {
       setState(() => _dateTo = picked);
+      _loadReportData();
     }
   }
 
@@ -161,6 +271,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
         title: const Text('التقارير والإحصائيات'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'تحديث',
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _loadReportData();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.print_outlined),
             tooltip: 'طباعة',
             onPressed: () {
@@ -176,44 +294,46 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Filter section ─────────────────────────────────
-            _buildFilterSection(theme, isDark),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Filter section ─────────────────────────────────
+                  _buildFilterSection(theme, isDark),
 
-            const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-            // ── Summary cards ──────────────────────────────────
-            _buildSummaryCards(theme, isDark),
+                  // ── Summary cards ──────────────────────────────────
+                  _buildSummaryCards(theme, isDark),
 
-            const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-            // ── Chart section ──────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: BarChartWidget(
-                data: _dailySalesData,
-                title: 'المبيعات اليومية',
-                barColor: AppColors.primary,
-                height: 240,
+                  // ── Chart section ──────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: BarChartWidget(
+                      data: _dailySalesData,
+                      title: 'المبيعات اليومية',
+                      barColor: AppColors.primary,
+                      height: 240,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Top products ───────────────────────────────────
+                  _buildTopProductsSection(theme, isDark),
+
+                  const SizedBox(height: 20),
+
+                  // ── Recent invoices ────────────────────────────────
+                  _buildRecentInvoicesSection(theme, isDark),
+                ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // ── Top products ───────────────────────────────────
-            _buildTopProductsSection(theme, isDark),
-
-            const SizedBox(height: 20),
-
-            // ── Recent reports ─────────────────────────────────
-            _buildRecentReportsSection(theme, isDark),
-          ],
-        ),
-      ),
     );
   }
 
@@ -370,6 +490,41 @@ class _ReportsScreenState extends State<ReportsScreen> {
               }
             },
           ),
+          const SizedBox(height: 12),
+
+          // ── Currency filter dropdown ───────────────────────
+          Text(
+            'العملة',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            value: _selectedCurrency,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            items: _currencyOptions
+                .map((currency) => DropdownMenuItem(value: currency, child: Text(currency)))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedCurrency = value;
+                  _isLoading = true;
+                });
+                _loadReportData();
+              }
+            },
+          ),
         ],
       ),
     );
@@ -382,28 +537,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final cards = [
       _SummaryCardData(
         title: 'إجمالي الإيرادات',
-        value: 48250.00,
+        value: _totalRevenue,
         icon: Icons.trending_up,
         color: AppColors.success,
         lightBg: AppColors.successLight,
       ),
       _SummaryCardData(
         title: 'إجمالي المصروفات',
-        value: 22180.50,
+        value: _totalExpenses,
         icon: Icons.trending_down,
         color: AppColors.error,
         lightBg: AppColors.errorLight,
       ),
       _SummaryCardData(
         title: 'صافي الربح',
-        value: 26069.50,
+        value: _netProfit,
         icon: Icons.monetization_on_outlined,
         color: AppColors.secondaryDark,
         lightBg: const Color(0xFFFFF8E1),
       ),
       _SummaryCardData(
         title: 'عدد الفواتير',
-        value: 87,
+        value: _invoiceCount.toDouble(),
         icon: Icons.receipt_long_outlined,
         color: AppColors.info,
         lightBg: AppColors.infoLight,
@@ -430,6 +585,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   //  TOP PRODUCTS SECTION
   // ════════════════════════════════════════════════════════════════
   Widget _buildTopProductsSection(ThemeData theme, bool isDark) {
+    if (_topProducts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final maxQuantity = _topProducts.first.quantity;
 
     return Padding(
@@ -459,7 +618,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: _topProducts.asMap().entries.map((entry) {
                 final index = entry.key;
                 final product = entry.value;
-                final progress = product.quantity / maxQuantity;
+                final progress = maxQuantity == 0 ? 0.0 : product.quantity / maxQuantity;
                 return _TopProductTile(
                   rank: index + 1,
                   product: product,
@@ -476,10 +635,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // ════════════════════════════════════════════════════════════════
-  //  RECENT REPORTS SECTION
+  //  RECENT INVOICES SECTION
   // ════════════════════════════════════════════════════════════════
-  Widget _buildRecentReportsSection(ThemeData theme, bool isDark) {
-    final reports = _recentReports;
+  Widget _buildRecentInvoicesSection(ThemeData theme, bool isDark) {
+    if (_recentInvoices.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -487,18 +648,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'التقارير الأخيرة',
+            'آخر الفواتير',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
-          ...reports.map((report) => _RecentReportCard(
-                report: report,
+          ..._recentInvoices.map((invoice) => _RecentInvoiceCard(
+                invoice: invoice,
                 isDark: isDark,
                 onShow: () {
-                  // TODO: Navigate to report detail
+                  // TODO: Navigate to invoice detail
                 },
               )),
         ],
@@ -703,30 +864,36 @@ class _TopProductTile extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  RECENT REPORT CARD
+//  RECENT INVOICE CARD
 // ═══════════════════════════════════════════════════════════════════
-class _RecentReport {
-  const _RecentReport({
-    required this.icon,
+class _RecentInvoice {
+  const _RecentInvoice({
+    required this.id,
     required this.title,
     required this.subtitle,
+    required this.date,
+    required this.total,
+    required this.icon,
     required this.color,
   });
 
-  final IconData icon;
+  final String id;
   final String title;
   final String subtitle;
+  final String date;
+  final double total;
+  final IconData icon;
   final Color color;
 }
 
-class _RecentReportCard extends StatelessWidget {
-  const _RecentReportCard({
-    required this.report,
+class _RecentInvoiceCard extends StatelessWidget {
+  const _RecentInvoiceCard({
+    required this.invoice,
     required this.isDark,
     required this.onShow,
   });
 
-  final _RecentReport report;
+  final _RecentInvoice invoice;
   final bool isDark;
   final VoidCallback onShow;
 
@@ -748,10 +915,10 @@ class _RecentReportCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: report.color.withValues(alpha: 0.12),
+                  color: invoice.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(report.icon, color: report.color, size: 22),
+                child: Icon(invoice.icon, color: invoice.color, size: 22),
               ),
               const SizedBox(width: 12),
 
@@ -761,21 +928,33 @@ class _RecentReportCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      report.title,
+                      invoice.title,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      report.subtitle,
+                      invoice.subtitle,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+
+              // ── Amount ────────────────────────────────────────
+              Text(
+                CurrencyFormatter.format(invoice.total),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: invoice.color,
+                ),
+              ),
+              const SizedBox(width: 8),
 
               // ── Show button ──────────────────────────────────
               FilledButton.tonal(

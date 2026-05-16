@@ -161,12 +161,114 @@ class _ProductsScreenState extends State<ProductsScreen>
     return ['الكل', ..._categories.map((c) => c['name'] as String)];
   }
 
+  // ── Category management dialog ────────────────────────────────
+  Future<void> _showCategoryManagement() async {
+    final db = DatabaseHelper();
+    final categories = await db.getAllCategories();
+
+    if (!mounted) return;
+
+    final nameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('إدارة التصنيفات'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Add new category
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'اسم التصنيف',
+                          prefixIcon: Icon(PhosphorIconsRegular.folder),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () async {
+                        if (nameController.text.trim().isEmpty) return;
+                        await db.insertCategory({
+                          'name': nameController.text.trim(),
+                          'is_active': 1,
+                          'created_at': DateTime.now().toIso8601String(),
+                        });
+                        nameController.clear();
+                        final updated = await db.getAllCategories();
+                        setDialogState(() => categories.clear());
+                        setDialogState(() => categories.addAll(updated));
+                        _loadData();
+                      },
+                      icon: const Icon(PhosphorIconsRegular.plusCircle, color: AppColors.primary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // List of categories
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 300),
+                  child: categories.isEmpty
+                      ? const Center(child: Text('لا توجد تصنيفات'))
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: categories.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (_, index) {
+                            final cat = categories[index];
+                            return ListTile(
+                              dense: true,
+                              leading: const Icon(PhosphorIconsRegular.folder, size: 20, color: AppColors.accentOrange),
+                              title: Text(cat['name'] as String),
+                              trailing: IconButton(
+                                icon: const Icon(PhosphorIconsRegular.trash, size: 18, color: AppColors.error),
+                                onPressed: () async {
+                                  await db.deleteCategory(cat['id'] as int);
+                                  final updated = await db.getAllCategories();
+                                  setDialogState(() => categories.clear());
+                                  setDialogState(() => categories.addAll(updated));
+                                  _loadData();
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                nameController.dispose();
+                Navigator.pop(ctx);
+              },
+              child: const Text('إغلاق'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('قائمة الأصناف'),
         actions: [
+          IconButton(
+            icon: const Icon(PhosphorIconsRegular.folderPlus),
+            tooltip: 'إدارة التصنيفات',
+            onPressed: _showCategoryManagement,
+          ),
           IconButton(
             icon: const Icon(PhosphorIconsRegular.plusSquare),
             tooltip: 'إضافة صنف',

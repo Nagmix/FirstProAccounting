@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/design_system.dart';
 
 /// A reusable empty-state widget displayed when a list has no items.
-///
-/// Shows a large icon, a title, a subtitle, and an optional action button.
-/// Designed for Arabic RTL layouts in the FirstPro accounting app.
+/// Modern design with gradient icon background and animated entry.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
@@ -16,19 +16,10 @@ class EmptyState extends StatelessWidget {
     this.onAction,
   });
 
-  /// The large icon displayed at the top of the empty state.
   final IconData icon;
-
-  /// Primary title text (e.g. "لا يوجد عملاء").
   final String title;
-
-  /// Secondary subtitle text providing more context.
   final String subtitle;
-
-  /// Optional label for the action button (e.g. "إضافة عميل").
   final String? actionLabel;
-
-  /// Optional callback invoked when the action button is pressed.
   final VoidCallback? onAction;
 
   @override
@@ -42,17 +33,24 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Large icon ────────────────────────────────────────
+            // ── Large icon with gradient background ────────────────
             Container(
-              width: 96,
-              height: 96,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.12),
+                    AppColors.primaryLight.withValues(alpha: 0.04),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                size: 48,
+                size: 44,
                 color: AppColors.primary.withValues(alpha: 0.6),
               ),
             ),
@@ -82,16 +80,28 @@ class EmptyState extends StatelessWidget {
             // ── Optional action button ────────────────────────────
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: onAction,
-                icon: const Icon(Icons.add, size: 20),
-                label: Text(actionLabel!),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primaryGradientStart, AppColors.primaryGradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: DesignSystem.fabShadow,
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: onAction,
+                  icon: const Icon(PhosphorIconsFill.plus, size: 18),
+                  label: Text(actionLabel!),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),

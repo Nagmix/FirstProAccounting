@@ -4,16 +4,17 @@ import 'package:flutter/services.dart';
 import 'app_colors.dart';
 
 /// Comprehensive Material 3 theme for the FirstPro accounting app.
-/// Supports both light and dark modes with full RTL Arabic support.
+/// Modern 2026 design with deep blue-purple gradients, smooth shadows,
+/// and refined typography using Cairo for Arabic RTL support.
 class AppTheme {
   AppTheme._();
 
-  // ── Seed color for Material 3 ColorScheme ─────────────────────
+  // ── Seed color for Material 3 ColorScheme ─────────────────────────
   static const Color _seedColor = AppColors.primary;
 
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  LIGHT THEME
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: _seedColor,
@@ -30,9 +31,9 @@ class AppTheme {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  DARK THEME
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   static ThemeData get darkTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: _seedColor,
@@ -49,9 +50,9 @@ class AppTheme {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  SHARED BUILDER
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   static ThemeData _buildThemeData({
     required ColorScheme colorScheme,
     required Brightness brightness,
@@ -65,51 +66,50 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: textTheme,
 
-      // ── Scaffold ────────────────────────────────────────────
+      // ── Scaffold ──────────────────────────────────────────────
       scaffoldBackgroundColor:
           isLight ? AppColors.background : AppColors.darkBackground,
 
-      // ── AppBar ──────────────────────────────────────────────
+      // ── AppBar ────────────────────────────────────────────────
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
-        scrolledUnderElevation: 2,
-        backgroundColor:
-            isLight ? AppColors.primary : AppColors.darkSurface,
-        foregroundColor: Colors.white,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: isLight ? AppColors.textPrimary : AppColors.darkTextPrimary,
         titleTextStyle: textTheme.titleLarge?.copyWith(
-          color: Colors.white,
+          color: isLight ? AppColors.textPrimary : AppColors.darkTextPrimary,
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
         ),
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness:
-              isLight ? Brightness.light : Brightness.light,
+              isLight ? Brightness.dark : Brightness.light,
           statusBarBrightness:
               isLight ? Brightness.dark : Brightness.dark,
         ),
       ),
 
-      // ── Card ────────────────────────────────────────────────
+      // ── Card ──────────────────────────────────────────────────
       cardTheme: CardThemeData(
-        elevation: 1,
+        elevation: 2,
         shadowColor: isLight
-            ? Colors.black.withValues(alpha: 0.06)
+            ? AppColors.primary.withValues(alpha: 0.08)
             : Colors.black.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         color: isLight ? AppColors.surface : AppColors.darkSurface,
-        surfaceTintColor: isLight ? AppColors.primary.withValues(alpha: 0.02) : null,
+        surfaceTintColor: Colors.transparent,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       ),
 
-      // ── Floating Action Button ──────────────────────────────
+      // ── Floating Action Button ────────────────────────────────
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 6,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -119,7 +119,7 @@ class AppTheme {
         ),
       ),
 
-      // ── Bottom Navigation Bar ───────────────────────────────
+      // ── Bottom Navigation Bar ─────────────────────────────────
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor:
             isLight ? AppColors.surface : AppColors.darkSurface,
@@ -127,7 +127,7 @@ class AppTheme {
         unselectedItemColor:
             isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
         type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        elevation: 0,
         selectedLabelStyle: textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.w700,
         ),
@@ -136,7 +136,7 @@ class AppTheme {
         ),
       ),
 
-      // ── Navigation Bar (M3) ─────────────────────────────────
+      // ── Navigation Bar (M3) ───────────────────────────────────
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor:
             isLight ? AppColors.surface : AppColors.darkSurface,
@@ -157,7 +157,7 @@ class AppTheme {
         }),
       ),
 
-      // ── Input Decoration ────────────────────────────────────
+      // ── Input Decoration ──────────────────────────────────────
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isLight
@@ -167,15 +167,11 @@ class AppTheme {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isLight ? AppColors.border : AppColors.darkBorder,
-          ),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isLight ? AppColors.border : AppColors.darkBorder,
-          ),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -224,7 +220,7 @@ class AppTheme {
         }),
       ),
 
-      // ── Elevated Button ─────────────────────────────────────
+      // ── Elevated Button ───────────────────────────────────────
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -241,7 +237,7 @@ class AppTheme {
         ),
       ),
 
-      // ── Outlined Button ─────────────────────────────────────
+      // ── Outlined Button ───────────────────────────────────────
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
@@ -257,7 +253,7 @@ class AppTheme {
         ),
       ),
 
-      // ── Text Button ─────────────────────────────────────────
+      // ── Text Button ───────────────────────────────────────────
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
@@ -272,7 +268,7 @@ class AppTheme {
         ),
       ),
 
-      // ── Icon Button ─────────────────────────────────────────
+      // ── Icon Button ───────────────────────────────────────────
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor:
@@ -285,7 +281,7 @@ class AppTheme {
         ),
       ),
 
-      // ── Chip ────────────────────────────────────────────────
+      // ── Chip ──────────────────────────────────────────────────
       chipTheme: ChipThemeData(
         backgroundColor:
             isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
@@ -296,20 +292,18 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-        side: BorderSide(
-          color: isLight ? AppColors.border : AppColors.darkBorder,
-        ),
+        side: BorderSide.none,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       ),
 
-      // ── Divider ─────────────────────────────────────────────
+      // ── Divider ───────────────────────────────────────────────
       dividerTheme: DividerThemeData(
         color: isLight ? AppColors.divider : AppColors.darkDivider,
         thickness: 1,
         space: 1,
       ),
 
-      // ── Dialog ──────────────────────────────────────────────
+      // ── Dialog ────────────────────────────────────────────────
       dialogTheme: DialogThemeData(
         backgroundColor:
             isLight ? AppColors.surface : AppColors.darkSurface,
@@ -323,7 +317,7 @@ class AppTheme {
         ),
       ),
 
-      // ── SnackBar ────────────────────────────────────────────
+      // ── SnackBar ──────────────────────────────────────────────
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -336,17 +330,17 @@ class AppTheme {
         ),
       ),
 
-      // ── Bottom Sheet ────────────────────────────────────────
+      // ── Bottom Sheet ──────────────────────────────────────────
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor:
             isLight ? AppColors.surface : AppColors.darkSurface,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         showDragHandle: true,
       ),
 
-      // ── Tab Bar ─────────────────────────────────────────────
+      // ── Tab Bar ───────────────────────────────────────────────
       tabBarTheme: TabBarThemeData(
         labelColor: isLight ? AppColors.primary : AppColors.primaryLight,
         unselectedLabelColor:
@@ -361,7 +355,7 @@ class AppTheme {
         indicatorSize: TabBarIndicatorSize.label,
       ),
 
-      // ── List Tile ───────────────────────────────────────────
+      // ── List Tile ─────────────────────────────────────────────
       listTileTheme: ListTileThemeData(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         titleTextStyle: textTheme.bodyLarge?.copyWith(
@@ -378,7 +372,7 @@ class AppTheme {
         ),
       ),
 
-      // ── Switch ──────────────────────────────────────────────
+      // ── Switch ────────────────────────────────────────────────
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -394,7 +388,7 @@ class AppTheme {
         }),
       ),
 
-      // ── Checkbox ────────────────────────────────────────────
+      // ── Checkbox ──────────────────────────────────────────────
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -407,7 +401,7 @@ class AppTheme {
         ),
       ),
 
-      // ── Progress Indicator ──────────────────────────────────
+      // ── Progress Indicator ────────────────────────────────────
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primary,
         linearTrackColor:
@@ -416,7 +410,7 @@ class AppTheme {
             isLight ? AppColors.divider : AppColors.darkDivider,
       ),
 
-      // ── Tooltip ─────────────────────────────────────────────
+      // ── Tooltip ───────────────────────────────────────────────
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
           color: isLight
@@ -430,7 +424,7 @@ class AppTheme {
         waitDuration: const Duration(milliseconds: 500),
       ),
 
-      // ── Popup Menu ──────────────────────────────────────────
+      // ── Popup Menu ────────────────────────────────────────────
       popupMenuTheme: PopupMenuThemeData(
         color: isLight ? AppColors.surface : AppColors.darkSurface,
         elevation: 8,
@@ -442,9 +436,9 @@ class AppTheme {
         ),
       ),
 
-      // ── Search Bar ──────────────────────────────────────────
+      // ── Search Bar ────────────────────────────────────────────
       searchBarTheme: SearchBarThemeData(
-        elevation: WidgetStateProperty.all(1),
+        elevation: WidgetStateProperty.all(0),
         shape: WidgetStateProperty.all(
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -458,22 +452,22 @@ class AppTheme {
         ),
       ),
 
-      // ── Drawer ──────────────────────────────────────────────
+      // ── Drawer ────────────────────────────────────────────────
       drawerTheme: DrawerThemeData(
         backgroundColor:
             isLight ? AppColors.surface : AppColors.darkSurface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.horizontal(
-            left: Radius.circular(20),
+            left: Radius.circular(24),
           ),
         ),
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  TEXT THEME – all styles include fontFamily: 'Cairo'
-  // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   static TextTheme _buildTextTheme(Brightness brightness) {
     final baseColor =
         brightness == Brightness.light

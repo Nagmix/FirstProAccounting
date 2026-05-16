@@ -12,16 +12,8 @@ import '../../../data/models/invoice_model.dart';
 import '../../widgets/invoice_item_card.dart';
 import 'add_invoice_item_sheet.dart';
 
-/// Full invoice creation / editing screen.
-///
-/// Supports both sale and purchase invoice types. All text is Arabic
-/// and the layout is fully RTL with Material 3 design.
 class CreateInvoiceScreen extends StatefulWidget {
-  const CreateInvoiceScreen({
-    super.key,
-    required this.invoiceType,
-    this.existingInvoice,
-  });
+  const CreateInvoiceScreen({super.key, required this.invoiceType, this.existingInvoice});
 
   final String invoiceType;
   final Invoice? existingInvoice;
@@ -31,34 +23,64 @@ class CreateInvoiceScreen extends StatefulWidget {
 }
 
 class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
-  // ── Form state ───────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _notesController = TextEditingController();
   final _discountController = TextEditingController();
   final _paidController = TextEditingController();
+  final _transportChargesController = TextEditingController();
 
-  String _paymentMethod = 'cash'; // cash, credit, bank, check, card
-  int? _selectedCustomerId;
+  // Payment mechanism: cash or credit
+  String _paymentMechanism = 'cash';
+  // Payment method: cash, check, transfer, bank
+  String _paymentMethod = 'cash';
+  // Is return invoice
+  bool _isReturn = false;
+
+  int? _selectedEntityId; // customer or supplier
+  int? _selectedWarehouseId;
+  int? _selectedCashBoxId;
   final List<InvoiceItem> _items = [];
 
-  // ── Data from DB ─────────────────────────────────────────────────
+  // Data from DB
   List<Map<String, dynamic>> _customers = [];
   List<Map<String, dynamic>> _suppliers = [];
+  List<Map<String, dynamic>> _warehouses = [];
+  List<Map<String, dynamic>> _cashBoxes = [];
+  List<Map<String, dynamic>> _currencies = [];
+  String _selectedCurrency = 'YER';
+  double _selectedExchangeRate = 1.0;
   bool _isLoading = true;
+
+  bool get _isSale => widget.invoiceType == 'sale';
+
+  String get _title {
+    String base = _isSale ? 'فاتورة مبيعات' : 'فاتورة مشتريات';
+    if (_isReturn) base = 'فاتورة مرتجع $base';
+    return '$base جديدة';
+  }
+
 
   @override
   void initState() {
     super.initState();
-    _loadEntities();
+    _loadData();
   }
 
-  Future<void> _loadEntities() async {
+  Future<void> _loadData() async {
     final db = DatabaseHelper();
-    final customers = await db.getAllCustomers();
-    final suppliers = await db.getAllSuppliers();
+    final results = await Future.wait([
+      db.getAllCustomers(),
+      db.getAllSuppliers(),
+      db.getAllWarehouses(),
+      db.getAllCashBoxes(),
+      db.getAllCurrencies(),
+    ]);
     setState(() {
-      _customers = customers;
-      _suppliers = suppliers;
+      _customers = results[0];
+      _suppliers = results[1];
+      _warehouses = results[2];
+      _cashBoxes = results[3];
+      _currencies = results[4];
       _isLoading = false;
     });
   }
@@ -68,44 +90,30 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     _notesController.dispose();
     _discountController.dispose();
     _paidController.dispose();
+    _transportChargesController.dispose();
     super.dispose();
   }
 
-  // ── Computed properties ──────────────────────────────────────────
-  double get _subtotal =>
-      _items.fold(0.0, (sum, item) => sum + item.totalPrice);
-
-  double get _discountAmount {
-    final val = double.tryParse(_discountController.text) ?? 0;
-    return val;
-  }
-
-  double get _taxAmount =>
-      (_subtotal - _discountAmount) * (AppConstants.defaultVatRate / 100);
-
-  double get _total => _subtotal - _discountAmount + _taxAmount;
-
+  double get _subtotal => _items.fold(0.0, (sum, item) => sum + item.totalPrice);
+  double get _discountAmount => double.tryParse(_discountController.text) ?? 0;
+  double get _transportCharges => double.tryParse(_transportChargesController.text) ?? 0;
+  double get _taxAmount => (_subtotal - _discountAmount) * (AppConstants.defaultVatRate / 100);
+  double get _total => _subtotal - _discountAmount + _taxAmount + _transportCharges;
   double get _paidAmount => double.tryParse(_paidController.text) ?? 0;
-
   double get _remaining => _total - _paidAmount;
 
-  String get _title {
-    if (widget.invoiceType == AppConstants.saleInvoice) {
-      return 'فاتورة بيع جديدة';
-    }
-    if (widget.invoiceType == AppConstants.purchaseInvoice) {
-      return 'فاتورة شراء جديدة';
-    }
-    return 'فاتورة جديدة';
+  String _getEntityBalanceText(int? entityId) {
+    if (entityId == null) return '';
+    final entities = _isSale ? _customers : _suppliers;
+    final entity = entities.where((e) => e['id'] == entityId).firstOrNull;
+    if (entity == null) return '';
+    final balance = (entity['balance'] as num?)?.toDouble() ?? 0.0;
+    final balanceType = entity['balance_type'] as String? ?? 'credit';
+    if (balance == 0) return '';
+    final isCredit = balanceType == 'credit';
+    return '(${CurrencyFormatter.format(balance)} ${isCredit ? 'له' : 'عليه'})';
   }
 
-  bool get _isSale =>
-      widget.invoiceType == AppConstants.saleInvoice ||
-      widget.invoiceType == AppConstants.returnInvoice;
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  BUILD
-  // ═══════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -118,12 +126,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               onPressed: _saveInvoice,
               icon: const Icon(PhosphorIconsRegular.floppyDisk),
               tooltip: 'حفظ',
-            ),
-            IconButton(
-              onPressed: () {
-                // TODO: more options
-              },
-              icon: const Icon(PhosphorIconsRegular.dotsThreeVertical),
             ),
           ],
         ),
@@ -139,9 +141,15 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildCustomerSection(),
-                            _buildPaymentMethodSection(),
+                            _buildCurrencySection(),
+                            _buildReturnCheckbox(),
+                            _buildPaymentMechanismSection(),
+                            if (_paymentMechanism == 'cash') _buildPaymentMethodSection(),
+                            _buildCashBoxSection(),
+                            _buildEntitySection(),
+                            _buildWarehouseSection(),
                             _buildItemsSection(),
+                            _buildTransportChargesSection(),
                             _buildSummarySection(),
                           ],
                         ),
@@ -155,11 +163,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Customer section ─────────────────────────────────────────────
-  Widget _buildCustomerSection() {
-    final entities = _isSale ? _customers : _suppliers;
-    final label = _isSale ? 'العميل' : 'المورد';
-
+  // ── Currency section ──────────────────────────────────────────
+  Widget _buildCurrencySection() {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -171,56 +176,75 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: context.textTheme.titleSmall),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<int>(
-            value: _selectedCustomerId,
-            decoration: InputDecoration(
-              hintText: 'اختر $label',
-              prefixIcon: Icon(
-                _isSale ? PhosphorIconsRegular.user : PhosphorIconsRegular.buildings,
-              ),
+          Row(
+            children: [
+              Icon(PhosphorIconsRegular.coin, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('العملة', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _selectedCurrency,
+            decoration: const InputDecoration(
+              labelText: 'العملة',
+              prefixIcon: Icon(PhosphorIconsRegular.coin),
             ),
-            items: entities.map((e) {
-              return DropdownMenuItem<int>(
-                value: e['id'] as int,
-                child: Text(e['name'] as String),
-              );
-            }).toList(),
+            items: _currencies.map((c) => DropdownMenuItem<String>(
+              value: c['code'] as String,
+              child: Text('${c['code']} (${c['symbol']}) - سعر الصرف: ${(c['exchange_rate'] as num?)?.toDouble() ?? 1.0}', style: const TextStyle(fontSize: 13)),
+            )).toList(),
             onChanged: (val) {
+              if (val == null) return;
               setState(() {
-                _selectedCustomerId = val;
+                _selectedCurrency = val;
+                final currency = _currencies.where((c) => c['code'] == val).firstOrNull;
+                if (currency != null) {
+                  _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+                }
               });
             },
           ),
           const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () {
-                // TODO: navigate to add customer/supplier
-              },
-              icon: const Icon(PhosphorIconsRegular.plus, size: 18),
-              label: Text(
-                _isSale ? 'إضافة عميل جديد' : 'إضافة مورد جديد',
-              ),
-            ),
+          Text(
+            'سعر الصرف: $_selectedExchangeRate (من الإعدادات)',
+            style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
     );
   }
 
-  // ── Payment method section ───────────────────────────────────────
-  Widget _buildPaymentMethodSection() {
-    const methods = [
-      ('cash', 'نقد', PhosphorIconsRegular.money),
-      ('credit', 'أجل', PhosphorIconsRegular.clock),
-      ('bank', 'بنك', PhosphorIconsRegular.bank),
-      ('check', 'شيك', PhosphorIconsRegular.note),
-      ('card', 'بطاقة', PhosphorIconsRegular.creditCard),
-    ];
+  // ── Return checkbox ──────────────────────────────────────────
+  Widget _buildReturnCheckbox() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _isReturn ? AppColors.error.withValues(alpha: 0.08) : context.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _isReturn ? AppColors.error.withValues(alpha: 0.3) : context.dividerColor,
+        ),
+      ),
+      child: CheckboxListTile(
+        value: _isReturn,
+        onChanged: (v) => setState(() => _isReturn = v ?? false),
+        title: Text('فاتورة مرتجع', style: context.textTheme.bodyLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: _isReturn ? AppColors.error : null,
+        )),
+        subtitle: _isReturn ? Text('سيتم تحويل الفاتورة إلى فاتورة مرتجع', style: context.textTheme.bodySmall?.copyWith(color: AppColors.error)) : null,
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        activeColor: AppColors.error,
+        dense: true,
+      ),
+    );
+  }
 
+  // ── Payment mechanism (cash or credit) ───────────────────────
+  Widget _buildPaymentMechanismSection() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -232,19 +256,89 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('طريقة الدفع', style: context.textTheme.titleSmall),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Row(
+            children: [
+              Icon(PhosphorIconsRegular.wallet, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('آلية الدفع', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _PaymentOptionCard(
+                  icon: PhosphorIconsFill.money,
+                  label: 'نقداً',
+                  subtitle: 'دفع فوري',
+                  isSelected: _paymentMechanism == 'cash',
+                  color: AppColors.success,
+                  onTap: () => setState(() => _paymentMechanism = 'cash'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PaymentOptionCard(
+                  icon: PhosphorIconsFill.clock,
+                  label: 'أجل',
+                  subtitle: 'دفع لاحق',
+                  isSelected: _paymentMechanism == 'credit',
+                  color: AppColors.accentOrange,
+                  onTap: () => setState(() {
+                    _paymentMechanism = 'credit';
+                    _selectedCashBoxId = null;
+                  }),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Payment method (cash, check, transfer, bank) ─────────────
+  Widget _buildPaymentMethodSection() {
+    const methods = [
+      ('cash', 'نقدي', PhosphorIconsFill.money, AppColors.success),
+      ('check', 'شيك', PhosphorIconsFill.note, AppColors.accentBlue),
+      ('transfer', 'حوالة', PhosphorIconsFill.arrowsLeftRight, AppColors.accentOrange),
+      ('bank', 'بنك', PhosphorIconsFill.bank, AppColors.primary),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(PhosphorIconsRegular.creditCard, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('طريقة الدفع', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: methods.map((m) {
               final selected = _paymentMethod == m.$1;
-              return ChoiceChip(
-                avatar: Icon(m.$3, size: 18),
-                label: Text(m.$2),
-                selected: selected,
-                onSelected: (_) => setState(() => _paymentMethod = m.$1),
-                selectedColor: AppColors.primary.withValues(alpha: 0.15),
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: _PaymentMethodChip(
+                    icon: m.$3,
+                    label: m.$2,
+                    color: m.$4,
+                    isSelected: selected,
+                    onTap: () => setState(() => _paymentMethod = m.$1),
+                  ),
+                ),
               );
             }).toList(),
           ),
@@ -253,10 +347,158 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Items section ────────────────────────────────────────────────
+  // ── Cash box dropdown (always visible, disabled when credit) ─
+  Widget _buildCashBoxSection() {
+    final isCash = _paymentMechanism == 'cash';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isCash ? context.surfaceColor : context.surfaceColor.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isCash ? context.dividerColor : AppColors.border.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(PhosphorIconsRegular.vault, size: 20, color: isCash ? AppColors.primary : AppColors.textHint),
+              const SizedBox(width: 8),
+              Text('حساب الصندوق', style: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isCash ? null : AppColors.textHint,
+              )),
+              if (!isCash) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text('معطل - فاتورة آجلة', style: context.textTheme.labelSmall?.copyWith(color: AppColors.warning, fontSize: 10)),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<int>(
+            value: isCash ? _selectedCashBoxId : null,
+            decoration: InputDecoration(
+              hintText: isCash ? 'اختر الصندوق *' : 'غير متاح للفاتورة الآجلة',
+              prefixIcon: Icon(PhosphorIconsRegular.vault, color: isCash ? null : AppColors.textHint),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.3)),
+              ),
+            ),
+            items: isCash ? _cashBoxes.map((cb) {
+              final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+              final bt = cb['balance_type'] as String? ?? 'credit';
+              return DropdownMenuItem<int>(
+                value: cb['id'] as int,
+                child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})'),
+              );
+            }).toList() : [],
+            onChanged: isCash ? (val) => setState(() => _selectedCashBoxId = val) : null,
+            validator: isCash ? (v) => v == null ? 'يجب اختيار الصندوق للفاتورة النقدية' : null : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Customer/Supplier section ────────────────────────────────
+  Widget _buildEntitySection() {
+    final entities = _isSale ? _customers : _suppliers;
+    final label = _isSale ? 'العميل' : 'المورد';
+    final isRequired = _paymentMechanism == 'credit';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('$label${isRequired ? ' *' : ''}', style: context.textTheme.titleSmall),
+              const Spacer(),
+              if (!isRequired) Text('(اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<int>(
+            value: _selectedEntityId,
+            decoration: InputDecoration(
+              hintText: 'اختر $label',
+              prefixIcon: Icon(_isSale ? PhosphorIconsRegular.user : PhosphorIconsRegular.buildings),
+            ),
+            items: entities.map((e) {
+              final balance = (e['balance'] as num?)?.toDouble() ?? 0.0;
+              final bt = e['balance_type'] as String? ?? 'credit';
+              String balanceStr = '';
+              if (balance != 0) {
+                balanceStr = ' (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})';
+              }
+              return DropdownMenuItem<int>(
+                value: e['id'] as int,
+                child: Text('${e['name']}$balanceStr', overflow: TextOverflow.ellipsis),
+              );
+            }).toList(),
+            onChanged: (val) => setState(() => _selectedEntityId = val),
+            validator: isRequired ? (v) => v == null ? '$label مطلوب للفاتورة الآجلة' : null : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Warehouse section ────────────────────────────────────────
+  Widget _buildWarehouseSection() {
+    if (_warehouses.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('المستودع', style: context.textTheme.titleSmall),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<int>(
+            value: _selectedWarehouseId,
+            decoration: const InputDecoration(
+              hintText: 'اختر المستودع',
+              prefixIcon: Icon(PhosphorIconsRegular.warehouse),
+            ),
+            items: _warehouses.map((w) => DropdownMenuItem<int>(
+              value: w['id'] as int,
+              child: Text(w['name'] as String),
+            )).toList(),
+            onChanged: (val) => setState(() => _selectedWarehouseId = val),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Items section ────────────────────────────────────────────
   Widget _buildItemsSection() {
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -264,34 +506,24 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('الأصناف', style: context.textTheme.titleSmall),
-              Text(
-                '${_items.length} صنف',
-                style: context.textTheme.bodySmall,
-              ),
+              Text('${_items.length} صنف', style: context.textTheme.bodySmall),
             ],
           ),
           const SizedBox(height: 8),
-
-          // List of items
           if (_items.isEmpty)
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 color: context.surfaceColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: context.dividerColor,
-                  style: BorderStyle.solid,
-                ),
+                border: Border.all(color: context.dividerColor, style: BorderStyle.solid),
               ),
               child: Center(
                 child: Column(
                   children: [
-                    Icon(PhosphorIconsRegular.shoppingCart,
-                        size: 48, color: AppColors.textHint),
+                    Icon(PhosphorIconsRegular.shoppingCart, size: 48, color: AppColors.textHint),
                     const SizedBox(height: 8),
-                    Text('لم يتم إضافة أصناف بعد',
-                        style: context.textTheme.bodyMedium),
+                    Text('لم يتم إضافة أصناف بعد', style: context.textTheme.bodyMedium),
                   ],
                 ),
               ),
@@ -304,30 +536,20 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 item: item,
                 onQuantityChanged: (qty) {
                   setState(() {
-                    _items[index] = item.copyWith(
-                      quantity: qty,
-                      totalPrice: qty * item.unitPrice,
-                    );
+                    _items[index] = item.copyWith(quantity: qty, totalPrice: qty * item.unitPrice);
                   });
                 },
-                onDelete: () {
-                  setState(() => _items.removeAt(index));
-                },
+                onDelete: () => setState(() => _items.removeAt(index)),
               );
             }),
-
           const SizedBox(height: 8),
-
-          // Add item button
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: _addItem,
               icon: const Icon(PhosphorIconsRegular.plusCircle),
               label: const Text('إضافة صنف'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
+              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
             ),
           ),
         ],
@@ -335,10 +557,48 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Summary section ──────────────────────────────────────────────
+  // ── Transport charges section (optional) ────────────────────
+  Widget _buildTransportChargesSection() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(PhosphorIconsRegular.truck, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('أجور النقل (اختياري)', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _transportChargesController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: 'أجور النقل',
+              prefixIcon: const Icon(PhosphorIconsRegular.truck),
+              suffixText: AppConstants.currency,
+              hintText: '0.00',
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Summary section ──────────────────────────────────────────
   Widget _buildSummarySection() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.surfaceColor,
@@ -361,33 +621,32 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   textAlign: TextAlign.left,
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     suffixText: AppConstants.currency,
                     hintText: '0.00',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          _summaryRow(
-            'الضريبة (${AppConstants.defaultVatRate.toStringAsFixed(0)}%)',
-            CurrencyFormatter.format(_taxAmount),
-          ),
+          if (AppConstants.defaultVatRate > 0) ...[
+            const SizedBox(height: 8),
+            _summaryRow('الضريبة (${AppConstants.defaultVatRate.toStringAsFixed(0)}%)', CurrencyFormatter.format(_taxAmount)),
+          ],
+          if (_transportCharges > 0) ...[
+            const SizedBox(height: 8),
+            _summaryRow('أجور النقل', CurrencyFormatter.format(_transportCharges)),
+          ],
           const Divider(height: 24),
-          _summaryRow(
-            'الإجمالي',
-            CurrencyFormatter.format(_total),
-            valueStyle: context.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-            ),
-          ),
+          _summaryRow('الإجمالي', CurrencyFormatter.format(_total),
+              valueStyle: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+          if (_selectedCurrency != 'YER') ...[
+            const SizedBox(height: 4),
+            _summaryRow('الإجمالي بالعملة الأساسية', CurrencyFormatter.format(_total * _selectedExchangeRate),
+                valueStyle: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          ],
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -401,13 +660,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   textAlign: TextAlign.left,
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     suffixText: AppConstants.currency,
                     hintText: '0.00',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -415,12 +671,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _summaryRow(
-            'المتبقي',
-            CurrencyFormatter.format(_remaining),
-            valueStyle: context.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: _remaining > 0 ? AppColors.error : AppColors.success,
+          _summaryRow('المتبقي', CurrencyFormatter.format(_remaining),
+              valueStyle: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: _remaining > 0 ? AppColors.error : AppColors.success,
+              )),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _notesController,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: 'ملاحظات',
+              prefixIcon: Icon(PhosphorIconsRegular.notepad),
+              alignLabelWithHint: true,
             ),
           ),
         ],
@@ -433,56 +696,37 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: context.textTheme.bodyMedium),
-        Text(value,
-            style: valueStyle ??
-                context.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                )),
+        Text(value, style: valueStyle ?? context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       ],
     );
   }
 
-  // ── Bottom action bar ────────────────────────────────────────────
+  // ── Bottom action bar ────────────────────────────────────────
   Widget _buildBottomBar() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.surfaceColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
       ),
       child: SafeArea(
         top: false,
         child: Row(
           children: [
-            // Share
             IconButton.outlined(
-              onPressed: () {
-                // TODO: share invoice
-              },
+              onPressed: () {},
               icon: const Icon(PhosphorIconsRegular.shareNetwork),
               tooltip: 'مشاركة',
             ),
             const SizedBox(width: 8),
-
-            // Print
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: print invoice
-                },
+                onPressed: () {},
                 icon: const Icon(PhosphorIconsRegular.printer),
                 label: const Text('طباعة'),
               ),
             ),
             const SizedBox(width: 8),
-
-            // Save
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: _saveInvoice,
@@ -496,48 +740,57 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Add item ─────────────────────────────────────────────────────
+  // ── Add item ─────────────────────────────────────────────────
   Future<void> _addItem() async {
     final result = await showModalBottomSheet<InvoiceItem>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const AddInvoiceItemSheet(),
+      builder: (_) => AddInvoiceItemSheet(warehouseId: _selectedWarehouseId),
     );
-
-    if (result != null) {
-      setState(() => _items.add(result));
-    }
+    if (result != null) setState(() => _items.add(result));
   }
 
-  // ── Save invoice ─────────────────────────────────────────────────
+  // ── Save invoice ─────────────────────────────────────────────
   Future<void> _saveInvoice() async {
+    // Validate
     if (_items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة صنف واحد على الأقل');
       return;
     }
+    if (_paymentMechanism == 'credit' && _selectedEntityId == null) {
+      context.showErrorSnackBar(_isSale ? 'الرجاء اختيار العميل للفاتورة الآجلة' : 'الرجاء اختيار المورد للفاتورة الآجلة');
+      return;
+    }
+    if (_paymentMechanism == 'cash' && _selectedCashBoxId == null) {
+      context.showErrorSnackBar('الرجاء اختيار حساب الصندوق للفاتورة النقدية');
+      return;
+    }
 
+    final invoiceId = const Uuid().v4();
     final invoice = Invoice(
-      id: const Uuid().v4(),
+      id: invoiceId,
       type: widget.invoiceType,
-      paymentType: _paymentMethod,
-      customerId: _isSale ? _selectedCustomerId : null,
-      supplierId: !_isSale ? _selectedCustomerId : null,
+      paymentMechanism: _paymentMechanism,
+      paymentMethod: _paymentMethod,
+      isReturn: _isReturn,
+      cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
+      customerId: _isSale ? _selectedEntityId : null,
+      supplierId: !_isSale ? _selectedEntityId : null,
       subtotal: _subtotal,
       discountAmount: _discountAmount,
       taxAmount: _taxAmount,
       total: _total,
       paidAmount: _paidAmount,
       remaining: _remaining,
-      status: _remaining <= 0
-          ? 'paid'
-          : _paidAmount > 0
-              ? 'partial'
-              : 'unpaid',
+      status: _remaining <= 0 ? 'paid' : _paidAmount > 0 ? 'partial' : 'unpaid',
+      warehouseId: _selectedWarehouseId,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
+      currency: _selectedCurrency,
+      exchangeRate: _selectedExchangeRate,
     );
 
     final itemsMaps = _items.map((item) => {
-      'invoice_id': invoice.id,
+      'invoice_id': invoiceId,
       'product_id': item.productId,
       'product_name': item.productName,
       'quantity': item.quantity,
@@ -547,11 +800,150 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }).toList();
 
     final db = DatabaseHelper();
-    await db.insertInvoiceWithItems(invoice.toMap(), itemsMaps);
+    await db.saveInvoiceWithJournalEntries(
+      invoice.toMap(),
+      itemsMaps,
+      invoiceType: invoice.effectiveType,
+      paymentMechanism: _paymentMechanism,
+      isReturn: _isReturn,
+      cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
+      transportCharges: _transportCharges,
+    );
 
     if (mounted) {
       context.showSuccessSnackBar('تم حفظ الفاتورة بنجاح');
       Navigator.pop(context);
     }
+  }
+}
+
+/// Card-style payment option for cash/credit selection.
+class _PaymentOptionCard extends StatelessWidget {
+  const _PaymentOptionCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.isSelected,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final bool isSelected;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.08) : context.surfaceColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? color : context.dividerColor,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isSelected ? color.withValues(alpha: 0.15) : AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: isSelected ? color : AppColors.textHint),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? color : AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isSelected ? color.withValues(alpha: 0.7) : AppColors.textHint,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Icon(PhosphorIconsFill.checkCircle, size: 18, color: color),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact payment method chip for cash/check/transfer/bank.
+class _PaymentMethodChip extends StatelessWidget {
+  const _PaymentMethodChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.08) : context.surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : context.dividerColor,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 20, color: isSelected ? color : AppColors.textHint),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? color : AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

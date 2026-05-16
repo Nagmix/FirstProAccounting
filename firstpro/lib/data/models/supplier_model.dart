@@ -5,6 +5,7 @@ class Supplier {
   final String? email;
   final String? address;
   final double balance;
+  final String balanceType; // 'debit' (عليه) or 'credit' (له)
   final String currency;
   final String? notes;
   final DateTime createdAt;
@@ -17,7 +18,8 @@ class Supplier {
     this.email,
     this.address,
     this.balance = 0.0,
-    this.currency = 'SAR',
+    this.balanceType = 'debit',
+    this.currency = 'YER',
     this.notes,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -32,6 +34,7 @@ class Supplier {
       'email': email,
       'address': address,
       'balance': balance,
+      'balance_type': balanceType,
       'currency': currency,
       'notes': notes,
       'created_at': createdAt.toIso8601String(),
@@ -47,7 +50,8 @@ class Supplier {
       email: map['email'],
       address: map['address'],
       balance: (map['balance'] ?? 0.0).toDouble(),
-      currency: map['currency'] ?? 'SAR',
+      balanceType: map['balance_type'] ?? 'debit',
+      currency: map['currency'] ?? 'YER',
       notes: map['notes'],
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
@@ -61,6 +65,7 @@ class Supplier {
     String? email,
     String? address,
     double? balance,
+    String? balanceType,
     String? currency,
     String? notes,
     DateTime? createdAt,
@@ -73,6 +78,7 @@ class Supplier {
       email: email ?? this.email,
       address: address ?? this.address,
       balance: balance ?? this.balance,
+      balanceType: balanceType ?? this.balanceType,
       currency: currency ?? this.currency,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
