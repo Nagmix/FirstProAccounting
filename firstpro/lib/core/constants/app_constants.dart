@@ -117,4 +117,5 @@ class AppConstants {
   static const String accountLedger = '/accounts/ledger';
   static const String expenses = '/expenses';
   static const String employees = '/employees';
+  static const String accountingAudit = '/accounting-audit';
 }

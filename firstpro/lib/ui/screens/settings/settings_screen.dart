@@ -246,6 +246,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
 
+            // ── Accounting Audit ────────────────────────────────
+            _buildSettingsGroup(
+              title: 'المحاسبة',
+              icon: PhosphorIconsRegular.shieldCheck,
+              isDark: isDark,
+              children: [
+                _buildActionTile(
+                  icon: PhosphorIconsRegular.magnifyingGlass,
+                  title: 'التدقيق المحاسبي',
+                  subtitle: 'التحقق من توازن القيود وربط العمليات بدليل الحسابات',
+                  onTap: () => Navigator.pushNamed(context, AppConstants.accountingAudit),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+
             // ── Data ───────────────────────────────────────────
             _buildSettingsGroup(
               title: 'البيانات',
