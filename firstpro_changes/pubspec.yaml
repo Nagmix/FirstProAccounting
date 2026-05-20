@@ -1,0 +1,44 @@
+name: firstpro
+description: "الأول برو المحاسبي - تطبيق محاسبي متكامل للاندرويد"
+publish_to: 'none'
+
+version: 1.0.7+7
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  sqflite: ^2.4.1
+  path: ^1.9.1
+  flutter_svg: ^2.0.17
+  uuid: ^4.5.1
+  phosphor_flutter: ^2.1.0
+  intl: ^0.20.2
+  provider: ^6.1.4
+  image_picker: ^1.0.4
+  path_provider: ^2.1.1
+  mobile_scanner: ^6.0.3
+  local_auth: ^2.3.0
+  flutter_secure_storage: ^9.2.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/
+
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Variable.ttf
