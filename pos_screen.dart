@@ -2690,7 +2690,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     final invoiceMap = {
       'id': invoiceId,
-      'type': 'sale',
+      'type': 'pos',
       'payment_mechanism': paymentMechanism,
       'payment_method': paymentMethod,
       'is_return': 0,
@@ -2721,6 +2721,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     final db = DatabaseHelper();
     await db.insertInvoiceWithItems(invoiceMap, items);
+
+    // Update shift totals (sales, discounts, transaction count)
+    final saleAmount = _total;
+    final discountAmount = _effectiveDiscount;
+    await db.updateShiftTotals(shiftId, saleAmount, 0.0, discountAmount);
 
     // Update product stock
     for (final item in _cart) {
@@ -3108,3 +3113,5 @@ class _ProductCard extends StatelessWidget {
     );
   }
 }
+
+

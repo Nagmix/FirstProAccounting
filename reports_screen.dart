@@ -27,6 +27,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     'المشتريات',
     'الأرباح والخسائر',
     'حركة الحسابات',
+    'حركة جميع الحسابات',
     'حركة الصندوق',
     'ميزان المراجعة',
     'المخزون',
@@ -54,6 +55,7 @@ class _ReportsScreenState extends State<ReportsScreen>
   List<_TopProduct> _topProducts = [];
   List<_RecentInvoice> _recentInvoices = [];
   List<_AccountMovement> _accountMovements = [];
+  List<_AllAccountMovement> _allAccountMovements = [];
   List<_TrialBalanceItem> _trialBalanceItems = [];
   List<_DebtItem> _debtItems = [];
   double _totalDebit = 0.0;
@@ -205,7 +207,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       );
     }).toList();
 
-    // Account movements
+    // Account movements (single account)
     List<_AccountMovement> accountMovements = [];
     if (_selectedAccountId != null) {
       final transactions =
@@ -221,6 +223,32 @@ class _ReportsScreenState extends State<ReportsScreen>
           debit: debit,
           credit: credit,
           balance: runningBalance,
+        ));
+      }
+    }
+
+    // All accounts movements
+    List<_AllAccountMovement> allAccountMovements = [];
+    {
+      String allTxDateFilter = dateFilter.replaceAll('created_at', 't.created_at');
+      final allTx = await db.rawQuery(
+        "SELECT t.id, t.account_id, t.debit, t.credit, t.description, t.date, t.created_at, "
+        "a.name_ar AS account_name, a.account_code, a.currency "
+        "FROM transactions t "
+        "LEFT JOIN accounts a ON t.account_id = a.id "
+        "WHERE 1=1 $allTxDateFilter "
+        "ORDER BY t.date DESC, t.created_at DESC",
+        dateArgs,
+      );
+      for (final tx in allTx) {
+        allAccountMovements.add(_AllAccountMovement(
+          date: tx['date'] as String? ?? '',
+          accountName: tx['account_name'] as String? ?? 'غير معروف',
+          accountCode: tx['account_code'] as String? ?? '',
+          currency: tx['currency'] as String? ?? 'YER',
+          description: tx['description'] as String? ?? '',
+          debit: (tx['debit'] as num?)?.toDouble() ?? 0.0,
+          credit: (tx['credit'] as num?)?.toDouble() ?? 0.0,
         ));
       }
     }
@@ -294,6 +322,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         _topProducts = topProducts;
         _recentInvoices = recentInvoices;
         _accountMovements = accountMovements;
+        _allAccountMovements = allAccountMovements;
         _trialBalanceItems = trialBalanceItems;
         _totalDebit = totalDebit;
         _totalCredit = totalCredit;
@@ -387,6 +416,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     switch (_selectedReportType) {
       case 'حركة الحسابات':
         return _buildAccountMovementReport(theme, isDark);
+      case 'حركة جميع الحسابات':
+        return _buildAllAccountMovementReport(theme, isDark);
       case 'ميزان المراجعة':
         return _buildTrialBalanceReport(theme, isDark);
       case 'ديون العملاء':
@@ -589,6 +620,117 @@ class _ReportsScreenState extends State<ReportsScreen>
     } catch (_) {
       return isoDate;
     }
+  }
+
+
+  Widget _buildAllAccountMovementReport(ThemeData theme, bool isDark) {
+    if (_allAccountMovements.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(PhosphorIconsRegular.arrowsLeftRight, size: 64, color: AppColors.textHint),
+            const SizedBox(height: 16),
+            Text('لا توجد حركات', style: TextStyle(fontSize: 16, color: AppColors.textHint)),
+          ],
+        ),
+      );
+    }
+
+    double totalDebit = _allAccountMovements.fold(0.0, (s, m) => s + m.debit);
+    double totalCredit = _allAccountMovements.fold(0.0, (s, m) => s + m.credit);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text('إجمالي المدين', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                      Text(CurrencyFormatter.format(totalDebit), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.error)),
+                    ],
+                  ),
+                ),
+                Container(width: 1, height: 36, color: AppColors.divider),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text('إجمالي الدائن', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                      Text(CurrencyFormatter.format(totalCredit), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
+                    ],
+                  ),
+                ),
+                Container(width: 1, height: 36, color: AppColors.divider),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text('عدد الحركات', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                      Text('${_allAccountMovements.length}', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            child: Row(
+              children: [
+                Expanded(flex: 2, child: Text('التاريخ', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
+                Expanded(flex: 3, child: Text('الحساب', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
+                Expanded(flex: 3, child: Text('البيان', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
+                Expanded(flex: 2, child: Text('مدين', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary), textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text('دائن', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary), textAlign: TextAlign.center)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _allAccountMovements.length,
+              itemBuilder: (ctx, i) {
+                final mov = _allAccountMovements[i];
+                final bgColor = i.isEven
+                    ? (isDark ? AppColors.darkSurface : AppColors.surface)
+                    : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant);
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  decoration: BoxDecoration(color: bgColor),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 2, child: Text(_formatDateShort(mov.date), style: theme.textTheme.bodySmall)),
+                      Expanded(flex: 3, child: Text(
+                        '${mov.accountName} (${mov.currency})',
+                        style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                      )),
+                      Expanded(flex: 3, child: Text(mov.description, style: theme.textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      Expanded(flex: 2, child: Text(mov.debit > 0 ? CurrencyFormatter.format(mov.debit) : '-', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
+                      Expanded(flex: 2, child: Text(mov.credit > 0 ? CurrencyFormatter.format(mov.credit) : '-', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTrialBalanceReport(ThemeData theme, bool isDark) {
@@ -1161,6 +1303,25 @@ class _AccountMovement {
   final double balance;
 }
 
+class _AllAccountMovement {
+  const _AllAccountMovement({
+    required this.date,
+    required this.accountName,
+    required this.accountCode,
+    required this.currency,
+    required this.description,
+    required this.debit,
+    required this.credit,
+  });
+  final String date;
+  final String accountName;
+  final String accountCode;
+  final String currency;
+  final String description;
+  final double debit;
+  final double credit;
+}
+
 class _TrialBalanceItem {
   const _TrialBalanceItem({required this.accountId, required this.accountName, required this.accountCode, required this.accountType, required this.currency, required this.debit, required this.credit});
   final int accountId;
@@ -1180,3 +1341,5 @@ class _DebtItem {
   final String currency;
   final String? phone;
 }
+
+
