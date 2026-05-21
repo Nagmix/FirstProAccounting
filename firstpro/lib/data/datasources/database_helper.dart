@@ -8,7 +8,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  static const int _databaseVersion = 8;
+  static const int _databaseVersion = 9;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -448,6 +448,15 @@ class DatabaseHelper {
         );
         await db.insert('accounts', account);
       }
+
+      // After inserting all accounts for this currency, set parent_id for المبيعات under الإيرادات
+      final actualCode4000 = (4000 + codeOffset).toString();
+      final actualCode4100 = (4100 + codeOffset).toString();
+      final revenueAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [actualCode4000, currencyCode], limit: 1);
+      final salesAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [actualCode4100, currencyCode], limit: 1);
+      if (revenueAccount.isNotEmpty && salesAccount.isNotEmpty) {
+        await db.update('accounts', {'parent_id': revenueAccount.first['id']}, where: 'id = ?', whereArgs: [salesAccount.first['id']]);
+      }
     }
   }
 
@@ -490,6 +499,15 @@ class DatabaseHelper {
         'created_at': now,
         'updated_at': now,
       });
+    }
+
+    // After inserting all accounts for this currency, set parent_id for المبيعات under الإيرادات
+    final actualCode4000 = (4000 + codeOffset).toString();
+    final actualCode4100 = (4100 + codeOffset).toString();
+    final revenueAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [actualCode4000, currencyCode], limit: 1);
+    final salesAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [actualCode4100, currencyCode], limit: 1);
+    if (revenueAccount.isNotEmpty && salesAccount.isNotEmpty) {
+      await db.update('accounts', {'parent_id': revenueAccount.first['id']}, where: 'id = ?', whereArgs: [salesAccount.first['id']]);
     }
   }
 
@@ -691,6 +709,46 @@ class DatabaseHelper {
       // Add index for expense_account_id
       try { await db.execute('CREATE INDEX IF NOT EXISTS idx_expenses_expense_account_id ON expenses (expense_account_id)'); } catch (_) {}
     }
+    if (oldVersion < 9) {
+      // Create shifts table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS shifts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          cash_box_id INTEGER NOT NULL,
+          cashier_id INTEGER,
+          opening_balance REAL NOT NULL DEFAULT 0.0,
+          expected_closing_balance REAL NOT NULL DEFAULT 0.0,
+          actual_closing_balance REAL,
+          total_sales REAL NOT NULL DEFAULT 0.0,
+          total_expenses REAL NOT NULL DEFAULT 0.0,
+          total_cash_in REAL NOT NULL DEFAULT 0.0,
+          total_cash_out REAL NOT NULL DEFAULT 0.0,
+          status TEXT NOT NULL DEFAULT 'open',
+          opened_at TEXT NOT NULL,
+          closed_at TEXT,
+          notes TEXT,
+          FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_shifts_status ON shifts (status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_shifts_cash_box_id ON shifts (cash_box_id)');
+
+      // Set parent_id for sales accounts under revenue accounts
+      final currencies = await db.query('currencies');
+      for (final currency in currencies) {
+        final code = currency['code'] as String;
+        final codeOffset = code == 'SAR' ? 1 : (code == 'USD' ? 2 : 0);
+        final revenueCode = (4000 + codeOffset).toString();
+        final salesCode = (4100 + codeOffset).toString();
+
+        final revenueAccounts = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [revenueCode, code]);
+        final salesAccounts = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [salesCode, code]);
+
+        if (revenueAccounts.isNotEmpty && salesAccounts.isNotEmpty) {
+          await db.update('accounts', {'parent_id': revenueAccounts.first['id']}, where: 'id = ?', whereArgs: [salesAccounts.first['id']]);
+        }
+      }
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -862,6 +920,35 @@ class DatabaseHelper {
   }
 
   // ══════════════════════════════════════════════════════════════
+  //  Shift CRUD methods
+  // ══════════════════════════════════════════════════════════════
+
+  Future<int> insertShift(Map<String, dynamic> shiftMap) async {
+    final db = await database;
+    return await db.insert('shifts', shiftMap);
+  }
+
+  Future<Map<String, dynamic>?> getActiveShift({int? cashBoxId}) async {
+    final db = await database;
+    if (cashBoxId != null) {
+      final results = await db.query('shifts', where: 'status = ? AND cash_box_id = ?', whereArgs: ['open', cashBoxId], limit: 1);
+      return results.isNotEmpty ? results.first : null;
+    }
+    final results = await db.query('shifts', where: 'status = ?', whereArgs: ['open'], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<int> updateShift(int id, Map<String, dynamic> shiftMap) async {
+    final db = await database;
+    return await db.update('shifts', shiftMap, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllShifts({String orderBy = 'opened_at DESC'}) async {
+    final db = await database;
+    return await db.query('shifts', orderBy: orderBy);
+  }
+
+  // ══════════════════════════════════════════════════════════════
   //  Currency CRUD methods
   // ══════════════════════════════════════════════════════════════
 
@@ -937,6 +1024,56 @@ class DatabaseHelper {
       // Insert invoice items
       for (final item in items) {
         await txn.insert('invoice_items', item);
+      }
+
+      // Update product stock for sale invoices
+      if (invoiceType == 'sale' && !isReturn) {
+        for (final item in items) {
+          final productId = item['product_id'];
+          if (productId != null) {
+            final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+            await txn.rawUpdate(
+              'UPDATE products SET current_stock = MAX(0, current_stock - ?), updated_at = ? WHERE id = ?',
+              [quantity, now, productId],
+            );
+          }
+        }
+      } else if (invoiceType == 'sale_return' && isReturn) {
+        // Return items to stock for sale returns
+        for (final item in items) {
+          final productId = item['product_id'];
+          if (productId != null) {
+            final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+            await txn.rawUpdate(
+              'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
+              [quantity, now, productId],
+            );
+          }
+        }
+      } else if (invoiceType == 'purchase' && !isReturn) {
+        // Add to stock for purchases
+        for (final item in items) {
+          final productId = item['product_id'];
+          if (productId != null) {
+            final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+            await txn.rawUpdate(
+              'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
+              [quantity, now, productId],
+            );
+          }
+        }
+      } else if (invoiceType == 'purchase_return' && isReturn) {
+        // Deduct from stock for purchase returns
+        for (final item in items) {
+          final productId = item['product_id'];
+          if (productId != null) {
+            final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+            await txn.rawUpdate(
+              'UPDATE products SET current_stock = MAX(0, current_stock - ?), updated_at = ? WHERE id = ?',
+              [quantity, now, productId],
+            );
+          }
+        }
       }
 
       // Post journal entries

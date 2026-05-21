@@ -22,6 +22,7 @@ import '../screens/expenses/expense_account_detail_screen.dart';
 import '../screens/employees/employees_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
 import '../screens/audit/accounting_audit_screen.dart';
+import '../screens/shifts/shifts_screen.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../data/models/account_model.dart';
@@ -58,6 +59,7 @@ class AppRouter {
         AppConstants.customerPrint: (_) => const CustomersScreen(),
         AppConstants.financialOrders: (_) => const SettingsScreen(),
         AppConstants.accountingAudit: (_) => const AccountingAuditScreen(),
+        AppConstants.shifts: (_) => const ShiftsScreen(),
       };
 
   static Future<T?> push<T extends Object?>(BuildContext context, String routeName, {Object? arguments}) {

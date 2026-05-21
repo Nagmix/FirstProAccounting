@@ -35,6 +35,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     'المشتريات',
     'الأرباح والخسائر',
     'حركة الصندوق',
+    'حركة الحساب',
     'المخزون',
   ];
 
@@ -63,6 +64,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<BarData> _dailySalesData = [];
   List<_TopProduct> _topProducts = [];
   List<_RecentInvoice> _recentInvoices = [];
+  List<Map<String, dynamic>> _accountMovementData = [];
 
   @override
   void initState() {
@@ -213,6 +215,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
       );
     }).toList();
 
+    // Account movement data
+    List<Map<String, dynamic>> accountMovement = [];
+    if (_selectedReportType == 'حركة الحساب') {
+      accountMovement = await db.rawQuery('''
+        SELECT t.id, t.debit, t.credit, t.description, t.date,
+          a.name_ar AS account_name, a.account_code
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        ORDER BY t.date DESC
+        LIMIT 100
+      ''');
+    }
+
     if (mounted) {
       setState(() {
         _totalRevenue = totalRevenue;
@@ -222,6 +237,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _dailySalesData = dailySales;
         _topProducts = topProducts;
         _recentInvoices = recentInvoices;
+        _accountMovementData = accountMovement;
         _isLoading = false;
       });
     }
@@ -297,6 +313,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
+              key: ValueKey(_selectedReportType),
+              physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,6 +349,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                   // ── Recent invoices ────────────────────────────────
                   _buildRecentInvoicesSection(theme, isDark),
+
+                  const SizedBox(height: 20),
+
+                  // ── Account movement ────────────────────────────────
+                  _buildAccountMovementSection(theme, isDark),
                 ],
               ),
             ),
@@ -627,6 +650,80 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   isLast: index == _topProducts.length - 1,
                 );
               }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  //  ACCOUNT MOVEMENT SECTION
+  // ════════════════════════════════════════════════════════════════
+  Widget _buildAccountMovementSection(ThemeData theme, bool isDark) {
+    if (_selectedReportType != 'حركة الحساب') return const SizedBox.shrink();
+
+    if (_accountMovementData.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.receipt_long_outlined, size: 48, color: AppColors.textHint),
+              const SizedBox(height: 12),
+              Text('لا توجد حركات', style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.textHint)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'حركة الحسابات',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.border,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(
+                    isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                  ),
+                  columns: [
+                    DataColumn(label: Text('الحساب', style: TextStyle(fontWeight: FontWeight.w700))),
+                    DataColumn(label: Text('عليه', style: TextStyle(fontWeight: FontWeight.w700))),
+                    DataColumn(label: Text('له', style: TextStyle(fontWeight: FontWeight.w700))),
+                    DataColumn(label: Text('البيان', style: TextStyle(fontWeight: FontWeight.w700))),
+                    DataColumn(label: Text('التاريخ', style: TextStyle(fontWeight: FontWeight.w700))),
+                  ],
+                  rows: _accountMovementData.map((row) => DataRow(cells: [
+                    DataCell(Text(row['account_name'] as String? ?? '')),
+                    DataCell(Text(CurrencyFormatter.format((row['debit'] as num?)?.toDouble() ?? 0.0))),
+                    DataCell(Text(CurrencyFormatter.format((row['credit'] as num?)?.toDouble() ?? 0.0))),
+                    DataCell(Text(row['description'] as String? ?? '', overflow: TextOverflow.ellipsis)),
+                    DataCell(Text(DateFormatter.formatDate(DateTime.tryParse(row['date'] as String? ?? '') ?? DateTime.now()))),
+                  ])).toList(),
+                ),
+              ),
             ),
           ),
         ],

@@ -3,8 +3,10 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/cash_box_model.dart';
+import '../../../ui/navigation/app_router.dart';
 import 'add_cash_box_sheet.dart';
 
 class CashBoxesScreen extends StatefulWidget {
@@ -99,6 +101,11 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
       appBar: AppBar(
         title: const Text('الصناديق والبنوك'),
         actions: [
+          IconButton(
+            icon: const Icon(PhosphorIconsRegular.clock),
+            tooltip: 'الورديات',
+            onPressed: () => AppRouter.push(context, AppConstants.shifts),
+          ),
           IconButton(
             icon: const Icon(PhosphorIconsRegular.plus),
             tooltip: 'إضافة',

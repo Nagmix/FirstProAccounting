@@ -33,6 +33,9 @@ class _PosScreenState extends State<PosScreen> {
   int? _selectedCategoryId;
   double _orderDiscount = 0;
 
+  // ── Processing flag ──────────────────────────────────────────────
+  bool _isProcessing = false;
+
   // ── Held orders ──────────────────────────────────────────────────
   final List<_HeldOrder> _heldOrders = [];
 
@@ -447,7 +450,7 @@ class _PosScreenState extends State<PosScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _cart.isEmpty ? null : _checkout,
+                      onPressed: (_cart.isEmpty || _isProcessing) ? null : _checkout,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.success,
                         foregroundColor: Colors.white,
@@ -572,93 +575,96 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _checkout() async {
-    final invoiceId = const Uuid().v4();
-    final isCash = _paymentMethod == 'cash' || _paymentMethod == 'card';
-    final invoiceMap = {
-      'id': invoiceId,
-      'type': 'sale',
-      'payment_mechanism': _paymentMethod == 'credit' ? 'credit' : 'cash',
-      'payment_method': _paymentMethod == 'card' ? 'bank' : _paymentMethod,
-      'is_return': 0,
-      'cash_box_id': null,
-      'customer_id': null,
-      'supplier_id': null,
-      'subtotal': _subtotal,
-      'discount_rate': 0.0,
-      'discount_amount': _orderDiscount,
-      'tax_amount': _tax,
-      'total': _total,
-      'paid_amount': isCash ? _total : 0.0,
-      'remaining': _paymentMethod == 'credit' ? _total : 0.0,
-      'status': _paymentMethod == 'credit' ? 'unpaid' : 'paid',
-      'cashier_id': null,
-      'warehouse_id': null,
-      'notes': null,
-      'created_at': DateTime.now().toIso8601String(),
-    };
-    final items = _cart.map((item) => {
-      'invoice_id': invoiceId,
-      'product_id': item.productId,
-      'product_name': item.name,
-      'quantity': item.quantity,
-      'unit_price': item.unitPrice,
-      'total_price': item.total,
-      'notes': null,
-    }).toList();
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
 
-    final db = DatabaseHelper();
-    await db.saveInvoiceWithJournalEntries(
-      invoiceMap,
-      items,
-      invoiceType: 'sale',
-      paymentMechanism: _paymentMethod == 'credit' ? 'credit' : 'cash',
-      isReturn: false,
-    );
+    try {
+      final invoiceId = const Uuid().v4();
+      final isCash = _paymentMethod == 'cash' || _paymentMethod == 'card';
 
-    // Update product stock
-    for (final item in _cart) {
-      final productMap = await db.getProductById(item.productId);
-      if (productMap != null) {
-        final currentStock = (productMap['current_stock'] as num?)?.toDouble() ?? 0.0;
-        await db.updateProduct(item.productId, {
-          'current_stock': (currentStock - item.quantity).clamp(0.0, double.infinity),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
-      }
-    }
+      // Save totals before clearing cart
+      final savedTotal = _total;
+      final savedPaymentMethod = _paymentMethod;
 
-    if (!mounted) return;
+      final invoiceMap = {
+        'id': invoiceId,
+        'type': 'sale',
+        'payment_mechanism': _paymentMethod == 'credit' ? 'credit' : 'cash',
+        'payment_method': _paymentMethod == 'card' ? 'bank' : _paymentMethod,
+        'is_return': 0,
+        'cash_box_id': null,
+        'customer_id': null,
+        'supplier_id': null,
+        'subtotal': _subtotal,
+        'discount_rate': 0.0,
+        'discount_amount': _orderDiscount,
+        'tax_amount': _tax,
+        'total': _total,
+        'paid_amount': isCash ? _total : 0.0,
+        'remaining': _paymentMethod == 'credit' ? _total : 0.0,
+        'status': _paymentMethod == 'credit' ? 'unpaid' : 'paid',
+        'cashier_id': null,
+        'warehouse_id': null,
+        'notes': null,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      final items = _cart.map((item) => {
+        'invoice_id': invoiceId,
+        'product_id': item.productId,
+        'product_name': item.name,
+        'quantity': item.quantity,
+        'unit_price': item.unitPrice,
+        'total_price': item.total,
+        'notes': null,
+      }).toList();
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('تم إنهاء البيع'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('الإجمالي: ${CurrencyFormatter.format(_total)}'),
-            Text('طريقة الدفع: ${_paymentMethod == 'cash' ? 'نقدي' : _paymentMethod == 'credit' ? 'آجل' : 'بطاقة'}'),
+      final db = DatabaseHelper();
+      await db.saveInvoiceWithJournalEntries(
+        invoiceMap,
+        items,
+        invoiceType: 'sale',
+        paymentMechanism: _paymentMethod == 'credit' ? 'credit' : 'cash',
+        isReturn: false,
+      );
+
+      // Stock is now updated inside saveInvoiceWithJournalEntries, no need to update here
+
+      if (!mounted) return;
+
+      // Clear cart immediately after successful save
+      setState(() {
+        _cart.clear();
+        _orderDiscount = 0;
+        _searchController.clear();
+        _selectedCategoryId = null;
+        _isProcessing = false;
+      });
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('تم إنهاء البيع'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('الإجمالي: ${CurrencyFormatter.format(savedTotal)}'),
+              Text('طريقة الدفع: ${savedPaymentMethod == 'cash' ? 'نقدي' : savedPaymentMethod == 'credit' ? 'آجل' : 'بطاقة'}'),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('فاتورة جديدة'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('إغلاق'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                _cart.clear();
-                _orderDiscount = 0;
-              });
-            },
-            child: const Text('فاتورة جديدة'),
-          ),
-        ],
-      ),
-    );
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
   }
 
   void _holdOrder() {
