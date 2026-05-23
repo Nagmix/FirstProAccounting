@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../currency_exchange/currency_exchange_screen.dart';
+import '../cash_transfers/cash_transfer_screen.dart';
+import '../debts/debts_screen.dart';
 
 /// Professional settings screen for the FirstPro accounting app.
 ///
 /// Organized into logical groups:
 /// 1. Profile section – business name, phone, email, logo (loaded from DB)
-/// 2. عام (General) – business name, currency, tax rate, language
+/// 2. عام (General) – username, business name, currency, tax rate, language
 /// 3. الفواتير (Invoices) – auto-numbering, prefix, auto-print, show tax
 /// 4. المخزون (Inventory) – stock alerts, threshold, expiry tracking
 /// 5. العرض (Display) – theme mode, font size
-/// 6. البيانات (Data) – backup, restore, export, clear data
-/// 7. حول التطبيق (About) – version, rate, contact, privacy
+/// 6. الأعمال (Operations) – currency exchange, cash transfers, debt tracking
+/// 7. قفل التطبيق (App Lock) – PIN toggle, set/change PIN, biometric auth
+/// 8. المحاسبة (Accounting Audit) – accounting audit
+/// 9. البيانات (Data) – backup, restore, export, clear data
+/// 10. حول التطبيق (About) – version, rate, contact, privacy
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -29,6 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _emailController = TextEditingController();
 
   // ── General settings state ───────────────────────────────────────
+  final _userNameController = TextEditingController();
   double _taxRate = 15.0;
 
   // ── Invoice settings state ───────────────────────────────────────
@@ -46,6 +55,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _themeModeIndex = 0; // 0=فاتح, 1=ليلي, 2=تلقائي
   int _fontSizeIndex = 1; // 0=صغير, 1=متوسط, 2=كبير
 
+  // ── App Lock settings state ──────────────────────────────────────
+  bool _pinEnabled = false;
+  bool _biometricEnabled = false;
+  bool _isBiometricAvailable = false;
+
   bool _isLoaded = false;
 
   @override
@@ -59,6 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final businessName = await db.getSetting('business_name');
     final phone = await db.getSetting('business_phone');
     final email = await db.getSetting('business_email');
+    final userName = await db.getSetting('user_name');
     final taxRate = await db.getSetting('tax_rate');
     final autoInvoice = await db.getSetting('auto_invoice_number');
     final invoicePrefix = await db.getSetting('invoice_prefix');
@@ -69,12 +84,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final trackExpiry = await db.getSetting('track_expiry_date');
     final themeMode = await db.getSetting('theme_mode_index');
     final fontSize = await db.getSetting('font_size_index');
+    final pinEnabled = await db.getSetting('pin_enabled');
+    final biometricEnabled = await db.getSetting('biometric_enabled');
+
+    // Check biometric availability
+    bool biometricAvailable = false;
+    try {
+      final localAuth = LocalAuthentication();
+      biometricAvailable = await localAuth.canCheckBiometric ||
+          await localAuth.isDeviceSupported();
+    } on PlatformException {
+      biometricAvailable = false;
+    }
 
     if (mounted) {
       setState(() {
         if (businessName != null) _businessNameController.text = businessName;
         if (phone != null) _phoneController.text = phone;
         if (email != null) _emailController.text = email;
+        if (userName != null) _userNameController.text = userName;
         if (taxRate != null) _taxRate = double.tryParse(taxRate) ?? 15.0;
         if (autoInvoice != null) _autoInvoiceNumber = autoInvoice == '1';
         if (invoicePrefix != null) _invoicePrefixController.text = invoicePrefix;
@@ -85,6 +113,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (trackExpiry != null) _trackExpiryDate = trackExpiry == '1';
         if (themeMode != null) _themeModeIndex = int.tryParse(themeMode) ?? 0;
         if (fontSize != null) _fontSizeIndex = int.tryParse(fontSize) ?? 1;
+        _pinEnabled = pinEnabled == '1';
+        _biometricEnabled = biometricEnabled == '1';
+        _isBiometricAvailable = biometricAvailable;
         _isLoaded = true;
       });
     }
@@ -100,6 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _businessNameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _userNameController.dispose();
     _invoicePrefixController.dispose();
     super.dispose();
   }
@@ -123,7 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('الإعدادات'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: 32 + MediaQuery.of(context).padding.bottom),
+        padding: EdgeInsets.only(bottom: 32 + MediaQuery.of(context).viewPadding.bottom),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -138,6 +170,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: PhosphorIconsRegular.gear,
               isDark: isDark,
               children: [
+                _buildTextSetting(
+                  label: 'اسم المستخدم',
+                  controller: _userNameController,
+                  isDark: isDark,
+                  onSave: () => _saveSetting('user_name', _userNameController.text),
+                ),
                 _buildTextSetting(
                   label: 'اسم النشاط التجاري',
                   controller: _businessNameController,
@@ -246,6 +284,149 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
 
+            // ── Operations (الأعمال) ────────────────────────────
+            _buildSettingsGroup(
+              title: 'الأعمال',
+              icon: PhosphorIconsRegular.briefcase,
+              isDark: isDark,
+              children: [
+                _buildActionTile(
+                  icon: PhosphorIconsRegular.arrowsLeftRight,
+                  title: 'مصارفة عملات',
+                  subtitle: 'تحويل العملات بأسعار الصرف المحددة',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CurrencyExchangeScreen()),
+                  ),
+                  isDark: isDark,
+                ),
+                _buildActionTile(
+                  icon: PhosphorIconsRegular.swap,
+                  title: 'تحويل بين الصناديق',
+                  subtitle: 'نقل الأموال بين الصناديق والخزائن',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CashTransferScreen()),
+                  ),
+                  isDark: isDark,
+                ),
+                _buildActionTile(
+                  icon: PhosphorIconsRegular.warningCircle,
+                  title: 'تتبع الديون',
+                  subtitle: 'متابعة ديون العملاء والموردين',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DebtsScreen()),
+                  ),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+
+            // ── App Lock (قفل التطبيق) ─────────────────────────
+            _buildSettingsGroup(
+              title: 'قفل التطبيق',
+              icon: PhosphorIconsRegular.lockSimple,
+              isDark: isDark,
+              children: [
+                SwitchListTile(
+                  secondary: Icon(
+                    PhosphorIconsRegular.lockSimple,
+                    color: _pinEnabled ? AppColors.primary : null,
+                  ),
+                  title: const Text('تفعيل قفل PIN'),
+                  subtitle: const Text('طلب رمز PIN عند فتح التطبيق'),
+                  value: _pinEnabled,
+                  activeColor: AppColors.primary,
+                  onChanged: (v) async {
+                    if (v) {
+                      // Enabling PIN — must set a PIN first
+                      final pin = await _showPinDialog(isSetting: true);
+                      if (pin != null && pin.length == 4) {
+                        await _saveSetting('pin_enabled', '1');
+                        await _saveSetting('app_pin', pin);
+                        setState(() => _pinEnabled = true);
+                      }
+                    } else {
+                      // Disabling PIN
+                      await _saveSetting('pin_enabled', '0');
+                      setState(() {
+                        _pinEnabled = false;
+                        _biometricEnabled = false;
+                      });
+                      await _saveSetting('biometric_enabled', '0');
+                    }
+                  },
+                ),
+                _buildActionTile(
+                  icon: PhosphorIconsRegular.key,
+                  title: _pinEnabled ? 'تغيير رمز PIN' : 'تعيين رمز PIN',
+                  subtitle: _pinEnabled
+                      ? 'تعديل رمز القفل المكون من 4 أرقام'
+                      : 'تعيين رمز PIN من 4 أرقام لحماية التطبيق',
+                  onTap: () async {
+                    final pin = await _showPinDialog(isSetting: true);
+                    if (pin != null && pin.length == 4) {
+                      await _saveSetting('app_pin', pin);
+                      if (!_pinEnabled) {
+                        await _saveSetting('pin_enabled', '1');
+                        setState(() => _pinEnabled = true);
+                      }
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('تم حفظ رمز PIN بنجاح'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  isDark: isDark,
+                ),
+                SwitchListTile(
+                  secondary: Icon(
+                    PhosphorIconsRegular.fingerprint,
+                    color: _biometricEnabled ? AppColors.primary : null,
+                  ),
+                  title: const Text('المصادقة البيومترية'),
+                  subtitle: Text(
+                    _isBiometricAvailable
+                        ? 'استخدام البصمة أو الوجه للدخول'
+                        : 'الجهاز لا يدعم المصادقة البيومترية',
+                  ),
+                  value: _biometricEnabled,
+                  activeColor: AppColors.primary,
+                  onChanged: _isBiometricAvailable && _pinEnabled
+                      ? (v) async {
+                          if (v) {
+                            // Verify biometric before enabling
+                            try {
+                              final localAuth = LocalAuthentication();
+                              final authenticated = await localAuth.authenticate(
+                                localizedReason: 'قم بالمصادقة لتفعيل الدخول بالبصمة',
+                                options: const AuthenticationOptions(
+                                  stickyAuth: true,
+                                  biometricOnly: true,
+                                ),
+                              );
+                              if (authenticated) {
+                                await _saveSetting('biometric_enabled', '1');
+                                setState(() => _biometricEnabled = true);
+                              }
+                            } on PlatformException {
+                              // Biometric auth failed
+                            }
+                          } else {
+                            await _saveSetting('biometric_enabled', '0');
+                            setState(() => _biometricEnabled = false);
+                          }
+                        }
+                      : null,
+                ),
+              ],
+            ),
+
             // ── Accounting Audit ────────────────────────────────
             _buildSettingsGroup(
               title: 'المحاسبة',
@@ -319,8 +500,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildActionTile(
                   icon: PhosphorIconsRegular.envelope,
                   title: 'تواصل معنا',
-                  subtitle: 'support@firstpro.sa',
+                  subtitle: 'support@firstpro.com',
                   onTap: _onContactUs,
+                  isDark: isDark,
+                ),
+                _buildActionTile(
+                  icon: PhosphorIconsRegular.phone,
+                  title: 'رقم الهاتف',
+                  subtitle: '+967777777777',
+                  onTap: _onCallUs,
+                  isDark: isDark,
+                ),
+                _buildActionTile(
+                  icon: PhosphorIconsRegular.whatsappLogo,
+                  title: 'واتساب',
+                  subtitle: '+967777777777',
+                  onTap: _onWhatsApp,
                   isDark: isDark,
                 ),
                 _buildActionTile(
@@ -464,11 +659,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String label,
     required TextEditingController controller,
     required bool isDark,
+    VoidCallback? onSave,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: TextField(
         controller: controller,
+        onSubmitted: (_) => onSave?.call(),
         decoration: InputDecoration(
           labelText: label,
           filled: true,
@@ -807,6 +1004,177 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ════════════════════════════════════════════════════════════════
+  //  PIN DIALOG
+  // ════════════════════════════════════════════════════════════════
+
+  /// Shows a dialog for entering a 4-digit PIN.
+  /// Returns the entered PIN string if confirmed, or null if cancelled.
+  Future<String?> _showPinDialog({required bool isSetting}) async {
+    String pin = '';
+    String confirmPin = '';
+    bool isConfirming = false;
+    String? errorText;
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            void onDigit(String digit) {
+              if (isConfirming && confirmPin.length >= 4) return;
+              if (!isConfirming && pin.length >= 4) return;
+
+              setDialogState(() {
+                if (isConfirming) {
+                  confirmPin += digit;
+                } else {
+                  pin += digit;
+                }
+                errorText = null;
+              });
+
+              // Auto-advance to confirm step
+              if (!isConfirming && pin.length == 4) {
+                setDialogState(() {
+                  isConfirming = true;
+                });
+              }
+
+              // Auto-confirm when confirmation PIN is complete
+              if (isConfirming && confirmPin.length == 4) {
+                if (pin == confirmPin) {
+                  Navigator.pop(ctx, pin);
+                } else {
+                  setDialogState(() {
+                    errorText = 'رمز PIN غير متطابق، حاول مرة أخرى';
+                    confirmPin = '';
+                    isConfirming = true;
+                    pin = '';
+                    isConfirming = false;
+                  });
+                }
+              }
+            }
+
+            void onBackspace() {
+              setDialogState(() {
+                if (isConfirming && confirmPin.isNotEmpty) {
+                  confirmPin = confirmPin.substring(0, confirmPin.length - 1);
+                } else if (!isConfirming && pin.isNotEmpty) {
+                  pin = pin.substring(0, pin.length - 1);
+                }
+                errorText = null;
+              });
+            }
+
+            final currentPin = isConfirming ? confirmPin : pin;
+            final title = isConfirming ? 'أعد إدخال رمز PIN' : 'أدخل رمز PIN الجديد';
+
+            return AlertDialog(
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // PIN dots
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(4, (index) {
+                      final isFilled = index < currentPin.length;
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isFilled ? AppColors.primary : Colors.transparent,
+                          border: Border.all(
+                            color: errorText != null
+                                ? AppColors.error
+                                : isFilled
+                                    ? AppColors.primary
+                                    : Colors.grey[400]!,
+                            width: 2,
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  if (errorText != null)
+                    Text(
+                      errorText!,
+                      style: const TextStyle(color: AppColors.error, fontSize: 13),
+                    ),
+                  const SizedBox(height: 12),
+                  // Numeric keypad
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      for (var d = 1; d <= 9; d++)
+                        SizedBox(
+                          width: 64,
+                          height: 48,
+                          child: OutlinedButton(
+                            onPressed: () => onDigit(d.toString()),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              d.toString(),
+                              style: const TextStyle(fontSize: 20),
+                            ),
+                          ),
+                        ),
+                      SizedBox(
+                        width: 64,
+                        height: 48,
+                        child: IconButton(
+                          onPressed: onBackspace,
+                          icon: const Icon(PhosphorIconsRegular.backspace),
+                          style: IconButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 64,
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: () => onDigit('0'),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text('0', style: TextStyle(fontSize: 20)),
+                        ),
+                      ),
+                      SizedBox(width: 64, height: 48), // spacer
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, null),
+                  child: const Text('إلغاء'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════
   //  DIALOGS & ACTIONS
   // ════════════════════════════════════════════════════════════════
 
@@ -932,7 +1300,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _onContactUs() {
-    // TODO: Open email client
+    // TODO: Open email client to support@firstpro.com
+  }
+
+  void _onCallUs() {
+    // TODO: Launch phone dialer with +967777777777
+  }
+
+  void _onWhatsApp() {
+    // TODO: Open WhatsApp with +967777777777
   }
 
   void _onPrivacyPolicy() {

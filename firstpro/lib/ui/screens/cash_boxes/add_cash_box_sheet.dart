@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -25,12 +24,26 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
 
   String _type = 'cash_box'; // 'cash_box' or 'bank'
   String _balanceType = 'credit'; // 'debit' or 'credit'
-  int? _selectedAccountId;
+  String _currency = 'YER'; // 'YER', 'SAR', 'USD'
+  int? _linkedAccountId;
   bool _isSaving = false;
-
-  List<Map<String, dynamic>> _accounts = [];
+  bool _accountLinkError = false;
 
   bool get _isEdit => widget.existing != null;
+
+  /// Maps each currency to the account_code for "حساب الصناديق والبنوك".
+  static const Map<String, String> _cashBanksAccountCodes = {
+    'YER': '1100',
+    'SAR': '1101',
+    'USD': '1102',
+  };
+
+  /// Currency display info.
+  static const Map<String, Map<String, String>> _currencyInfo = {
+    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
+    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
+    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
+  };
 
   @override
   void initState() {
@@ -43,15 +56,30 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
       _bankAccountNumberController.text = widget.existing!.bankAccountNumber ?? '';
       _bankNameController.text = widget.existing!.bankName ?? '';
       _bankBranchController.text = widget.existing!.bankBranch ?? '';
-      _selectedAccountId = widget.existing!.linkedAccountId;
+      _linkedAccountId = widget.existing!.linkedAccountId;
+
+      // Derive currency from the linked account if editing
+      if (_linkedAccountId != null) {
+        _deriveCurrencyFromLinkedAccount();
+      }
+    } else {
+      // For new cash boxes, auto-link to default currency (YER) account
+      _onCurrencyChanged(_currency);
     }
-    _loadAccounts();
   }
 
-  Future<void> _loadAccounts() async {
+  /// When editing, try to figure out which currency the existing linked account belongs to.
+  Future<void> _deriveCurrencyFromLinkedAccount() async {
     final db = DatabaseHelper();
-    final accounts = await db.getAccountsByType('ASSET');
-    setState(() => _accounts = accounts);
+    for (final entry in _cashBanksAccountCodes.entries) {
+      final account = await db.getAccountByCodeAndCurrency(entry.value, entry.key);
+      if (account != null && account['id'] == _linkedAccountId) {
+        if (mounted) {
+          setState(() => _currency = entry.key);
+        }
+        break;
+      }
+    }
   }
 
   @override
@@ -64,11 +92,55 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
     super.dispose();
   }
 
+  /// Auto-link to the Cash & Banks account for the selected currency.
+  Future<void> _onCurrencyChanged(String newCurrency) async {
+    setState(() {
+      _currency = newCurrency;
+      _accountLinkError = false;
+    });
+
+    final code = _cashBanksAccountCodes[newCurrency]!;
+    final db = DatabaseHelper();
+    final account = await db.getAccountByCodeAndCurrency(code, newCurrency);
+
+    if (!mounted) return;
+
+    if (account != null) {
+      setState(() => _linkedAccountId = account['id'] as int);
+    } else {
+      // No matching account found — show warning but still allow the user to proceed
+      setState(() {
+        _linkedAccountId = null;
+        _accountLinkError = true;
+      });
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Ensure we have a linked account before saving
+    if (_linkedAccountId == null) {
+      // Try one more time to resolve the account
+      final code = _cashBanksAccountCodes[_currency]!;
+      final db = DatabaseHelper();
+      final account = await db.getAccountByCodeAndCurrency(code, _currency);
+      if (account != null) {
+        _linkedAccountId = account['id'] as int;
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
 
-    final now = DateTime.now().toIso8601String();
     final cashBox = CashBox(
       id: widget.existing?.id,
       name: _nameController.text.trim(),
@@ -78,23 +150,30 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
       bankBranch: _type == 'bank' ? _bankBranchController.text.trim() : null,
       balance: double.tryParse(_balanceController.text) ?? 0.0,
       balanceType: _balanceType,
-      linkedAccountId: _selectedAccountId,
+      linkedAccountId: _linkedAccountId,
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
+    final map = cashBox.toMap();
+    // Include currency in the map so it gets persisted (column added in v13 migration)
+    map['currency'] = _currency;
+
     final db = DatabaseHelper();
     if (_isEdit) {
-      await db.updateCashBox(cashBox.id!, cashBox.toMap());
+      await db.updateCashBox(cashBox.id!, map);
     } else {
-      await db.insertCashBox(cashBox.toMap());
+      await db.insertCashBox(map);
     }
 
     if (!mounted) return;
     setState(() => _isSaving = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'), backgroundColor: AppColors.success),
+      SnackBar(
+        content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
+        backgroundColor: AppColors.success,
+      ),
     );
     Navigator.of(context).pop();
   }
@@ -103,9 +182,11 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final viewPaddingBottom = MediaQuery.of(context).viewPadding.bottom;
+    final currencySymbol = _currencyInfo[_currency]?['symbol'] ?? AppConstants.currency;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
+      padding: EdgeInsets.only(bottom: bottomInset + viewPaddingBottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         child: Form(
@@ -114,25 +195,36 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(_isEdit ? 'تعديل صندوق/بنك' : 'إضافة صندوق أو بنك',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center),
+              // ── Title ──
+              Text(
+                _isEdit ? 'تعديل صندوق/بنك' : 'إضافة صندوق أو بنك',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 20),
 
-              // Type selection
+              // ── Type selection ──
               Text('النوع', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               SegmentedButton<String>(
                 segments: const [
-                  ButtonSegment(value: 'cash_box', label: Text('صندوق'), icon: Icon(PhosphorIconsRegular.vault, size: 18)),
-                  ButtonSegment(value: 'bank', label: Text('بنك'), icon: Icon(PhosphorIconsRegular.bank, size: 18)),
+                  ButtonSegment(
+                    value: 'cash_box',
+                    label: Text('صندوق'),
+                    icon: Icon(PhosphorIconsRegular.vault, size: 18),
+                  ),
+                  ButtonSegment(
+                    value: 'bank',
+                    label: Text('بنك'),
+                    icon: Icon(PhosphorIconsRegular.bank, size: 18),
+                  ),
                 ],
                 selected: {_type},
                 onSelectionChanged: (v) => setState(() => _type = v.first),
               ),
               const SizedBox(height: 14),
 
-              // Name
+              // ── Name ──
               TextFormField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
@@ -144,7 +236,36 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               ),
               const SizedBox(height: 14),
 
-              // Bank-specific fields
+              // ── Currency selection ──
+              DropdownButtonFormField<String>(
+                value: _currency,
+                decoration: InputDecoration(
+                  labelText: 'العملة',
+                  prefixIcon: const Icon(PhosphorIconsRegular.currencyDollar),
+                  suffixIcon: _linkedAccountId != null
+                      ? const Icon(PhosphorIconsRegular.link, size: 18, color: AppColors.success)
+                      : null,
+                ),
+                items: _currencyInfo.entries.map((entry) {
+                  return DropdownMenuItem<String>(
+                    value: entry.key,
+                    child: Text('${entry.value['label']} (${entry.key})'),
+                  );
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) _onCurrencyChanged(v);
+                },
+              ),
+              if (_accountLinkError) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة. تأكد من وجود الحساب بدليل الحسابات.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error),
+                ),
+              ],
+              const SizedBox(height: 14),
+
+              // ── Bank-specific fields ──
               if (_type == 'bank') ...[
                 TextFormField(
                   controller: _bankNameController,
@@ -175,7 +296,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 const SizedBox(height: 14),
               ],
 
-              // Initial balance (only for new cash boxes)
+              // ── Initial balance (only for new cash boxes) ──
               if (!_isEdit || _type == 'cash_box') ...[
                 TextFormField(
                   controller: _balanceController,
@@ -185,12 +306,12 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                   decoration: InputDecoration(
                     labelText: _type == 'cash_box' ? 'الرصيد الأولي' : 'الرصيد',
                     prefixIcon: const Icon(PhosphorIconsRegular.calculator),
-                    suffixText: AppConstants.currency,
+                    suffixText: currencySymbol,
                   ),
                 ),
                 const SizedBox(height: 10),
 
-                // Balance type: له / عليه
+                // ── Balance type: له / عليه ──
                 Text('حالة الرصيد', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 Row(
@@ -222,22 +343,44 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 const SizedBox(height: 14),
               ],
 
-              // Linked account
-              DropdownButtonFormField<int>(
-                value: _selectedAccountId,
-                decoration: const InputDecoration(
-                  labelText: 'الحساب المرتبط',
-                  prefixIcon: Icon(PhosphorIconsRegular.link),
+              // ── Auto-linked account info (read-only) ──
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _linkedAccountId != null
+                      ? AppColors.success.withValues(alpha: 0.08)
+                      : AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _linkedAccountId != null
+                        ? AppColors.success.withValues(alpha: 0.3)
+                        : AppColors.error.withValues(alpha: 0.3),
+                  ),
                 ),
-                items: _accounts.map((a) => DropdownMenuItem<int>(
-                  value: a['id'] as int,
-                  child: Text('${a['account_code']} - ${a['name_ar']}', overflow: TextOverflow.ellipsis),
-                )).toList(),
-                onChanged: (v) => setState(() => _selectedAccountId = v),
+                child: Row(
+                  children: [
+                    Icon(
+                      _linkedAccountId != null ? PhosphorIconsRegular.link : PhosphorIconsRegular.warning,
+                      size: 18,
+                      color: _linkedAccountId != null ? AppColors.success : AppColors.error,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _linkedAccountId != null
+                            ? 'مرتبط تلقائيًا بحساب الصناديق والبنوك (${_cashBanksAccountCodes[_currency]} - $_currency)'
+                            : 'لم يتم ربط الحساب — اختر عملة أخرى أو تأكد من دليل الحسابات',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: _linkedAccountId != null ? AppColors.success : AppColors.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
 
-              // Action buttons
+              // ── Action buttons ──
               Row(
                 children: [
                   Expanded(
@@ -245,7 +388,11 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                     child: ElevatedButton.icon(
                       onPressed: _isSaving ? null : _save,
                       icon: _isSaving
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
                           : const Icon(PhosphorIconsRegular.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(

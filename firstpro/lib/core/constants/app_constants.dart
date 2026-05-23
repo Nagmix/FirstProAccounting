@@ -11,7 +11,7 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 5;
+  static const int dbVersion = 12;
 
   // ── Locale & currency ─────────────────────────────────────────
   static const String currency = 'ر.ي';
@@ -118,4 +118,12 @@ class AppConstants {
   static const String expenses = '/expenses';
   static const String employees = '/employees';
   static const String accountingAudit = '/accounting-audit';
+  static const String quotations = '/quotations';
+  static const String purchaseOrders = '/purchase-orders';
+  static const String salesOrders = '/sales-orders';
+  static const String shifts = '/shifts';
+  static const String currencyExchange = '/currency-exchange';
+  static const String cashTransfers = '/cash-transfers';
+  static const String debts = '/debts';
+  static const String appLock = '/app-lock';
 }

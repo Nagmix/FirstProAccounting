@@ -8,7 +8,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  static const int _databaseVersion = 8;
+  static const int _databaseVersion = 13;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -114,7 +114,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Invoices
+    // Invoices (v12: includes shift_id, cashier_name, is_posted)
     await db.execute('''
       CREATE TABLE invoices (
         id TEXT PRIMARY KEY,
@@ -143,6 +143,9 @@ class DatabaseHelper {
         bank_transfer_provider TEXT,
         transfer_number TEXT,
         attachment_path TEXT,
+        shift_id INTEGER,
+        cashier_name TEXT,
+        is_posted INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         FOREIGN KEY (customer_id) REFERENCES customers (id),
         FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
@@ -345,12 +348,211 @@ class DatabaseHelper {
       )
     ''');
 
+
+    // Quotations
+    await db.execute('''
+      CREATE TABLE quotations (
+        id TEXT PRIMARY KEY,
+        quotation_number TEXT NOT NULL,
+        customer_id INTEGER,
+        currency TEXT NOT NULL DEFAULT 'YER',
+        exchange_rate REAL NOT NULL DEFAULT 1.0,
+        subtotal REAL NOT NULL DEFAULT 0.0,
+        discount_rate REAL NOT NULL DEFAULT 0.0,
+        discount_amount REAL NOT NULL DEFAULT 0.0,
+        tax_amount REAL NOT NULL DEFAULT 0.0,
+        total REAL NOT NULL DEFAULT 0.0,
+        status TEXT NOT NULL DEFAULT 'draft',
+        valid_until TEXT,
+        notes TEXT,
+        terms_conditions TEXT,
+        converted_to_sales_order INTEGER NOT NULL DEFAULT 0,
+        sales_order_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customers (id)
+      )
+    ''');
+
+    // Quotation Items
+    await db.execute('''
+      CREATE TABLE quotation_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        quotation_id TEXT NOT NULL,
+        product_id INTEGER,
+        product_name TEXT NOT NULL,
+        description TEXT,
+        quantity REAL NOT NULL DEFAULT 1.0,
+        unit_price REAL NOT NULL DEFAULT 0.0,
+        total_price REAL NOT NULL DEFAULT 0.0,
+        FOREIGN KEY (quotation_id) REFERENCES quotations (id),
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    ''');
+
+    // Purchase Orders
+    await db.execute('''
+      CREATE TABLE purchase_orders (
+        id TEXT PRIMARY KEY,
+        order_number TEXT NOT NULL,
+        supplier_id INTEGER,
+        currency TEXT NOT NULL DEFAULT 'YER',
+        exchange_rate REAL NOT NULL DEFAULT 1.0,
+        subtotal REAL NOT NULL DEFAULT 0.0,
+        discount_rate REAL NOT NULL DEFAULT 0.0,
+        discount_amount REAL NOT NULL DEFAULT 0.0,
+        tax_amount REAL NOT NULL DEFAULT 0.0,
+        total REAL NOT NULL DEFAULT 0.0,
+        status TEXT NOT NULL DEFAULT 'draft',
+        expected_date TEXT,
+        notes TEXT,
+        terms_conditions TEXT,
+        warehouse_id INTEGER,
+        converted_to_invoice INTEGER NOT NULL DEFAULT 0,
+        invoice_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
+        FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+      )
+    ''');
+
+    // Purchase Order Items
+    await db.execute('''
+      CREATE TABLE purchase_order_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        purchase_order_id TEXT NOT NULL,
+        product_id INTEGER,
+        product_name TEXT NOT NULL,
+        description TEXT,
+        quantity REAL NOT NULL DEFAULT 1.0,
+        unit_price REAL NOT NULL DEFAULT 0.0,
+        total_price REAL NOT NULL DEFAULT 0.0,
+        FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders (id),
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    ''');
+
+    // Sales Orders
+    await db.execute('''
+      CREATE TABLE sales_orders (
+        id TEXT PRIMARY KEY,
+        order_number TEXT NOT NULL,
+        customer_id INTEGER,
+        currency TEXT NOT NULL DEFAULT 'YER',
+        exchange_rate REAL NOT NULL DEFAULT 1.0,
+        subtotal REAL NOT NULL DEFAULT 0.0,
+        discount_rate REAL NOT NULL DEFAULT 0.0,
+        discount_amount REAL NOT NULL DEFAULT 0.0,
+        tax_amount REAL NOT NULL DEFAULT 0.0,
+        total REAL NOT NULL DEFAULT 0.0,
+        status TEXT NOT NULL DEFAULT 'draft',
+        expected_date TEXT,
+        notes TEXT,
+        terms_conditions TEXT,
+        warehouse_id INTEGER,
+        converted_to_invoice INTEGER NOT NULL DEFAULT 0,
+        invoice_id TEXT,
+        quotation_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customers (id),
+        FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+      )
+    ''');
+
+    // Sales Order Items
+    await db.execute('''
+      CREATE TABLE sales_order_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sales_order_id TEXT NOT NULL,
+        product_id INTEGER,
+        product_name TEXT NOT NULL,
+        description TEXT,
+        quantity REAL NOT NULL DEFAULT 1.0,
+        unit_price REAL NOT NULL DEFAULT 0.0,
+        total_price REAL NOT NULL DEFAULT 0.0,
+        FOREIGN KEY (sales_order_id) REFERENCES sales_orders (id),
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    ''');
+
+
+    // Shifts (الورديات)
+    await db.execute('''
+      CREATE TABLE shifts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        shift_number TEXT NOT NULL,
+        cashier_id INTEGER,
+        cash_box_id INTEGER NOT NULL,
+        opening_amount REAL NOT NULL DEFAULT 0.0,
+        closing_amount REAL,
+        expected_amount REAL,
+        difference REAL,
+        status TEXT NOT NULL DEFAULT 'open',
+        opened_at TEXT NOT NULL,
+        closed_at TEXT,
+        notes TEXT,
+        total_sales REAL NOT NULL DEFAULT 0.0,
+        total_returns REAL NOT NULL DEFAULT 0.0,
+        total_discounts REAL NOT NULL DEFAULT 0.0,
+        transaction_count INTEGER NOT NULL DEFAULT 0,
+        currency TEXT NOT NULL DEFAULT 'YER',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (cashier_id) REFERENCES users (id),
+        FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+      )
+    ''');
+
+    // Currency Exchanges (صرافة العملات) - v12
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS currency_exchanges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        exchange_number TEXT NOT NULL,
+        from_currency TEXT NOT NULL,
+        to_currency TEXT NOT NULL,
+        from_amount REAL NOT NULL,
+        to_amount REAL NOT NULL,
+        exchange_rate REAL NOT NULL,
+        from_cash_box_id INTEGER NOT NULL,
+        to_cash_box_id INTEGER NOT NULL,
+        gain_loss REAL NOT NULL DEFAULT 0.0,
+        gain_loss_type TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (from_cash_box_id) REFERENCES cash_boxes (id),
+        FOREIGN KEY (to_cash_box_id) REFERENCES cash_boxes (id)
+      )
+    ''');
+
+    // Cash Transfers (تحويل بين الصناديق) - v12
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cash_transfers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transfer_number TEXT NOT NULL,
+        from_cash_box_id INTEGER NOT NULL,
+        to_cash_box_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'YER',
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (from_cash_box_id) REFERENCES cash_boxes (id),
+        FOREIGN KEY (to_cash_box_id) REFERENCES cash_boxes (id)
+      )
+    ''');
+
+    await db.execute('CREATE INDEX idx_shifts_cashier_id ON shifts (cashier_id)');
+    await db.execute('CREATE INDEX idx_shifts_cash_box_id ON shifts (cash_box_id)');
+    await db.execute('CREATE INDEX idx_shifts_status ON shifts (status)');
     // --- Indexes ---
     await db.execute('CREATE INDEX idx_products_barcode ON products (barcode)');
     await db.execute('CREATE INDEX idx_products_item_code ON products (item_code)');
     await db.execute('CREATE INDEX idx_invoices_customer_id ON invoices (customer_id)');
     await db.execute('CREATE INDEX idx_invoices_created_at ON invoices (created_at)');
     await db.execute('CREATE INDEX idx_invoices_status ON invoices (status)');
+    await db.execute('CREATE INDEX idx_invoices_shift_id ON invoices (shift_id)');
+    await db.execute('CREATE INDEX idx_invoices_is_posted ON invoices (is_posted)');
     await db.execute('CREATE INDEX idx_invoice_items_invoice_id ON invoice_items (invoice_id)');
     await db.execute('CREATE INDEX idx_transactions_account_id ON transactions (account_id)');
     await db.execute('CREATE INDEX idx_transactions_journal_id ON transactions (journal_id)');
@@ -366,6 +568,20 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_employees_name ON employees (name)');
     await db.execute('CREATE INDEX idx_employees_is_active ON employees (is_active)');
     await db.execute('CREATE INDEX idx_expenses_expense_account_id ON expenses (expense_account_id)');
+    await db.execute('CREATE INDEX idx_quotations_customer_id ON quotations (customer_id)');
+    await db.execute('CREATE INDEX idx_quotations_status ON quotations (status)');
+    await db.execute('CREATE INDEX idx_quotation_items_quotation_id ON quotation_items (quotation_id)');
+    await db.execute('CREATE INDEX idx_purchase_orders_supplier_id ON purchase_orders (supplier_id)');
+    await db.execute('CREATE INDEX idx_purchase_orders_status ON purchase_orders (status)');
+    await db.execute('CREATE INDEX idx_purchase_order_items_po_id ON purchase_order_items (purchase_order_id)');
+    await db.execute('CREATE INDEX idx_sales_orders_customer_id ON sales_orders (customer_id)');
+    await db.execute('CREATE INDEX idx_sales_orders_status ON sales_orders (status)');
+    await db.execute('CREATE INDEX idx_sales_order_items_so_id ON sales_order_items (sales_order_id)');
+    // v12 indexes
+    await db.execute('CREATE INDEX idx_currency_exchanges_number ON currency_exchanges (exchange_number)');
+    await db.execute('CREATE INDEX idx_currency_exchanges_created_at ON currency_exchanges (created_at)');
+    await db.execute('CREATE INDEX idx_cash_transfers_number ON cash_transfers (transfer_number)');
+    await db.execute('CREATE INDEX idx_cash_transfers_created_at ON cash_transfers (created_at)');
 
     // Seed default data
     await _seedCurrencies(db);
@@ -376,8 +592,8 @@ class DatabaseHelper {
     final now = DateTime.now().toIso8601String();
     final currencies = [
       {'code': 'YER', 'name_ar': 'ريال يمني', 'name_en': 'Yemeni Rial', 'symbol': 'ر.ي', 'exchange_rate': 1.0, 'is_default': 1, 'is_active': 1, 'created_at': now},
-      {'code': 'SAR', 'name_ar': 'ريال سعودي', 'name_en': 'Saudi Riyal', 'symbol': 'ر.س', 'exchange_rate': 0.037, 'is_default': 0, 'is_active': 1, 'created_at': now},
-      {'code': 'USD', 'name_ar': 'دولار أمريكي', 'name_en': 'US Dollar', 'symbol': r'$', 'exchange_rate': 0.004, 'is_default': 0, 'is_active': 1, 'created_at': now},
+      {'code': 'SAR', 'name_ar': 'ريال سعودي', 'name_en': 'Saudi Riyal', 'symbol': 'ر.س', 'exchange_rate': 140.0, 'is_default': 0, 'is_active': 1, 'created_at': now},
+      {'code': 'USD', 'name_ar': 'دولار أمريكي', 'name_en': 'US Dollar', 'symbol': r'$', 'exchange_rate': 530.0, 'is_default': 0, 'is_active': 1, 'created_at': now},
     ];
     for (final c in currencies) {
       await db.insert('currencies', c);
@@ -408,19 +624,17 @@ class DatabaseHelper {
     }
 
     // Account templates: [nameAr, nameEn, baseCode, accountType]
+    // Removed: حساب الإيرادات (4000), حساب التكاليف (3000), حساب المصاريف (5000), اجور النقل (5200)
+    // These duplicate the parent category name and are no longer needed
     final templates = [
       ['حساب الأصول', 'Assets Account', '1000', 'ASSET'],
       ['حساب الصناديق والبنوك', 'Cash & Banks Account', '1100', 'ASSET'],
       ['حساب العملاء', 'Customers Account', '1200', 'ASSET'],
       ['حساب الخصوم', 'Liabilities Account', '2000', 'LIABILITY'],
       ['حساب الموردين', 'Suppliers Account', '2100', 'LIABILITY'],
-      ['حساب التكاليف', 'Costs Account', '3000', 'COST'],
       ['حساب المشتريات', 'Purchases Account', '3100', 'COST'],
-      ['حساب الإيرادات', 'Revenue Account', '4000', 'REVENUE'],
       ['حساب المبيعات', 'Sales Account', '4100', 'REVENUE'],
-      ['حساب المصاريف', 'Expenses Account', '5000', 'EXPENSE'],
       ['حساب الموظفين', 'Employees Account', '5100', 'EXPENSE'],
-      ['اجور النقل', 'Transport Charges', '5200', 'EXPENSE'],
     ];
 
     // Currency configurations: [currencyCode, symbol, codeOffset]
@@ -461,19 +675,16 @@ class DatabaseHelper {
     if (existing.isNotEmpty) return;
 
     // Account templates: [nameAr, nameEn, baseCode, accountType]
+    // Removed: حساب الإيرادات (4000), حساب التكاليف (3000), حساب المصاريف (5000), اجور النقل (5200)
     final templates = [
       ['حساب الأصول', 'Assets Account', 1000, 'ASSET'],
       ['حساب الصناديق والبنوك', 'Cash & Banks Account', 1100, 'ASSET'],
       ['حساب العملاء', 'Customers Account', 1200, 'ASSET'],
       ['حساب الخصوم', 'Liabilities Account', 2000, 'LIABILITY'],
       ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY'],
-      ['حساب التكاليف', 'Costs Account', 3000, 'COST'],
       ['حساب المشتريات', 'Purchases Account', 3100, 'COST'],
-      ['حساب الإيرادات', 'Revenue Account', 4000, 'REVENUE'],
       ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE'],
-      ['حساب المصاريف', 'Expenses Account', 5000, 'EXPENSE'],
       ['حساب الموظفين', 'Employees Account', 5100, 'EXPENSE'],
-      ['اجور النقل', 'Transport Charges', 5200, 'EXPENSE'],
     ];
 
     for (final template in templates) {
@@ -690,6 +901,256 @@ class DatabaseHelper {
 
       // Add index for expense_account_id
       try { await db.execute('CREATE INDEX IF NOT EXISTS idx_expenses_expense_account_id ON expenses (expense_account_id)'); } catch (_) {}
+    }
+    if (oldVersion < 9) {
+      // Delete duplicate-named accounts that have the same name as their parent category:
+      // - حساب الإيرادات (codes 4000, 4001, 4002) under REVENUE
+      // - حساب التكاليف (codes 3000, 3001, 3002) under COST
+      // - حساب المصاريف (codes 5000, 5001, 5002) under EXPENSE
+      // - اجور النقل (codes 5200, 5201, 5202) under EXPENSE
+      final codesToDelete = [
+        '4000', '4001', '4002', // حساب الإيرادات per currency
+        '3000', '3001', '3002', // حساب التكاليف per currency
+        '5000', '5001', '5002', // حساب المصاريف per currency
+        '5200', '5201', '5202', // اجور النقل per currency
+      ];
+      for (final code in codesToDelete) {
+        try {
+          await db.delete('accounts', where: 'account_code = ?', whereArgs: [code]);
+        } catch (_) {}
+      }
+    }
+
+    if (oldVersion < 10) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS quotations (
+          id TEXT PRIMARY KEY,
+          quotation_number TEXT NOT NULL,
+          customer_id INTEGER,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          exchange_rate REAL NOT NULL DEFAULT 1.0,
+          subtotal REAL NOT NULL DEFAULT 0.0,
+          discount_rate REAL NOT NULL DEFAULT 0.0,
+          discount_amount REAL NOT NULL DEFAULT 0.0,
+          tax_amount REAL NOT NULL DEFAULT 0.0,
+          total REAL NOT NULL DEFAULT 0.0,
+          status TEXT NOT NULL DEFAULT 'draft',
+          valid_until TEXT,
+          notes TEXT,
+          terms_conditions TEXT,
+          converted_to_sales_order INTEGER NOT NULL DEFAULT 0,
+          sales_order_id TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES customers (id)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS quotation_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          quotation_id TEXT NOT NULL,
+          product_id INTEGER,
+          product_name TEXT NOT NULL,
+          description TEXT,
+          quantity REAL NOT NULL DEFAULT 1.0,
+          unit_price REAL NOT NULL DEFAULT 0.0,
+          total_price REAL NOT NULL DEFAULT 0.0,
+          FOREIGN KEY (quotation_id) REFERENCES quotations (id),
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS purchase_orders (
+          id TEXT PRIMARY KEY,
+          order_number TEXT NOT NULL,
+          supplier_id INTEGER,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          exchange_rate REAL NOT NULL DEFAULT 1.0,
+          subtotal REAL NOT NULL DEFAULT 0.0,
+          discount_rate REAL NOT NULL DEFAULT 0.0,
+          discount_amount REAL NOT NULL DEFAULT 0.0,
+          tax_amount REAL NOT NULL DEFAULT 0.0,
+          total REAL NOT NULL DEFAULT 0.0,
+          status TEXT NOT NULL DEFAULT 'draft',
+          expected_date TEXT,
+          notes TEXT,
+          terms_conditions TEXT,
+          warehouse_id INTEGER,
+          converted_to_invoice INTEGER NOT NULL DEFAULT 0,
+          invoice_id TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
+          FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS purchase_order_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          purchase_order_id TEXT NOT NULL,
+          product_id INTEGER,
+          product_name TEXT NOT NULL,
+          description TEXT,
+          quantity REAL NOT NULL DEFAULT 1.0,
+          unit_price REAL NOT NULL DEFAULT 0.0,
+          total_price REAL NOT NULL DEFAULT 0.0,
+          FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders (id),
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sales_orders (
+          id TEXT PRIMARY KEY,
+          order_number TEXT NOT NULL,
+          customer_id INTEGER,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          exchange_rate REAL NOT NULL DEFAULT 1.0,
+          subtotal REAL NOT NULL DEFAULT 0.0,
+          discount_rate REAL NOT NULL DEFAULT 0.0,
+          discount_amount REAL NOT NULL DEFAULT 0.0,
+          tax_amount REAL NOT NULL DEFAULT 0.0,
+          total REAL NOT NULL DEFAULT 0.0,
+          status TEXT NOT NULL DEFAULT 'draft',
+          expected_date TEXT,
+          notes TEXT,
+          terms_conditions TEXT,
+          warehouse_id INTEGER,
+          converted_to_invoice INTEGER NOT NULL DEFAULT 0,
+          invoice_id TEXT,
+          quotation_id TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES customers (id),
+          FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sales_order_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sales_order_id TEXT NOT NULL,
+          product_id INTEGER,
+          product_name TEXT NOT NULL,
+          description TEXT,
+          quantity REAL NOT NULL DEFAULT 1.0,
+          unit_price REAL NOT NULL DEFAULT 0.0,
+          total_price REAL NOT NULL DEFAULT 0.0,
+          FOREIGN KEY (sales_order_id) REFERENCES sales_orders (id),
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_quotations_customer_id ON quotations (customer_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations (status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_quotation_items_quotation_id ON quotation_items (quotation_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_purchase_orders_supplier_id ON purchase_orders (supplier_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders (status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_purchase_order_items_po_id ON purchase_order_items (purchase_order_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_sales_orders_customer_id ON sales_orders (customer_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_sales_orders_status ON sales_orders (status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_sales_order_items_so_id ON sales_order_items (sales_order_id)');
+    }
+    if (oldVersion < 11) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS shifts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          shift_number TEXT NOT NULL,
+          cashier_id INTEGER,
+          cash_box_id INTEGER NOT NULL,
+          opening_amount REAL NOT NULL DEFAULT 0.0,
+          closing_amount REAL,
+          expected_amount REAL,
+          difference REAL,
+          status TEXT NOT NULL DEFAULT 'open',
+          opened_at TEXT NOT NULL,
+          closed_at TEXT,
+          notes TEXT,
+          total_sales REAL NOT NULL DEFAULT 0.0,
+          total_returns REAL NOT NULL DEFAULT 0.0,
+          total_discounts REAL NOT NULL DEFAULT 0.0,
+          transaction_count INTEGER NOT NULL DEFAULT 0,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (cashier_id) REFERENCES users (id),
+          FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_shifts_cashier_id ON shifts (cashier_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_shifts_cash_box_id ON shifts (cash_box_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_shifts_status ON shifts (status)');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v12 Migration: shift columns on invoices, currency_exchanges, cash_transfers, updated exchange rates
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 12) {
+      // Add shift-related columns to invoices
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN shift_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN cashier_name TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN is_posted INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+
+      // Create indexes for new invoice columns
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_shift_id ON invoices (shift_id)'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_is_posted ON invoices (is_posted)'); } catch (_) {}
+
+      // Create currency_exchanges table (صرافة العملات)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS currency_exchanges (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          exchange_number TEXT NOT NULL,
+          from_currency TEXT NOT NULL,
+          to_currency TEXT NOT NULL,
+          from_amount REAL NOT NULL,
+          to_amount REAL NOT NULL,
+          exchange_rate REAL NOT NULL,
+          from_cash_box_id INTEGER NOT NULL,
+          to_cash_box_id INTEGER NOT NULL,
+          gain_loss REAL NOT NULL DEFAULT 0.0,
+          gain_loss_type TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (from_cash_box_id) REFERENCES cash_boxes (id),
+          FOREIGN KEY (to_cash_box_id) REFERENCES cash_boxes (id)
+        )
+      ''');
+
+      // Create cash_transfers table (تحويل بين الصناديق)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS cash_transfers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          transfer_number TEXT NOT NULL,
+          from_cash_box_id INTEGER NOT NULL,
+          to_cash_box_id INTEGER NOT NULL,
+          amount REAL NOT NULL,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (from_cash_box_id) REFERENCES cash_boxes (id),
+          FOREIGN KEY (to_cash_box_id) REFERENCES cash_boxes (id)
+        )
+      ''');
+
+      // Create indexes for new tables
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_currency_exchanges_number ON currency_exchanges (exchange_number)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_currency_exchanges_created_at ON currency_exchanges (created_at)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_cash_transfers_number ON cash_transfers (transfer_number)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_cash_transfers_created_at ON cash_transfers (created_at)');
+
+      // Update currency exchange rates: SAR = 140 YER, USD = 530 YER
+      try {
+        await db.update('currencies', {'exchange_rate': 140.0}, where: 'code = ?', whereArgs: ['SAR']);
+        await db.update('currencies', {'exchange_rate': 530.0}, where: 'code = ?', whereArgs: ['USD']);
+      } catch (_) {}
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v13 Migration: add currency column to cash_boxes, cashier_name to shifts
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 13) {
+      // Add currency column to cash_boxes
+      try { await db.execute("ALTER TABLE cash_boxes ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'"); } catch (_) {}
+
+      // Add cashier_name column to shifts
+      try { await db.execute("ALTER TABLE shifts ADD COLUMN cashier_name TEXT"); } catch (_) {}
     }
   }
 
@@ -1357,6 +1818,12 @@ class DatabaseHelper {
     return await db.query('accounts', where: 'is_active = ? AND account_type = ?', whereArgs: [1, 'EXPENSE'], orderBy: 'account_code ASC');
   }
 
+  /// Get expense accounts filtered by currency
+  Future<List<Map<String, dynamic>>> getExpenseAccountsByCurrency(String currency) async {
+    final db = await database;
+    return await db.query('accounts', where: 'is_active = ? AND account_type = ? AND currency = ?', whereArgs: [1, 'EXPENSE', currency], orderBy: 'account_code ASC');
+  }
+
   /// Get all expenses for a specific expense account
   Future<List<Map<String, dynamic>>> getExpensesByAccountId(int accountId, {String orderBy = 'expense_date DESC'}) async {
     final db = await database;
@@ -1746,4 +2213,841 @@ class DatabaseHelper {
     final db = await database;
     return await db.delete('notifications', where: 'id = ?', whereArgs: [id]);
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Quotation CRUD methods
+  // ══════════════════════════════════════════════════════════════
+
+  Future<void> insertQuotationWithItems(Map<String, dynamic> quotationMap, List<Map<String, dynamic>> items) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('quotations', quotationMap);
+      for (final item in items) {
+        await txn.insert('quotation_items', item);
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getAllQuotations({String orderBy = 'created_at DESC'}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT q.*, COALESCE(c.name, 'بدون عميل') AS customer_name
+      FROM quotations q
+      LEFT JOIN customers c ON q.customer_id = c.id
+      ORDER BY q.$orderBy
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getQuotationsByStatus(String status) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT q.*, COALESCE(c.name, 'بدون عميل') AS customer_name
+      FROM quotations q
+      LEFT JOIN customers c ON q.customer_id = c.id
+      WHERE q.status = ?
+      ORDER BY q.created_at DESC
+    ''', [status]);
+  }
+
+  Future<Map<String, dynamic>?> getQuotationById(String id) async {
+    final db = await database;
+    final results = await db.query('quotations', where: 'id = ?', whereArgs: [id], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getQuotationItems(String quotationId) async {
+    final db = await database;
+    return await db.query('quotation_items', where: 'quotation_id = ?', whereArgs: [quotationId]);
+  }
+
+  Future<int> updateQuotation(String id, Map<String, dynamic> quotationMap) async {
+    final db = await database;
+    return await db.update('quotations', quotationMap, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteQuotation(String id) async {
+    final db = await database;
+    await db.delete('quotation_items', where: 'quotation_id = ?', whereArgs: [id]);
+    return await db.delete('quotations', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<String> getNextQuotationNumber() async {
+    final db = await database;
+    final now = DateTime.now();
+    final prefix = 'QT-${now.year}${now.month.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery(
+      "SELECT COALESCE(MAX(CAST(SUBSTR(quotation_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM quotations WHERE quotation_number LIKE ?",
+      ['$prefix%'],
+    );
+    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
+    return '$prefix${nextNum.toString().padLeft(4, '0')}';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Purchase Order CRUD methods
+  // ══════════════════════════════════════════════════════════════
+
+  Future<void> insertPurchaseOrderWithItems(Map<String, dynamic> poMap, List<Map<String, dynamic>> items) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('purchase_orders', poMap);
+      for (final item in items) {
+        await txn.insert('purchase_order_items', item);
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPurchaseOrders({String orderBy = 'created_at DESC'}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT po.*, COALESCE(s.name, 'بدون مورد') AS supplier_name
+      FROM purchase_orders po
+      LEFT JOIN suppliers s ON po.supplier_id = s.id
+      ORDER BY po.$orderBy
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getPurchaseOrdersByStatus(String status) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT po.*, COALESCE(s.name, 'بدون مورد') AS supplier_name
+      FROM purchase_orders po
+      LEFT JOIN suppliers s ON po.supplier_id = s.id
+      WHERE po.status = ?
+      ORDER BY po.created_at DESC
+    ''', [status]);
+  }
+
+  Future<Map<String, dynamic>?> getPurchaseOrderById(String id) async {
+    final db = await database;
+    final results = await db.query('purchase_orders', where: 'id = ?', whereArgs: [id], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getPurchaseOrderItems(String poId) async {
+    final db = await database;
+    return await db.query('purchase_order_items', where: 'purchase_order_id = ?', whereArgs: [poId]);
+  }
+
+  Future<int> updatePurchaseOrder(String id, Map<String, dynamic> poMap) async {
+    final db = await database;
+    return await db.update('purchase_orders', poMap, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deletePurchaseOrder(String id) async {
+    final db = await database;
+    await db.delete('purchase_order_items', where: 'purchase_order_id = ?', whereArgs: [id]);
+    return await db.delete('purchase_orders', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<String> getNextPurchaseOrderNumber() async {
+    final db = await database;
+    final now = DateTime.now();
+    final prefix = 'PO-${now.year}${now.month.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery(
+      "SELECT COALESCE(MAX(CAST(SUBSTR(order_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM purchase_orders WHERE order_number LIKE ?",
+      ['$prefix%'],
+    );
+    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
+    return '$prefix${nextNum.toString().padLeft(4, '0')}';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Sales Order CRUD methods
+  // ══════════════════════════════════════════════════════════════
+
+  Future<void> insertSalesOrderWithItems(Map<String, dynamic> soMap, List<Map<String, dynamic>> items) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('sales_orders', soMap);
+      for (final item in items) {
+        await txn.insert('sales_order_items', item);
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getAllSalesOrders({String orderBy = 'created_at DESC'}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT so.*, COALESCE(c.name, 'بدون عميل') AS customer_name
+      FROM sales_orders so
+      LEFT JOIN customers c ON so.customer_id = c.id
+      ORDER BY so.$orderBy
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getSalesOrdersByStatus(String status) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT so.*, COALESCE(c.name, 'بدون عميل') AS customer_name
+      FROM sales_orders so
+      LEFT JOIN customers c ON so.customer_id = c.id
+      WHERE so.status = ?
+      ORDER BY so.created_at DESC
+    ''', [status]);
+  }
+
+  Future<Map<String, dynamic>?> getSalesOrderById(String id) async {
+    final db = await database;
+    final results = await db.query('sales_orders', where: 'id = ?', whereArgs: [id], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getSalesOrderItems(String soId) async {
+    final db = await database;
+    return await db.query('sales_order_items', where: 'sales_order_id = ?', whereArgs: [soId]);
+  }
+
+  Future<int> updateSalesOrder(String id, Map<String, dynamic> soMap) async {
+    final db = await database;
+    return await db.update('sales_orders', soMap, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteSalesOrder(String id) async {
+    final db = await database;
+    await db.delete('sales_order_items', where: 'sales_order_id = ?', whereArgs: [id]);
+    return await db.delete('sales_orders', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<String> getNextSalesOrderNumber() async {
+    final db = await database;
+    final now = DateTime.now();
+    final prefix = 'SO-${now.year}${now.month.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery(
+      "SELECT COALESCE(MAX(CAST(SUBSTR(order_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM sales_orders WHERE order_number LIKE ?",
+      ['$prefix%'],
+    );
+    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
+    return '$prefix${nextNum.toString().padLeft(4, '0')}';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Shift (وردية) CRUD methods
+  // ══════════════════════════════════════════════════════════════
+
+  Future<int> openShift(Map<String, dynamic> shiftMap) async {
+    final db = await database;
+    return await db.insert('shifts', shiftMap);
+  }
+
+  Future<Map<String, dynamic>?> getActiveShift(int cashBoxId) async {
+    final db = await database;
+    final results = await db.query('shifts', where: 'cash_box_id = ? AND status = ?', whereArgs: [cashBoxId, 'open'], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<Map<String, dynamic>?> getActiveShiftForCashier(int? cashierId) async {
+    final db = await database;
+    if (cashierId == null) return null;
+    final results = await db.query('shifts', where: 'cashier_id = ? AND status = ?', whereArgs: [cashierId, 'open'], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<int> closeShift(int shiftId, Map<String, dynamic> closeData) async {
+    final db = await database;
+    return await db.update('shifts', closeData, where: 'id = ?', whereArgs: [shiftId]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllShifts({String orderBy = 'opened_at DESC'}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT s.*, cb.name AS cash_box_name
+      FROM shifts s
+      LEFT JOIN cash_boxes cb ON s.cash_box_id = cb.id
+      ORDER BY s.$orderBy
+    ''');
+  }
+
+  Future<String> getNextShiftNumber() async {
+    final db = await database;
+    final now = DateTime.now();
+    final prefix = 'SH-${now.year}${now.month.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery(
+      "SELECT COALESCE(MAX(CAST(SUBSTR(shift_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM shifts WHERE shift_number LIKE ?",
+      ['$prefix%'],
+    );
+    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
+    return '$prefix${nextNum.toString().padLeft(4, '0')}';
+  }
+
+  Future<void> updateShiftTotals(int shiftId, double saleAmount, double returnAmount, double discountAmount) async {
+    final db = await database;
+    await db.rawUpdate('''
+      UPDATE shifts SET 
+        total_sales = total_sales + ?,
+        total_returns = total_returns + ?,
+        total_discounts = total_discounts + ?,
+        transaction_count = transaction_count + 1,
+        expected_amount = opening_amount + total_sales + ? - total_returns - total_discounts - ?,
+        updated_at = ?
+      WHERE id = ?
+    ''', [saleAmount, returnAmount, discountAmount, saleAmount, discountAmount, DateTime.now().toIso8601String(), shiftId]);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  v12: Currency Exchange (صرافة العملات) CRUD methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// إدراج عملية صرافة عملات مع القيود المحاسبية
+  /// Inserts a currency exchange record and posts journal entries.
+  ///
+  /// القيود المحاسبية:
+  /// - مدين: حساب الصناديق والبنوك للعملة المستلمة (to_currency) بالمبلغ المستلم
+  /// - دائن: حساب الصناديق والبنوك للعملة المرسلة (from_currency) بالمبلغ المرسل
+  /// - إذا كان هناك أرباح صرافة: دائن حساب أرباح الصرافة
+  /// - إذا كان هناك خسائر صرافة: مدين حساب خسائر الصرافة
+  Future<int> insertCurrencyExchange(Map<String, dynamic> exchangeMap) async {
+    final db = await database;
+    final fromCurrency = (exchangeMap['from_currency'] as String?) ?? 'YER';
+    final toCurrency = (exchangeMap['to_currency'] as String?) ?? 'YER';
+    final fromAmount = (exchangeMap['from_amount'] as num?)?.toDouble() ?? 0.0;
+    final toAmount = (exchangeMap['to_amount'] as num?)?.toDouble() ?? 0.0;
+    final gainLoss = (exchangeMap['gain_loss'] as num?)?.toDouble() ?? 0.0;
+    final gainLossType = (exchangeMap['gain_loss_type'] as String?) ?? '';
+    final fromCashBoxId = (exchangeMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
+    final toCashBoxId = (exchangeMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
+    final now = DateTime.now().toIso8601String();
+
+    late int exchangeId;
+    await db.transaction((txn) async {
+      // إدراج سجل الصرافة
+      exchangeId = await txn.insert('currency_exchanges', exchangeMap);
+
+      // القيود المحاسبية
+      final journalId = DateTime.now().millisecondsSinceEpoch;
+
+      // حساب الصناديق والبنوك للعملة المستلمة (مدين)
+      final toCodeOffset = toCurrency == 'SAR' ? 1 : (toCurrency == 'USD' ? 2 : 0);
+      final toCashBanksAccount = await txn.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [(1100 + toCodeOffset).toString(), toCurrency],
+        limit: 1,
+      );
+      final toCashBanksAccountId = toCashBanksAccount.isNotEmpty ? toCashBanksAccount.first['id'] as int : null;
+
+      // حساب الصناديق والبنوك للعملة المرسلة (دائن)
+      final fromCodeOffset = fromCurrency == 'SAR' ? 1 : (fromCurrency == 'USD' ? 2 : 0);
+      final fromCashBanksAccount = await txn.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [(1100 + fromCodeOffset).toString(), fromCurrency],
+        limit: 1,
+      );
+      final fromCashBanksAccountId = fromCashBanksAccount.isNotEmpty ? fromCashBanksAccount.first['id'] as int : null;
+
+      // مدين: حساب الصناديق والبنوك للعملة المستلمة
+      if (toCashBanksAccountId != null && toAmount > 0) {
+        await txn.insert('transactions', {
+          'account_id': toCashBanksAccountId,
+          'journal_id': journalId,
+          'debit': toAmount,
+          'credit': 0.0,
+          'description': 'صرافة: استلام $toCurrency - ${exchangeMap['exchange_number']}',
+          'date': now,
+          'created_at': now,
+        });
+        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [toAmount, now, toCashBanksAccountId]);
+      }
+
+      // دائن: حساب الصناديق والبنوك للعملة المرسلة
+      if (fromCashBanksAccountId != null && fromAmount > 0) {
+        await txn.insert('transactions', {
+          'account_id': fromCashBanksAccountId,
+          'journal_id': journalId,
+          'debit': 0.0,
+          'credit': fromAmount,
+          'description': 'صرافة: صرف $fromCurrency - ${exchangeMap['exchange_number']}',
+          'date': now,
+          'created_at': now,
+        });
+        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [fromAmount, now, fromCashBanksAccountId]);
+      }
+
+      // معالجة أرباح/خسائر الصرافة
+      if (gainLoss > 0) {
+        if (gainLossType == 'gain') {
+          // أرباح صرافة: دائن حساب أرباح الصرافة
+          // استخدام حساب إيراد بالعملة الأساسية (YER)
+          final gainCodeOffset = 0; // أرباح الصرافة تُسجل بالعملة الأساسية
+          final gainAccount = await txn.query(
+            'accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(4100 + gainCodeOffset).toString(), 'YER'],
+            limit: 1,
+          );
+          final gainAccountId = gainAccount.isNotEmpty ? gainAccount.first['id'] as int : null;
+
+          if (gainAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': gainAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': gainLoss,
+              'description': 'أرباح صرافة - ${exchangeMap['exchange_number']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [gainLoss, now, gainAccountId]);
+          }
+        } else if (gainLossType == 'loss') {
+          // خسائر صرافة: مدين حساب خسائر الصرافة
+          final lossCodeOffset = 0; // خسائر الصرافة تُسجل بالعملة الأساسية (YER)
+          final lossAccount = await txn.query(
+            'accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(5100 + lossCodeOffset).toString(), 'YER'],
+            limit: 1,
+          );
+          final lossAccountId = lossAccount.isNotEmpty ? lossAccount.first['id'] as int : null;
+
+          if (lossAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': lossAccountId,
+              'journal_id': journalId,
+              'debit': gainLoss,
+              'credit': 0.0,
+              'description': 'خسائر صرافة - ${exchangeMap['exchange_number']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [gainLoss, now, lossAccountId]);
+          }
+        }
+      }
+
+      // تحديث أرصدة الصناديق
+      // خصم المبلغ من صندوق المصدر
+      await txn.rawUpdate(
+        'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
+        [fromAmount, now, fromCashBoxId],
+      );
+      // إضافة المبلغ إلى صندوق المستقبل
+      await txn.rawUpdate(
+        'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
+        [toAmount, now, toCashBoxId],
+      );
+    });
+
+    return exchangeId;
+  }
+
+  /// جلب جميع عمليات الصرافة
+  Future<List<Map<String, dynamic>>> getAllCurrencyExchanges({String orderBy = 'created_at DESC'}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT ce.*,
+        from_cb.name AS from_cash_box_name,
+        to_cb.name AS to_cash_box_name
+      FROM currency_exchanges ce
+      LEFT JOIN cash_boxes from_cb ON ce.from_cash_box_id = from_cb.id
+      LEFT JOIN cash_boxes to_cb ON ce.to_cash_box_id = to_cb.id
+      ORDER BY ce.$orderBy
+    ''');
+  }
+
+  /// جلب الرقم التالي لعملية الصرافة
+  Future<String> getNextExchangeNumber() async {
+    final db = await database;
+    final now = DateTime.now();
+    final prefix = 'CE-${now.year}${now.month.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery(
+      "SELECT COALESCE(MAX(CAST(SUBSTR(exchange_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM currency_exchanges WHERE exchange_number LIKE ?",
+      ['$prefix%'],
+    );
+    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
+    return '$prefix${nextNum.toString().padLeft(4, '0')}';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  v12: Cash Transfer (تحويل بين الصناديق) CRUD methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// إدراج عملية تحويل بين الصناديق مع القيود المحاسبية
+  /// Inserts a cash transfer record and posts journal entries.
+  ///
+  /// القيود المحاسبية:
+  /// - مدين: حساب الصناديق والبنوك المرتبط بصندوق الوجهة
+  /// - دائن: حساب الصناديق والبنوك المرتبط بصندوق المصدر
+  Future<int> insertCashTransfer(Map<String, dynamic> transferMap) async {
+    final db = await database;
+    final fromCashBoxId = (transferMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
+    final toCashBoxId = (transferMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
+    final amount = (transferMap['amount'] as num?)?.toDouble() ?? 0.0;
+    final transferCurrency = (transferMap['currency'] as String?) ?? 'YER';
+    final now = DateTime.now().toIso8601String();
+
+    late int transferId;
+    await db.transaction((txn) async {
+      // إدراج سجل التحويل
+      transferId = await txn.insert('cash_transfers', transferMap);
+
+      // القيود المحاسبية
+      final journalId = DateTime.now().millisecondsSinceEpoch;
+
+      // الحصول على حساب الصندوق المصدر (المرتبط أو الافتراضي)
+      int? fromAccountId;
+      final fromCashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
+      if (fromCashBox.isNotEmpty) {
+        final linkedId = fromCashBox.first['linked_account_id'] as int?;
+        if (linkedId != null) {
+          fromAccountId = linkedId;
+        }
+      }
+      if (fromAccountId == null) {
+        final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final fromCashBanksAccount = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [(1100 + codeOffset).toString(), transferCurrency],
+          limit: 1,
+        );
+        fromAccountId = fromCashBanksAccount.isNotEmpty ? fromCashBanksAccount.first['id'] as int : null;
+      }
+
+      // الحصول على حساب الصندوق الوجهة (المرتبط أو الافتراضي)
+      int? toAccountId;
+      final toCashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
+      if (toCashBox.isNotEmpty) {
+        final linkedId = toCashBox.first['linked_account_id'] as int?;
+        if (linkedId != null) {
+          toAccountId = linkedId;
+        }
+      }
+      if (toAccountId == null) {
+        final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final toCashBanksAccount = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [(1100 + codeOffset).toString(), transferCurrency],
+          limit: 1,
+        );
+        toAccountId = toCashBanksAccount.isNotEmpty ? toCashBanksAccount.first['id'] as int : null;
+      }
+
+      // مدين: حساب الصناديق والبنوك للوجهة
+      if (toAccountId != null && amount > 0) {
+        await txn.insert('transactions', {
+          'account_id': toAccountId,
+          'journal_id': journalId,
+          'debit': amount,
+          'credit': 0.0,
+          'description': 'تحويل: استلام من صندوق آخر - ${transferMap['transfer_number']}',
+          'date': now,
+          'created_at': now,
+        });
+        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amount, now, toAccountId]);
+      }
+
+      // دائن: حساب الصناديق والبنوك للمصدر
+      if (fromAccountId != null && amount > 0) {
+        await txn.insert('transactions', {
+          'account_id': fromAccountId,
+          'journal_id': journalId,
+          'debit': 0.0,
+          'credit': amount,
+          'description': 'تحويل: صرف إلى صندوق آخر - ${transferMap['transfer_number']}',
+          'date': now,
+          'created_at': now,
+        });
+        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amount, now, fromAccountId]);
+      }
+
+      // تحديث أرصدة الصناديق
+      // خصم المبلغ من صندوق المصدر
+      await txn.rawUpdate(
+        'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
+        [amount, now, fromCashBoxId],
+      );
+      // إضافة المبلغ إلى صندوق الوجهة
+      await txn.rawUpdate(
+        'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
+        [amount, now, toCashBoxId],
+      );
+    });
+
+    return transferId;
+  }
+
+  /// جلب جميع عمليات التحويل بين الصناديق
+  Future<List<Map<String, dynamic>>> getAllCashTransfers({String orderBy = 'created_at DESC'}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT ct.*,
+        from_cb.name AS from_cash_box_name,
+        to_cb.name AS to_cash_box_name
+      FROM cash_transfers ct
+      LEFT JOIN cash_boxes from_cb ON ct.from_cash_box_id = from_cb.id
+      LEFT JOIN cash_boxes to_cb ON ct.to_cash_box_id = to_cb.id
+      ORDER BY ct.$orderBy
+    ''');
+  }
+
+  /// جلب الرقم التالي لعملية التحويل
+  Future<String> getNextTransferNumber() async {
+    final db = await database;
+    final now = DateTime.now();
+    final prefix = 'TR-${now.year}${now.month.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery(
+      "SELECT COALESCE(MAX(CAST(SUBSTR(transfer_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM cash_transfers WHERE transfer_number LIKE ?",
+      ['$prefix%'],
+    );
+    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
+    return '$prefix${nextNum.toString().padLeft(4, '0')}';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  v12: Shift Invoice & Posting methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// جلب جميع فواتير الوردية المحددة
+  /// Get all invoices for a specific shift.
+  Future<List<Map<String, dynamic>>> getShiftInvoices(int shiftId) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT i.*,
+        CASE
+          WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل')
+          WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد')
+          ELSE 'بدون عميل'
+        END AS entity_name
+      FROM invoices i
+      LEFT JOIN customers c ON i.customer_id = c.id
+      LEFT JOIN suppliers s ON i.supplier_id = s.id
+      WHERE i.shift_id = ?
+      ORDER BY i.created_at DESC
+    ''', [shiftId]);
+  }
+
+  /// ترحيل جميع الفواتير المعلقة في وردية محددة
+  /// Post all pending invoices in a shift by creating journal entries.
+  ///
+  /// عند إقفال الوردية، يتم إنشاء القيود المحاسبية لجميع الفواتير
+  /// التي لم يتم ترحيلها (is_posted = 0) وتحديث حالتها إلى مرحلة (is_posted = 1).
+  Future<int> postShiftInvoices(int shiftId) async {
+    final db = await database;
+    int postedCount = 0;
+    final now = DateTime.now().toIso8601String();
+
+    // جلب جميع الفواتير المعلقة في الوردية
+    final pendingInvoices = await db.query(
+      'invoices',
+      where: 'shift_id = ? AND is_posted = ?',
+      whereArgs: [shiftId, 0],
+    );
+
+    for (final invoice in pendingInvoices) {
+      final invoiceId = invoice['id'] as String;
+      final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+      final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
+      final invoiceType = (invoice['type'] as String?) ?? 'sale';
+      final isReturn = (invoice['is_return'] as int?) == 1;
+      final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
+      final cashBoxId = invoice['cash_box_id'] as int?;
+      final transportCharges = (invoice['transport_charges'] as num?)?.toDouble() ?? 0.0;
+
+      await db.transaction((txn) async {
+        final journalId = DateTime.now().millisecondsSinceEpoch;
+
+        // تحديد إزاحة كود الحساب حسب العملة
+        final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
+
+        // جلب معرفات الحسابات
+        final salesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(4100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+
+        final salesAccountId = salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
+        final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
+        final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
+        final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
+        final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
+
+        int? debitAccountId;
+        int? creditAccountId;
+
+        if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+          if (isReturn) {
+            debitAccountId = salesAccountId;
+            creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+          } else {
+            debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+            creditAccountId = salesAccountId;
+          }
+        } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
+          if (isReturn) {
+            debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+            creditAccountId = purchasesAccountId;
+          } else {
+            debitAccountId = purchasesAccountId;
+            creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+          }
+        }
+
+        // إنشاء القيود المحاسبية
+        if (debitAccountId != null && total > 0) {
+          await txn.insert('transactions', {
+            'account_id': debitAccountId,
+            'journal_id': journalId,
+            'debit': total,
+            'credit': 0.0,
+            'description': '${invoiceType == 'sale' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, debitAccountId]);
+        }
+
+        if (creditAccountId != null && total > 0) {
+          await txn.insert('transactions', {
+            'account_id': creditAccountId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': total,
+            'description': '${invoiceType == 'sale' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
+            'date': now,
+            'created_at': now,
+          });
+          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, creditAccountId]);
+        }
+
+        // ── قيود أجور النقل ──
+        if (transportCharges > 0) {
+          final transportAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5200 + codeOffset).toString(), invoiceCurrency], limit: 1);
+          final transportAccountId = transportAccount.isNotEmpty ? transportAccount.first['id'] as int : null;
+
+          if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+            final transportDebitId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+            final transportCreditId = transportAccountId;
+
+            if (transportDebitId != null) {
+              await txn.insert('transactions', {
+                'account_id': transportDebitId,
+                'journal_id': journalId,
+                'debit': transportCharges,
+                'credit': 0.0,
+                'description': 'اجور نقل - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportDebitId]);
+            }
+            if (transportCreditId != null) {
+              await txn.insert('transactions', {
+                'account_id': transportCreditId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': transportCharges,
+                'description': 'اجور نقل - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportCreditId]);
+            }
+          } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
+            final transportDebitId = transportAccountId;
+            final transportCreditId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+
+            if (transportDebitId != null) {
+              await txn.insert('transactions', {
+                'account_id': transportDebitId,
+                'journal_id': journalId,
+                'debit': transportCharges,
+                'credit': 0.0,
+                'description': 'اجور نقل - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportDebitId]);
+            }
+            if (transportCreditId != null) {
+              await txn.insert('transactions', {
+                'account_id': transportCreditId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': transportCharges,
+                'description': 'اجور نقل - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportCreditId]);
+            }
+          }
+        }
+
+        // تحديث رصيد العميل/المورد
+        if (invoice['customer_id'] != null) {
+          final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
+          final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return') ? transportCharges : 0);
+          if (isDebit) {
+            await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
+          } else {
+            await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
+          }
+        }
+
+        if (invoice['supplier_id'] != null) {
+          final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
+          final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'purchase' || invoiceType == 'purchase_return') ? transportCharges : 0);
+          if (isCreditToSupplier) {
+            await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['supplier_id']]);
+          } else {
+            await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['supplier_id']]);
+          }
+        }
+
+        // تحديث رصيد الصندوق
+        if (cashBoxId != null) {
+          final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase_return' && !isReturn);
+          if (isCashIn) {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+          } else {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+          }
+        }
+
+        // تحديث حالة الفاتورة إلى مرحلة
+        await txn.update('invoices', {'is_posted': 1}, where: 'id = ?', whereArgs: [invoiceId]);
+      });
+
+      postedCount++;
+    }
+
+    return postedCount;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  v12: Additional lookup methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// جلب الصناديق حسب العملة
+  /// Get cash boxes filtered by currency (via linked account currency).
+  Future<List<Map<String, dynamic>>> getCashBoxesByCurrency(String currency) async {
+    final db = await database;
+    // الصناديق المرتبطة بحساب بعملة محددة
+    return await db.rawQuery('''
+      SELECT cb.* FROM cash_boxes cb
+      LEFT JOIN accounts a ON cb.linked_account_id = a.id
+      WHERE cb.is_active = 1 AND (
+        (a.currency = ?) OR (cb.linked_account_id IS NULL)
+      )
+      ORDER BY cb.type ASC, cb.name ASC
+    ''', [currency]);
+  }
+
+  /// جلب حساب بكود وعملة محددة
+  /// Get account by code and currency.
+  Future<Map<String, dynamic>?> getAccountByCodeAndCurrency(String code, String currency) async {
+    final db = await database;
+    final results = await db.query(
+      'accounts',
+      where: 'account_code = ? AND currency = ? AND is_active = ?',
+      whereArgs: [code, currency, 1],
+      limit: 1,
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
 }

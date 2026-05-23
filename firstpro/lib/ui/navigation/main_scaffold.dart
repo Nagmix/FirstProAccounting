@@ -9,7 +9,6 @@ import 'app_router.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/customers/customers_screen.dart';
 import '../screens/invoices/invoices_screen.dart';
-import '../screens/reports/reports_screen.dart';
 import '../widgets/custom_bottom_bar.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -27,10 +26,10 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     DashboardScreen(),
     CustomersScreen(),
     InvoicesScreen(),
-    ReportsScreen(),
     _MoreTab(),
   ];
 
+  // Only 4 items: 2 left (الرئيسية, العملاء) + center FAB + 2 right (الفواتير, المزيد)
   static const _bottomBarItems = [
     CustomBottomBarItem(
       icon: PhosphorIconsRegular.house,
@@ -48,11 +47,6 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
       label: 'الفواتير',
     ),
     CustomBottomBarItem(
-      icon: PhosphorIconsRegular.chartBar,
-      activeIcon: PhosphorIconsFill.chartBar,
-      label: 'التقارير',
-    ),
-    CustomBottomBarItem(
       icon: PhosphorIconsRegular.dotsThree,
       activeIcon: PhosphorIconsFill.dotsThree,
       label: 'المزيد',
@@ -62,11 +56,20 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
   final _drawerItems = const <_DrawerMenuItem>[
     _DrawerMenuItem(icon: PhosphorIconsRegular.receipt, label: 'فاتورة بيع جديدة', route: AppConstants.newSaleInvoice, color: AppColors.accentBlue),
     _DrawerMenuItem(icon: PhosphorIconsRegular.shoppingCart, label: 'فاتورة شراء جديدة', route: AppConstants.newPurchaseInvoice, color: AppColors.accentPink),
+    _DrawerMenuItem(icon: PhosphorIconsRegular.fileText, label: 'عروض الأسعار', route: AppConstants.quotations, color: Colors.purple),
+    _DrawerMenuItem(icon: PhosphorIconsRegular.shoppingCart, label: 'طلبات الشراء', route: AppConstants.purchaseOrders, color: Colors.teal),
+    _DrawerMenuItem(icon: PhosphorIconsRegular.package, label: 'طلبات البيع', route: AppConstants.salesOrders, color: Colors.indigo),
+    _DrawerMenuItem(icon: PhosphorIconsRegular.clockCounterClockwise, label: 'الورديات', route: AppConstants.shifts, color: Colors.brown),
     _DrawerMenuItem(icon: PhosphorIconsRegular.users, label: 'قائمة العملاء', route: AppConstants.customers, color: AppColors.primaryLight),
     _DrawerMenuItem(icon: PhosphorIconsRegular.package, label: 'المنتجات والمخزون', route: AppConstants.products, color: AppColors.accentOrange),
     _DrawerMenuItem(icon: PhosphorIconsRegular.currencyDollar, label: 'المصروفات', route: AppConstants.expenses, color: AppColors.error),
     _DrawerMenuItem(icon: PhosphorIconsRegular.user, label: 'الموظفين', route: AppConstants.employees, color: AppColors.accentBlue),
     _DrawerMenuItem(icon: PhosphorIconsRegular.vault, label: 'الصناديق والبنوك', route: AppConstants.cashBoxes, color: AppColors.accentGreen),
+    // ── New: Currency Exchange, Cash Transfers, Debt Tracking ─────
+    _DrawerMenuItem(icon: PhosphorIconsRegular.arrowsLeftRight, label: 'مصارفة عملات', route: AppConstants.currencyExchange, color: Color(0xFF00ACC1)),
+    _DrawerMenuItem(icon: PhosphorIconsRegular.swap, label: 'تحويل بين الصناديق', route: AppConstants.cashTransfers, color: Color(0xFF1E88E5)),
+    _DrawerMenuItem(icon: PhosphorIconsRegular.handCoins, label: 'تتبع الديون', route: AppConstants.debts, color: Color(0xFFE65100)),
+    // ───────────────────────────────────────────────────────────────
     _DrawerMenuItem(icon: PhosphorIconsRegular.truck, label: 'الموردين', route: AppConstants.suppliers, color: AppColors.info),
     _DrawerMenuItem(icon: PhosphorIconsRegular.warehouse, label: 'المستودعات', route: AppConstants.warehouses, color: AppColors.secondaryDark),
     _DrawerMenuItem(icon: PhosphorIconsRegular.chartPie, label: 'دليل الحسابات', route: AppConstants.chartOfAccounts, color: AppColors.primary),
@@ -98,6 +101,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: true,
       appBar: _currentIndex == 0
           ? null
           : AppBar(
@@ -158,81 +162,126 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
+        final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkSurface : AppColors.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Handle
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Text(
-                'إنشاء جديد',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _QuickAddOption(
-                    icon: PhosphorIconsFill.receipt,
-                    label: 'فاتورة بيع',
-                    color: AppColors.accentBlue,
-                    onTap: () {
-                      Navigator.pop(context);
-                      AppRouter.push(context, AppConstants.newSaleInvoice);
-                    },
+                  // Handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  _QuickAddOption(
-                    icon: PhosphorIconsFill.shoppingCart,
-                    label: 'فاتورة شراء',
-                    color: AppColors.accentPink,
-                    onTap: () {
-                      Navigator.pop(context);
-                      AppRouter.push(context, AppConstants.newPurchaseInvoice);
-                    },
+                  Text(
+                    'إنشاء جديد',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  _QuickAddOption(
-                    icon: PhosphorIconsFill.userPlus,
-                    label: 'عميل جديد',
-                    color: AppColors.accentGreen,
-                    onTap: () {
-                      Navigator.pop(context);
-                      AppRouter.push(context, AppConstants.addCustomer);
-                    },
+                  const SizedBox(height: 20),
+                  // ── Row 1: Original quick-add options ────────────
+                  Row(
+                    children: [
+                      _QuickAddOption(
+                        icon: PhosphorIconsFill.receipt,
+                        label: 'فاتورة بيع',
+                        color: AppColors.accentBlue,
+                        onTap: () {
+                          Navigator.pop(context);
+                          AppRouter.push(context, AppConstants.newSaleInvoice);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _QuickAddOption(
+                        icon: PhosphorIconsFill.shoppingCart,
+                        label: 'فاتورة شراء',
+                        color: AppColors.accentPink,
+                        onTap: () {
+                          Navigator.pop(context);
+                          AppRouter.push(context, AppConstants.newPurchaseInvoice);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _QuickAddOption(
+                        icon: PhosphorIconsFill.userPlus,
+                        label: 'عميل جديد',
+                        color: AppColors.accentGreen,
+                        onTap: () {
+                          Navigator.pop(context);
+                          AppRouter.push(context, AppConstants.addCustomer);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _QuickAddOption(
+                        icon: PhosphorIconsFill.package,
+                        label: 'منتج جديد',
+                        color: AppColors.accentOrange,
+                        onTap: () {
+                          Navigator.pop(context);
+                          AppRouter.push(context, AppConstants.addProduct);
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  _QuickAddOption(
-                    icon: PhosphorIconsFill.package,
-                    label: 'منتج جديد',
-                    color: AppColors.accentOrange,
-                    onTap: () {
-                      Navigator.pop(context);
-                      AppRouter.push(context, AppConstants.addProduct);
-                    },
+                  const SizedBox(height: 12),
+                  // ── Row 2: New dashboard quick actions ───────────
+                  Row(
+                    children: [
+                      _QuickAddOption(
+                        icon: PhosphorIconsFill.arrowsLeftRight,
+                        label: 'مصارفة عملات',
+                        color: const Color(0xFF00ACC1),
+                        onTap: () {
+                          Navigator.pop(context);
+                          AppRouter.push(context, AppConstants.currencyExchange);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _QuickAddOption(
+                        icon: PhosphorIconsFill.swap,
+                        label: 'تحويل صناديق',
+                        color: const Color(0xFF1E88E5),
+                        onTap: () {
+                          Navigator.pop(context);
+                          AppRouter.push(context, AppConstants.cashTransfers);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _QuickAddOption(
+                        icon: PhosphorIconsFill.handCoins,
+                        label: 'تتبع الديون',
+                        color: const Color(0xFFE65100),
+                        onTap: () {
+                          Navigator.pop(context);
+                          AppRouter.push(context, AppConstants.debts);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      // Empty spacer to balance the row
+                      Expanded(child: const SizedBox.shrink()),
+                    ],
                   ),
+                  SizedBox(height: bottomPadding + 8),
                 ],
               ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
-            ],
+            ),
           ),
         );
       },
@@ -326,6 +375,8 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                                     fontWeight: FontWeight.w500,
                                     color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
                                 ),
                               ),
                               Icon(
@@ -384,7 +435,7 @@ class _MoreTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
       appBar: AppBar(
@@ -402,6 +453,27 @@ class _MoreTab extends StatelessWidget {
             subtitle: 'واجهة بيع سريعة',
             color: AppColors.accentBlue,
             onTap: () => Navigator.pushNamed(context, AppConstants.pos),
+          ),
+          _MoreTile(
+            icon: PhosphorIconsRegular.fileText,
+            title: 'عروض الأسعار',
+            subtitle: 'إدارة عروض الأسعار',
+            color: Colors.purple,
+            onTap: () => AppRouter.push(context, AppConstants.quotations),
+          ),
+          _MoreTile(
+            icon: PhosphorIconsRegular.shoppingCart,
+            title: 'طلبات الشراء',
+            subtitle: 'إدارة طلبات الشراء',
+            color: Colors.teal,
+            onTap: () => AppRouter.push(context, AppConstants.purchaseOrders),
+          ),
+          _MoreTile(
+            icon: PhosphorIconsRegular.package,
+            title: 'طلبات البيع',
+            subtitle: 'إدارة طلبات البيع',
+            color: Colors.indigo,
+            onTap: () => AppRouter.push(context, AppConstants.salesOrders),
           ),
 
           // ── Section: إدارة الأعمال ───────────────────────────────
@@ -455,6 +527,30 @@ class _MoreTab extends StatelessWidget {
             color: AppColors.accentGreen,
             onTap: () => Navigator.pushNamed(context, AppConstants.cashBoxes),
           ),
+          // ── New: Currency Exchange ────────────────────────────────
+          _MoreTile(
+            icon: PhosphorIconsRegular.arrowsLeftRight,
+            title: 'مصارفة عملات',
+            subtitle: 'تحويل العملات بأسعار الصرف',
+            color: const Color(0xFF00ACC1),
+            onTap: () => AppRouter.push(context, AppConstants.currencyExchange),
+          ),
+          // ── New: Cash Transfers ───────────────────────────────────
+          _MoreTile(
+            icon: PhosphorIconsRegular.swap,
+            title: 'تحويل بين الصناديق',
+            subtitle: 'تحويل الأموال بين الصناديق والبنوك',
+            color: const Color(0xFF1E88E5),
+            onTap: () => AppRouter.push(context, AppConstants.cashTransfers),
+          ),
+          // ── New: Debt Tracking ────────────────────────────────────
+          _MoreTile(
+            icon: PhosphorIconsRegular.handCoins,
+            title: 'تتبع الديون',
+            subtitle: 'متابعة الديون المستحقة والمطلوبة',
+            color: const Color(0xFFE65100),
+            onTap: () => AppRouter.push(context, AppConstants.debts),
+          ),
           _MoreTile(
             icon: PhosphorIconsRegular.chartPie,
             title: 'دليل الحسابات',
@@ -468,6 +564,27 @@ class _MoreTab extends StatelessWidget {
             subtitle: 'العملات وأسعار الصرف',
             color: AppColors.success,
             onTap: () => Navigator.pushNamed(context, AppConstants.currencies),
+          ),
+          _MoreTile(
+            icon: PhosphorIconsRegular.chartBar,
+            title: 'التقارير',
+            subtitle: 'تقارير المبيعات والمشتريات',
+            color: AppColors.primaryLight,
+            onTap: () => Navigator.pushNamed(context, AppConstants.reports),
+          ),
+          _MoreTile(
+            icon: PhosphorIconsRegular.chartLineUp,
+            title: 'الإحصائيات',
+            subtitle: 'إحصائيات شاملة',
+            color: const Color(0xFF7B1FA2),
+            onTap: () => Navigator.pushNamed(context, AppConstants.statistics),
+          ),
+          _MoreTile(
+            icon: PhosphorIconsRegular.clockCounterClockwise,
+            title: 'الورديات',
+            subtitle: 'إدارة ورديات الكاشير',
+            color: Colors.brown,
+            onTap: () => AppRouter.push(context, AppConstants.shifts),
           ),
 
           // ── Section: أخرى ────────────────────────────────────────
@@ -587,6 +704,8 @@ class _MoreTile extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -594,6 +713,8 @@ class _MoreTile extends StatelessWidget {
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ],
                   ),
