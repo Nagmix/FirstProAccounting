@@ -727,7 +727,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
             child: LayoutBuilder(builder: (context, constraints) {
               final totalWidth = constraints.maxWidth;
-              final revenueWidth = _totalRevenue > 0 ? (_totalRevenue / (_totalRevenue + _totalExpenses.abs()) * totalWidth).clamp(0, totalWidth) : 0.0;
+              final revenueWidth = _totalRevenue > 0 ? (_totalRevenue / (_totalRevenue + _totalExpenses.abs()) * totalWidth).clamp(0.0, totalWidth) as double : 0.0;
               return Row(
                 children: [
                   Container(
