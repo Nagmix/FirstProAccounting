@@ -2720,7 +2720,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }).toList();
 
     final db = DatabaseHelper();
-    await db.insertInvoiceWithItems(invoiceMap, items);
+    await db.saveInvoiceWithJournalEntries(
+      invoiceMap,
+      items,
+      invoiceType: 'pos',
+      paymentMechanism: paymentMechanism,
+      isReturn: false,
+      cashBoxId: cashBoxId,
+    );
 
     // Update shift totals (sales, discounts, transaction count)
     final saleAmount = _total;

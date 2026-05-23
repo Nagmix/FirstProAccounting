@@ -10,6 +10,11 @@ class CurrencyFormatter {
     return '$formatted $symbol';
   }
 
+  /// Formats [amount] with the currency symbol (alias for format).
+  static String formatWithSymbol(double amount, {String symbol = AppConstants.currency}) {
+    return format(amount, symbol: symbol);
+  }
+
   /// Formats [amount] without the currency symbol.
   static String formatValue(double amount) {
     return _addCommas(amount.toStringAsFixed(2));

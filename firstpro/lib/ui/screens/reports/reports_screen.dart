@@ -21,6 +21,7 @@ class _ReportsScreenState extends State<ReportsScreen>
   DateTime? _dateTo;
   int? _selectedAccountId;
   String _selectedAccountType = 'الكل';
+  String _searchQuery = '';
 
   static const List<String> _reportTypes = [
     'المبيعات',
@@ -35,7 +36,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     'ديون الموردين',
   ];
 
-  static const List<String> _currencyOptions = ['الكل', 'ر.ي', 'ر.س', r'\$'];
+  static const List<String> _currencyOptions = ['الكل', 'ر.ي', 'ر.س', r'$'];
 
   static const List<MapEntry<String, String>> _accountTypes = [
     MapEntry('الكل', 'الكل'),
@@ -58,6 +59,8 @@ class _ReportsScreenState extends State<ReportsScreen>
   List<_AllAccountMovement> _allAccountMovements = [];
   List<_TrialBalanceItem> _trialBalanceItems = [];
   List<_DebtItem> _debtItems = [];
+  List<_CashBoxMovement> _cashBoxMovements = [];
+  List<_InventoryItem> _inventoryItems = [];
   double _totalDebit = 0.0;
   double _totalCredit = 0.0;
 
@@ -80,7 +83,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         return 'YER';
       case 'ر.س':
         return 'SAR';
-      case r'\$':
+      case r'$':
         return 'USD';
       default:
         return null;
@@ -88,247 +91,376 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadReportData() async {
-    final db = await DatabaseHelper().database;
-    final dbHelper = DatabaseHelper();
+    try {
+      final db = await DatabaseHelper().database;
+      final dbHelper = DatabaseHelper();
 
-    String dateFilter = '';
-    List<dynamic> dateArgs = [];
-    if (_dateFrom != null) {
-      dateFilter += ' AND created_at >= ?';
-      dateArgs.add(_dateFrom!.toIso8601String());
-    }
-    if (_dateTo != null) {
-      final toDate = _dateTo!.add(const Duration(days: 1));
-      dateFilter += ' AND created_at < ?';
-      dateArgs.add(toDate.toIso8601String());
-    }
+      String dateFilter = '';
+      List<dynamic> dateArgs = [];
+      if (_dateFrom != null) {
+        dateFilter += ' AND created_at >= ?';
+        dateArgs.add(_dateFrom!.toIso8601String());
+      }
+      if (_dateTo != null) {
+        final toDate = _dateTo!.add(const Duration(days: 1));
+        dateFilter += ' AND created_at < ?';
+        dateArgs.add(toDate.toIso8601String());
+      }
 
-    String currencyFilter = '';
-    List<dynamic> currencyArgs = [];
-    final cc = _currencyCode();
-    if (cc != null) {
-      currencyFilter = ' AND currency = ?';
-      currencyArgs.add(cc);
-    }
-    final allArgs = [...dateArgs, ...currencyArgs];
+      String currencyFilter = '';
+      List<dynamic> currencyArgs = [];
+      final cc = _currencyCode();
+      if (cc != null) {
+        currencyFilter = ' AND currency = ?';
+        currencyArgs.add(cc);
+      }
+      final allArgs = [...dateArgs, ...currencyArgs];
 
-    final revenueResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'pos') AND is_return = 0"
-          "$dateFilter$currencyFilter",
-      allArgs,
-    );
-    final totalRevenue =
-        (revenueResult.first['total'] as num?)?.toDouble() ?? 0.0;
-
-    final expenseResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type = 'purchase' AND is_return = 0"
-          "$dateFilter$currencyFilter",
-      allArgs,
-    );
-    final totalExpenses =
-        (expenseResult.first['total'] as num?)?.toDouble() ?? 0.0;
-
-    String expDateFilter =
-        dateFilter.replaceAll('created_at', 'expense_date');
-    final actualExpensesResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(amount), 0.0) AS total FROM expenses WHERE 1=1"
-          "$expDateFilter$currencyFilter",
-      [...dateArgs, ...currencyArgs],
-    );
-    final actualExpenses =
-        (actualExpensesResult.first['total'] as num?)?.toDouble() ?? 0.0;
-    final netProfit = totalRevenue - totalExpenses - actualExpenses;
-
-    final countResult = await db.rawQuery(
-      "SELECT COUNT(*) AS cnt FROM invoices WHERE is_return = 0"
-          "$dateFilter$currencyFilter",
-      allArgs,
-    );
-    final invoiceCount =
-        (countResult.first['cnt'] as num?)?.toInt() ?? 0;
-
-    final now = DateTime.now();
-    const dayLabels = [
-      'السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'
-    ];
-    final List<BarData> dailySales = [];
-    for (int i = 6; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
-      final dayStart = DateTime(date.year, date.month, date.day);
-      final dayEnd = dayStart.add(const Duration(days: 1));
-      final dayResult = await db.rawQuery(
-        "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'pos') AND is_return = 0 AND created_at >= ? AND created_at < ?",
-        [dayStart.toIso8601String(), dayEnd.toIso8601String()],
+      // ── Sales Revenue ──
+      final revenueResult = await db.rawQuery(
+        "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'pos') AND is_return = 0"
+        "$dateFilter$currencyFilter",
+        allArgs,
       );
-      final dayTotal =
-          (dayResult.first['total'] as num?)?.toDouble() ?? 0.0;
-      int labelIndex;
-      if (date.weekday == 6) {
-        labelIndex = 0;
-      } else if (date.weekday == 7) {
-        labelIndex = 1;
-      } else {
-        labelIndex = date.weekday + 1;
-      }
-      dailySales.add(BarData(label: dayLabels[labelIndex], value: dayTotal));
-    }
+      final totalRevenue =
+          (revenueResult.first['total'] as num?)?.toDouble() ?? 0.0;
 
-    final topProductsResult = await db.rawQuery(
-      "SELECT ii.product_id, ii.product_name, SUM(ii.quantity) AS total_quantity, SUM(ii.total_price) AS total_revenue FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id = i.id WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 GROUP BY ii.product_id ORDER BY total_quantity DESC LIMIT 5",
-    );
-    final List<_TopProduct> topProducts =
-        topProductsResult.map((row) => _TopProduct(
-              name: row['product_name'] as String? ?? 'منتج غير معروف',
-              quantity: (row['total_quantity'] as num?)?.toInt() ?? 0,
-              revenue: (row['total_revenue'] as num?)?.toDouble() ?? 0.0,
-            )).toList();
-
-    final recentResult = await db.rawQuery(
-      "SELECT i.id, i.type, i.total, i.is_return, i.created_at, CASE WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل') WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد') ELSE 'بدون عميل' END AS entity_name FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id LEFT JOIN suppliers s ON i.supplier_id = s.id ORDER BY i.created_at DESC LIMIT 5",
-    );
-    final List<_RecentInvoice> recentInvoices =
-        recentResult.map((row) {
-      final type = row['type'] as String? ?? 'sale';
-      final isReturn = (row['is_return'] as int?) == 1;
-      return _RecentInvoice(
-        id: row['id'] as String? ?? '',
-        title: type == 'sale'
-            ? (isReturn ? 'مرتجع مبيعات' : 'فاتورة مبيعات')
-            : (isReturn ? 'مرتجع مشتريات' : 'فاتورة مشتريات'),
-        subtitle: row['entity_name'] as String? ?? '',
-        date: row['created_at'] as String? ?? '',
-        total: (row['total'] as num?)?.toDouble() ?? 0.0,
-        icon: type == 'sale'
-            ? (isReturn ? Icons.undo : Icons.receipt_long_outlined)
-            : (isReturn ? Icons.undo : Icons.shopping_cart_outlined),
-        color: type == 'sale'
-            ? (isReturn ? AppColors.warning : AppColors.success)
-            : (isReturn ? AppColors.warning : AppColors.error),
+      // ── Purchases ──
+      final expenseResult = await db.rawQuery(
+        "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type = 'purchase' AND is_return = 0"
+        "$dateFilter$currencyFilter",
+        allArgs,
       );
-    }).toList();
+      final totalExpenses =
+          (expenseResult.first['total'] as num?)?.toDouble() ?? 0.0;
 
-    // Account movements (single account)
-    List<_AccountMovement> accountMovements = [];
-    if (_selectedAccountId != null) {
-      final transactions =
-          await dbHelper.getAccountTransactions(_selectedAccountId!);
-      double runningBalance = 0.0;
-      for (final tx in transactions) {
-        final debit = (tx['debit'] as num?)?.toDouble() ?? 0.0;
-        final credit = (tx['credit'] as num?)?.toDouble() ?? 0.0;
-        runningBalance += (debit - credit);
-        accountMovements.add(_AccountMovement(
-          date: tx['date'] as String? ?? '',
-          description: tx['description'] as String? ?? '',
-          debit: debit,
-          credit: credit,
-          balance: runningBalance,
-        ));
-      }
-    }
-
-    // All accounts movements
-    List<_AllAccountMovement> allAccountMovements = [];
-    {
-      String allTxDateFilter = dateFilter.replaceAll('created_at', 't.created_at');
-      final allTx = await db.rawQuery(
-        "SELECT t.id, t.account_id, t.debit, t.credit, t.description, t.date, t.created_at, "
-        "a.name_ar AS account_name, a.account_code, a.currency "
-        "FROM transactions t "
-        "LEFT JOIN accounts a ON t.account_id = a.id "
-        "WHERE 1=1 $allTxDateFilter "
-        "ORDER BY t.date DESC, t.created_at DESC",
-        dateArgs,
+      // ── Actual Expenses ──
+      String expDateFilter =
+          dateFilter.replaceAll('created_at', 'expense_date');
+      final actualExpensesResult = await db.rawQuery(
+        "SELECT COALESCE(SUM(amount), 0.0) AS total FROM expenses WHERE 1=1"
+        "$expDateFilter$currencyFilter",
+        [...dateArgs, ...currencyArgs],
       );
-      for (final tx in allTx) {
-        allAccountMovements.add(_AllAccountMovement(
-          date: tx['date'] as String? ?? '',
-          accountName: tx['account_name'] as String? ?? 'غير معروف',
-          accountCode: tx['account_code'] as String? ?? '',
-          currency: tx['currency'] as String? ?? 'YER',
-          description: tx['description'] as String? ?? '',
-          debit: (tx['debit'] as num?)?.toDouble() ?? 0.0,
-          credit: (tx['credit'] as num?)?.toDouble() ?? 0.0,
-        ));
-      }
-    }
+      final actualExpenses =
+          (actualExpensesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+      final netProfit = totalRevenue - totalExpenses - actualExpenses;
 
-    // Trial balance
-    List<_TrialBalanceItem> trialBalanceItems = [];
-    double totalDebit = 0.0;
-    double totalCredit = 0.0;
-    final accounts = await dbHelper.getAllAccounts();
-    for (final account in accounts) {
-      if (cc != null && account['currency'] != cc) continue;
-      final accountId = account['id'] as int;
-      final balance = await dbHelper.getAccountBalance(accountId);
-      if (balance == 0.0) continue;
-      final isDebit = balance > 0;
-      if (isDebit) {
-        totalDebit += balance.abs();
-      } else {
-        totalCredit += balance.abs();
-      }
-      trialBalanceItems.add(_TrialBalanceItem(
-        accountId: accountId,
-        accountName: account['name_ar'] as String? ?? '',
-        accountCode: account['account_code'] as String? ?? '',
-        accountType: account['account_type'] as String? ?? '',
-        currency: account['currency'] as String? ?? 'YER',
-        debit: isDebit ? balance.abs() : 0.0,
-        credit: isDebit ? 0.0 : balance.abs(),
-      ));
-    }
+      // ── Invoice Count ──
+      final countResult = await db.rawQuery(
+        "SELECT COUNT(*) AS cnt FROM invoices WHERE is_return = 0"
+        "$dateFilter$currencyFilter",
+        allArgs,
+      );
+      final invoiceCount =
+          (countResult.first['cnt'] as num?)?.toInt() ?? 0;
 
-    // Debt items
-    List<_DebtItem> debtItems = [];
-    if (_selectedReportType == 'ديون العملاء') {
-      final customers = await dbHelper.getAllCustomers();
-      for (final c in customers) {
-        final balance = (c['balance'] as num?)?.toDouble() ?? 0.0;
-        if (balance > 0) {
-          debtItems.add(_DebtItem(
-            name: c['name'] as String? ?? '',
-            balance: balance,
-            balanceType: c['balance_type'] as String? ?? 'credit',
-            currency: c['currency'] as String? ?? 'YER',
-            phone: c['phone'] as String?,
+      // ── Daily Sales Chart ──
+      final now = DateTime.now();
+      const dayLabels = [
+        'السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'
+      ];
+      final List<BarData> dailySales = [];
+      for (int i = 6; i >= 0; i--) {
+        final date = now.subtract(Duration(days: i));
+        final dayStart = DateTime(date.year, date.month, date.day);
+        final dayEnd = dayStart.add(const Duration(days: 1));
+        final dayResult = await db.rawQuery(
+          "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'pos') AND is_return = 0 AND created_at >= ? AND created_at < ?",
+          [dayStart.toIso8601String(), dayEnd.toIso8601String()],
+        );
+        final dayTotal =
+            (dayResult.first['total'] as num?)?.toDouble() ?? 0.0;
+        int labelIndex;
+        if (date.weekday == 6) {
+          labelIndex = 0;
+        } else if (date.weekday == 7) {
+          labelIndex = 1;
+        } else {
+          labelIndex = date.weekday + 1;
+        }
+        dailySales.add(BarData(label: dayLabels[labelIndex], value: dayTotal));
+      }
+
+      // ── Top Products ──
+      final topProductsResult = await db.rawQuery(
+        "SELECT ii.product_id, ii.product_name, SUM(ii.quantity) AS total_quantity, SUM(ii.total_price) AS total_revenue "
+        "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id = i.id "
+        "WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 "
+        "GROUP BY ii.product_id ORDER BY total_quantity DESC LIMIT 10",
+      );
+      final List<_TopProduct> topProducts =
+          topProductsResult.map((row) => _TopProduct(
+                name: row['product_name'] as String? ?? 'منتج غير معروف',
+                quantity: (row['total_quantity'] as num?)?.toInt() ?? 0,
+                revenue: (row['total_revenue'] as num?)?.toDouble() ?? 0.0,
+              )).toList();
+
+      // ── Recent Invoices ──
+      final recentResult = await db.rawQuery(
+        "SELECT i.id, i.type, i.total, i.is_return, i.created_at, i.currency, "
+        "CASE WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل') "
+        "WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد') "
+        "ELSE 'بدون عميل' END AS entity_name "
+        "FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id "
+        "LEFT JOIN suppliers s ON i.supplier_id = s.id "
+        "ORDER BY i.created_at DESC LIMIT 20",
+      );
+      final List<_RecentInvoice> recentInvoices =
+          recentResult.map((row) {
+        final type = row['type'] as String? ?? 'sale';
+        final isReturn = (row['is_return'] as int?) == 1;
+        return _RecentInvoice(
+          id: row['id'] as String? ?? '',
+          title: type == 'sale' || type == 'pos'
+              ? (isReturn ? 'مرتجع مبيعات' : 'فاتورة مبيعات')
+              : (isReturn ? 'مرتجع مشتريات' : 'فاتورة مشتريات'),
+          subtitle: row['entity_name'] as String? ?? '',
+          date: row['created_at'] as String? ?? '',
+          total: (row['total'] as num?)?.toDouble() ?? 0.0,
+          currency: row['currency'] as String? ?? 'YER',
+          icon: type == 'sale' || type == 'pos'
+              ? (isReturn ? Icons.undo : Icons.receipt_long_outlined)
+              : (isReturn ? Icons.undo : Icons.shopping_cart_outlined),
+          color: type == 'sale' || type == 'pos'
+              ? (isReturn ? AppColors.warning : AppColors.success)
+              : (isReturn ? AppColors.warning : AppColors.error),
+        );
+      }).toList();
+
+      // ── Account movements (single account) ──
+      List<_AccountMovement> accountMovements = [];
+      if (_selectedAccountId != null) {
+        final transactions =
+            await dbHelper.getAccountTransactions(_selectedAccountId!);
+        double runningBalance = 0.0;
+        for (final tx in transactions) {
+          final debit = (tx['debit'] as num?)?.toDouble() ?? 0.0;
+          final credit = (tx['credit'] as num?)?.toDouble() ?? 0.0;
+          runningBalance += (debit - credit);
+          accountMovements.add(_AccountMovement(
+            date: tx['date'] as String? ?? '',
+            description: tx['description'] as String? ?? '',
+            debit: debit,
+            credit: credit,
+            balance: runningBalance,
           ));
         }
       }
-    } else if (_selectedReportType == 'ديون الموردين') {
-      final suppliers = await dbHelper.getAllSuppliers();
-      for (final s in suppliers) {
-        final balance = (s['balance'] as num?)?.toDouble() ?? 0.0;
-        if (balance > 0) {
-          debtItems.add(_DebtItem(
-            name: s['name'] as String? ?? '',
-            balance: balance,
-            balanceType: s['balance_type'] as String? ?? 'debit',
-            currency: s['currency'] as String? ?? 'YER',
-            phone: s['phone'] as String?,
+
+      // ── All accounts movements ──
+      List<_AllAccountMovement> allAccountMovements = [];
+      {
+        String allTxDateFilter = dateFilter.replaceAll('created_at', 't.created_at');
+        String allTxCurrencyFilter = '';
+        List<dynamic> allTxArgs = [...dateArgs];
+        if (cc != null) {
+          allTxCurrencyFilter = ' AND a.currency = ?';
+          allTxArgs.add(cc);
+        }
+        final allTx = await db.rawQuery(
+          "SELECT t.id, t.account_id, t.debit, t.credit, t.description, t.date, t.created_at, "
+          "a.name_ar AS account_name, a.account_code, a.currency "
+          "FROM transactions t "
+          "LEFT JOIN accounts a ON t.account_id = a.id "
+          "WHERE 1=1 $allTxDateFilter $allTxCurrencyFilter "
+          "ORDER BY t.date DESC, t.created_at DESC",
+          allTxArgs,
+        );
+        for (final tx in allTx) {
+          allAccountMovements.add(_AllAccountMovement(
+            date: tx['date'] as String? ?? '',
+            accountName: tx['account_name'] as String? ?? 'غير معروف',
+            accountCode: tx['account_code'] as String? ?? '',
+            currency: tx['currency'] as String? ?? 'YER',
+            description: tx['description'] as String? ?? '',
+            debit: (tx['debit'] as num?)?.toDouble() ?? 0.0,
+            credit: (tx['credit'] as num?)?.toDouble() ?? 0.0,
           ));
         }
       }
-    }
 
-    if (mounted) {
-      setState(() {
-        _totalRevenue = totalRevenue;
-        _totalExpenses = totalExpenses + actualExpenses;
-        _netProfit = netProfit;
-        _invoiceCount = invoiceCount;
-        _dailySalesData = dailySales;
-        _topProducts = topProducts;
-        _recentInvoices = recentInvoices;
-        _accountMovements = accountMovements;
-        _allAccountMovements = allAccountMovements;
-        _trialBalanceItems = trialBalanceItems;
-        _totalDebit = totalDebit;
-        _totalCredit = totalCredit;
-        _debtItems = debtItems;
-        _isLoading = false;
-      });
+      // ── Trial balance ──
+      List<_TrialBalanceItem> trialBalanceItems = [];
+      double totalDebit = 0.0;
+      double totalCredit = 0.0;
+      final accounts = await dbHelper.getAllAccounts();
+      for (final account in accounts) {
+        if (cc != null && account['currency'] != cc) continue;
+        final accountId = account['id'] as int;
+        final balance = await dbHelper.getAccountBalance(accountId);
+        if (balance == 0.0) continue;
+        final isDebit = balance > 0;
+        if (isDebit) {
+          totalDebit += balance.abs();
+        } else {
+          totalCredit += balance.abs();
+        }
+        trialBalanceItems.add(_TrialBalanceItem(
+          accountId: accountId,
+          accountName: account['name_ar'] as String? ?? '',
+          accountCode: account['account_code'] as String? ?? '',
+          accountType: account['account_type'] as String? ?? '',
+          currency: account['currency'] as String? ?? 'YER',
+          debit: isDebit ? balance.abs() : 0.0,
+          credit: isDebit ? 0.0 : balance.abs(),
+        ));
+      }
+
+      // ── Cash Box Movements ──
+      List<_CashBoxMovement> cashBoxMovements = [];
+      {
+        final cashBoxes = await dbHelper.getAllCashBoxes();
+        for (final cb in cashBoxes) {
+          if (cc != null && cb['currency'] != cc) continue;
+          final cbId = cb['id'] as int;
+          final cbName = cb['name'] as String? ?? '';
+          final cbType = cb['type'] as String? ?? 'cash_box';
+          final cbBalance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+          final cbBalanceType = cb['balance_type'] as String? ?? 'credit';
+          final cbCurrency = cb['currency'] as String? ?? 'YER';
+
+          // Get invoices for this cash box
+          String invDateFilter = dateFilter;
+          String invCurrencyFilter = currencyFilter;
+          final invResult = await db.rawQuery(
+            "SELECT type, COUNT(*) as cnt, COALESCE(SUM(total), 0.0) as total "
+            "FROM invoices WHERE cash_box_id = ? AND is_return = 0"
+            "$invDateFilter$invCurrencyFilter "
+            "GROUP BY type",
+            [cbId, ...dateArgs, ...currencyArgs],
+          );
+
+          double salesTotal = 0;
+          int salesCount = 0;
+          double purchaseTotal = 0;
+          int purchaseCount = 0;
+
+          for (final inv in invResult) {
+            final invType = inv['type'] as String? ?? '';
+            final invTotal = (inv['total'] as num?)?.toDouble() ?? 0.0;
+            final invCnt = (inv['cnt'] as num?)?.toInt() ?? 0;
+            if (invType == 'sale' || invType == 'pos') {
+              salesTotal = invTotal;
+              salesCount = invCnt;
+            } else if (invType == 'purchase') {
+              purchaseTotal = invTotal;
+              purchaseCount = invCnt;
+            }
+          }
+
+          cashBoxMovements.add(_CashBoxMovement(
+            id: cbId,
+            name: cbName,
+            type: cbType,
+            balance: cbBalance,
+            balanceType: cbBalanceType,
+            currency: cbCurrency,
+            salesTotal: salesTotal,
+            salesCount: salesCount,
+            purchaseTotal: purchaseTotal,
+            purchaseCount: purchaseCount,
+          ));
+        }
+      }
+
+      // ── Inventory Report ──
+      List<_InventoryItem> inventoryItems = [];
+      {
+        String prodFilter = 'WHERE p.is_active = 1';
+        List<dynamic> prodArgs = [];
+        if (cc != null) {
+          // No direct currency on products, skip currency filter for inventory
+        }
+        final prodResult = await db.rawQuery(
+          "SELECT p.id, p.name_ar, p.barcode, p.item_code, p.current_stock, "
+          "p.cost_price, p.sell_price, p.min_stock, p.warehouse_id, "
+          "w.name AS warehouse_name, c.name AS category_name "
+          "FROM products p "
+          "LEFT JOIN warehouses w ON p.warehouse_id = w.id "
+          "LEFT JOIN categories c ON p.category_id = c.id "
+          "$prodFilter ORDER BY p.current_stock DESC",
+          prodArgs,
+        );
+        for (final p in prodResult) {
+          final stock = (p['current_stock'] as num?)?.toDouble() ?? 0.0;
+          final minStock = (p['min_stock'] as num?)?.toDouble() ?? 0.0;
+          inventoryItems.add(_InventoryItem(
+            id: p['id'] as int,
+            name: p['name_ar'] as String? ?? '',
+            barcode: p['barcode'] as String?,
+            itemCode: p['item_code'] as String?,
+            currentStock: stock,
+            costPrice: (p['cost_price'] as num?)?.toDouble() ?? 0.0,
+            sellPrice: (p['sell_price'] as num?)?.toDouble() ?? 0.0,
+            minStock: minStock,
+            warehouseName: p['warehouse_name'] as String?,
+            categoryName: p['category_name'] as String?,
+            isLowStock: stock > 0 && stock <= minStock,
+            isOutOfStock: stock <= 0,
+          ));
+        }
+      }
+
+      // ── Debt items ──
+      List<_DebtItem> debtItems = [];
+      if (_selectedReportType == 'ديون العملاء') {
+        final customers = await dbHelper.getAllCustomers();
+        for (final c in customers) {
+          final balance = (c['balance'] as num?)?.toDouble() ?? 0.0;
+          if (balance > 0) {
+            debtItems.add(_DebtItem(
+              name: c['name'] as String? ?? '',
+              balance: balance,
+              balanceType: c['balance_type'] as String? ?? 'credit',
+              currency: c['currency'] as String? ?? 'YER',
+              phone: c['phone'] as String?,
+            ));
+          }
+        }
+      } else if (_selectedReportType == 'ديون الموردين') {
+        final suppliers = await dbHelper.getAllSuppliers();
+        for (final s in suppliers) {
+          final balance = (s['balance'] as num?)?.toDouble() ?? 0.0;
+          if (balance > 0) {
+            debtItems.add(_DebtItem(
+              name: s['name'] as String? ?? '',
+              balance: balance,
+              balanceType: s['balance_type'] as String? ?? 'debit',
+              currency: s['currency'] as String? ?? 'YER',
+              phone: s['phone'] as String?,
+            ));
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalRevenue = totalRevenue;
+          _totalExpenses = totalExpenses + actualExpenses;
+          _netProfit = netProfit;
+          _invoiceCount = invoiceCount;
+          _dailySalesData = dailySales;
+          _topProducts = topProducts;
+          _recentInvoices = recentInvoices;
+          _accountMovements = accountMovements;
+          _allAccountMovements = allAccountMovements;
+          _trialBalanceItems = trialBalanceItems;
+          _totalDebit = totalDebit;
+          _totalCredit = totalCredit;
+          _debtItems = debtItems;
+          _cashBoxMovements = cashBoxMovements;
+          _inventoryItems = inventoryItems;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل التقارير: $e'), backgroundColor: AppColors.error),
+        );
+      }
     }
   }
 
@@ -337,7 +469,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       context: context,
       initialDate: _dateFrom ?? DateTime.now(),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
       locale: const Locale('ar'),
     );
     if (picked != null) {
@@ -351,13 +483,23 @@ class _ReportsScreenState extends State<ReportsScreen>
       context: context,
       initialDate: _dateTo ?? DateTime.now(),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
       locale: const Locale('ar'),
     );
     if (picked != null) {
       setState(() => _dateTo = picked);
       _loadReportData();
     }
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _dateFrom = null;
+      _dateTo = null;
+      _selectedCurrency = 'الكل';
+      _isLoading = true;
+    });
+    _loadReportData();
   }
 
   @override
@@ -378,6 +520,12 @@ class _ReportsScreenState extends State<ReportsScreen>
             ],
           ),
           actions: [
+            if (_dateFrom != null || _dateTo != null || _selectedCurrency != 'الكل')
+              IconButton(
+                icon: const Icon(PhosphorIconsRegular.xCircle),
+                tooltip: 'مسح الفلاتر',
+                onPressed: _clearFilters,
+              ),
             IconButton(
               icon: const Icon(PhosphorIconsRegular.arrowClockwise),
               tooltip: 'تحديث',
@@ -393,16 +541,20 @@ class _ReportsScreenState extends State<ReportsScreen>
           children: [
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).viewPadding.bottom + 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildFilterSection(theme, isDark),
-                        const SizedBox(height: 16),
-                        _buildReportContent(theme, isDark),
-                      ],
+                : RefreshIndicator(
+                    onRefresh: _loadReportData,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).viewPadding.bottom + 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFilterSection(theme, isDark),
+                          const SizedBox(height: 16),
+                          _buildReportContent(theme, isDark),
+                        ],
+                      ),
                     ),
                   ),
             _buildAccountMovementsTab(theme, isDark),
@@ -420,33 +572,469 @@ class _ReportsScreenState extends State<ReportsScreen>
         return _buildAllAccountMovementReport(theme, isDark);
       case 'ميزان المراجعة':
         return _buildTrialBalanceReport(theme, isDark);
+      case 'حركة الصندوق':
+        return _buildCashBoxReport(theme, isDark);
+      case 'المخزون':
+        return _buildInventoryReport(theme, isDark);
       case 'ديون العملاء':
       case 'ديون الموردين':
         return _buildDebtReport(theme, isDark);
+      case 'المشتريات':
+        return _buildPurchasesReport(theme, isDark);
+      case 'الأرباح والخسائر':
+        return _buildProfitLossReport(theme, isDark);
       default:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSummaryCards(theme, isDark),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: BarChartWidget(
-                data: _dailySalesData,
-                title: 'المبيعات اليومية',
-                barColor: AppColors.primary,
-                height: 240,
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildTopProductsSection(theme, isDark),
-            const SizedBox(height: 20),
-            _buildRecentInvoicesSection(theme, isDark),
-          ],
-        );
+        return _buildSalesReport(theme, isDark);
     }
   }
 
+  // ══════════════════════════════════════════════════════════════
+  //  SALES REPORT (المبيعات)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildSalesReport(ThemeData theme, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSummaryCards(theme, isDark),
+        const SizedBox(height: 20),
+        if (_dailySalesData.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: BarChartWidget(
+              data: _dailySalesData,
+              title: 'المبيعات اليومية (آخر 7 أيام)',
+              barColor: AppColors.primary,
+              height: 240,
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+        _buildTopProductsSection(theme, isDark),
+        const SizedBox(height: 20),
+        _buildRecentInvoicesSection(theme, isDark),
+      ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  PURCHASES REPORT (المشتريات)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildPurchasesReport(ThemeData theme, bool isDark) {
+    final purchaseInvoices = _recentInvoices.where((i) =>
+        i.title.contains('مشتريات') && !i.title.contains('مرتجع')).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSummaryCards(theme, isDark),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(PhosphorIconsRegular.shoppingCart, color: AppColors.error, size: 22),
+                  const SizedBox(width: 8),
+                  Text('فواتير المشتريات', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (purchaseInvoices.isEmpty)
+                _buildEmptyState(theme, PhosphorIconsRegular.shoppingCart, 'لا توجد فواتير مشتريات')
+              else
+                ...purchaseInvoices.map((invoice) => _RecentInvoiceCard(invoice: invoice, isDark: isDark)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  PROFIT & LOSS REPORT (الأرباح والخسائر)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildProfitLossReport(ThemeData theme, bool isDark) {
+    final profitPercent = _totalRevenue > 0 ? (_netProfit / _totalRevenue * 100) : 0.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main P&L Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: _netProfit >= 0
+                    ? [AppColors.success.withValues(alpha: 0.1), AppColors.success.withValues(alpha: 0.05)]
+                    : [AppColors.error.withValues(alpha: 0.1), AppColors.error.withValues(alpha: 0.05)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              children: [
+                Icon(_netProfit >= 0 ? PhosphorIconsRegular.trendUp : PhosphorIconsRegular.trendDown,
+                    size: 48, color: _netProfit >= 0 ? AppColors.success : AppColors.error),
+                const SizedBox(height: 12),
+                Text(
+                  _netProfit >= 0 ? 'صافي الربح' : 'صافي الخسارة',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  CurrencyFormatter.formatWithSymbol(_netProfit.abs()),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: _netProfit >= 0 ? AppColors.success : AppColors.error,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'هامش الربح: ${profitPercent.toStringAsFixed(1)}%',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: _netProfit >= 0 ? AppColors.success : AppColors.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Revenue breakdown
+          _buildPLRow(theme, isDark, 'إجمالي الإيرادات', _totalRevenue, AppColors.success, PhosphorIconsRegular.arrowUpRight),
+          const SizedBox(height: 8),
+          _buildPLRow(theme, isDark, 'تكلفة المشتريات', _totalExpenses - (_totalExpenses - _totalRevenue + _netProfit).abs(), AppColors.error, PhosphorIconsRegular.arrowDownRight),
+          const SizedBox(height: 8),
+          _buildPLRow(theme, isDark, 'المصاريف التشغيلية', (_totalExpenses - (_totalRevenue - _netProfit)).abs().clamp(0, _totalExpenses), AppColors.warning, PhosphorIconsRegular.minus),
+          const SizedBox(height: 16),
+          // Visual Bar
+          Container(
+            height: 32,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              color: AppColors.surfaceVariant,
+            ),
+            child: LayoutBuilder(builder: (context, constraints) {
+              final totalWidth = constraints.maxWidth;
+              final revenueWidth = _totalRevenue > 0 ? (_totalRevenue / (_totalRevenue + _totalExpenses.abs()) * totalWidth).clamp(0, totalWidth) : 0.0;
+              return Row(
+                children: [
+                  Container(
+                    width: revenueWidth,
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.7),
+                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text('إيرادات', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                  ),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.7),
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text('مصاريف', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPLRow(ThemeData theme, bool isDark, String title, double value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ),
+          Text(CurrencyFormatter.formatWithSymbol(value),
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  CASH BOX REPORT (حركة الصندوق)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildCashBoxReport(ThemeData theme, bool isDark) {
+    if (_cashBoxMovements.isEmpty) {
+      return _buildEmptyState(theme, PhosphorIconsRegular.vault, 'لا توجد صناديق');
+    }
+    final totalBalance = _cashBoxMovements.fold(0.0, (s, m) => s + (m.balanceType == 'credit' ? m.balance : -m.balance));
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Total summary
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                AppColors.primary.withValues(alpha: 0.08),
+                AppColors.secondary.withValues(alpha: 0.08),
+              ]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Icon(PhosphorIconsRegular.vault, size: 36, color: AppColors.primary),
+                const SizedBox(height: 8),
+                Text('إجمالي الأرصدة', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(CurrencyFormatter.formatWithSymbol(totalBalance.abs()),
+                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                Text(totalBalance >= 0 ? 'له' : 'عليه',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: totalBalance >= 0 ? AppColors.success : AppColors.error,
+                      fontWeight: FontWeight.w700,
+                    )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Cash box cards
+          ..._cashBoxMovements.map((cb) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          color: (cb.type == 'bank' ? AppColors.info : AppColors.primary).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          cb.type == 'bank' ? PhosphorIconsRegular.bank : PhosphorIconsRegular.vault,
+                          color: cb.type == 'bank' ? AppColors.info : AppColors.primary, size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(cb.name, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700)),
+                            Text('${cb.type == 'bank' ? 'بنك' : 'صندوق'} - ${cb.currency}',
+                                style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(CurrencyFormatter.format(cb.balance),
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                          Text(cb.balanceType == 'credit' ? 'له' : 'عليه',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: cb.balanceType == 'credit' ? AppColors.success : AppColors.error,
+                                fontWeight: FontWeight.w600,
+                              )),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatMini(theme, 'المبيعات', cb.salesTotal, cb.salesCount, AppColors.success),
+                      ),
+                      Container(width: 1, height: 40, color: AppColors.divider),
+                      Expanded(
+                        child: _buildStatMini(theme, 'المشتريات', cb.purchaseTotal, cb.purchaseCount, AppColors.error),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatMini(ThemeData theme, String label, double total, int count, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        children: [
+          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text(CurrencyFormatter.formatCompactWithSymbol(total),
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
+          Text('$count فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  INVENTORY REPORT (المخزون)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildInventoryReport(ThemeData theme, bool isDark) {
+    final lowStockItems = _inventoryItems.where((i) => i.isLowStock).toList();
+    final outOfStockItems = _inventoryItems.where((i) => i.isOutOfStock).toList();
+    final totalStockValue = _inventoryItems.fold(0.0, (s, i) => s + (i.currentStock * i.costPrice));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Summary cards
+          Row(
+            children: [
+              Expanded(child: _buildInventoryStatCard(theme, 'إجمالي الأصناف', '${_inventoryItems.length}', AppColors.primary, PhosphorIconsRegular.package)),
+              const SizedBox(width: 8),
+              Expanded(child: _buildInventoryStatCard(theme, 'قيمة المخزون', CurrencyFormatter.formatCompactWithSymbol(totalStockValue), AppColors.success, PhosphorIconsRegular.currencyDollar)),
+              const SizedBox(width: 8),
+              Expanded(child: _buildInventoryStatCard(theme, 'نفذ المخزون', '${outOfStockItems.length}', AppColors.error, PhosphorIconsRegular.warning)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Alerts
+          if (outOfStockItems.isNotEmpty) ...[
+            _buildAlertBanner(theme, 'أصناف نفذت من المخزون (${outOfStockItems.length})', AppColors.error, PhosphorIconsRegular.warningCircle),
+            const SizedBox(height: 8),
+          ],
+          if (lowStockItems.isNotEmpty) ...[
+            _buildAlertBanner(theme, 'أصناف قاربت على النفاد (${lowStockItems.length})', AppColors.warning, PhosphorIconsRegular.warning),
+            const SizedBox(height: 12),
+          ],
+          // Inventory list
+          if (_inventoryItems.isEmpty)
+            _buildEmptyState(theme, PhosphorIconsRegular.package, 'لا توجد أصناف في المخزون')
+          else
+            ..._inventoryItems.map((item) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                leading: Container(
+                  width: 42, height: 42,
+                  decoration: BoxDecoration(
+                    color: (item.isOutOfStock ? AppColors.error : item.isLowStock ? AppColors.warning : AppColors.success).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    item.isOutOfStock ? PhosphorIconsRegular.warningCircle : item.isLowStock ? PhosphorIconsRegular.warning : PhosphorIconsRegular.package,
+                    color: item.isOutOfStock ? AppColors.error : item.isLowStock ? AppColors.warning : AppColors.success, size: 20,
+                  ),
+                ),
+                title: Row(
+                  children: [
+                    Expanded(child: Text(item.name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    if (item.categoryName != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
+                        child: Text(item.categoryName!, style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, color: AppColors.primary)),
+                      ),
+                  ],
+                ),
+                subtitle: Text(
+                  '${item.barcode ?? item.itemCode ?? ""}${item.warehouseName != null ? " | ${item.warehouseName}" : ""}',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+                ),
+                trailing: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('${item.currentStock.toStringAsFixed(item.currentStock == item.currentStock.roundToDouble() ? 0 : 1)} قطعة',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: item.isOutOfStock ? AppColors.error : item.isLowStock ? AppColors.warning : AppColors.success,
+                        )),
+                    Text('تكلفة: ${CurrencyFormatter.format(item.costPrice)}', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                  ],
+                ),
+              ),
+            )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInventoryStatCard(ThemeData theme, String title, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 6),
+          Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
+          Text(title, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlertBanner(ThemeData theme, String message, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(child: Text(message, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: color))),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ACCOUNT MOVEMENTS TAB (2nd Tab)
+  // ══════════════════════════════════════════════════════════════
   Widget _buildAccountMovementsTab(ThemeData theme, bool isDark) {
     return Column(
       children: [
@@ -522,18 +1110,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         ),
         Expanded(
           child: _accountMovements.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(PhosphorIconsRegular.arrowsLeftRight,
-                          size: 64, color: AppColors.textHint),
-                      const SizedBox(height: 16),
-                      Text('اختر حساباً لعرض حركته',
-                          style: TextStyle(fontSize: 16, color: AppColors.textHint)),
-                    ],
-                  ),
-                )
+              ? _buildEmptyState(theme, PhosphorIconsRegular.arrowsLeftRight, 'اختر حساباً لعرض حركته')
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: _accountMovements.length + 1,
@@ -545,6 +1122,21 @@ class _ReportsScreenState extends State<ReportsScreen>
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme, IconData icon, String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          children: [
+            Icon(icon, size: 64, color: AppColors.textHint),
+            const SizedBox(height: 16),
+            Text(message, style: TextStyle(fontSize: 16, color: AppColors.textHint), textAlign: TextAlign.center),
+          ],
+        ),
+      ),
     );
   }
 
@@ -622,19 +1214,9 @@ class _ReportsScreenState extends State<ReportsScreen>
     }
   }
 
-
   Widget _buildAllAccountMovementReport(ThemeData theme, bool isDark) {
     if (_allAccountMovements.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(PhosphorIconsRegular.arrowsLeftRight, size: 64, color: AppColors.textHint),
-            const SizedBox(height: 16),
-            Text('لا توجد حركات', style: TextStyle(fontSize: 16, color: AppColors.textHint)),
-          ],
-        ),
-      );
+      return _buildEmptyState(theme, PhosphorIconsRegular.arrowsLeftRight, 'لا توجد حركات - قم بإجراء عمليات بيع أو شراء أولاً');
     }
 
     double totalDebit = _allAccountMovements.fold(0.0, (s, m) => s + m.debit);
@@ -734,6 +1316,9 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Widget _buildTrialBalanceReport(ThemeData theme, bool isDark) {
+    if (_trialBalanceItems.isEmpty) {
+      return _buildEmptyState(theme, PhosphorIconsRegular.scales, 'لا توجد أرصدة - قم بإجراء عمليات أولاً');
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -757,8 +1342,25 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          _buildMovementHeader(theme, isDark),
-          ..._trialBalanceItems.map((item) => Container(
+          // Account type filter chips
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _accountTypes.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (_, i) => ChoiceChip(
+                label: Text(_accountTypes[i].key, style: const TextStyle(fontSize: 12)),
+                selected: _selectedAccountType == _accountTypes[i].key,
+                onSelected: (_) => setState(() {
+                  _selectedAccountType = _accountTypes[i].key;
+                }),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildTrialHeader(theme),
+          ..._getFilteredTrialItems().map((item) => Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurface : AppColors.surface,
@@ -774,6 +1376,52 @@ class _ReportsScreenState extends State<ReportsScreen>
               ],
             ),
           )),
+          // Totals row
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+              border: Border(top: BorderSide(width: 2, color: AppColors.primary)),
+            ),
+            child: Row(
+              children: [
+                Expanded(flex: 4, child: Text('الإجمالي', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary))),
+                Expanded(flex: 1, child: const SizedBox()),
+                Expanded(flex: 2, child: Text(CurrencyFormatter.format(_totalDebit), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.error), textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text(CurrencyFormatter.format(_totalCredit), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success), textAlign: TextAlign.center)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_TrialBalanceItem> _getFilteredTrialItems() {
+    if (_selectedAccountType == 'الكل') return _trialBalanceItems;
+    final typeCode = _accountTypes
+        .firstWhere((e) => e.key == _selectedAccountType,
+            orElse: () => const MapEntry('الكل', 'الكل'))
+        .value;
+    if (typeCode == 'الكل') return _trialBalanceItems;
+    return _trialBalanceItems.where((i) => i.accountType == typeCode).toList();
+  }
+
+  Widget _buildTrialHeader(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: Row(
+        children: [
+          Expanded(flex: 1, child: Text('الكود', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
+          Expanded(flex: 3, child: Text('الحساب', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
+          Expanded(flex: 1, child: Text('العملة', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary), textAlign: TextAlign.center)),
+          Expanded(flex: 2, child: Text('مدين', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary), textAlign: TextAlign.center)),
+          Expanded(flex: 2, child: Text('دائن', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary), textAlign: TextAlign.center)),
         ],
       ),
     );
@@ -856,18 +1504,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             _buildMovementHeader(theme, isDark),
             ..._accountMovements.asMap().entries.map((e) => _buildMovementRow(e.value, theme, isDark, e.key)),
           ] else ...[
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  children: [
-                    Icon(PhosphorIconsRegular.arrowsLeftRight, size: 64, color: AppColors.textHint),
-                    const SizedBox(height: 16),
-                    Text('اختر حساباً لعرض حركته', style: TextStyle(fontSize: 16, color: AppColors.textHint)),
-                  ],
-                ),
-              ),
-            ),
+            _buildEmptyState(theme, PhosphorIconsRegular.arrowsLeftRight, 'اختر حساباً لعرض حركته'),
           ],
         ],
       ),
@@ -910,56 +1547,46 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          ..._debtItems.map((item) => Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                    child: Icon(isCustomer ? PhosphorIconsRegular.user : PhosphorIconsRegular.truck, color: AppColors.error, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          if (_debtItems.isEmpty)
+            _buildEmptyState(theme, isCustomer ? PhosphorIconsRegular.users : PhosphorIconsRegular.truck,
+                'لا توجد ${isCustomer ? "ديون عملاء" : "مديونيات موردين"}')
+          else
+            ..._debtItems.map((item) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                      child: Icon(isCustomer ? PhosphorIconsRegular.user : PhosphorIconsRegular.truck, color: AppColors.error, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text('${item.currency}${item.phone != null ? " | ${item.phone}" : ""}',
+                              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(item.name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 2),
-                        Text('${item.currency}${item.phone != null ? " | ${item.phone}" : ""}',
-                            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                        Text(CurrencyFormatter.format(item.balance),
+                            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
+                        Text(item.balanceType == 'credit' ? 'له' : 'عليه',
+                            style: theme.textTheme.bodySmall?.copyWith(color: item.balanceType == 'credit' ? AppColors.success : AppColors.error)),
                       ],
                     ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(CurrencyFormatter.format(item.balance),
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
-                      Text(item.balanceType == 'credit' ? 'له' : 'عليه',
-                          style: theme.textTheme.bodySmall?.copyWith(color: item.balanceType == 'credit' ? AppColors.success : AppColors.error)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          )),
-          if (_debtItems.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  children: [
-                    Icon(PhosphorIconsRegular.checkCircle, size: 64, color: AppColors.success),
-                    const SizedBox(height: 16),
-                    Text('لا توجد ${isCustomer ? "ديون على العملاء" : "مديونيات للموردين"}',
-                        style: TextStyle(fontSize: 16, color: AppColors.success)),
                   ],
                 ),
               ),
-            ),
+            )),
         ],
       ),
     );
@@ -1112,7 +1739,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         children: [
           Text('آخر الفواتير', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
-          ..._recentInvoices.map((invoice) => _RecentInvoiceCard(invoice: invoice, isDark: isDark)),
+          ..._recentInvoices.take(10).map((invoice) => _RecentInvoiceCard(invoice: invoice, isDark: isDark)),
         ],
       ),
     );
@@ -1225,17 +1852,19 @@ class _TopProductTile extends StatelessWidget {
               Text(CurrencyFormatter.format(product.revenue), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
             ],
           ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-              valueColor: AlwaysStoppedAnimation(rank <= 3 ? AppColors.secondary : AppColors.primaryLight),
+          if (!isLast) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: AppColors.surfaceVariant,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  rank == 1 ? AppColors.primary : rank <= 3 ? AppColors.secondary : AppColors.textHint,
+                ),
+              ),
             ),
-          ),
-          if (!isLast) const SizedBox(height: 12),
+          ],
         ],
       ),
     );
@@ -1243,12 +1872,13 @@ class _TopProductTile extends StatelessWidget {
 }
 
 class _RecentInvoice {
-  const _RecentInvoice({required this.id, required this.title, required this.subtitle, required this.date, required this.total, required this.icon, required this.color});
+  const _RecentInvoice({required this.id, required this.title, required this.subtitle, required this.date, required this.total, required this.currency, required this.icon, required this.color});
   final String id;
   final String title;
   final String subtitle;
   final String date;
   final double total;
+  final String currency;
   final IconData icon;
   final Color color;
 }
@@ -1258,22 +1888,29 @@ class _RecentInvoiceCard extends StatelessWidget {
   final _RecentInvoice invoice;
   final bool isDark;
 
+  String _formatDate(String isoDate) {
+    try {
+      final dt = DateTime.parse(isoDate);
+      return "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}";
+    } catch (_) {
+      return isoDate;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
             Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(
-                color: invoice.color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(invoice.icon, color: invoice.color, size: 22),
+              width: 38, height: 38,
+              decoration: BoxDecoration(color: invoice.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+              child: Icon(invoice.icon, color: invoice.color, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1281,12 +1918,17 @@ class _RecentInvoiceCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(invoice.title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text(invoice.subtitle, style: theme.textTheme.labelSmall?.copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textHint), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(invoice.subtitle, style: theme.textTheme.bodySmall?.copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
                 ],
               ),
             ),
-            Text(CurrencyFormatter.format(invoice.total), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: invoice.color)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(CurrencyFormatter.format(invoice.total), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: invoice.color)),
+                Text(_formatDate(invoice.date), style: theme.textTheme.labelSmall?.copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textHint)),
+              ],
+            ),
           ],
         ),
       ),
@@ -1304,15 +1946,7 @@ class _AccountMovement {
 }
 
 class _AllAccountMovement {
-  const _AllAccountMovement({
-    required this.date,
-    required this.accountName,
-    required this.accountCode,
-    required this.currency,
-    required this.description,
-    required this.debit,
-    required this.credit,
-  });
+  const _AllAccountMovement({required this.date, required this.accountName, required this.accountCode, required this.currency, required this.description, required this.debit, required this.credit});
   final String date;
   final String accountName;
   final String accountCode;
@@ -1342,4 +1976,32 @@ class _DebtItem {
   final String? phone;
 }
 
+class _CashBoxMovement {
+  const _CashBoxMovement({required this.id, required this.name, required this.type, required this.balance, required this.balanceType, required this.currency, required this.salesTotal, required this.salesCount, required this.purchaseTotal, required this.purchaseCount});
+  final int id;
+  final String name;
+  final String type;
+  final double balance;
+  final String balanceType;
+  final String currency;
+  final double salesTotal;
+  final int salesCount;
+  final double purchaseTotal;
+  final int purchaseCount;
+}
 
+class _InventoryItem {
+  const _InventoryItem({required this.id, required this.name, this.barcode, this.itemCode, required this.currentStock, required this.costPrice, required this.sellPrice, required this.minStock, this.warehouseName, this.categoryName, required this.isLowStock, required this.isOutOfStock});
+  final int id;
+  final String name;
+  final String? barcode;
+  final String? itemCode;
+  final double currentStock;
+  final double costPrice;
+  final double sellPrice;
+  final double minStock;
+  final String? warehouseName;
+  final String? categoryName;
+  final bool isLowStock;
+  final bool isOutOfStock;
+}
