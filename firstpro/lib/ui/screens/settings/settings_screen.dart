@@ -91,8 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool biometricAvailable = false;
     try {
       final localAuth = LocalAuthentication();
-      biometricAvailable = await localAuth.canCheckBiometric ||
-          await localAuth.isDeviceSupported();
+      biometricAvailable = await localAuth.isDeviceSupported();
     } on PlatformException {
       biometricAvailable = false;
     }
@@ -405,7 +404,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               final localAuth = LocalAuthentication();
                               final authenticated = await localAuth.authenticate(
                                 localizedReason: 'قم بالمصادقة لتفعيل الدخول بالبصمة',
-                                options: const AuthenticationOptions(
+                                options: AuthenticationOptions(
                                   stickyAuth: true,
                                   biometricOnly: true,
                                 ),

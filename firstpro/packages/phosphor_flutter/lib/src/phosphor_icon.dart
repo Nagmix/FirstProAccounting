@@ -1,11 +1,9 @@
-library phosphor_flutter;
-
 import 'package:flutter/material.dart';
 
 class PhosphorIcon extends Icon {
   const PhosphorIcon(
     IconData icon, {
-    super.key,
+    Key? key,
     double? size,
     double? fill,
     double? weight,
@@ -17,6 +15,7 @@ class PhosphorIcon extends Icon {
     TextDirection? textDirection,
   }) : super(
           icon,
+          key: key,
           color: color,
           fill: fill,
           grade: grade,

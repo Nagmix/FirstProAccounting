@@ -113,8 +113,7 @@ class _AppLockScreenState extends State<AppLockScreen>
 
       // Check biometric availability
       try {
-        _isBiometricAvailable = await _localAuth.canCheckBiometric ||
-            await _localAuth.isDeviceSupported();
+        _isBiometricAvailable = await _localAuth.isDeviceSupported();
         if (_isBiometricAvailable) {
           final biometricEnabled = await _db.getSetting('biometric_enabled');
           _isBiometricEnabled = biometricEnabled == '1';
@@ -191,7 +190,7 @@ class _AppLockScreenState extends State<AppLockScreen>
     try {
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'قم بالمصادقة للدخول إلى التطبيق',
-        options: const AuthenticationOptions(
+        options: AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: true,
         ),

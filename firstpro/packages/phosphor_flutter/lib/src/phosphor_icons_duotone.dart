@@ -3,7 +3,6 @@
 
 import 'package:flutter/widgets.dart';
 
-@staticIconProvider
 class PhosphorIconsDuotone {
   const PhosphorIconsDuotone();
 

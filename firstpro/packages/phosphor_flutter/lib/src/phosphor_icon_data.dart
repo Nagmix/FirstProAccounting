@@ -1,10 +1,7 @@
-library phosphor_flutter;
+// Compatibility layer for Flutter 3.44+ where IconData is final.
 
 import 'package:flutter/widgets.dart';
 
-/// Compatibility layer for Flutter 3.44+ where IconData is final.
 /// PhosphorIconData is now just an alias for IconData.
-typedef PhosphorIconData = IconData;
-
-/// PhosphorFlatIconData is now just an alias for IconData.
-typedef PhosphorFlatIconData = IconData;
+// Note: We can't use typedef for non-function types in library-mode Dart.
+// Instead, we just use IconData directly everywhere.
