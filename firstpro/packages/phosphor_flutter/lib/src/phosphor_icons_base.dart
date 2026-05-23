@@ -37,7 +37,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.acorn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.acorn.primary;
+        return PhosphorIconsDuotone.acorn;
     }
   }
 
@@ -61,7 +61,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.addressBook;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.addressBook.primary;
+        return PhosphorIconsDuotone.addressBook;
     }
   }
 
@@ -85,7 +85,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.addressBookTabs;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.addressBookTabs.primary;
+        return PhosphorIconsDuotone.addressBookTabs;
     }
   }
 
@@ -109,7 +109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.airTrafficControl;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.airTrafficControl.primary;
+        return PhosphorIconsDuotone.airTrafficControl;
     }
   }
 
@@ -133,7 +133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.airplane;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.airplane.primary;
+        return PhosphorIconsDuotone.airplane;
     }
   }
 
@@ -157,7 +157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.airplaneInFlight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.airplaneInFlight.primary;
+        return PhosphorIconsDuotone.airplaneInFlight;
     }
   }
 
@@ -181,7 +181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.airplaneLanding;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.airplaneLanding.primary;
+        return PhosphorIconsDuotone.airplaneLanding;
     }
   }
 
@@ -205,7 +205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.airplaneTakeoff;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.airplaneTakeoff.primary;
+        return PhosphorIconsDuotone.airplaneTakeoff;
     }
   }
 
@@ -229,7 +229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.airplaneTaxiing;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.airplaneTaxiing.primary;
+        return PhosphorIconsDuotone.airplaneTaxiing;
     }
   }
 
@@ -253,7 +253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.airplaneTilt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.airplaneTilt.primary;
+        return PhosphorIconsDuotone.airplaneTilt;
     }
   }
 
@@ -277,7 +277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.airplay;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.airplay.primary;
+        return PhosphorIconsDuotone.airplay;
     }
   }
 
@@ -301,7 +301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alarm;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alarm.primary;
+        return PhosphorIconsDuotone.alarm;
     }
   }
 
@@ -325,7 +325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alien;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alien.primary;
+        return PhosphorIconsDuotone.alien;
     }
   }
 
@@ -349,7 +349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignBottom;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignBottom.primary;
+        return PhosphorIconsDuotone.alignBottom;
     }
   }
 
@@ -373,7 +373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignBottomSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignBottomSimple.primary;
+        return PhosphorIconsDuotone.alignBottomSimple;
     }
   }
 
@@ -397,7 +397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignCenterHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignCenterHorizontal.primary;
+        return PhosphorIconsDuotone.alignCenterHorizontal;
     }
   }
 
@@ -421,7 +421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignCenterHorizontalSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignCenterHorizontalSimple.primary;
+        return PhosphorIconsDuotone.alignCenterHorizontalSimple;
     }
   }
 
@@ -445,7 +445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignCenterVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignCenterVertical.primary;
+        return PhosphorIconsDuotone.alignCenterVertical;
     }
   }
 
@@ -469,7 +469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignCenterVerticalSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignCenterVerticalSimple.primary;
+        return PhosphorIconsDuotone.alignCenterVerticalSimple;
     }
   }
 
@@ -493,7 +493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignLeft.primary;
+        return PhosphorIconsDuotone.alignLeft;
     }
   }
 
@@ -517,7 +517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignLeftSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignLeftSimple.primary;
+        return PhosphorIconsDuotone.alignLeftSimple;
     }
   }
 
@@ -541,7 +541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignRight.primary;
+        return PhosphorIconsDuotone.alignRight;
     }
   }
 
@@ -565,7 +565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignRightSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignRightSimple.primary;
+        return PhosphorIconsDuotone.alignRightSimple;
     }
   }
 
@@ -589,7 +589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignTop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignTop.primary;
+        return PhosphorIconsDuotone.alignTop;
     }
   }
 
@@ -613,7 +613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.alignTopSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.alignTopSimple.primary;
+        return PhosphorIconsDuotone.alignTopSimple;
     }
   }
 
@@ -637,7 +637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.amazonLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.amazonLogo.primary;
+        return PhosphorIconsDuotone.amazonLogo;
     }
   }
 
@@ -661,7 +661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ambulance;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ambulance.primary;
+        return PhosphorIconsDuotone.ambulance;
     }
   }
 
@@ -685,7 +685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.anchor;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.anchor.primary;
+        return PhosphorIconsDuotone.anchor;
     }
   }
 
@@ -709,7 +709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.anchorSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.anchorSimple.primary;
+        return PhosphorIconsDuotone.anchorSimple;
     }
   }
 
@@ -733,7 +733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.androidLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.androidLogo.primary;
+        return PhosphorIconsDuotone.androidLogo;
     }
   }
 
@@ -757,7 +757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.angle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.angle.primary;
+        return PhosphorIconsDuotone.angle;
     }
   }
 
@@ -781,7 +781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.angularLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.angularLogo.primary;
+        return PhosphorIconsDuotone.angularLogo;
     }
   }
 
@@ -805,7 +805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.aperture;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.aperture.primary;
+        return PhosphorIconsDuotone.aperture;
     }
   }
 
@@ -829,7 +829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.appStoreLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.appStoreLogo.primary;
+        return PhosphorIconsDuotone.appStoreLogo;
     }
   }
 
@@ -853,7 +853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.appWindow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.appWindow.primary;
+        return PhosphorIconsDuotone.appWindow;
     }
   }
 
@@ -877,7 +877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.appleLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.appleLogo.primary;
+        return PhosphorIconsDuotone.appleLogo;
     }
   }
 
@@ -901,7 +901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.applePodcastsLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.applePodcastsLogo.primary;
+        return PhosphorIconsDuotone.applePodcastsLogo;
     }
   }
 
@@ -925,7 +925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.approximateEquals;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.approximateEquals.primary;
+        return PhosphorIconsDuotone.approximateEquals;
     }
   }
 
@@ -949,7 +949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.archive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.archive.primary;
+        return PhosphorIconsDuotone.archive;
     }
   }
 
@@ -973,7 +973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.armchair;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.armchair.primary;
+        return PhosphorIconsDuotone.armchair;
     }
   }
 
@@ -997,7 +997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowArcLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowArcLeft.primary;
+        return PhosphorIconsDuotone.arrowArcLeft;
     }
   }
 
@@ -1021,7 +1021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowArcRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowArcRight.primary;
+        return PhosphorIconsDuotone.arrowArcRight;
     }
   }
 
@@ -1045,7 +1045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendDoubleUpLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendDoubleUpLeft.primary;
+        return PhosphorIconsDuotone.arrowBendDoubleUpLeft;
     }
   }
 
@@ -1069,7 +1069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendDoubleUpRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendDoubleUpRight.primary;
+        return PhosphorIconsDuotone.arrowBendDoubleUpRight;
     }
   }
 
@@ -1093,7 +1093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendDownLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendDownLeft.primary;
+        return PhosphorIconsDuotone.arrowBendDownLeft;
     }
   }
 
@@ -1117,7 +1117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendDownRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendDownRight.primary;
+        return PhosphorIconsDuotone.arrowBendDownRight;
     }
   }
 
@@ -1141,7 +1141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendLeftDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendLeftDown.primary;
+        return PhosphorIconsDuotone.arrowBendLeftDown;
     }
   }
 
@@ -1165,7 +1165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendLeftUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendLeftUp.primary;
+        return PhosphorIconsDuotone.arrowBendLeftUp;
     }
   }
 
@@ -1189,7 +1189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendRightDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendRightDown.primary;
+        return PhosphorIconsDuotone.arrowBendRightDown;
     }
   }
 
@@ -1213,7 +1213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendRightUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendRightUp.primary;
+        return PhosphorIconsDuotone.arrowBendRightUp;
     }
   }
 
@@ -1237,7 +1237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendUpLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendUpLeft.primary;
+        return PhosphorIconsDuotone.arrowBendUpLeft;
     }
   }
 
@@ -1261,7 +1261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowBendUpRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowBendUpRight.primary;
+        return PhosphorIconsDuotone.arrowBendUpRight;
     }
   }
 
@@ -1285,7 +1285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCircleDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCircleDown.primary;
+        return PhosphorIconsDuotone.arrowCircleDown;
     }
   }
 
@@ -1309,7 +1309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCircleDownLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCircleDownLeft.primary;
+        return PhosphorIconsDuotone.arrowCircleDownLeft;
     }
   }
 
@@ -1333,7 +1333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCircleDownRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCircleDownRight.primary;
+        return PhosphorIconsDuotone.arrowCircleDownRight;
     }
   }
 
@@ -1357,7 +1357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCircleLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCircleLeft.primary;
+        return PhosphorIconsDuotone.arrowCircleLeft;
     }
   }
 
@@ -1381,7 +1381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCircleRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCircleRight.primary;
+        return PhosphorIconsDuotone.arrowCircleRight;
     }
   }
 
@@ -1405,7 +1405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCircleUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCircleUp.primary;
+        return PhosphorIconsDuotone.arrowCircleUp;
     }
   }
 
@@ -1429,7 +1429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCircleUpLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCircleUpLeft.primary;
+        return PhosphorIconsDuotone.arrowCircleUpLeft;
     }
   }
 
@@ -1453,7 +1453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCircleUpRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCircleUpRight.primary;
+        return PhosphorIconsDuotone.arrowCircleUpRight;
     }
   }
 
@@ -1477,7 +1477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowClockwise;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowClockwise.primary;
+        return PhosphorIconsDuotone.arrowClockwise;
     }
   }
 
@@ -1501,7 +1501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowCounterClockwise;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowCounterClockwise.primary;
+        return PhosphorIconsDuotone.arrowCounterClockwise;
     }
   }
 
@@ -1525,7 +1525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowDown.primary;
+        return PhosphorIconsDuotone.arrowDown;
     }
   }
 
@@ -1549,7 +1549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowDownLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowDownLeft.primary;
+        return PhosphorIconsDuotone.arrowDownLeft;
     }
   }
 
@@ -1573,7 +1573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowDownRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowDownRight.primary;
+        return PhosphorIconsDuotone.arrowDownRight;
     }
   }
 
@@ -1597,7 +1597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowDownLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowDownLeft.primary;
+        return PhosphorIconsDuotone.arrowElbowDownLeft;
     }
   }
 
@@ -1621,7 +1621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowDownRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowDownRight.primary;
+        return PhosphorIconsDuotone.arrowElbowDownRight;
     }
   }
 
@@ -1645,7 +1645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowLeft.primary;
+        return PhosphorIconsDuotone.arrowElbowLeft;
     }
   }
 
@@ -1669,7 +1669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowLeftDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowLeftDown.primary;
+        return PhosphorIconsDuotone.arrowElbowLeftDown;
     }
   }
 
@@ -1693,7 +1693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowLeftUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowLeftUp.primary;
+        return PhosphorIconsDuotone.arrowElbowLeftUp;
     }
   }
 
@@ -1717,7 +1717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowRight.primary;
+        return PhosphorIconsDuotone.arrowElbowRight;
     }
   }
 
@@ -1741,7 +1741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowRightDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowRightDown.primary;
+        return PhosphorIconsDuotone.arrowElbowRightDown;
     }
   }
 
@@ -1765,7 +1765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowRightUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowRightUp.primary;
+        return PhosphorIconsDuotone.arrowElbowRightUp;
     }
   }
 
@@ -1789,7 +1789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowUpLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowUpLeft.primary;
+        return PhosphorIconsDuotone.arrowElbowUpLeft;
     }
   }
 
@@ -1813,7 +1813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowElbowUpRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowElbowUpRight.primary;
+        return PhosphorIconsDuotone.arrowElbowUpRight;
     }
   }
 
@@ -1837,7 +1837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatDown.primary;
+        return PhosphorIconsDuotone.arrowFatDown;
     }
   }
 
@@ -1861,7 +1861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLeft.primary;
+        return PhosphorIconsDuotone.arrowFatLeft;
     }
   }
 
@@ -1885,7 +1885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLineDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLineDown.primary;
+        return PhosphorIconsDuotone.arrowFatLineDown;
     }
   }
 
@@ -1909,7 +1909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLineLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLineLeft.primary;
+        return PhosphorIconsDuotone.arrowFatLineLeft;
     }
   }
 
@@ -1933,7 +1933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLineRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLineRight.primary;
+        return PhosphorIconsDuotone.arrowFatLineRight;
     }
   }
 
@@ -1957,7 +1957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLineUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLineUp.primary;
+        return PhosphorIconsDuotone.arrowFatLineUp;
     }
   }
 
@@ -1981,7 +1981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLinesDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLinesDown.primary;
+        return PhosphorIconsDuotone.arrowFatLinesDown;
     }
   }
 
@@ -2005,7 +2005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLinesLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLinesLeft.primary;
+        return PhosphorIconsDuotone.arrowFatLinesLeft;
     }
   }
 
@@ -2029,7 +2029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLinesRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLinesRight.primary;
+        return PhosphorIconsDuotone.arrowFatLinesRight;
     }
   }
 
@@ -2053,7 +2053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatLinesUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatLinesUp.primary;
+        return PhosphorIconsDuotone.arrowFatLinesUp;
     }
   }
 
@@ -2077,7 +2077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatRight.primary;
+        return PhosphorIconsDuotone.arrowFatRight;
     }
   }
 
@@ -2101,7 +2101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowFatUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowFatUp.primary;
+        return PhosphorIconsDuotone.arrowFatUp;
     }
   }
 
@@ -2125,7 +2125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLeft.primary;
+        return PhosphorIconsDuotone.arrowLeft;
     }
   }
 
@@ -2149,7 +2149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLineDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLineDown.primary;
+        return PhosphorIconsDuotone.arrowLineDown;
     }
   }
 
@@ -2173,7 +2173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLineDownLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLineDownLeft.primary;
+        return PhosphorIconsDuotone.arrowLineDownLeft;
     }
   }
 
@@ -2197,7 +2197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLineDownRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLineDownRight.primary;
+        return PhosphorIconsDuotone.arrowLineDownRight;
     }
   }
 
@@ -2221,7 +2221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLineLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLineLeft.primary;
+        return PhosphorIconsDuotone.arrowLineLeft;
     }
   }
 
@@ -2245,7 +2245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLineRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLineRight.primary;
+        return PhosphorIconsDuotone.arrowLineRight;
     }
   }
 
@@ -2269,7 +2269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLineUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLineUp.primary;
+        return PhosphorIconsDuotone.arrowLineUp;
     }
   }
 
@@ -2293,7 +2293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLineUpLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLineUpLeft.primary;
+        return PhosphorIconsDuotone.arrowLineUpLeft;
     }
   }
 
@@ -2317,7 +2317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowLineUpRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowLineUpRight.primary;
+        return PhosphorIconsDuotone.arrowLineUpRight;
     }
   }
 
@@ -2341,7 +2341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowRight.primary;
+        return PhosphorIconsDuotone.arrowRight;
     }
   }
 
@@ -2365,7 +2365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareDown.primary;
+        return PhosphorIconsDuotone.arrowSquareDown;
     }
   }
 
@@ -2389,7 +2389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareDownLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareDownLeft.primary;
+        return PhosphorIconsDuotone.arrowSquareDownLeft;
     }
   }
 
@@ -2413,7 +2413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareDownRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareDownRight.primary;
+        return PhosphorIconsDuotone.arrowSquareDownRight;
     }
   }
 
@@ -2437,7 +2437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareIn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareIn.primary;
+        return PhosphorIconsDuotone.arrowSquareIn;
     }
   }
 
@@ -2461,7 +2461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareLeft.primary;
+        return PhosphorIconsDuotone.arrowSquareLeft;
     }
   }
 
@@ -2485,7 +2485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareOut;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareOut.primary;
+        return PhosphorIconsDuotone.arrowSquareOut;
     }
   }
 
@@ -2509,7 +2509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareRight.primary;
+        return PhosphorIconsDuotone.arrowSquareRight;
     }
   }
 
@@ -2533,7 +2533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareUp.primary;
+        return PhosphorIconsDuotone.arrowSquareUp;
     }
   }
 
@@ -2557,7 +2557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareUpLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareUpLeft.primary;
+        return PhosphorIconsDuotone.arrowSquareUpLeft;
     }
   }
 
@@ -2581,7 +2581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowSquareUpRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowSquareUpRight.primary;
+        return PhosphorIconsDuotone.arrowSquareUpRight;
     }
   }
 
@@ -2605,7 +2605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowUDownLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowUDownLeft.primary;
+        return PhosphorIconsDuotone.arrowUDownLeft;
     }
   }
 
@@ -2629,7 +2629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowUDownRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowUDownRight.primary;
+        return PhosphorIconsDuotone.arrowUDownRight;
     }
   }
 
@@ -2653,7 +2653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowULeftDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowULeftDown.primary;
+        return PhosphorIconsDuotone.arrowULeftDown;
     }
   }
 
@@ -2677,7 +2677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowULeftUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowULeftUp.primary;
+        return PhosphorIconsDuotone.arrowULeftUp;
     }
   }
 
@@ -2701,7 +2701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowURightDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowURightDown.primary;
+        return PhosphorIconsDuotone.arrowURightDown;
     }
   }
 
@@ -2725,7 +2725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowURightUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowURightUp.primary;
+        return PhosphorIconsDuotone.arrowURightUp;
     }
   }
 
@@ -2749,7 +2749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowUUpLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowUUpLeft.primary;
+        return PhosphorIconsDuotone.arrowUUpLeft;
     }
   }
 
@@ -2773,7 +2773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowUUpRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowUUpRight.primary;
+        return PhosphorIconsDuotone.arrowUUpRight;
     }
   }
 
@@ -2797,7 +2797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowUp.primary;
+        return PhosphorIconsDuotone.arrowUp;
     }
   }
 
@@ -2821,7 +2821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowUpLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowUpLeft.primary;
+        return PhosphorIconsDuotone.arrowUpLeft;
     }
   }
 
@@ -2845,7 +2845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowUpRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowUpRight.primary;
+        return PhosphorIconsDuotone.arrowUpRight;
     }
   }
 
@@ -2869,7 +2869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsClockwise;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsClockwise.primary;
+        return PhosphorIconsDuotone.arrowsClockwise;
     }
   }
 
@@ -2893,7 +2893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsCounterClockwise;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsCounterClockwise.primary;
+        return PhosphorIconsDuotone.arrowsCounterClockwise;
     }
   }
 
@@ -2917,7 +2917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsDownUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsDownUp.primary;
+        return PhosphorIconsDuotone.arrowsDownUp;
     }
   }
 
@@ -2941,7 +2941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsHorizontal.primary;
+        return PhosphorIconsDuotone.arrowsHorizontal;
     }
   }
 
@@ -2965,7 +2965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsIn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsIn.primary;
+        return PhosphorIconsDuotone.arrowsIn;
     }
   }
 
@@ -2989,7 +2989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsInCardinal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsInCardinal.primary;
+        return PhosphorIconsDuotone.arrowsInCardinal;
     }
   }
 
@@ -3013,7 +3013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsInLineHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsInLineHorizontal.primary;
+        return PhosphorIconsDuotone.arrowsInLineHorizontal;
     }
   }
 
@@ -3037,7 +3037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsInLineVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsInLineVertical.primary;
+        return PhosphorIconsDuotone.arrowsInLineVertical;
     }
   }
 
@@ -3061,7 +3061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsInSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsInSimple.primary;
+        return PhosphorIconsDuotone.arrowsInSimple;
     }
   }
 
@@ -3085,7 +3085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsLeftRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsLeftRight.primary;
+        return PhosphorIconsDuotone.arrowsLeftRight;
     }
   }
 
@@ -3109,7 +3109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsMerge;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsMerge.primary;
+        return PhosphorIconsDuotone.arrowsMerge;
     }
   }
 
@@ -3133,7 +3133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsOut;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsOut.primary;
+        return PhosphorIconsDuotone.arrowsOut;
     }
   }
 
@@ -3157,7 +3157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsOutCardinal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsOutCardinal.primary;
+        return PhosphorIconsDuotone.arrowsOutCardinal;
     }
   }
 
@@ -3181,7 +3181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsOutLineHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsOutLineHorizontal.primary;
+        return PhosphorIconsDuotone.arrowsOutLineHorizontal;
     }
   }
 
@@ -3205,7 +3205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsOutLineVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsOutLineVertical.primary;
+        return PhosphorIconsDuotone.arrowsOutLineVertical;
     }
   }
 
@@ -3229,7 +3229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsOutSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsOutSimple.primary;
+        return PhosphorIconsDuotone.arrowsOutSimple;
     }
   }
 
@@ -3253,7 +3253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsSplit;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsSplit.primary;
+        return PhosphorIconsDuotone.arrowsSplit;
     }
   }
 
@@ -3277,7 +3277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.arrowsVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.arrowsVertical.primary;
+        return PhosphorIconsDuotone.arrowsVertical;
     }
   }
 
@@ -3301,7 +3301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.article;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.article.primary;
+        return PhosphorIconsDuotone.article;
     }
   }
 
@@ -3325,7 +3325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.articleMedium;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.articleMedium.primary;
+        return PhosphorIconsDuotone.articleMedium;
     }
   }
 
@@ -3349,7 +3349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.articleNyTimes;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.articleNyTimes.primary;
+        return PhosphorIconsDuotone.articleNyTimes;
     }
   }
 
@@ -3373,7 +3373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.asclepius;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.asclepius.primary;
+        return PhosphorIconsDuotone.asclepius;
     }
   }
 
@@ -3397,7 +3397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.asterisk;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.asterisk.primary;
+        return PhosphorIconsDuotone.asterisk;
     }
   }
 
@@ -3421,7 +3421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.asteriskSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.asteriskSimple.primary;
+        return PhosphorIconsDuotone.asteriskSimple;
     }
   }
 
@@ -3445,7 +3445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.at;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.at.primary;
+        return PhosphorIconsDuotone.at;
     }
   }
 
@@ -3469,7 +3469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.atom;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.atom.primary;
+        return PhosphorIconsDuotone.atom;
     }
   }
 
@@ -3493,7 +3493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.avocado;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.avocado.primary;
+        return PhosphorIconsDuotone.avocado;
     }
   }
 
@@ -3517,7 +3517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.axe;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.axe.primary;
+        return PhosphorIconsDuotone.axe;
     }
   }
 
@@ -3541,7 +3541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.baby;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.baby.primary;
+        return PhosphorIconsDuotone.baby;
     }
   }
 
@@ -3565,7 +3565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.babyCarriage;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.babyCarriage.primary;
+        return PhosphorIconsDuotone.babyCarriage;
     }
   }
 
@@ -3589,7 +3589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.backpack;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.backpack.primary;
+        return PhosphorIconsDuotone.backpack;
     }
   }
 
@@ -3613,7 +3613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.backspace;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.backspace.primary;
+        return PhosphorIconsDuotone.backspace;
     }
   }
 
@@ -3637,7 +3637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bag;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bag.primary;
+        return PhosphorIconsDuotone.bag;
     }
   }
 
@@ -3661,7 +3661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bagSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bagSimple.primary;
+        return PhosphorIconsDuotone.bagSimple;
     }
   }
 
@@ -3685,7 +3685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.balloon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.balloon.primary;
+        return PhosphorIconsDuotone.balloon;
     }
   }
 
@@ -3709,7 +3709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bandaids;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bandaids.primary;
+        return PhosphorIconsDuotone.bandaids;
     }
   }
 
@@ -3733,7 +3733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bank;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bank.primary;
+        return PhosphorIconsDuotone.bank;
     }
   }
 
@@ -3757,7 +3757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.barbell;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.barbell.primary;
+        return PhosphorIconsDuotone.barbell;
     }
   }
 
@@ -3781,7 +3781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.barcode;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.barcode.primary;
+        return PhosphorIconsDuotone.barcode;
     }
   }
 
@@ -3805,7 +3805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.barn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.barn.primary;
+        return PhosphorIconsDuotone.barn;
     }
   }
 
@@ -3829,7 +3829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.barricade;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.barricade.primary;
+        return PhosphorIconsDuotone.barricade;
     }
   }
 
@@ -3853,7 +3853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.baseball;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.baseball.primary;
+        return PhosphorIconsDuotone.baseball;
     }
   }
 
@@ -3877,7 +3877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.baseballCap;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.baseballCap.primary;
+        return PhosphorIconsDuotone.baseballCap;
     }
   }
 
@@ -3901,7 +3901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.baseballHelmet;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.baseballHelmet.primary;
+        return PhosphorIconsDuotone.baseballHelmet;
     }
   }
 
@@ -3925,7 +3925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.basket;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.basket.primary;
+        return PhosphorIconsDuotone.basket;
     }
   }
 
@@ -3949,7 +3949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.basketball;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.basketball.primary;
+        return PhosphorIconsDuotone.basketball;
     }
   }
 
@@ -3973,7 +3973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bathtub;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bathtub.primary;
+        return PhosphorIconsDuotone.bathtub;
     }
   }
 
@@ -3997,7 +3997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryCharging;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryCharging.primary;
+        return PhosphorIconsDuotone.batteryCharging;
     }
   }
 
@@ -4021,7 +4021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryChargingVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryChargingVertical.primary;
+        return PhosphorIconsDuotone.batteryChargingVertical;
     }
   }
 
@@ -4045,7 +4045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryEmpty;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryEmpty.primary;
+        return PhosphorIconsDuotone.batteryEmpty;
     }
   }
 
@@ -4069,7 +4069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryFull;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryFull.primary;
+        return PhosphorIconsDuotone.batteryFull;
     }
   }
 
@@ -4093,7 +4093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryHigh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryHigh.primary;
+        return PhosphorIconsDuotone.batteryHigh;
     }
   }
 
@@ -4117,7 +4117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryLow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryLow.primary;
+        return PhosphorIconsDuotone.batteryLow;
     }
   }
 
@@ -4141,7 +4141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryMedium;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryMedium.primary;
+        return PhosphorIconsDuotone.batteryMedium;
     }
   }
 
@@ -4165,7 +4165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryPlus.primary;
+        return PhosphorIconsDuotone.batteryPlus;
     }
   }
 
@@ -4189,7 +4189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryPlusVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryPlusVertical.primary;
+        return PhosphorIconsDuotone.batteryPlusVertical;
     }
   }
 
@@ -4213,7 +4213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryVerticalEmpty;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryVerticalEmpty.primary;
+        return PhosphorIconsDuotone.batteryVerticalEmpty;
     }
   }
 
@@ -4237,7 +4237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryVerticalFull;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryVerticalFull.primary;
+        return PhosphorIconsDuotone.batteryVerticalFull;
     }
   }
 
@@ -4261,7 +4261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryVerticalHigh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryVerticalHigh.primary;
+        return PhosphorIconsDuotone.batteryVerticalHigh;
     }
   }
 
@@ -4285,7 +4285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryVerticalLow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryVerticalLow.primary;
+        return PhosphorIconsDuotone.batteryVerticalLow;
     }
   }
 
@@ -4309,7 +4309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryVerticalMedium;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryVerticalMedium.primary;
+        return PhosphorIconsDuotone.batteryVerticalMedium;
     }
   }
 
@@ -4333,7 +4333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryWarning;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryWarning.primary;
+        return PhosphorIconsDuotone.batteryWarning;
     }
   }
 
@@ -4357,7 +4357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.batteryWarningVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.batteryWarningVertical.primary;
+        return PhosphorIconsDuotone.batteryWarningVertical;
     }
   }
 
@@ -4381,7 +4381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.beachBall;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.beachBall.primary;
+        return PhosphorIconsDuotone.beachBall;
     }
   }
 
@@ -4405,7 +4405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.beanie;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.beanie.primary;
+        return PhosphorIconsDuotone.beanie;
     }
   }
 
@@ -4429,7 +4429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bed.primary;
+        return PhosphorIconsDuotone.bed;
     }
   }
 
@@ -4453,7 +4453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.beerBottle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.beerBottle.primary;
+        return PhosphorIconsDuotone.beerBottle;
     }
   }
 
@@ -4477,7 +4477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.beerStein;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.beerStein.primary;
+        return PhosphorIconsDuotone.beerStein;
     }
   }
 
@@ -4501,7 +4501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.behanceLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.behanceLogo.primary;
+        return PhosphorIconsDuotone.behanceLogo;
     }
   }
 
@@ -4525,7 +4525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bell;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bell.primary;
+        return PhosphorIconsDuotone.bell;
     }
   }
 
@@ -4549,7 +4549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bellRinging;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bellRinging.primary;
+        return PhosphorIconsDuotone.bellRinging;
     }
   }
 
@@ -4573,7 +4573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bellSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bellSimple.primary;
+        return PhosphorIconsDuotone.bellSimple;
     }
   }
 
@@ -4597,7 +4597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bellSimpleRinging;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bellSimpleRinging.primary;
+        return PhosphorIconsDuotone.bellSimpleRinging;
     }
   }
 
@@ -4621,7 +4621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bellSimpleSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bellSimpleSlash.primary;
+        return PhosphorIconsDuotone.bellSimpleSlash;
     }
   }
 
@@ -4645,7 +4645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bellSimpleZ;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bellSimpleZ.primary;
+        return PhosphorIconsDuotone.bellSimpleZ;
     }
   }
 
@@ -4669,7 +4669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bellSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bellSlash.primary;
+        return PhosphorIconsDuotone.bellSlash;
     }
   }
 
@@ -4693,7 +4693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bellZ;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bellZ.primary;
+        return PhosphorIconsDuotone.bellZ;
     }
   }
 
@@ -4717,7 +4717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.belt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.belt.primary;
+        return PhosphorIconsDuotone.belt;
     }
   }
 
@@ -4741,7 +4741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bezierCurve;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bezierCurve.primary;
+        return PhosphorIconsDuotone.bezierCurve;
     }
   }
 
@@ -4765,7 +4765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bicycle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bicycle.primary;
+        return PhosphorIconsDuotone.bicycle;
     }
   }
 
@@ -4789,7 +4789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.binary;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.binary.primary;
+        return PhosphorIconsDuotone.binary;
     }
   }
 
@@ -4813,7 +4813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.binoculars;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.binoculars.primary;
+        return PhosphorIconsDuotone.binoculars;
     }
   }
 
@@ -4837,7 +4837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.biohazard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.biohazard.primary;
+        return PhosphorIconsDuotone.biohazard;
     }
   }
 
@@ -4861,7 +4861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bird;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bird.primary;
+        return PhosphorIconsDuotone.bird;
     }
   }
 
@@ -4885,7 +4885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.blueprint;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.blueprint.primary;
+        return PhosphorIconsDuotone.blueprint;
     }
   }
 
@@ -4909,7 +4909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bluetooth;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bluetooth.primary;
+        return PhosphorIconsDuotone.bluetooth;
     }
   }
 
@@ -4933,7 +4933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bluetoothConnected;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bluetoothConnected.primary;
+        return PhosphorIconsDuotone.bluetoothConnected;
     }
   }
 
@@ -4957,7 +4957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bluetoothSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bluetoothSlash.primary;
+        return PhosphorIconsDuotone.bluetoothSlash;
     }
   }
 
@@ -4981,7 +4981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bluetoothX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bluetoothX.primary;
+        return PhosphorIconsDuotone.bluetoothX;
     }
   }
 
@@ -5005,7 +5005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.boat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.boat.primary;
+        return PhosphorIconsDuotone.boat;
     }
   }
 
@@ -5029,7 +5029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bomb;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bomb.primary;
+        return PhosphorIconsDuotone.bomb;
     }
   }
 
@@ -5053,7 +5053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bone.primary;
+        return PhosphorIconsDuotone.bone;
     }
   }
 
@@ -5077,7 +5077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.book;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.book.primary;
+        return PhosphorIconsDuotone.book;
     }
   }
 
@@ -5101,7 +5101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bookBookmark;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bookBookmark.primary;
+        return PhosphorIconsDuotone.bookBookmark;
     }
   }
 
@@ -5125,7 +5125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bookOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bookOpen.primary;
+        return PhosphorIconsDuotone.bookOpen;
     }
   }
 
@@ -5149,7 +5149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bookOpenText;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bookOpenText.primary;
+        return PhosphorIconsDuotone.bookOpenText;
     }
   }
 
@@ -5173,7 +5173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bookOpenUser;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bookOpenUser.primary;
+        return PhosphorIconsDuotone.bookOpenUser;
     }
   }
 
@@ -5197,7 +5197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bookmark;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bookmark.primary;
+        return PhosphorIconsDuotone.bookmark;
     }
   }
 
@@ -5221,7 +5221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bookmarkSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bookmarkSimple.primary;
+        return PhosphorIconsDuotone.bookmarkSimple;
     }
   }
 
@@ -5245,7 +5245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bookmarks;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bookmarks.primary;
+        return PhosphorIconsDuotone.bookmarks;
     }
   }
 
@@ -5269,7 +5269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bookmarksSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bookmarksSimple.primary;
+        return PhosphorIconsDuotone.bookmarksSimple;
     }
   }
 
@@ -5293,7 +5293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.books;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.books.primary;
+        return PhosphorIconsDuotone.books;
     }
   }
 
@@ -5317,7 +5317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.boot;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.boot.primary;
+        return PhosphorIconsDuotone.boot;
     }
   }
 
@@ -5341,7 +5341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.boules;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.boules.primary;
+        return PhosphorIconsDuotone.boules;
     }
   }
 
@@ -5365,7 +5365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.boundingBox;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.boundingBox.primary;
+        return PhosphorIconsDuotone.boundingBox;
     }
   }
 
@@ -5389,7 +5389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bowlFood;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bowlFood.primary;
+        return PhosphorIconsDuotone.bowlFood;
     }
   }
 
@@ -5413,7 +5413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bowlSteam;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bowlSteam.primary;
+        return PhosphorIconsDuotone.bowlSteam;
     }
   }
 
@@ -5437,7 +5437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bowlingBall;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bowlingBall.primary;
+        return PhosphorIconsDuotone.bowlingBall;
     }
   }
 
@@ -5461,7 +5461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.boxArrowDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.boxArrowDown.primary;
+        return PhosphorIconsDuotone.boxArrowDown;
     }
   }
 
@@ -5485,7 +5485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.boxArrowUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.boxArrowUp.primary;
+        return PhosphorIconsDuotone.boxArrowUp;
     }
   }
 
@@ -5509,7 +5509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.boxingGlove;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.boxingGlove.primary;
+        return PhosphorIconsDuotone.boxingGlove;
     }
   }
 
@@ -5533,7 +5533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bracketsAngle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bracketsAngle.primary;
+        return PhosphorIconsDuotone.bracketsAngle;
     }
   }
 
@@ -5557,7 +5557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bracketsCurly;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bracketsCurly.primary;
+        return PhosphorIconsDuotone.bracketsCurly;
     }
   }
 
@@ -5581,7 +5581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bracketsRound;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bracketsRound.primary;
+        return PhosphorIconsDuotone.bracketsRound;
     }
   }
 
@@ -5605,7 +5605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bracketsSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bracketsSquare.primary;
+        return PhosphorIconsDuotone.bracketsSquare;
     }
   }
 
@@ -5629,7 +5629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.brain;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.brain.primary;
+        return PhosphorIconsDuotone.brain;
     }
   }
 
@@ -5653,7 +5653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.brandy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.brandy.primary;
+        return PhosphorIconsDuotone.brandy;
     }
   }
 
@@ -5677,7 +5677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bread;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bread.primary;
+        return PhosphorIconsDuotone.bread;
     }
   }
 
@@ -5701,7 +5701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bridge;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bridge.primary;
+        return PhosphorIconsDuotone.bridge;
     }
   }
 
@@ -5725,7 +5725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.briefcase;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.briefcase.primary;
+        return PhosphorIconsDuotone.briefcase;
     }
   }
 
@@ -5749,7 +5749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.briefcaseMetal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.briefcaseMetal.primary;
+        return PhosphorIconsDuotone.briefcaseMetal;
     }
   }
 
@@ -5773,7 +5773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.broadcast;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.broadcast.primary;
+        return PhosphorIconsDuotone.broadcast;
     }
   }
 
@@ -5797,7 +5797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.broom;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.broom.primary;
+        return PhosphorIconsDuotone.broom;
     }
   }
 
@@ -5821,7 +5821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.browser;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.browser.primary;
+        return PhosphorIconsDuotone.browser;
     }
   }
 
@@ -5845,7 +5845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.browsers;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.browsers.primary;
+        return PhosphorIconsDuotone.browsers;
     }
   }
 
@@ -5869,7 +5869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bug;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bug.primary;
+        return PhosphorIconsDuotone.bug;
     }
   }
 
@@ -5893,7 +5893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bugBeetle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bugBeetle.primary;
+        return PhosphorIconsDuotone.bugBeetle;
     }
   }
 
@@ -5917,7 +5917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bugDroid;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bugDroid.primary;
+        return PhosphorIconsDuotone.bugDroid;
     }
   }
 
@@ -5941,7 +5941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.building;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.building.primary;
+        return PhosphorIconsDuotone.building;
     }
   }
 
@@ -5965,7 +5965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.buildingApartment;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.buildingApartment.primary;
+        return PhosphorIconsDuotone.buildingApartment;
     }
   }
 
@@ -5989,7 +5989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.buildingOffice;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.buildingOffice.primary;
+        return PhosphorIconsDuotone.buildingOffice;
     }
   }
 
@@ -6013,7 +6013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.buildings;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.buildings.primary;
+        return PhosphorIconsDuotone.buildings;
     }
   }
 
@@ -6037,7 +6037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bulldozer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bulldozer.primary;
+        return PhosphorIconsDuotone.bulldozer;
     }
   }
 
@@ -6061,7 +6061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.bus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.bus.primary;
+        return PhosphorIconsDuotone.bus;
     }
   }
 
@@ -6085,7 +6085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.butterfly;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.butterfly.primary;
+        return PhosphorIconsDuotone.butterfly;
     }
   }
 
@@ -6109,7 +6109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cableCar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cableCar.primary;
+        return PhosphorIconsDuotone.cableCar;
     }
   }
 
@@ -6133,7 +6133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cactus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cactus.primary;
+        return PhosphorIconsDuotone.cactus;
     }
   }
 
@@ -6157,7 +6157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cake;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cake.primary;
+        return PhosphorIconsDuotone.cake;
     }
   }
 
@@ -6181,7 +6181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calculator;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calculator.primary;
+        return PhosphorIconsDuotone.calculator;
     }
   }
 
@@ -6205,7 +6205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendar.primary;
+        return PhosphorIconsDuotone.calendar;
     }
   }
 
@@ -6229,7 +6229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarBlank;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarBlank.primary;
+        return PhosphorIconsDuotone.calendarBlank;
     }
   }
 
@@ -6253,7 +6253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarCheck;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarCheck.primary;
+        return PhosphorIconsDuotone.calendarCheck;
     }
   }
 
@@ -6277,7 +6277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarDot;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarDot.primary;
+        return PhosphorIconsDuotone.calendarDot;
     }
   }
 
@@ -6301,7 +6301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarDots;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarDots.primary;
+        return PhosphorIconsDuotone.calendarDots;
     }
   }
 
@@ -6325,7 +6325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarHeart;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarHeart.primary;
+        return PhosphorIconsDuotone.calendarHeart;
     }
   }
 
@@ -6349,7 +6349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarMinus.primary;
+        return PhosphorIconsDuotone.calendarMinus;
     }
   }
 
@@ -6373,7 +6373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarPlus.primary;
+        return PhosphorIconsDuotone.calendarPlus;
     }
   }
 
@@ -6397,7 +6397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarSlash.primary;
+        return PhosphorIconsDuotone.calendarSlash;
     }
   }
 
@@ -6421,7 +6421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarStar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarStar.primary;
+        return PhosphorIconsDuotone.calendarStar;
     }
   }
 
@@ -6445,7 +6445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.calendarX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.calendarX.primary;
+        return PhosphorIconsDuotone.calendarX;
     }
   }
 
@@ -6469,7 +6469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.callBell;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.callBell.primary;
+        return PhosphorIconsDuotone.callBell;
     }
   }
 
@@ -6493,7 +6493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.camera;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.camera.primary;
+        return PhosphorIconsDuotone.camera;
     }
   }
 
@@ -6517,7 +6517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cameraPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cameraPlus.primary;
+        return PhosphorIconsDuotone.cameraPlus;
     }
   }
 
@@ -6541,7 +6541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cameraRotate;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cameraRotate.primary;
+        return PhosphorIconsDuotone.cameraRotate;
     }
   }
 
@@ -6565,7 +6565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cameraSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cameraSlash.primary;
+        return PhosphorIconsDuotone.cameraSlash;
     }
   }
 
@@ -6589,7 +6589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.campfire;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.campfire.primary;
+        return PhosphorIconsDuotone.campfire;
     }
   }
 
@@ -6613,7 +6613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.car;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.car.primary;
+        return PhosphorIconsDuotone.car;
     }
   }
 
@@ -6637,7 +6637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.carBattery;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.carBattery.primary;
+        return PhosphorIconsDuotone.carBattery;
     }
   }
 
@@ -6661,7 +6661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.carProfile;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.carProfile.primary;
+        return PhosphorIconsDuotone.carProfile;
     }
   }
 
@@ -6685,7 +6685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.carSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.carSimple.primary;
+        return PhosphorIconsDuotone.carSimple;
     }
   }
 
@@ -6709,7 +6709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cardholder;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cardholder.primary;
+        return PhosphorIconsDuotone.cardholder;
     }
   }
 
@@ -6733,7 +6733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cards;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cards.primary;
+        return PhosphorIconsDuotone.cards;
     }
   }
 
@@ -6757,7 +6757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cardsThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cardsThree.primary;
+        return PhosphorIconsDuotone.cardsThree;
     }
   }
 
@@ -6781,7 +6781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleDoubleDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleDoubleDown.primary;
+        return PhosphorIconsDuotone.caretCircleDoubleDown;
     }
   }
 
@@ -6805,7 +6805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleDoubleLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleDoubleLeft.primary;
+        return PhosphorIconsDuotone.caretCircleDoubleLeft;
     }
   }
 
@@ -6829,7 +6829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleDoubleRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleDoubleRight.primary;
+        return PhosphorIconsDuotone.caretCircleDoubleRight;
     }
   }
 
@@ -6853,7 +6853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleDoubleUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleDoubleUp.primary;
+        return PhosphorIconsDuotone.caretCircleDoubleUp;
     }
   }
 
@@ -6877,7 +6877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleDown.primary;
+        return PhosphorIconsDuotone.caretCircleDown;
     }
   }
 
@@ -6901,7 +6901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleLeft.primary;
+        return PhosphorIconsDuotone.caretCircleLeft;
     }
   }
 
@@ -6925,7 +6925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleRight.primary;
+        return PhosphorIconsDuotone.caretCircleRight;
     }
   }
 
@@ -6949,7 +6949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleUp.primary;
+        return PhosphorIconsDuotone.caretCircleUp;
     }
   }
 
@@ -6973,7 +6973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretCircleUpDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretCircleUpDown.primary;
+        return PhosphorIconsDuotone.caretCircleUpDown;
     }
   }
 
@@ -6997,7 +6997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretDoubleDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretDoubleDown.primary;
+        return PhosphorIconsDuotone.caretDoubleDown;
     }
   }
 
@@ -7021,7 +7021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretDoubleLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretDoubleLeft.primary;
+        return PhosphorIconsDuotone.caretDoubleLeft;
     }
   }
 
@@ -7045,7 +7045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretDoubleRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretDoubleRight.primary;
+        return PhosphorIconsDuotone.caretDoubleRight;
     }
   }
 
@@ -7069,7 +7069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretDoubleUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretDoubleUp.primary;
+        return PhosphorIconsDuotone.caretDoubleUp;
     }
   }
 
@@ -7093,7 +7093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretDown.primary;
+        return PhosphorIconsDuotone.caretDown;
     }
   }
 
@@ -7117,7 +7117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretLeft.primary;
+        return PhosphorIconsDuotone.caretLeft;
     }
   }
 
@@ -7141,7 +7141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretLineDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretLineDown.primary;
+        return PhosphorIconsDuotone.caretLineDown;
     }
   }
 
@@ -7165,7 +7165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretLineLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretLineLeft.primary;
+        return PhosphorIconsDuotone.caretLineLeft;
     }
   }
 
@@ -7189,7 +7189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretLineRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretLineRight.primary;
+        return PhosphorIconsDuotone.caretLineRight;
     }
   }
 
@@ -7213,7 +7213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretLineUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretLineUp.primary;
+        return PhosphorIconsDuotone.caretLineUp;
     }
   }
 
@@ -7237,7 +7237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretRight.primary;
+        return PhosphorIconsDuotone.caretRight;
     }
   }
 
@@ -7261,7 +7261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretUp.primary;
+        return PhosphorIconsDuotone.caretUp;
     }
   }
 
@@ -7285,7 +7285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.caretUpDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.caretUpDown.primary;
+        return PhosphorIconsDuotone.caretUpDown;
     }
   }
 
@@ -7309,7 +7309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.carrot;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.carrot.primary;
+        return PhosphorIconsDuotone.carrot;
     }
   }
 
@@ -7333,7 +7333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cashRegister;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cashRegister.primary;
+        return PhosphorIconsDuotone.cashRegister;
     }
   }
 
@@ -7357,7 +7357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cassetteTape;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cassetteTape.primary;
+        return PhosphorIconsDuotone.cassetteTape;
     }
   }
 
@@ -7381,7 +7381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.castleTurret;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.castleTurret.primary;
+        return PhosphorIconsDuotone.castleTurret;
     }
   }
 
@@ -7405,7 +7405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cat.primary;
+        return PhosphorIconsDuotone.cat;
     }
   }
 
@@ -7429,7 +7429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cellSignalFull;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cellSignalFull.primary;
+        return PhosphorIconsDuotone.cellSignalFull;
     }
   }
 
@@ -7453,7 +7453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cellSignalHigh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cellSignalHigh.primary;
+        return PhosphorIconsDuotone.cellSignalHigh;
     }
   }
 
@@ -7477,7 +7477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cellSignalLow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cellSignalLow.primary;
+        return PhosphorIconsDuotone.cellSignalLow;
     }
   }
 
@@ -7501,7 +7501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cellSignalMedium;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cellSignalMedium.primary;
+        return PhosphorIconsDuotone.cellSignalMedium;
     }
   }
 
@@ -7525,7 +7525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cellSignalNone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cellSignalNone.primary;
+        return PhosphorIconsDuotone.cellSignalNone;
     }
   }
 
@@ -7549,7 +7549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cellSignalSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cellSignalSlash.primary;
+        return PhosphorIconsDuotone.cellSignalSlash;
     }
   }
 
@@ -7573,7 +7573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cellSignalX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cellSignalX.primary;
+        return PhosphorIconsDuotone.cellSignalX;
     }
   }
 
@@ -7597,7 +7597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cellTower;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cellTower.primary;
+        return PhosphorIconsDuotone.cellTower;
     }
   }
 
@@ -7621,7 +7621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.certificate;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.certificate.primary;
+        return PhosphorIconsDuotone.certificate;
     }
   }
 
@@ -7645,7 +7645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chair;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chair.primary;
+        return PhosphorIconsDuotone.chair;
     }
   }
 
@@ -7669,7 +7669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chalkboard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chalkboard.primary;
+        return PhosphorIconsDuotone.chalkboard;
     }
   }
 
@@ -7693,7 +7693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chalkboardSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chalkboardSimple.primary;
+        return PhosphorIconsDuotone.chalkboardSimple;
     }
   }
 
@@ -7717,7 +7717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chalkboardTeacher;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chalkboardTeacher.primary;
+        return PhosphorIconsDuotone.chalkboardTeacher;
     }
   }
 
@@ -7741,7 +7741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.champagne;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.champagne.primary;
+        return PhosphorIconsDuotone.champagne;
     }
   }
 
@@ -7765,7 +7765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chargingStation;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chargingStation.primary;
+        return PhosphorIconsDuotone.chargingStation;
     }
   }
 
@@ -7789,7 +7789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartBar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartBar.primary;
+        return PhosphorIconsDuotone.chartBar;
     }
   }
 
@@ -7813,7 +7813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartBarHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartBarHorizontal.primary;
+        return PhosphorIconsDuotone.chartBarHorizontal;
     }
   }
 
@@ -7837,7 +7837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartDonut;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartDonut.primary;
+        return PhosphorIconsDuotone.chartDonut;
     }
   }
 
@@ -7861,7 +7861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartLine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartLine.primary;
+        return PhosphorIconsDuotone.chartLine;
     }
   }
 
@@ -7885,7 +7885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartLineDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartLineDown.primary;
+        return PhosphorIconsDuotone.chartLineDown;
     }
   }
 
@@ -7909,7 +7909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartLineUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartLineUp.primary;
+        return PhosphorIconsDuotone.chartLineUp;
     }
   }
 
@@ -7933,7 +7933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartPie;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartPie.primary;
+        return PhosphorIconsDuotone.chartPie;
     }
   }
 
@@ -7957,7 +7957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartPieSlice;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartPieSlice.primary;
+        return PhosphorIconsDuotone.chartPieSlice;
     }
   }
 
@@ -7981,7 +7981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartPolar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartPolar.primary;
+        return PhosphorIconsDuotone.chartPolar;
     }
   }
 
@@ -8005,7 +8005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chartScatter;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chartScatter.primary;
+        return PhosphorIconsDuotone.chartScatter;
     }
   }
 
@@ -8029,7 +8029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chat.primary;
+        return PhosphorIconsDuotone.chat;
     }
   }
 
@@ -8053,7 +8053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatCentered;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatCentered.primary;
+        return PhosphorIconsDuotone.chatCentered;
     }
   }
 
@@ -8077,7 +8077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatCenteredDots;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatCenteredDots.primary;
+        return PhosphorIconsDuotone.chatCenteredDots;
     }
   }
 
@@ -8101,7 +8101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatCenteredSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatCenteredSlash.primary;
+        return PhosphorIconsDuotone.chatCenteredSlash;
     }
   }
 
@@ -8125,7 +8125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatCenteredText;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatCenteredText.primary;
+        return PhosphorIconsDuotone.chatCenteredText;
     }
   }
 
@@ -8149,7 +8149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatCircle.primary;
+        return PhosphorIconsDuotone.chatCircle;
     }
   }
 
@@ -8173,7 +8173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatCircleDots;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatCircleDots.primary;
+        return PhosphorIconsDuotone.chatCircleDots;
     }
   }
 
@@ -8197,7 +8197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatCircleSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatCircleSlash.primary;
+        return PhosphorIconsDuotone.chatCircleSlash;
     }
   }
 
@@ -8221,7 +8221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatCircleText;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatCircleText.primary;
+        return PhosphorIconsDuotone.chatCircleText;
     }
   }
 
@@ -8245,7 +8245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatDots;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatDots.primary;
+        return PhosphorIconsDuotone.chatDots;
     }
   }
 
@@ -8269,7 +8269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatSlash.primary;
+        return PhosphorIconsDuotone.chatSlash;
     }
   }
 
@@ -8293,7 +8293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatTeardrop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatTeardrop.primary;
+        return PhosphorIconsDuotone.chatTeardrop;
     }
   }
 
@@ -8317,7 +8317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatTeardropDots;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatTeardropDots.primary;
+        return PhosphorIconsDuotone.chatTeardropDots;
     }
   }
 
@@ -8341,7 +8341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatTeardropSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatTeardropSlash.primary;
+        return PhosphorIconsDuotone.chatTeardropSlash;
     }
   }
 
@@ -8365,7 +8365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatTeardropText;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatTeardropText.primary;
+        return PhosphorIconsDuotone.chatTeardropText;
     }
   }
 
@@ -8389,7 +8389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatText;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatText.primary;
+        return PhosphorIconsDuotone.chatText;
     }
   }
 
@@ -8413,7 +8413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chats;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chats.primary;
+        return PhosphorIconsDuotone.chats;
     }
   }
 
@@ -8437,7 +8437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatsCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatsCircle.primary;
+        return PhosphorIconsDuotone.chatsCircle;
     }
   }
 
@@ -8461,7 +8461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chatsTeardrop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chatsTeardrop.primary;
+        return PhosphorIconsDuotone.chatsTeardrop;
     }
   }
 
@@ -8485,7 +8485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.check;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.check.primary;
+        return PhosphorIconsDuotone.check;
     }
   }
 
@@ -8509,7 +8509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.checkCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.checkCircle.primary;
+        return PhosphorIconsDuotone.checkCircle;
     }
   }
 
@@ -8533,7 +8533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.checkFat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.checkFat.primary;
+        return PhosphorIconsDuotone.checkFat;
     }
   }
 
@@ -8557,7 +8557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.checkSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.checkSquare.primary;
+        return PhosphorIconsDuotone.checkSquare;
     }
   }
 
@@ -8581,7 +8581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.checkSquareOffset;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.checkSquareOffset.primary;
+        return PhosphorIconsDuotone.checkSquareOffset;
     }
   }
 
@@ -8605,7 +8605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.checkerboard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.checkerboard.primary;
+        return PhosphorIconsDuotone.checkerboard;
     }
   }
 
@@ -8629,7 +8629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.checks;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.checks.primary;
+        return PhosphorIconsDuotone.checks;
     }
   }
 
@@ -8653,7 +8653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cheers;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cheers.primary;
+        return PhosphorIconsDuotone.cheers;
     }
   }
 
@@ -8677,7 +8677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cheese;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cheese.primary;
+        return PhosphorIconsDuotone.cheese;
     }
   }
 
@@ -8701,7 +8701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.chefHat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.chefHat.primary;
+        return PhosphorIconsDuotone.chefHat;
     }
   }
 
@@ -8725,7 +8725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cherries;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cherries.primary;
+        return PhosphorIconsDuotone.cherries;
     }
   }
 
@@ -8749,7 +8749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.church;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.church.primary;
+        return PhosphorIconsDuotone.church;
     }
   }
 
@@ -8773,7 +8773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cigarette;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cigarette.primary;
+        return PhosphorIconsDuotone.cigarette;
     }
   }
 
@@ -8797,7 +8797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cigaretteSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cigaretteSlash.primary;
+        return PhosphorIconsDuotone.cigaretteSlash;
     }
   }
 
@@ -8821,7 +8821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circle.primary;
+        return PhosphorIconsDuotone.circle;
     }
   }
 
@@ -8845,7 +8845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circleDashed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circleDashed.primary;
+        return PhosphorIconsDuotone.circleDashed;
     }
   }
 
@@ -8869,7 +8869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circleHalf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circleHalf.primary;
+        return PhosphorIconsDuotone.circleHalf;
     }
   }
 
@@ -8893,7 +8893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circleHalfTilt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circleHalfTilt.primary;
+        return PhosphorIconsDuotone.circleHalfTilt;
     }
   }
 
@@ -8917,7 +8917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circleNotch;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circleNotch.primary;
+        return PhosphorIconsDuotone.circleNotch;
     }
   }
 
@@ -8941,7 +8941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circlesFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circlesFour.primary;
+        return PhosphorIconsDuotone.circlesFour;
     }
   }
 
@@ -8965,7 +8965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circlesThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circlesThree.primary;
+        return PhosphorIconsDuotone.circlesThree;
     }
   }
 
@@ -8989,7 +8989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circlesThreePlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circlesThreePlus.primary;
+        return PhosphorIconsDuotone.circlesThreePlus;
     }
   }
 
@@ -9013,7 +9013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.circuitry;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.circuitry.primary;
+        return PhosphorIconsDuotone.circuitry;
     }
   }
 
@@ -9037,7 +9037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.city;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.city.primary;
+        return PhosphorIconsDuotone.city;
     }
   }
 
@@ -9061,7 +9061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clipboard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clipboard.primary;
+        return PhosphorIconsDuotone.clipboard;
     }
   }
 
@@ -9085,7 +9085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clipboardText;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clipboardText.primary;
+        return PhosphorIconsDuotone.clipboardText;
     }
   }
 
@@ -9109,7 +9109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clock;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clock.primary;
+        return PhosphorIconsDuotone.clock;
     }
   }
 
@@ -9133,7 +9133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clockAfternoon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clockAfternoon.primary;
+        return PhosphorIconsDuotone.clockAfternoon;
     }
   }
 
@@ -9157,7 +9157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clockClockwise;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clockClockwise.primary;
+        return PhosphorIconsDuotone.clockClockwise;
     }
   }
 
@@ -9181,7 +9181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clockCountdown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clockCountdown.primary;
+        return PhosphorIconsDuotone.clockCountdown;
     }
   }
 
@@ -9205,7 +9205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clockCounterClockwise;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clockCounterClockwise.primary;
+        return PhosphorIconsDuotone.clockCounterClockwise;
     }
   }
 
@@ -9229,7 +9229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clockUser;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clockUser.primary;
+        return PhosphorIconsDuotone.clockUser;
     }
   }
 
@@ -9253,7 +9253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.closedCaptioning;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.closedCaptioning.primary;
+        return PhosphorIconsDuotone.closedCaptioning;
     }
   }
 
@@ -9277,7 +9277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloud;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloud.primary;
+        return PhosphorIconsDuotone.cloud;
     }
   }
 
@@ -9301,7 +9301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudArrowDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudArrowDown.primary;
+        return PhosphorIconsDuotone.cloudArrowDown;
     }
   }
 
@@ -9325,7 +9325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudArrowUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudArrowUp.primary;
+        return PhosphorIconsDuotone.cloudArrowUp;
     }
   }
 
@@ -9349,7 +9349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudCheck;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudCheck.primary;
+        return PhosphorIconsDuotone.cloudCheck;
     }
   }
 
@@ -9373,7 +9373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudFog;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudFog.primary;
+        return PhosphorIconsDuotone.cloudFog;
     }
   }
 
@@ -9397,7 +9397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudLightning;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudLightning.primary;
+        return PhosphorIconsDuotone.cloudLightning;
     }
   }
 
@@ -9421,7 +9421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudMoon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudMoon.primary;
+        return PhosphorIconsDuotone.cloudMoon;
     }
   }
 
@@ -9445,7 +9445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudRain;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudRain.primary;
+        return PhosphorIconsDuotone.cloudRain;
     }
   }
 
@@ -9469,7 +9469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudSlash.primary;
+        return PhosphorIconsDuotone.cloudSlash;
     }
   }
 
@@ -9493,7 +9493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudSnow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudSnow.primary;
+        return PhosphorIconsDuotone.cloudSnow;
     }
   }
 
@@ -9517,7 +9517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudSun;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudSun.primary;
+        return PhosphorIconsDuotone.cloudSun;
     }
   }
 
@@ -9541,7 +9541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudWarning;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudWarning.primary;
+        return PhosphorIconsDuotone.cloudWarning;
     }
   }
 
@@ -9565,7 +9565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cloudX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cloudX.primary;
+        return PhosphorIconsDuotone.cloudX;
     }
   }
 
@@ -9589,7 +9589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.clover;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.clover.primary;
+        return PhosphorIconsDuotone.clover;
     }
   }
 
@@ -9613,7 +9613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.club;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.club.primary;
+        return PhosphorIconsDuotone.club;
     }
   }
 
@@ -9637,7 +9637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.coatHanger;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.coatHanger.primary;
+        return PhosphorIconsDuotone.coatHanger;
     }
   }
 
@@ -9661,7 +9661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.codaLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.codaLogo.primary;
+        return PhosphorIconsDuotone.codaLogo;
     }
   }
 
@@ -9685,7 +9685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.code;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.code.primary;
+        return PhosphorIconsDuotone.code;
     }
   }
 
@@ -9709,7 +9709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.codeBlock;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.codeBlock.primary;
+        return PhosphorIconsDuotone.codeBlock;
     }
   }
 
@@ -9733,7 +9733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.codeSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.codeSimple.primary;
+        return PhosphorIconsDuotone.codeSimple;
     }
   }
 
@@ -9757,7 +9757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.codepenLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.codepenLogo.primary;
+        return PhosphorIconsDuotone.codepenLogo;
     }
   }
 
@@ -9781,7 +9781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.codesandboxLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.codesandboxLogo.primary;
+        return PhosphorIconsDuotone.codesandboxLogo;
     }
   }
 
@@ -9805,7 +9805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.coffee;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.coffee.primary;
+        return PhosphorIconsDuotone.coffee;
     }
   }
 
@@ -9829,7 +9829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.coffeeBean;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.coffeeBean.primary;
+        return PhosphorIconsDuotone.coffeeBean;
     }
   }
 
@@ -9853,7 +9853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.coin;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.coin.primary;
+        return PhosphorIconsDuotone.coin;
     }
   }
 
@@ -9877,7 +9877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.coinVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.coinVertical.primary;
+        return PhosphorIconsDuotone.coinVertical;
     }
   }
 
@@ -9901,7 +9901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.coins;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.coins.primary;
+        return PhosphorIconsDuotone.coins;
     }
   }
 
@@ -9925,7 +9925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.columns;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.columns.primary;
+        return PhosphorIconsDuotone.columns;
     }
   }
 
@@ -9949,7 +9949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.columnsPlusLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.columnsPlusLeft.primary;
+        return PhosphorIconsDuotone.columnsPlusLeft;
     }
   }
 
@@ -9973,7 +9973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.columnsPlusRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.columnsPlusRight.primary;
+        return PhosphorIconsDuotone.columnsPlusRight;
     }
   }
 
@@ -9997,7 +9997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.command;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.command.primary;
+        return PhosphorIconsDuotone.command;
     }
   }
 
@@ -10021,7 +10021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.compass;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.compass.primary;
+        return PhosphorIconsDuotone.compass;
     }
   }
 
@@ -10045,7 +10045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.compassRose;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.compassRose.primary;
+        return PhosphorIconsDuotone.compassRose;
     }
   }
 
@@ -10069,7 +10069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.compassTool;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.compassTool.primary;
+        return PhosphorIconsDuotone.compassTool;
     }
   }
 
@@ -10093,7 +10093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.computerTower;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.computerTower.primary;
+        return PhosphorIconsDuotone.computerTower;
     }
   }
 
@@ -10117,7 +10117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.confetti;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.confetti.primary;
+        return PhosphorIconsDuotone.confetti;
     }
   }
 
@@ -10141,7 +10141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.contactlessPayment;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.contactlessPayment.primary;
+        return PhosphorIconsDuotone.contactlessPayment;
     }
   }
 
@@ -10165,7 +10165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.control;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.control.primary;
+        return PhosphorIconsDuotone.control;
     }
   }
 
@@ -10189,7 +10189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cookie;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cookie.primary;
+        return PhosphorIconsDuotone.cookie;
     }
   }
 
@@ -10213,7 +10213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cookingPot;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cookingPot.primary;
+        return PhosphorIconsDuotone.cookingPot;
     }
   }
 
@@ -10237,7 +10237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.copy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.copy.primary;
+        return PhosphorIconsDuotone.copy;
     }
   }
 
@@ -10261,7 +10261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.copySimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.copySimple.primary;
+        return PhosphorIconsDuotone.copySimple;
     }
   }
 
@@ -10285,7 +10285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.copyleft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.copyleft.primary;
+        return PhosphorIconsDuotone.copyleft;
     }
   }
 
@@ -10309,7 +10309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.copyright;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.copyright.primary;
+        return PhosphorIconsDuotone.copyright;
     }
   }
 
@@ -10333,7 +10333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cornersIn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cornersIn.primary;
+        return PhosphorIconsDuotone.cornersIn;
     }
   }
 
@@ -10357,7 +10357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cornersOut;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cornersOut.primary;
+        return PhosphorIconsDuotone.cornersOut;
     }
   }
 
@@ -10381,7 +10381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.couch;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.couch.primary;
+        return PhosphorIconsDuotone.couch;
     }
   }
 
@@ -10405,7 +10405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.courtBasketball;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.courtBasketball.primary;
+        return PhosphorIconsDuotone.courtBasketball;
     }
   }
 
@@ -10429,7 +10429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cow.primary;
+        return PhosphorIconsDuotone.cow;
     }
   }
 
@@ -10453,7 +10453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cowboyHat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cowboyHat.primary;
+        return PhosphorIconsDuotone.cowboyHat;
     }
   }
 
@@ -10477,7 +10477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cpu;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cpu.primary;
+        return PhosphorIconsDuotone.cpu;
     }
   }
 
@@ -10501,7 +10501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.crane;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.crane.primary;
+        return PhosphorIconsDuotone.crane;
     }
   }
 
@@ -10525,7 +10525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.craneTower;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.craneTower.primary;
+        return PhosphorIconsDuotone.craneTower;
     }
   }
 
@@ -10549,7 +10549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.creditCard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.creditCard.primary;
+        return PhosphorIconsDuotone.creditCard;
     }
   }
 
@@ -10573,7 +10573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cricket;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cricket.primary;
+        return PhosphorIconsDuotone.cricket;
     }
   }
 
@@ -10597,7 +10597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.crop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.crop.primary;
+        return PhosphorIconsDuotone.crop;
     }
   }
 
@@ -10621,7 +10621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cross;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cross.primary;
+        return PhosphorIconsDuotone.cross;
     }
   }
 
@@ -10645,7 +10645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.crosshair;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.crosshair.primary;
+        return PhosphorIconsDuotone.crosshair;
     }
   }
 
@@ -10669,7 +10669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.crosshairSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.crosshairSimple.primary;
+        return PhosphorIconsDuotone.crosshairSimple;
     }
   }
 
@@ -10693,7 +10693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.crown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.crown.primary;
+        return PhosphorIconsDuotone.crown;
     }
   }
 
@@ -10717,7 +10717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.crownCross;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.crownCross.primary;
+        return PhosphorIconsDuotone.crownCross;
     }
   }
 
@@ -10741,7 +10741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.crownSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.crownSimple.primary;
+        return PhosphorIconsDuotone.crownSimple;
     }
   }
 
@@ -10765,7 +10765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cube;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cube.primary;
+        return PhosphorIconsDuotone.cube;
     }
   }
 
@@ -10789,7 +10789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cubeFocus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cubeFocus.primary;
+        return PhosphorIconsDuotone.cubeFocus;
     }
   }
 
@@ -10813,7 +10813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cubeTransparent;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cubeTransparent.primary;
+        return PhosphorIconsDuotone.cubeTransparent;
     }
   }
 
@@ -10837,7 +10837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyBtc;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyBtc.primary;
+        return PhosphorIconsDuotone.currencyBtc;
     }
   }
 
@@ -10861,7 +10861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyCircleDollar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyCircleDollar.primary;
+        return PhosphorIconsDuotone.currencyCircleDollar;
     }
   }
 
@@ -10885,7 +10885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyCny;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyCny.primary;
+        return PhosphorIconsDuotone.currencyCny;
     }
   }
 
@@ -10909,7 +10909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyDollar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyDollar.primary;
+        return PhosphorIconsDuotone.currencyDollar;
     }
   }
 
@@ -10933,7 +10933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyDollarSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyDollarSimple.primary;
+        return PhosphorIconsDuotone.currencyDollarSimple;
     }
   }
 
@@ -10957,7 +10957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyEth;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyEth.primary;
+        return PhosphorIconsDuotone.currencyEth;
     }
   }
 
@@ -10981,7 +10981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyEur;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyEur.primary;
+        return PhosphorIconsDuotone.currencyEur;
     }
   }
 
@@ -11005,7 +11005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyGbp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyGbp.primary;
+        return PhosphorIconsDuotone.currencyGbp;
     }
   }
 
@@ -11029,7 +11029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyInr;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyInr.primary;
+        return PhosphorIconsDuotone.currencyInr;
     }
   }
 
@@ -11053,7 +11053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyJpy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyJpy.primary;
+        return PhosphorIconsDuotone.currencyJpy;
     }
   }
 
@@ -11077,7 +11077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyKrw;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyKrw.primary;
+        return PhosphorIconsDuotone.currencyKrw;
     }
   }
 
@@ -11101,7 +11101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyKzt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyKzt.primary;
+        return PhosphorIconsDuotone.currencyKzt;
     }
   }
 
@@ -11125,7 +11125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyNgn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyNgn.primary;
+        return PhosphorIconsDuotone.currencyNgn;
     }
   }
 
@@ -11149,7 +11149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.currencyRub;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.currencyRub.primary;
+        return PhosphorIconsDuotone.currencyRub;
     }
   }
 
@@ -11173,7 +11173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cursor;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cursor.primary;
+        return PhosphorIconsDuotone.cursor;
     }
   }
 
@@ -11197,7 +11197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cursorClick;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cursorClick.primary;
+        return PhosphorIconsDuotone.cursorClick;
     }
   }
 
@@ -11221,7 +11221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cursorText;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cursorText.primary;
+        return PhosphorIconsDuotone.cursorText;
     }
   }
 
@@ -11245,7 +11245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.cylinder;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.cylinder.primary;
+        return PhosphorIconsDuotone.cylinder;
     }
   }
 
@@ -11269,7 +11269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.database;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.database.primary;
+        return PhosphorIconsDuotone.database;
     }
   }
 
@@ -11293,7 +11293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.desk;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.desk.primary;
+        return PhosphorIconsDuotone.desk;
     }
   }
 
@@ -11317,7 +11317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.desktop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.desktop.primary;
+        return PhosphorIconsDuotone.desktop;
     }
   }
 
@@ -11341,7 +11341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.desktopTower;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.desktopTower.primary;
+        return PhosphorIconsDuotone.desktopTower;
     }
   }
 
@@ -11365,7 +11365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.detective;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.detective.primary;
+        return PhosphorIconsDuotone.detective;
     }
   }
 
@@ -11389,7 +11389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.devToLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.devToLogo.primary;
+        return PhosphorIconsDuotone.devToLogo;
     }
   }
 
@@ -11413,7 +11413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.deviceMobile;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.deviceMobile.primary;
+        return PhosphorIconsDuotone.deviceMobile;
     }
   }
 
@@ -11437,7 +11437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.deviceMobileCamera;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.deviceMobileCamera.primary;
+        return PhosphorIconsDuotone.deviceMobileCamera;
     }
   }
 
@@ -11461,7 +11461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.deviceMobileSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.deviceMobileSlash.primary;
+        return PhosphorIconsDuotone.deviceMobileSlash;
     }
   }
 
@@ -11485,7 +11485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.deviceMobileSpeaker;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.deviceMobileSpeaker.primary;
+        return PhosphorIconsDuotone.deviceMobileSpeaker;
     }
   }
 
@@ -11509,7 +11509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.deviceRotate;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.deviceRotate.primary;
+        return PhosphorIconsDuotone.deviceRotate;
     }
   }
 
@@ -11533,7 +11533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.deviceTablet;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.deviceTablet.primary;
+        return PhosphorIconsDuotone.deviceTablet;
     }
   }
 
@@ -11557,7 +11557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.deviceTabletCamera;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.deviceTabletCamera.primary;
+        return PhosphorIconsDuotone.deviceTabletCamera;
     }
   }
 
@@ -11581,7 +11581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.deviceTabletSpeaker;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.deviceTabletSpeaker.primary;
+        return PhosphorIconsDuotone.deviceTabletSpeaker;
     }
   }
 
@@ -11605,7 +11605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.devices;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.devices.primary;
+        return PhosphorIconsDuotone.devices;
     }
   }
 
@@ -11629,7 +11629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.diamond;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.diamond.primary;
+        return PhosphorIconsDuotone.diamond;
     }
   }
 
@@ -11653,7 +11653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.diamondsFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.diamondsFour.primary;
+        return PhosphorIconsDuotone.diamondsFour;
     }
   }
 
@@ -11677,7 +11677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.diceFive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.diceFive.primary;
+        return PhosphorIconsDuotone.diceFive;
     }
   }
 
@@ -11701,7 +11701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.diceFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.diceFour.primary;
+        return PhosphorIconsDuotone.diceFour;
     }
   }
 
@@ -11725,7 +11725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.diceOne;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.diceOne.primary;
+        return PhosphorIconsDuotone.diceOne;
     }
   }
 
@@ -11749,7 +11749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.diceSix;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.diceSix.primary;
+        return PhosphorIconsDuotone.diceSix;
     }
   }
 
@@ -11773,7 +11773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.diceThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.diceThree.primary;
+        return PhosphorIconsDuotone.diceThree;
     }
   }
 
@@ -11797,7 +11797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.diceTwo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.diceTwo.primary;
+        return PhosphorIconsDuotone.diceTwo;
     }
   }
 
@@ -11821,7 +11821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.disc;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.disc.primary;
+        return PhosphorIconsDuotone.disc;
     }
   }
 
@@ -11845,7 +11845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.discoBall;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.discoBall.primary;
+        return PhosphorIconsDuotone.discoBall;
     }
   }
 
@@ -11869,7 +11869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.discordLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.discordLogo.primary;
+        return PhosphorIconsDuotone.discordLogo;
     }
   }
 
@@ -11893,7 +11893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.divide;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.divide.primary;
+        return PhosphorIconsDuotone.divide;
     }
   }
 
@@ -11917,7 +11917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dna;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dna.primary;
+        return PhosphorIconsDuotone.dna;
     }
   }
 
@@ -11941,7 +11941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dog;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dog.primary;
+        return PhosphorIconsDuotone.dog;
     }
   }
 
@@ -11965,7 +11965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.door;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.door.primary;
+        return PhosphorIconsDuotone.door;
     }
   }
 
@@ -11989,7 +11989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.doorOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.doorOpen.primary;
+        return PhosphorIconsDuotone.doorOpen;
     }
   }
 
@@ -12013,7 +12013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dot;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dot.primary;
+        return PhosphorIconsDuotone.dot;
     }
   }
 
@@ -12037,7 +12037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotOutline;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotOutline.primary;
+        return PhosphorIconsDuotone.dotOutline;
     }
   }
 
@@ -12061,7 +12061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsNine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsNine.primary;
+        return PhosphorIconsDuotone.dotsNine;
     }
   }
 
@@ -12085,7 +12085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsSix;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsSix.primary;
+        return PhosphorIconsDuotone.dotsSix;
     }
   }
 
@@ -12109,7 +12109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsSixVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsSixVertical.primary;
+        return PhosphorIconsDuotone.dotsSixVertical;
     }
   }
 
@@ -12133,7 +12133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsThree.primary;
+        return PhosphorIconsDuotone.dotsThree;
     }
   }
 
@@ -12157,7 +12157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsThreeCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsThreeCircle.primary;
+        return PhosphorIconsDuotone.dotsThreeCircle;
     }
   }
 
@@ -12181,7 +12181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsThreeCircleVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsThreeCircleVertical.primary;
+        return PhosphorIconsDuotone.dotsThreeCircleVertical;
     }
   }
 
@@ -12205,7 +12205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsThreeOutline;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsThreeOutline.primary;
+        return PhosphorIconsDuotone.dotsThreeOutline;
     }
   }
 
@@ -12229,7 +12229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsThreeOutlineVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsThreeOutlineVertical.primary;
+        return PhosphorIconsDuotone.dotsThreeOutlineVertical;
     }
   }
 
@@ -12253,7 +12253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dotsThreeVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dotsThreeVertical.primary;
+        return PhosphorIconsDuotone.dotsThreeVertical;
     }
   }
 
@@ -12277,7 +12277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.download;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.download.primary;
+        return PhosphorIconsDuotone.download;
     }
   }
 
@@ -12301,7 +12301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.downloadSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.downloadSimple.primary;
+        return PhosphorIconsDuotone.downloadSimple;
     }
   }
 
@@ -12325,7 +12325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dress;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dress.primary;
+        return PhosphorIconsDuotone.dress;
     }
   }
 
@@ -12349,7 +12349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dresser;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dresser.primary;
+        return PhosphorIconsDuotone.dresser;
     }
   }
 
@@ -12373,7 +12373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dribbbleLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dribbbleLogo.primary;
+        return PhosphorIconsDuotone.dribbbleLogo;
     }
   }
 
@@ -12397,7 +12397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.drone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.drone.primary;
+        return PhosphorIconsDuotone.drone;
     }
   }
 
@@ -12421,7 +12421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.drop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.drop.primary;
+        return PhosphorIconsDuotone.drop;
     }
   }
 
@@ -12445,7 +12445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dropHalf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dropHalf.primary;
+        return PhosphorIconsDuotone.dropHalf;
     }
   }
 
@@ -12469,7 +12469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dropHalfBottom;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dropHalfBottom.primary;
+        return PhosphorIconsDuotone.dropHalfBottom;
     }
   }
 
@@ -12493,7 +12493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dropSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dropSimple.primary;
+        return PhosphorIconsDuotone.dropSimple;
     }
   }
 
@@ -12517,7 +12517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dropSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dropSlash.primary;
+        return PhosphorIconsDuotone.dropSlash;
     }
   }
 
@@ -12541,7 +12541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.dropboxLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.dropboxLogo.primary;
+        return PhosphorIconsDuotone.dropboxLogo;
     }
   }
 
@@ -12565,7 +12565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ear;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ear.primary;
+        return PhosphorIconsDuotone.ear;
     }
   }
 
@@ -12589,7 +12589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.earSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.earSlash.primary;
+        return PhosphorIconsDuotone.earSlash;
     }
   }
 
@@ -12613,7 +12613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.egg;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.egg.primary;
+        return PhosphorIconsDuotone.egg;
     }
   }
 
@@ -12637,7 +12637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eggCrack;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eggCrack.primary;
+        return PhosphorIconsDuotone.eggCrack;
     }
   }
 
@@ -12661,7 +12661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eject;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eject.primary;
+        return PhosphorIconsDuotone.eject;
     }
   }
 
@@ -12685,7 +12685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ejectSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ejectSimple.primary;
+        return PhosphorIconsDuotone.ejectSimple;
     }
   }
 
@@ -12709,7 +12709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.elevator;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.elevator.primary;
+        return PhosphorIconsDuotone.elevator;
     }
   }
 
@@ -12733,7 +12733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.empty;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.empty.primary;
+        return PhosphorIconsDuotone.empty;
     }
   }
 
@@ -12757,7 +12757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.engine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.engine.primary;
+        return PhosphorIconsDuotone.engine;
     }
   }
 
@@ -12781,7 +12781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.envelope;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.envelope.primary;
+        return PhosphorIconsDuotone.envelope;
     }
   }
 
@@ -12805,7 +12805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.envelopeOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.envelopeOpen.primary;
+        return PhosphorIconsDuotone.envelopeOpen;
     }
   }
 
@@ -12829,7 +12829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.envelopeSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.envelopeSimple.primary;
+        return PhosphorIconsDuotone.envelopeSimple;
     }
   }
 
@@ -12853,7 +12853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.envelopeSimpleOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.envelopeSimpleOpen.primary;
+        return PhosphorIconsDuotone.envelopeSimpleOpen;
     }
   }
 
@@ -12877,7 +12877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.equalizer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.equalizer.primary;
+        return PhosphorIconsDuotone.equalizer;
     }
   }
 
@@ -12901,7 +12901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.equals;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.equals.primary;
+        return PhosphorIconsDuotone.equals;
     }
   }
 
@@ -12925,7 +12925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eraser;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eraser.primary;
+        return PhosphorIconsDuotone.eraser;
     }
   }
 
@@ -12949,7 +12949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.escalatorDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.escalatorDown.primary;
+        return PhosphorIconsDuotone.escalatorDown;
     }
   }
 
@@ -12973,7 +12973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.escalatorUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.escalatorUp.primary;
+        return PhosphorIconsDuotone.escalatorUp;
     }
   }
 
@@ -12997,7 +12997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.exam;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.exam.primary;
+        return PhosphorIconsDuotone.exam;
     }
   }
 
@@ -13021,7 +13021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.exclamationMark;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.exclamationMark.primary;
+        return PhosphorIconsDuotone.exclamationMark;
     }
   }
 
@@ -13045,7 +13045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.exclude;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.exclude.primary;
+        return PhosphorIconsDuotone.exclude;
     }
   }
 
@@ -13069,7 +13069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.excludeSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.excludeSquare.primary;
+        return PhosphorIconsDuotone.excludeSquare;
     }
   }
 
@@ -13093,7 +13093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.export;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.export.primary;
+        return PhosphorIconsDuotone.export;
     }
   }
 
@@ -13117,7 +13117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eye;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eye.primary;
+        return PhosphorIconsDuotone.eye;
     }
   }
 
@@ -13141,7 +13141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eyeClosed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eyeClosed.primary;
+        return PhosphorIconsDuotone.eyeClosed;
     }
   }
 
@@ -13165,7 +13165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eyeSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eyeSlash.primary;
+        return PhosphorIconsDuotone.eyeSlash;
     }
   }
 
@@ -13189,7 +13189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eyedropper;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eyedropper.primary;
+        return PhosphorIconsDuotone.eyedropper;
     }
   }
 
@@ -13213,7 +13213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eyedropperSample;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eyedropperSample.primary;
+        return PhosphorIconsDuotone.eyedropperSample;
     }
   }
 
@@ -13237,7 +13237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eyeglasses;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eyeglasses.primary;
+        return PhosphorIconsDuotone.eyeglasses;
     }
   }
 
@@ -13261,7 +13261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.eyes;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.eyes.primary;
+        return PhosphorIconsDuotone.eyes;
     }
   }
 
@@ -13285,7 +13285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.faceMask;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.faceMask.primary;
+        return PhosphorIconsDuotone.faceMask;
     }
   }
 
@@ -13309,7 +13309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.facebookLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.facebookLogo.primary;
+        return PhosphorIconsDuotone.facebookLogo;
     }
   }
 
@@ -13333,7 +13333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.factory;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.factory.primary;
+        return PhosphorIconsDuotone.factory;
     }
   }
 
@@ -13357,7 +13357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.faders;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.faders.primary;
+        return PhosphorIconsDuotone.faders;
     }
   }
 
@@ -13381,7 +13381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fadersHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fadersHorizontal.primary;
+        return PhosphorIconsDuotone.fadersHorizontal;
     }
   }
 
@@ -13405,7 +13405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.falloutShelter;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.falloutShelter.primary;
+        return PhosphorIconsDuotone.falloutShelter;
     }
   }
 
@@ -13429,7 +13429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fan;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fan.primary;
+        return PhosphorIconsDuotone.fan;
     }
   }
 
@@ -13453,7 +13453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.farm;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.farm.primary;
+        return PhosphorIconsDuotone.farm;
     }
   }
 
@@ -13477,7 +13477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fastForward;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fastForward.primary;
+        return PhosphorIconsDuotone.fastForward;
     }
   }
 
@@ -13501,7 +13501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fastForwardCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fastForwardCircle.primary;
+        return PhosphorIconsDuotone.fastForwardCircle;
     }
   }
 
@@ -13525,7 +13525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.feather;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.feather.primary;
+        return PhosphorIconsDuotone.feather;
     }
   }
 
@@ -13549,7 +13549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fediverseLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fediverseLogo.primary;
+        return PhosphorIconsDuotone.fediverseLogo;
     }
   }
 
@@ -13573,7 +13573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.figmaLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.figmaLogo.primary;
+        return PhosphorIconsDuotone.figmaLogo;
     }
   }
 
@@ -13597,7 +13597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.file;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.file.primary;
+        return PhosphorIconsDuotone.file;
     }
   }
 
@@ -13621,7 +13621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileArchive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileArchive.primary;
+        return PhosphorIconsDuotone.fileArchive;
     }
   }
 
@@ -13645,7 +13645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileArrowDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileArrowDown.primary;
+        return PhosphorIconsDuotone.fileArrowDown;
     }
   }
 
@@ -13669,7 +13669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileArrowUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileArrowUp.primary;
+        return PhosphorIconsDuotone.fileArrowUp;
     }
   }
 
@@ -13693,7 +13693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileAudio;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileAudio.primary;
+        return PhosphorIconsDuotone.fileAudio;
     }
   }
 
@@ -13717,7 +13717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileC;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileC.primary;
+        return PhosphorIconsDuotone.fileC;
     }
   }
 
@@ -13741,7 +13741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileCSharp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileCSharp.primary;
+        return PhosphorIconsDuotone.fileCSharp;
     }
   }
 
@@ -13765,7 +13765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileCloud;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileCloud.primary;
+        return PhosphorIconsDuotone.fileCloud;
     }
   }
 
@@ -13789,7 +13789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileCode;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileCode.primary;
+        return PhosphorIconsDuotone.fileCode;
     }
   }
 
@@ -13813,7 +13813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileCpp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileCpp.primary;
+        return PhosphorIconsDuotone.fileCpp;
     }
   }
 
@@ -13837,7 +13837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileCss;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileCss.primary;
+        return PhosphorIconsDuotone.fileCss;
     }
   }
 
@@ -13861,7 +13861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileCsv;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileCsv.primary;
+        return PhosphorIconsDuotone.fileCsv;
     }
   }
 
@@ -13885,7 +13885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileDashed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileDashed.primary;
+        return PhosphorIconsDuotone.fileDashed;
     }
   }
 
@@ -13909,7 +13909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileDoc;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileDoc.primary;
+        return PhosphorIconsDuotone.fileDoc;
     }
   }
 
@@ -13933,7 +13933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileHtml;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileHtml.primary;
+        return PhosphorIconsDuotone.fileHtml;
     }
   }
 
@@ -13957,7 +13957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileImage;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileImage.primary;
+        return PhosphorIconsDuotone.fileImage;
     }
   }
 
@@ -13981,7 +13981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileIni;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileIni.primary;
+        return PhosphorIconsDuotone.fileIni;
     }
   }
 
@@ -14005,7 +14005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileJpg;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileJpg.primary;
+        return PhosphorIconsDuotone.fileJpg;
     }
   }
 
@@ -14029,7 +14029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileJs;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileJs.primary;
+        return PhosphorIconsDuotone.fileJs;
     }
   }
 
@@ -14053,7 +14053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileJsx;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileJsx.primary;
+        return PhosphorIconsDuotone.fileJsx;
     }
   }
 
@@ -14077,7 +14077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileLock;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileLock.primary;
+        return PhosphorIconsDuotone.fileLock;
     }
   }
 
@@ -14101,7 +14101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileMagnifyingGlass;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileMagnifyingGlass.primary;
+        return PhosphorIconsDuotone.fileMagnifyingGlass;
     }
   }
 
@@ -14125,7 +14125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileMd;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileMd.primary;
+        return PhosphorIconsDuotone.fileMd;
     }
   }
 
@@ -14149,7 +14149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileMinus.primary;
+        return PhosphorIconsDuotone.fileMinus;
     }
   }
 
@@ -14173,7 +14173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filePdf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filePdf.primary;
+        return PhosphorIconsDuotone.filePdf;
     }
   }
 
@@ -14197,7 +14197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filePlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filePlus.primary;
+        return PhosphorIconsDuotone.filePlus;
     }
   }
 
@@ -14221,7 +14221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filePng;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filePng.primary;
+        return PhosphorIconsDuotone.filePng;
     }
   }
 
@@ -14245,7 +14245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filePpt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filePpt.primary;
+        return PhosphorIconsDuotone.filePpt;
     }
   }
 
@@ -14269,7 +14269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filePy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filePy.primary;
+        return PhosphorIconsDuotone.filePy;
     }
   }
 
@@ -14293,7 +14293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileRs;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileRs.primary;
+        return PhosphorIconsDuotone.fileRs;
     }
   }
 
@@ -14317,7 +14317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileSql;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileSql.primary;
+        return PhosphorIconsDuotone.fileSql;
     }
   }
 
@@ -14341,7 +14341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileSvg;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileSvg.primary;
+        return PhosphorIconsDuotone.fileSvg;
     }
   }
 
@@ -14365,7 +14365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileText;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileText.primary;
+        return PhosphorIconsDuotone.fileText;
     }
   }
 
@@ -14389,7 +14389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileTs;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileTs.primary;
+        return PhosphorIconsDuotone.fileTs;
     }
   }
 
@@ -14413,7 +14413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileTsx;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileTsx.primary;
+        return PhosphorIconsDuotone.fileTsx;
     }
   }
 
@@ -14437,7 +14437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileTxt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileTxt.primary;
+        return PhosphorIconsDuotone.fileTxt;
     }
   }
 
@@ -14461,7 +14461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileVideo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileVideo.primary;
+        return PhosphorIconsDuotone.fileVideo;
     }
   }
 
@@ -14485,7 +14485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileVue;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileVue.primary;
+        return PhosphorIconsDuotone.fileVue;
     }
   }
 
@@ -14509,7 +14509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileX.primary;
+        return PhosphorIconsDuotone.fileX;
     }
   }
 
@@ -14533,7 +14533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileXls;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileXls.primary;
+        return PhosphorIconsDuotone.fileXls;
     }
   }
 
@@ -14557,7 +14557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fileZip;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fileZip.primary;
+        return PhosphorIconsDuotone.fileZip;
     }
   }
 
@@ -14581,7 +14581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.files;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.files.primary;
+        return PhosphorIconsDuotone.files;
     }
   }
 
@@ -14605,7 +14605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filmReel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filmReel.primary;
+        return PhosphorIconsDuotone.filmReel;
     }
   }
 
@@ -14629,7 +14629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filmScript;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filmScript.primary;
+        return PhosphorIconsDuotone.filmScript;
     }
   }
 
@@ -14653,7 +14653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filmSlate;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filmSlate.primary;
+        return PhosphorIconsDuotone.filmSlate;
     }
   }
 
@@ -14677,7 +14677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.filmStrip;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.filmStrip.primary;
+        return PhosphorIconsDuotone.filmStrip;
     }
   }
 
@@ -14701,7 +14701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fingerprint;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fingerprint.primary;
+        return PhosphorIconsDuotone.fingerprint;
     }
   }
 
@@ -14725,7 +14725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fingerprintSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fingerprintSimple.primary;
+        return PhosphorIconsDuotone.fingerprintSimple;
     }
   }
 
@@ -14749,7 +14749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.finnTheHuman;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.finnTheHuman.primary;
+        return PhosphorIconsDuotone.finnTheHuman;
     }
   }
 
@@ -14773,7 +14773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fire;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fire.primary;
+        return PhosphorIconsDuotone.fire;
     }
   }
 
@@ -14797,7 +14797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fireExtinguisher;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fireExtinguisher.primary;
+        return PhosphorIconsDuotone.fireExtinguisher;
     }
   }
 
@@ -14821,7 +14821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fireSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fireSimple.primary;
+        return PhosphorIconsDuotone.fireSimple;
     }
   }
 
@@ -14845,7 +14845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fireTruck;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fireTruck.primary;
+        return PhosphorIconsDuotone.fireTruck;
     }
   }
 
@@ -14869,7 +14869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.firstAid;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.firstAid.primary;
+        return PhosphorIconsDuotone.firstAid;
     }
   }
 
@@ -14893,7 +14893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.firstAidKit;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.firstAidKit.primary;
+        return PhosphorIconsDuotone.firstAidKit;
     }
   }
 
@@ -14917,7 +14917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fish;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fish.primary;
+        return PhosphorIconsDuotone.fish;
     }
   }
 
@@ -14941,7 +14941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fishSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fishSimple.primary;
+        return PhosphorIconsDuotone.fishSimple;
     }
   }
 
@@ -14965,7 +14965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flag;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flag.primary;
+        return PhosphorIconsDuotone.flag;
     }
   }
 
@@ -14989,7 +14989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flagBanner;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flagBanner.primary;
+        return PhosphorIconsDuotone.flagBanner;
     }
   }
 
@@ -15013,7 +15013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flagBannerFold;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flagBannerFold.primary;
+        return PhosphorIconsDuotone.flagBannerFold;
     }
   }
 
@@ -15037,7 +15037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flagCheckered;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flagCheckered.primary;
+        return PhosphorIconsDuotone.flagCheckered;
     }
   }
 
@@ -15061,7 +15061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flagPennant;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flagPennant.primary;
+        return PhosphorIconsDuotone.flagPennant;
     }
   }
 
@@ -15085,7 +15085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flame;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flame.primary;
+        return PhosphorIconsDuotone.flame;
     }
   }
 
@@ -15109,7 +15109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flashlight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flashlight.primary;
+        return PhosphorIconsDuotone.flashlight;
     }
   }
 
@@ -15133,7 +15133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flask;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flask.primary;
+        return PhosphorIconsDuotone.flask;
     }
   }
 
@@ -15157,7 +15157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flipHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flipHorizontal.primary;
+        return PhosphorIconsDuotone.flipHorizontal;
     }
   }
 
@@ -15181,7 +15181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flipVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flipVertical.primary;
+        return PhosphorIconsDuotone.flipVertical;
     }
   }
 
@@ -15205,7 +15205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.floppyDisk;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.floppyDisk.primary;
+        return PhosphorIconsDuotone.floppyDisk;
     }
   }
 
@@ -15229,7 +15229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.floppyDiskBack;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.floppyDiskBack.primary;
+        return PhosphorIconsDuotone.floppyDiskBack;
     }
   }
 
@@ -15253,7 +15253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flowArrow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flowArrow.primary;
+        return PhosphorIconsDuotone.flowArrow;
     }
   }
 
@@ -15277,7 +15277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flower;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flower.primary;
+        return PhosphorIconsDuotone.flower;
     }
   }
 
@@ -15301,7 +15301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flowerLotus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flowerLotus.primary;
+        return PhosphorIconsDuotone.flowerLotus;
     }
   }
 
@@ -15325,7 +15325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flowerTulip;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flowerTulip.primary;
+        return PhosphorIconsDuotone.flowerTulip;
     }
   }
 
@@ -15349,7 +15349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.flyingSaucer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.flyingSaucer.primary;
+        return PhosphorIconsDuotone.flyingSaucer;
     }
   }
 
@@ -15373,7 +15373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folder;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folder.primary;
+        return PhosphorIconsDuotone.folder;
     }
   }
 
@@ -15397,7 +15397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderDashed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderDashed.primary;
+        return PhosphorIconsDuotone.folderDashed;
     }
   }
 
@@ -15421,7 +15421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderLock;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderLock.primary;
+        return PhosphorIconsDuotone.folderLock;
     }
   }
 
@@ -15445,7 +15445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderMinus.primary;
+        return PhosphorIconsDuotone.folderMinus;
     }
   }
 
@@ -15469,7 +15469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderOpen.primary;
+        return PhosphorIconsDuotone.folderOpen;
     }
   }
 
@@ -15493,7 +15493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderPlus.primary;
+        return PhosphorIconsDuotone.folderPlus;
     }
   }
 
@@ -15517,7 +15517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderSimple.primary;
+        return PhosphorIconsDuotone.folderSimple;
     }
   }
 
@@ -15541,7 +15541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderSimpleDashed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderSimpleDashed.primary;
+        return PhosphorIconsDuotone.folderSimpleDashed;
     }
   }
 
@@ -15565,7 +15565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderSimpleLock;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderSimpleLock.primary;
+        return PhosphorIconsDuotone.folderSimpleLock;
     }
   }
 
@@ -15589,7 +15589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderSimpleMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderSimpleMinus.primary;
+        return PhosphorIconsDuotone.folderSimpleMinus;
     }
   }
 
@@ -15613,7 +15613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderSimplePlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderSimplePlus.primary;
+        return PhosphorIconsDuotone.folderSimplePlus;
     }
   }
 
@@ -15637,7 +15637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderSimpleStar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderSimpleStar.primary;
+        return PhosphorIconsDuotone.folderSimpleStar;
     }
   }
 
@@ -15661,7 +15661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderSimpleUser;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderSimpleUser.primary;
+        return PhosphorIconsDuotone.folderSimpleUser;
     }
   }
 
@@ -15685,7 +15685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderStar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderStar.primary;
+        return PhosphorIconsDuotone.folderStar;
     }
   }
 
@@ -15709,7 +15709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folderUser;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folderUser.primary;
+        return PhosphorIconsDuotone.folderUser;
     }
   }
 
@@ -15733,7 +15733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.folders;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.folders.primary;
+        return PhosphorIconsDuotone.folders;
     }
   }
 
@@ -15757,7 +15757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.football;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.football.primary;
+        return PhosphorIconsDuotone.football;
     }
   }
 
@@ -15781,7 +15781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.footballHelmet;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.footballHelmet.primary;
+        return PhosphorIconsDuotone.footballHelmet;
     }
   }
 
@@ -15805,7 +15805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.footprints;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.footprints.primary;
+        return PhosphorIconsDuotone.footprints;
     }
   }
 
@@ -15829,7 +15829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.forkKnife;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.forkKnife.primary;
+        return PhosphorIconsDuotone.forkKnife;
     }
   }
 
@@ -15853,7 +15853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.fourK;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.fourK.primary;
+        return PhosphorIconsDuotone.fourK;
     }
   }
 
@@ -15877,7 +15877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.frameCorners;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.frameCorners.primary;
+        return PhosphorIconsDuotone.frameCorners;
     }
   }
 
@@ -15901,7 +15901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.framerLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.framerLogo.primary;
+        return PhosphorIconsDuotone.framerLogo;
     }
   }
 
@@ -15925,7 +15925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.function;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.function.primary;
+        return PhosphorIconsDuotone.function;
     }
   }
 
@@ -15949,7 +15949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.funnel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.funnel.primary;
+        return PhosphorIconsDuotone.funnel;
     }
   }
 
@@ -15973,7 +15973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.funnelSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.funnelSimple.primary;
+        return PhosphorIconsDuotone.funnelSimple;
     }
   }
 
@@ -15997,7 +15997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.funnelSimpleX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.funnelSimpleX.primary;
+        return PhosphorIconsDuotone.funnelSimpleX;
     }
   }
 
@@ -16021,7 +16021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.funnelX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.funnelX.primary;
+        return PhosphorIconsDuotone.funnelX;
     }
   }
 
@@ -16045,7 +16045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gameController;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gameController.primary;
+        return PhosphorIconsDuotone.gameController;
     }
   }
 
@@ -16069,7 +16069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.garage;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.garage.primary;
+        return PhosphorIconsDuotone.garage;
     }
   }
 
@@ -16093,7 +16093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gasCan;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gasCan.primary;
+        return PhosphorIconsDuotone.gasCan;
     }
   }
 
@@ -16117,7 +16117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gasPump;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gasPump.primary;
+        return PhosphorIconsDuotone.gasPump;
     }
   }
 
@@ -16141,7 +16141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gauge;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gauge.primary;
+        return PhosphorIconsDuotone.gauge;
     }
   }
 
@@ -16165,7 +16165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gavel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gavel.primary;
+        return PhosphorIconsDuotone.gavel;
     }
   }
 
@@ -16189,7 +16189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gear;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gear.primary;
+        return PhosphorIconsDuotone.gear;
     }
   }
 
@@ -16213,7 +16213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gearFine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gearFine.primary;
+        return PhosphorIconsDuotone.gearFine;
     }
   }
 
@@ -16237,7 +16237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gearSix;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gearSix.primary;
+        return PhosphorIconsDuotone.gearSix;
     }
   }
 
@@ -16261,7 +16261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.genderFemale;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.genderFemale.primary;
+        return PhosphorIconsDuotone.genderFemale;
     }
   }
 
@@ -16285,7 +16285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.genderIntersex;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.genderIntersex.primary;
+        return PhosphorIconsDuotone.genderIntersex;
     }
   }
 
@@ -16309,7 +16309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.genderMale;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.genderMale.primary;
+        return PhosphorIconsDuotone.genderMale;
     }
   }
 
@@ -16333,7 +16333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.genderNeuter;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.genderNeuter.primary;
+        return PhosphorIconsDuotone.genderNeuter;
     }
   }
 
@@ -16357,7 +16357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.genderNonbinary;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.genderNonbinary.primary;
+        return PhosphorIconsDuotone.genderNonbinary;
     }
   }
 
@@ -16381,7 +16381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.genderTransgender;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.genderTransgender.primary;
+        return PhosphorIconsDuotone.genderTransgender;
     }
   }
 
@@ -16405,7 +16405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ghost;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ghost.primary;
+        return PhosphorIconsDuotone.ghost;
     }
   }
 
@@ -16429,7 +16429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gif;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gif.primary;
+        return PhosphorIconsDuotone.gif;
     }
   }
 
@@ -16453,7 +16453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gift;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gift.primary;
+        return PhosphorIconsDuotone.gift;
     }
   }
 
@@ -16477,7 +16477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gitBranch;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gitBranch.primary;
+        return PhosphorIconsDuotone.gitBranch;
     }
   }
 
@@ -16501,7 +16501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gitCommit;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gitCommit.primary;
+        return PhosphorIconsDuotone.gitCommit;
     }
   }
 
@@ -16525,7 +16525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gitDiff;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gitDiff.primary;
+        return PhosphorIconsDuotone.gitDiff;
     }
   }
 
@@ -16549,7 +16549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gitFork;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gitFork.primary;
+        return PhosphorIconsDuotone.gitFork;
     }
   }
 
@@ -16573,7 +16573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gitMerge;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gitMerge.primary;
+        return PhosphorIconsDuotone.gitMerge;
     }
   }
 
@@ -16597,7 +16597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gitPullRequest;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gitPullRequest.primary;
+        return PhosphorIconsDuotone.gitPullRequest;
     }
   }
 
@@ -16621,7 +16621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.githubLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.githubLogo.primary;
+        return PhosphorIconsDuotone.githubLogo;
     }
   }
 
@@ -16645,7 +16645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gitlabLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gitlabLogo.primary;
+        return PhosphorIconsDuotone.gitlabLogo;
     }
   }
 
@@ -16669,7 +16669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gitlabLogoSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gitlabLogoSimple.primary;
+        return PhosphorIconsDuotone.gitlabLogoSimple;
     }
   }
 
@@ -16693,7 +16693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.globe;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.globe.primary;
+        return PhosphorIconsDuotone.globe;
     }
   }
 
@@ -16717,7 +16717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.globeHemisphereEast;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.globeHemisphereEast.primary;
+        return PhosphorIconsDuotone.globeHemisphereEast;
     }
   }
 
@@ -16741,7 +16741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.globeHemisphereWest;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.globeHemisphereWest.primary;
+        return PhosphorIconsDuotone.globeHemisphereWest;
     }
   }
 
@@ -16765,7 +16765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.globeSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.globeSimple.primary;
+        return PhosphorIconsDuotone.globeSimple;
     }
   }
 
@@ -16789,7 +16789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.globeSimpleX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.globeSimpleX.primary;
+        return PhosphorIconsDuotone.globeSimpleX;
     }
   }
 
@@ -16813,7 +16813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.globeStand;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.globeStand.primary;
+        return PhosphorIconsDuotone.globeStand;
     }
   }
 
@@ -16837,7 +16837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.globeX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.globeX.primary;
+        return PhosphorIconsDuotone.globeX;
     }
   }
 
@@ -16861,7 +16861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.goggles;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.goggles.primary;
+        return PhosphorIconsDuotone.goggles;
     }
   }
 
@@ -16885,7 +16885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.golf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.golf.primary;
+        return PhosphorIconsDuotone.golf;
     }
   }
 
@@ -16909,7 +16909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.goodreadsLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.goodreadsLogo.primary;
+        return PhosphorIconsDuotone.goodreadsLogo;
     }
   }
 
@@ -16933,7 +16933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.googleCardboardLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.googleCardboardLogo.primary;
+        return PhosphorIconsDuotone.googleCardboardLogo;
     }
   }
 
@@ -16957,7 +16957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.googleChromeLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.googleChromeLogo.primary;
+        return PhosphorIconsDuotone.googleChromeLogo;
     }
   }
 
@@ -16981,7 +16981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.googleDriveLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.googleDriveLogo.primary;
+        return PhosphorIconsDuotone.googleDriveLogo;
     }
   }
 
@@ -17005,7 +17005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.googleLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.googleLogo.primary;
+        return PhosphorIconsDuotone.googleLogo;
     }
   }
 
@@ -17029,7 +17029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.googlePhotosLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.googlePhotosLogo.primary;
+        return PhosphorIconsDuotone.googlePhotosLogo;
     }
   }
 
@@ -17053,7 +17053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.googlePlayLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.googlePlayLogo.primary;
+        return PhosphorIconsDuotone.googlePlayLogo;
     }
   }
 
@@ -17077,7 +17077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.googlePodcastsLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.googlePodcastsLogo.primary;
+        return PhosphorIconsDuotone.googlePodcastsLogo;
     }
   }
 
@@ -17101,7 +17101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gps;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gps.primary;
+        return PhosphorIconsDuotone.gps;
     }
   }
 
@@ -17125,7 +17125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gpsFix;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gpsFix.primary;
+        return PhosphorIconsDuotone.gpsFix;
     }
   }
 
@@ -17149,7 +17149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gpsSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gpsSlash.primary;
+        return PhosphorIconsDuotone.gpsSlash;
     }
   }
 
@@ -17173,7 +17173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gradient;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gradient.primary;
+        return PhosphorIconsDuotone.gradient;
     }
   }
 
@@ -17197,7 +17197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.graduationCap;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.graduationCap.primary;
+        return PhosphorIconsDuotone.graduationCap;
     }
   }
 
@@ -17221,7 +17221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.grains;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.grains.primary;
+        return PhosphorIconsDuotone.grains;
     }
   }
 
@@ -17245,7 +17245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.grainsSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.grainsSlash.primary;
+        return PhosphorIconsDuotone.grainsSlash;
     }
   }
 
@@ -17269,7 +17269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.graph;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.graph.primary;
+        return PhosphorIconsDuotone.graph;
     }
   }
 
@@ -17293,7 +17293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.graphicsCard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.graphicsCard.primary;
+        return PhosphorIconsDuotone.graphicsCard;
     }
   }
 
@@ -17317,7 +17317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.greaterThan;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.greaterThan.primary;
+        return PhosphorIconsDuotone.greaterThan;
     }
   }
 
@@ -17341,7 +17341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.greaterThanOrEqual;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.greaterThanOrEqual.primary;
+        return PhosphorIconsDuotone.greaterThanOrEqual;
     }
   }
 
@@ -17365,7 +17365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gridFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gridFour.primary;
+        return PhosphorIconsDuotone.gridFour;
     }
   }
 
@@ -17389,7 +17389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.gridNine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.gridNine.primary;
+        return PhosphorIconsDuotone.gridNine;
     }
   }
 
@@ -17413,7 +17413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.guitar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.guitar.primary;
+        return PhosphorIconsDuotone.guitar;
     }
   }
 
@@ -17437,7 +17437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hairDryer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hairDryer.primary;
+        return PhosphorIconsDuotone.hairDryer;
     }
   }
 
@@ -17461,7 +17461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hamburger;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hamburger.primary;
+        return PhosphorIconsDuotone.hamburger;
     }
   }
 
@@ -17485,7 +17485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hammer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hammer.primary;
+        return PhosphorIconsDuotone.hammer;
     }
   }
 
@@ -17509,7 +17509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hand;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hand.primary;
+        return PhosphorIconsDuotone.hand;
     }
   }
 
@@ -17533,7 +17533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handArrowDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handArrowDown.primary;
+        return PhosphorIconsDuotone.handArrowDown;
     }
   }
 
@@ -17557,7 +17557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handArrowUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handArrowUp.primary;
+        return PhosphorIconsDuotone.handArrowUp;
     }
   }
 
@@ -17581,7 +17581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handCoins;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handCoins.primary;
+        return PhosphorIconsDuotone.handCoins;
     }
   }
 
@@ -17605,7 +17605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handDeposit;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handDeposit.primary;
+        return PhosphorIconsDuotone.handDeposit;
     }
   }
 
@@ -17629,7 +17629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handEye;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handEye.primary;
+        return PhosphorIconsDuotone.handEye;
     }
   }
 
@@ -17653,7 +17653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handFist;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handFist.primary;
+        return PhosphorIconsDuotone.handFist;
     }
   }
 
@@ -17677,7 +17677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handGrabbing;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handGrabbing.primary;
+        return PhosphorIconsDuotone.handGrabbing;
     }
   }
 
@@ -17701,7 +17701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handHeart;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handHeart.primary;
+        return PhosphorIconsDuotone.handHeart;
     }
   }
 
@@ -17725,7 +17725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handPalm;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handPalm.primary;
+        return PhosphorIconsDuotone.handPalm;
     }
   }
 
@@ -17749,7 +17749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handPeace;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handPeace.primary;
+        return PhosphorIconsDuotone.handPeace;
     }
   }
 
@@ -17773,7 +17773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handPointing;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handPointing.primary;
+        return PhosphorIconsDuotone.handPointing;
     }
   }
 
@@ -17797,7 +17797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handSoap;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handSoap.primary;
+        return PhosphorIconsDuotone.handSoap;
     }
   }
 
@@ -17821,7 +17821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handSwipeLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handSwipeLeft.primary;
+        return PhosphorIconsDuotone.handSwipeLeft;
     }
   }
 
@@ -17845,7 +17845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handSwipeRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handSwipeRight.primary;
+        return PhosphorIconsDuotone.handSwipeRight;
     }
   }
 
@@ -17869,7 +17869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handTap;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handTap.primary;
+        return PhosphorIconsDuotone.handTap;
     }
   }
 
@@ -17893,7 +17893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handWaving;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handWaving.primary;
+        return PhosphorIconsDuotone.handWaving;
     }
   }
 
@@ -17917,7 +17917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handWithdraw;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handWithdraw.primary;
+        return PhosphorIconsDuotone.handWithdraw;
     }
   }
 
@@ -17941,7 +17941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handbag;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handbag.primary;
+        return PhosphorIconsDuotone.handbag;
     }
   }
 
@@ -17965,7 +17965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handbagSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handbagSimple.primary;
+        return PhosphorIconsDuotone.handbagSimple;
     }
   }
 
@@ -17989,7 +17989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handsClapping;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handsClapping.primary;
+        return PhosphorIconsDuotone.handsClapping;
     }
   }
 
@@ -18013,7 +18013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handsPraying;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handsPraying.primary;
+        return PhosphorIconsDuotone.handsPraying;
     }
   }
 
@@ -18037,7 +18037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.handshake;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.handshake.primary;
+        return PhosphorIconsDuotone.handshake;
     }
   }
 
@@ -18061,7 +18061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hardDrive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hardDrive.primary;
+        return PhosphorIconsDuotone.hardDrive;
     }
   }
 
@@ -18085,7 +18085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hardDrives;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hardDrives.primary;
+        return PhosphorIconsDuotone.hardDrives;
     }
   }
 
@@ -18109,7 +18109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hardHat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hardHat.primary;
+        return PhosphorIconsDuotone.hardHat;
     }
   }
 
@@ -18133,7 +18133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hash.primary;
+        return PhosphorIconsDuotone.hash;
     }
   }
 
@@ -18157,7 +18157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hashStraight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hashStraight.primary;
+        return PhosphorIconsDuotone.hashStraight;
     }
   }
 
@@ -18181,7 +18181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.headCircuit;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.headCircuit.primary;
+        return PhosphorIconsDuotone.headCircuit;
     }
   }
 
@@ -18205,7 +18205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.headlights;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.headlights.primary;
+        return PhosphorIconsDuotone.headlights;
     }
   }
 
@@ -18229,7 +18229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.headphones;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.headphones.primary;
+        return PhosphorIconsDuotone.headphones;
     }
   }
 
@@ -18253,7 +18253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.headset;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.headset.primary;
+        return PhosphorIconsDuotone.headset;
     }
   }
 
@@ -18277,7 +18277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.heart;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.heart.primary;
+        return PhosphorIconsDuotone.heart;
     }
   }
 
@@ -18301,7 +18301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.heartBreak;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.heartBreak.primary;
+        return PhosphorIconsDuotone.heartBreak;
     }
   }
 
@@ -18325,7 +18325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.heartHalf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.heartHalf.primary;
+        return PhosphorIconsDuotone.heartHalf;
     }
   }
 
@@ -18349,7 +18349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.heartStraight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.heartStraight.primary;
+        return PhosphorIconsDuotone.heartStraight;
     }
   }
 
@@ -18373,7 +18373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.heartStraightBreak;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.heartStraightBreak.primary;
+        return PhosphorIconsDuotone.heartStraightBreak;
     }
   }
 
@@ -18397,7 +18397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.heartbeat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.heartbeat.primary;
+        return PhosphorIconsDuotone.heartbeat;
     }
   }
 
@@ -18421,7 +18421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hexagon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hexagon.primary;
+        return PhosphorIconsDuotone.hexagon;
     }
   }
 
@@ -18445,7 +18445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.highDefinition;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.highDefinition.primary;
+        return PhosphorIconsDuotone.highDefinition;
     }
   }
 
@@ -18469,7 +18469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.highHeel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.highHeel.primary;
+        return PhosphorIconsDuotone.highHeel;
     }
   }
 
@@ -18493,7 +18493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.highlighter;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.highlighter.primary;
+        return PhosphorIconsDuotone.highlighter;
     }
   }
 
@@ -18517,7 +18517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.highlighterCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.highlighterCircle.primary;
+        return PhosphorIconsDuotone.highlighterCircle;
     }
   }
 
@@ -18541,7 +18541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hockey;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hockey.primary;
+        return PhosphorIconsDuotone.hockey;
     }
   }
 
@@ -18565,7 +18565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hoodie;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hoodie.primary;
+        return PhosphorIconsDuotone.hoodie;
     }
   }
 
@@ -18589,7 +18589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.horse;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.horse.primary;
+        return PhosphorIconsDuotone.horse;
     }
   }
 
@@ -18613,7 +18613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hospital;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hospital.primary;
+        return PhosphorIconsDuotone.hospital;
     }
   }
 
@@ -18637,7 +18637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hourglass;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hourglass.primary;
+        return PhosphorIconsDuotone.hourglass;
     }
   }
 
@@ -18661,7 +18661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hourglassHigh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hourglassHigh.primary;
+        return PhosphorIconsDuotone.hourglassHigh;
     }
   }
 
@@ -18685,7 +18685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hourglassLow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hourglassLow.primary;
+        return PhosphorIconsDuotone.hourglassLow;
     }
   }
 
@@ -18709,7 +18709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hourglassMedium;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hourglassMedium.primary;
+        return PhosphorIconsDuotone.hourglassMedium;
     }
   }
 
@@ -18733,7 +18733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hourglassSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hourglassSimple.primary;
+        return PhosphorIconsDuotone.hourglassSimple;
     }
   }
 
@@ -18757,7 +18757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hourglassSimpleHigh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hourglassSimpleHigh.primary;
+        return PhosphorIconsDuotone.hourglassSimpleHigh;
     }
   }
 
@@ -18781,7 +18781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hourglassSimpleLow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hourglassSimpleLow.primary;
+        return PhosphorIconsDuotone.hourglassSimpleLow;
     }
   }
 
@@ -18805,7 +18805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hourglassSimpleMedium;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hourglassSimpleMedium.primary;
+        return PhosphorIconsDuotone.hourglassSimpleMedium;
     }
   }
 
@@ -18829,7 +18829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.house;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.house.primary;
+        return PhosphorIconsDuotone.house;
     }
   }
 
@@ -18853,7 +18853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.houseLine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.houseLine.primary;
+        return PhosphorIconsDuotone.houseLine;
     }
   }
 
@@ -18877,7 +18877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.houseSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.houseSimple.primary;
+        return PhosphorIconsDuotone.houseSimple;
     }
   }
 
@@ -18901,7 +18901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.hurricane;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.hurricane.primary;
+        return PhosphorIconsDuotone.hurricane;
     }
   }
 
@@ -18925,7 +18925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.iceCream;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.iceCream.primary;
+        return PhosphorIconsDuotone.iceCream;
     }
   }
 
@@ -18949,7 +18949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.identificationBadge;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.identificationBadge.primary;
+        return PhosphorIconsDuotone.identificationBadge;
     }
   }
 
@@ -18973,7 +18973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.identificationCard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.identificationCard.primary;
+        return PhosphorIconsDuotone.identificationCard;
     }
   }
 
@@ -18997,7 +18997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.image;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.image.primary;
+        return PhosphorIconsDuotone.image;
     }
   }
 
@@ -19021,7 +19021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.imageBroken;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.imageBroken.primary;
+        return PhosphorIconsDuotone.imageBroken;
     }
   }
 
@@ -19045,7 +19045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.imageSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.imageSquare.primary;
+        return PhosphorIconsDuotone.imageSquare;
     }
   }
 
@@ -19069,7 +19069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.images;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.images.primary;
+        return PhosphorIconsDuotone.images;
     }
   }
 
@@ -19093,7 +19093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.imagesSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.imagesSquare.primary;
+        return PhosphorIconsDuotone.imagesSquare;
     }
   }
 
@@ -19117,7 +19117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.infinity;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.infinity.primary;
+        return PhosphorIconsDuotone.infinity;
     }
   }
 
@@ -19141,7 +19141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.info;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.info.primary;
+        return PhosphorIconsDuotone.info;
     }
   }
 
@@ -19165,7 +19165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.instagramLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.instagramLogo.primary;
+        return PhosphorIconsDuotone.instagramLogo;
     }
   }
 
@@ -19189,7 +19189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.intersect;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.intersect.primary;
+        return PhosphorIconsDuotone.intersect;
     }
   }
 
@@ -19213,7 +19213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.intersectSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.intersectSquare.primary;
+        return PhosphorIconsDuotone.intersectSquare;
     }
   }
 
@@ -19237,7 +19237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.intersectThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.intersectThree.primary;
+        return PhosphorIconsDuotone.intersectThree;
     }
   }
 
@@ -19261,7 +19261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.intersection;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.intersection.primary;
+        return PhosphorIconsDuotone.intersection;
     }
   }
 
@@ -19285,7 +19285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.invoice;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.invoice.primary;
+        return PhosphorIconsDuotone.invoice;
     }
   }
 
@@ -19309,7 +19309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.island;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.island.primary;
+        return PhosphorIconsDuotone.island;
     }
   }
 
@@ -19333,7 +19333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.jar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.jar.primary;
+        return PhosphorIconsDuotone.jar;
     }
   }
 
@@ -19357,7 +19357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.jarLabel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.jarLabel.primary;
+        return PhosphorIconsDuotone.jarLabel;
     }
   }
 
@@ -19381,7 +19381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.jeep;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.jeep.primary;
+        return PhosphorIconsDuotone.jeep;
     }
   }
 
@@ -19405,7 +19405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.joystick;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.joystick.primary;
+        return PhosphorIconsDuotone.joystick;
     }
   }
 
@@ -19429,7 +19429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.kanban;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.kanban.primary;
+        return PhosphorIconsDuotone.kanban;
     }
   }
 
@@ -19453,7 +19453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.key;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.key.primary;
+        return PhosphorIconsDuotone.key;
     }
   }
 
@@ -19477,7 +19477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.keyReturn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.keyReturn.primary;
+        return PhosphorIconsDuotone.keyReturn;
     }
   }
 
@@ -19501,7 +19501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.keyboard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.keyboard.primary;
+        return PhosphorIconsDuotone.keyboard;
     }
   }
 
@@ -19525,7 +19525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.keyhole;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.keyhole.primary;
+        return PhosphorIconsDuotone.keyhole;
     }
   }
 
@@ -19549,7 +19549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.knife;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.knife.primary;
+        return PhosphorIconsDuotone.knife;
     }
   }
 
@@ -19573,7 +19573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ladder;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ladder.primary;
+        return PhosphorIconsDuotone.ladder;
     }
   }
 
@@ -19597,7 +19597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ladderSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ladderSimple.primary;
+        return PhosphorIconsDuotone.ladderSimple;
     }
   }
 
@@ -19621,7 +19621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lamp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lamp.primary;
+        return PhosphorIconsDuotone.lamp;
     }
   }
 
@@ -19645,7 +19645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lampPendant;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lampPendant.primary;
+        return PhosphorIconsDuotone.lampPendant;
     }
   }
 
@@ -19669,7 +19669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.laptop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.laptop.primary;
+        return PhosphorIconsDuotone.laptop;
     }
   }
 
@@ -19693,7 +19693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lasso;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lasso.primary;
+        return PhosphorIconsDuotone.lasso;
     }
   }
 
@@ -19717,7 +19717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lastfmLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lastfmLogo.primary;
+        return PhosphorIconsDuotone.lastfmLogo;
     }
   }
 
@@ -19741,7 +19741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.layout;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.layout.primary;
+        return PhosphorIconsDuotone.layout;
     }
   }
 
@@ -19765,7 +19765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.leaf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.leaf.primary;
+        return PhosphorIconsDuotone.leaf;
     }
   }
 
@@ -19789,7 +19789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lectern;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lectern.primary;
+        return PhosphorIconsDuotone.lectern;
     }
   }
 
@@ -19813,7 +19813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lego;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lego.primary;
+        return PhosphorIconsDuotone.lego;
     }
   }
 
@@ -19837,7 +19837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.legoSmiley;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.legoSmiley.primary;
+        return PhosphorIconsDuotone.legoSmiley;
     }
   }
 
@@ -19861,7 +19861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lessThan;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lessThan.primary;
+        return PhosphorIconsDuotone.lessThan;
     }
   }
 
@@ -19885,7 +19885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lessThanOrEqual;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lessThanOrEqual.primary;
+        return PhosphorIconsDuotone.lessThanOrEqual;
     }
   }
 
@@ -19909,7 +19909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.letterCircleH;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.letterCircleH.primary;
+        return PhosphorIconsDuotone.letterCircleH;
     }
   }
 
@@ -19933,7 +19933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.letterCircleP;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.letterCircleP.primary;
+        return PhosphorIconsDuotone.letterCircleP;
     }
   }
 
@@ -19957,7 +19957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.letterCircleV;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.letterCircleV.primary;
+        return PhosphorIconsDuotone.letterCircleV;
     }
   }
 
@@ -19981,7 +19981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lifebuoy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lifebuoy.primary;
+        return PhosphorIconsDuotone.lifebuoy;
     }
   }
 
@@ -20005,7 +20005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lightbulb;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lightbulb.primary;
+        return PhosphorIconsDuotone.lightbulb;
     }
   }
 
@@ -20029,7 +20029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lightbulbFilament;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lightbulbFilament.primary;
+        return PhosphorIconsDuotone.lightbulbFilament;
     }
   }
 
@@ -20053,7 +20053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lighthouse;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lighthouse.primary;
+        return PhosphorIconsDuotone.lighthouse;
     }
   }
 
@@ -20077,7 +20077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lightning;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lightning.primary;
+        return PhosphorIconsDuotone.lightning;
     }
   }
 
@@ -20101,7 +20101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lightningA;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lightningA.primary;
+        return PhosphorIconsDuotone.lightningA;
     }
   }
 
@@ -20125,7 +20125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lightningSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lightningSlash.primary;
+        return PhosphorIconsDuotone.lightningSlash;
     }
   }
 
@@ -20149,7 +20149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lineSegment;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lineSegment.primary;
+        return PhosphorIconsDuotone.lineSegment;
     }
   }
 
@@ -20173,7 +20173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lineSegments;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lineSegments.primary;
+        return PhosphorIconsDuotone.lineSegments;
     }
   }
 
@@ -20197,7 +20197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lineVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lineVertical.primary;
+        return PhosphorIconsDuotone.lineVertical;
     }
   }
 
@@ -20221,7 +20221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.link;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.link.primary;
+        return PhosphorIconsDuotone.link;
     }
   }
 
@@ -20245,7 +20245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.linkBreak;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.linkBreak.primary;
+        return PhosphorIconsDuotone.linkBreak;
     }
   }
 
@@ -20269,7 +20269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.linkSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.linkSimple.primary;
+        return PhosphorIconsDuotone.linkSimple;
     }
   }
 
@@ -20293,7 +20293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.linkSimpleBreak;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.linkSimpleBreak.primary;
+        return PhosphorIconsDuotone.linkSimpleBreak;
     }
   }
 
@@ -20317,7 +20317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.linkSimpleHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.linkSimpleHorizontal.primary;
+        return PhosphorIconsDuotone.linkSimpleHorizontal;
     }
   }
 
@@ -20341,7 +20341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.linkSimpleHorizontalBreak;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.linkSimpleHorizontalBreak.primary;
+        return PhosphorIconsDuotone.linkSimpleHorizontalBreak;
     }
   }
 
@@ -20365,7 +20365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.linkedinLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.linkedinLogo.primary;
+        return PhosphorIconsDuotone.linkedinLogo;
     }
   }
 
@@ -20389,7 +20389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.linktreeLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.linktreeLogo.primary;
+        return PhosphorIconsDuotone.linktreeLogo;
     }
   }
 
@@ -20413,7 +20413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.linuxLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.linuxLogo.primary;
+        return PhosphorIconsDuotone.linuxLogo;
     }
   }
 
@@ -20437,7 +20437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.list;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.list.primary;
+        return PhosphorIconsDuotone.list;
     }
   }
 
@@ -20461,7 +20461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.listBullets;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.listBullets.primary;
+        return PhosphorIconsDuotone.listBullets;
     }
   }
 
@@ -20485,7 +20485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.listChecks;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.listChecks.primary;
+        return PhosphorIconsDuotone.listChecks;
     }
   }
 
@@ -20509,7 +20509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.listDashes;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.listDashes.primary;
+        return PhosphorIconsDuotone.listDashes;
     }
   }
 
@@ -20533,7 +20533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.listHeart;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.listHeart.primary;
+        return PhosphorIconsDuotone.listHeart;
     }
   }
 
@@ -20557,7 +20557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.listMagnifyingGlass;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.listMagnifyingGlass.primary;
+        return PhosphorIconsDuotone.listMagnifyingGlass;
     }
   }
 
@@ -20581,7 +20581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.listNumbers;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.listNumbers.primary;
+        return PhosphorIconsDuotone.listNumbers;
     }
   }
 
@@ -20605,7 +20605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.listPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.listPlus.primary;
+        return PhosphorIconsDuotone.listPlus;
     }
   }
 
@@ -20629,7 +20629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.listStar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.listStar.primary;
+        return PhosphorIconsDuotone.listStar;
     }
   }
 
@@ -20653,7 +20653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lock;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lock.primary;
+        return PhosphorIconsDuotone.lock;
     }
   }
 
@@ -20677,7 +20677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lockKey;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lockKey.primary;
+        return PhosphorIconsDuotone.lockKey;
     }
   }
 
@@ -20701,7 +20701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lockKeyOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lockKeyOpen.primary;
+        return PhosphorIconsDuotone.lockKeyOpen;
     }
   }
 
@@ -20725,7 +20725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lockLaminated;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lockLaminated.primary;
+        return PhosphorIconsDuotone.lockLaminated;
     }
   }
 
@@ -20749,7 +20749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lockLaminatedOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lockLaminatedOpen.primary;
+        return PhosphorIconsDuotone.lockLaminatedOpen;
     }
   }
 
@@ -20773,7 +20773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lockOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lockOpen.primary;
+        return PhosphorIconsDuotone.lockOpen;
     }
   }
 
@@ -20797,7 +20797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lockSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lockSimple.primary;
+        return PhosphorIconsDuotone.lockSimple;
     }
   }
 
@@ -20821,7 +20821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lockSimpleOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lockSimpleOpen.primary;
+        return PhosphorIconsDuotone.lockSimpleOpen;
     }
   }
 
@@ -20845,7 +20845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.lockers;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.lockers.primary;
+        return PhosphorIconsDuotone.lockers;
     }
   }
 
@@ -20869,7 +20869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.log;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.log.primary;
+        return PhosphorIconsDuotone.log;
     }
   }
 
@@ -20893,7 +20893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.magicWand;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.magicWand.primary;
+        return PhosphorIconsDuotone.magicWand;
     }
   }
 
@@ -20917,7 +20917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.magnet;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.magnet.primary;
+        return PhosphorIconsDuotone.magnet;
     }
   }
 
@@ -20941,7 +20941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.magnetStraight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.magnetStraight.primary;
+        return PhosphorIconsDuotone.magnetStraight;
     }
   }
 
@@ -20965,7 +20965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.magnifyingGlass;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.magnifyingGlass.primary;
+        return PhosphorIconsDuotone.magnifyingGlass;
     }
   }
 
@@ -20989,7 +20989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.magnifyingGlassMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.magnifyingGlassMinus.primary;
+        return PhosphorIconsDuotone.magnifyingGlassMinus;
     }
   }
 
@@ -21013,7 +21013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.magnifyingGlassPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.magnifyingGlassPlus.primary;
+        return PhosphorIconsDuotone.magnifyingGlassPlus;
     }
   }
 
@@ -21037,7 +21037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mailbox;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mailbox.primary;
+        return PhosphorIconsDuotone.mailbox;
     }
   }
 
@@ -21061,7 +21061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mapPin;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mapPin.primary;
+        return PhosphorIconsDuotone.mapPin;
     }
   }
 
@@ -21085,7 +21085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mapPinArea;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mapPinArea.primary;
+        return PhosphorIconsDuotone.mapPinArea;
     }
   }
 
@@ -21109,7 +21109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mapPinLine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mapPinLine.primary;
+        return PhosphorIconsDuotone.mapPinLine;
     }
   }
 
@@ -21133,7 +21133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mapPinPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mapPinPlus.primary;
+        return PhosphorIconsDuotone.mapPinPlus;
     }
   }
 
@@ -21157,7 +21157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mapPinSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mapPinSimple.primary;
+        return PhosphorIconsDuotone.mapPinSimple;
     }
   }
 
@@ -21181,7 +21181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mapPinSimpleArea;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mapPinSimpleArea.primary;
+        return PhosphorIconsDuotone.mapPinSimpleArea;
     }
   }
 
@@ -21205,7 +21205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mapPinSimpleLine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mapPinSimpleLine.primary;
+        return PhosphorIconsDuotone.mapPinSimpleLine;
     }
   }
 
@@ -21229,7 +21229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mapTrifold;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mapTrifold.primary;
+        return PhosphorIconsDuotone.mapTrifold;
     }
   }
 
@@ -21253,7 +21253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.markdownLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.markdownLogo.primary;
+        return PhosphorIconsDuotone.markdownLogo;
     }
   }
 
@@ -21277,7 +21277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.markerCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.markerCircle.primary;
+        return PhosphorIconsDuotone.markerCircle;
     }
   }
 
@@ -21301,7 +21301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.martini;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.martini.primary;
+        return PhosphorIconsDuotone.martini;
     }
   }
 
@@ -21325,7 +21325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.maskHappy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.maskHappy.primary;
+        return PhosphorIconsDuotone.maskHappy;
     }
   }
 
@@ -21349,7 +21349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.maskSad;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.maskSad.primary;
+        return PhosphorIconsDuotone.maskSad;
     }
   }
 
@@ -21373,7 +21373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mastodonLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mastodonLogo.primary;
+        return PhosphorIconsDuotone.mastodonLogo;
     }
   }
 
@@ -21397,7 +21397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mathOperations;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mathOperations.primary;
+        return PhosphorIconsDuotone.mathOperations;
     }
   }
 
@@ -21421,7 +21421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.matrixLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.matrixLogo.primary;
+        return PhosphorIconsDuotone.matrixLogo;
     }
   }
 
@@ -21445,7 +21445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.medal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.medal.primary;
+        return PhosphorIconsDuotone.medal;
     }
   }
 
@@ -21469,7 +21469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.medalMilitary;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.medalMilitary.primary;
+        return PhosphorIconsDuotone.medalMilitary;
     }
   }
 
@@ -21493,7 +21493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mediumLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mediumLogo.primary;
+        return PhosphorIconsDuotone.mediumLogo;
     }
   }
 
@@ -21517,7 +21517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.megaphone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.megaphone.primary;
+        return PhosphorIconsDuotone.megaphone;
     }
   }
 
@@ -21541,7 +21541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.megaphoneSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.megaphoneSimple.primary;
+        return PhosphorIconsDuotone.megaphoneSimple;
     }
   }
 
@@ -21565,7 +21565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.memberOf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.memberOf.primary;
+        return PhosphorIconsDuotone.memberOf;
     }
   }
 
@@ -21589,7 +21589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.memory;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.memory.primary;
+        return PhosphorIconsDuotone.memory;
     }
   }
 
@@ -21613,7 +21613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.messengerLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.messengerLogo.primary;
+        return PhosphorIconsDuotone.messengerLogo;
     }
   }
 
@@ -21637,7 +21637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.metaLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.metaLogo.primary;
+        return PhosphorIconsDuotone.metaLogo;
     }
   }
 
@@ -21661,7 +21661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.meteor;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.meteor.primary;
+        return PhosphorIconsDuotone.meteor;
     }
   }
 
@@ -21685,7 +21685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.metronome;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.metronome.primary;
+        return PhosphorIconsDuotone.metronome;
     }
   }
 
@@ -21709,7 +21709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microphone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microphone.primary;
+        return PhosphorIconsDuotone.microphone;
     }
   }
 
@@ -21733,7 +21733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microphoneSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microphoneSlash.primary;
+        return PhosphorIconsDuotone.microphoneSlash;
     }
   }
 
@@ -21757,7 +21757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microphoneStage;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microphoneStage.primary;
+        return PhosphorIconsDuotone.microphoneStage;
     }
   }
 
@@ -21781,7 +21781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microscope;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microscope.primary;
+        return PhosphorIconsDuotone.microscope;
     }
   }
 
@@ -21805,7 +21805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microsoftExcelLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microsoftExcelLogo.primary;
+        return PhosphorIconsDuotone.microsoftExcelLogo;
     }
   }
 
@@ -21829,7 +21829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microsoftOutlookLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microsoftOutlookLogo.primary;
+        return PhosphorIconsDuotone.microsoftOutlookLogo;
     }
   }
 
@@ -21853,7 +21853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microsoftPowerpointLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microsoftPowerpointLogo.primary;
+        return PhosphorIconsDuotone.microsoftPowerpointLogo;
     }
   }
 
@@ -21877,7 +21877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microsoftTeamsLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microsoftTeamsLogo.primary;
+        return PhosphorIconsDuotone.microsoftTeamsLogo;
     }
   }
 
@@ -21901,7 +21901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.microsoftWordLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.microsoftWordLogo.primary;
+        return PhosphorIconsDuotone.microsoftWordLogo;
     }
   }
 
@@ -21925,7 +21925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.minus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.minus.primary;
+        return PhosphorIconsDuotone.minus;
     }
   }
 
@@ -21949,7 +21949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.minusCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.minusCircle.primary;
+        return PhosphorIconsDuotone.minusCircle;
     }
   }
 
@@ -21973,7 +21973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.minusSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.minusSquare.primary;
+        return PhosphorIconsDuotone.minusSquare;
     }
   }
 
@@ -21997,7 +21997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.money;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.money.primary;
+        return PhosphorIconsDuotone.money;
     }
   }
 
@@ -22021,7 +22021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.moneyWavy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.moneyWavy.primary;
+        return PhosphorIconsDuotone.moneyWavy;
     }
   }
 
@@ -22045,7 +22045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.monitor;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.monitor.primary;
+        return PhosphorIconsDuotone.monitor;
     }
   }
 
@@ -22069,7 +22069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.monitorArrowUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.monitorArrowUp.primary;
+        return PhosphorIconsDuotone.monitorArrowUp;
     }
   }
 
@@ -22093,7 +22093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.monitorPlay;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.monitorPlay.primary;
+        return PhosphorIconsDuotone.monitorPlay;
     }
   }
 
@@ -22117,7 +22117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.moon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.moon.primary;
+        return PhosphorIconsDuotone.moon;
     }
   }
 
@@ -22141,7 +22141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.moonStars;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.moonStars.primary;
+        return PhosphorIconsDuotone.moonStars;
     }
   }
 
@@ -22165,7 +22165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.moped;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.moped.primary;
+        return PhosphorIconsDuotone.moped;
     }
   }
 
@@ -22189,7 +22189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mopedFront;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mopedFront.primary;
+        return PhosphorIconsDuotone.mopedFront;
     }
   }
 
@@ -22213,7 +22213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mosque;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mosque.primary;
+        return PhosphorIconsDuotone.mosque;
     }
   }
 
@@ -22237,7 +22237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.motorcycle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.motorcycle.primary;
+        return PhosphorIconsDuotone.motorcycle;
     }
   }
 
@@ -22261,7 +22261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mountains;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mountains.primary;
+        return PhosphorIconsDuotone.mountains;
     }
   }
 
@@ -22285,7 +22285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mouse;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mouse.primary;
+        return PhosphorIconsDuotone.mouse;
     }
   }
 
@@ -22309,7 +22309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mouseLeftClick;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mouseLeftClick.primary;
+        return PhosphorIconsDuotone.mouseLeftClick;
     }
   }
 
@@ -22333,7 +22333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mouseMiddleClick;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mouseMiddleClick.primary;
+        return PhosphorIconsDuotone.mouseMiddleClick;
     }
   }
 
@@ -22357,7 +22357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mouseRightClick;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mouseRightClick.primary;
+        return PhosphorIconsDuotone.mouseRightClick;
     }
   }
 
@@ -22381,7 +22381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mouseScroll;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mouseScroll.primary;
+        return PhosphorIconsDuotone.mouseScroll;
     }
   }
 
@@ -22405,7 +22405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.mouseSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.mouseSimple.primary;
+        return PhosphorIconsDuotone.mouseSimple;
     }
   }
 
@@ -22429,7 +22429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.musicNote;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.musicNote.primary;
+        return PhosphorIconsDuotone.musicNote;
     }
   }
 
@@ -22453,7 +22453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.musicNoteSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.musicNoteSimple.primary;
+        return PhosphorIconsDuotone.musicNoteSimple;
     }
   }
 
@@ -22477,7 +22477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.musicNotes;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.musicNotes.primary;
+        return PhosphorIconsDuotone.musicNotes;
     }
   }
 
@@ -22501,7 +22501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.musicNotesMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.musicNotesMinus.primary;
+        return PhosphorIconsDuotone.musicNotesMinus;
     }
   }
 
@@ -22525,7 +22525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.musicNotesPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.musicNotesPlus.primary;
+        return PhosphorIconsDuotone.musicNotesPlus;
     }
   }
 
@@ -22549,7 +22549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.musicNotesSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.musicNotesSimple.primary;
+        return PhosphorIconsDuotone.musicNotesSimple;
     }
   }
 
@@ -22573,7 +22573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.navigationArrow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.navigationArrow.primary;
+        return PhosphorIconsDuotone.navigationArrow;
     }
   }
 
@@ -22597,7 +22597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.needle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.needle.primary;
+        return PhosphorIconsDuotone.needle;
     }
   }
 
@@ -22621,7 +22621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.network;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.network.primary;
+        return PhosphorIconsDuotone.network;
     }
   }
 
@@ -22645,7 +22645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.networkSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.networkSlash.primary;
+        return PhosphorIconsDuotone.networkSlash;
     }
   }
 
@@ -22669,7 +22669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.networkX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.networkX.primary;
+        return PhosphorIconsDuotone.networkX;
     }
   }
 
@@ -22693,7 +22693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.newspaper;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.newspaper.primary;
+        return PhosphorIconsDuotone.newspaper;
     }
   }
 
@@ -22717,7 +22717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.newspaperClipping;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.newspaperClipping.primary;
+        return PhosphorIconsDuotone.newspaperClipping;
     }
   }
 
@@ -22741,7 +22741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notEquals;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notEquals.primary;
+        return PhosphorIconsDuotone.notEquals;
     }
   }
 
@@ -22765,7 +22765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notMemberOf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notMemberOf.primary;
+        return PhosphorIconsDuotone.notMemberOf;
     }
   }
 
@@ -22789,7 +22789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notSubsetOf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notSubsetOf.primary;
+        return PhosphorIconsDuotone.notSubsetOf;
     }
   }
 
@@ -22813,7 +22813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notSupersetOf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notSupersetOf.primary;
+        return PhosphorIconsDuotone.notSupersetOf;
     }
   }
 
@@ -22837,7 +22837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notches;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notches.primary;
+        return PhosphorIconsDuotone.notches;
     }
   }
 
@@ -22861,7 +22861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.note;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.note.primary;
+        return PhosphorIconsDuotone.note;
     }
   }
 
@@ -22885,7 +22885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.noteBlank;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.noteBlank.primary;
+        return PhosphorIconsDuotone.noteBlank;
     }
   }
 
@@ -22909,7 +22909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notePencil;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notePencil.primary;
+        return PhosphorIconsDuotone.notePencil;
     }
   }
 
@@ -22933,7 +22933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notebook;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notebook.primary;
+        return PhosphorIconsDuotone.notebook;
     }
   }
 
@@ -22957,7 +22957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notepad;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notepad.primary;
+        return PhosphorIconsDuotone.notepad;
     }
   }
 
@@ -22981,7 +22981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notification;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notification.primary;
+        return PhosphorIconsDuotone.notification;
     }
   }
 
@@ -23005,7 +23005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.notionLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.notionLogo.primary;
+        return PhosphorIconsDuotone.notionLogo;
     }
   }
 
@@ -23029,7 +23029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.nuclearPlant;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.nuclearPlant.primary;
+        return PhosphorIconsDuotone.nuclearPlant;
     }
   }
 
@@ -23053,7 +23053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleEight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleEight.primary;
+        return PhosphorIconsDuotone.numberCircleEight;
     }
   }
 
@@ -23077,7 +23077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleFive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleFive.primary;
+        return PhosphorIconsDuotone.numberCircleFive;
     }
   }
 
@@ -23101,7 +23101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleFour.primary;
+        return PhosphorIconsDuotone.numberCircleFour;
     }
   }
 
@@ -23125,7 +23125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleNine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleNine.primary;
+        return PhosphorIconsDuotone.numberCircleNine;
     }
   }
 
@@ -23149,7 +23149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleOne;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleOne.primary;
+        return PhosphorIconsDuotone.numberCircleOne;
     }
   }
 
@@ -23173,7 +23173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleSeven;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleSeven.primary;
+        return PhosphorIconsDuotone.numberCircleSeven;
     }
   }
 
@@ -23197,7 +23197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleSix;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleSix.primary;
+        return PhosphorIconsDuotone.numberCircleSix;
     }
   }
 
@@ -23221,7 +23221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleThree.primary;
+        return PhosphorIconsDuotone.numberCircleThree;
     }
   }
 
@@ -23245,7 +23245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleTwo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleTwo.primary;
+        return PhosphorIconsDuotone.numberCircleTwo;
     }
   }
 
@@ -23269,7 +23269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberCircleZero;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberCircleZero.primary;
+        return PhosphorIconsDuotone.numberCircleZero;
     }
   }
 
@@ -23293,7 +23293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberEight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberEight.primary;
+        return PhosphorIconsDuotone.numberEight;
     }
   }
 
@@ -23317,7 +23317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberFive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberFive.primary;
+        return PhosphorIconsDuotone.numberFive;
     }
   }
 
@@ -23341,7 +23341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberFour.primary;
+        return PhosphorIconsDuotone.numberFour;
     }
   }
 
@@ -23365,7 +23365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberNine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberNine.primary;
+        return PhosphorIconsDuotone.numberNine;
     }
   }
 
@@ -23389,7 +23389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberOne;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberOne.primary;
+        return PhosphorIconsDuotone.numberOne;
     }
   }
 
@@ -23413,7 +23413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSeven;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSeven.primary;
+        return PhosphorIconsDuotone.numberSeven;
     }
   }
 
@@ -23437,7 +23437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSix;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSix.primary;
+        return PhosphorIconsDuotone.numberSix;
     }
   }
 
@@ -23461,7 +23461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareEight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareEight.primary;
+        return PhosphorIconsDuotone.numberSquareEight;
     }
   }
 
@@ -23485,7 +23485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareFive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareFive.primary;
+        return PhosphorIconsDuotone.numberSquareFive;
     }
   }
 
@@ -23509,7 +23509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareFour.primary;
+        return PhosphorIconsDuotone.numberSquareFour;
     }
   }
 
@@ -23533,7 +23533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareNine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareNine.primary;
+        return PhosphorIconsDuotone.numberSquareNine;
     }
   }
 
@@ -23557,7 +23557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareOne;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareOne.primary;
+        return PhosphorIconsDuotone.numberSquareOne;
     }
   }
 
@@ -23581,7 +23581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareSeven;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareSeven.primary;
+        return PhosphorIconsDuotone.numberSquareSeven;
     }
   }
 
@@ -23605,7 +23605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareSix;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareSix.primary;
+        return PhosphorIconsDuotone.numberSquareSix;
     }
   }
 
@@ -23629,7 +23629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareThree.primary;
+        return PhosphorIconsDuotone.numberSquareThree;
     }
   }
 
@@ -23653,7 +23653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareTwo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareTwo.primary;
+        return PhosphorIconsDuotone.numberSquareTwo;
     }
   }
 
@@ -23677,7 +23677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberSquareZero;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberSquareZero.primary;
+        return PhosphorIconsDuotone.numberSquareZero;
     }
   }
 
@@ -23701,7 +23701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberThree.primary;
+        return PhosphorIconsDuotone.numberThree;
     }
   }
 
@@ -23725,7 +23725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberTwo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberTwo.primary;
+        return PhosphorIconsDuotone.numberTwo;
     }
   }
 
@@ -23749,7 +23749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numberZero;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numberZero.primary;
+        return PhosphorIconsDuotone.numberZero;
     }
   }
 
@@ -23773,7 +23773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.numpad;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.numpad.primary;
+        return PhosphorIconsDuotone.numpad;
     }
   }
 
@@ -23797,7 +23797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.nut;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.nut.primary;
+        return PhosphorIconsDuotone.nut;
     }
   }
 
@@ -23821,7 +23821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.nyTimesLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.nyTimesLogo.primary;
+        return PhosphorIconsDuotone.nyTimesLogo;
     }
   }
 
@@ -23845,7 +23845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.octagon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.octagon.primary;
+        return PhosphorIconsDuotone.octagon;
     }
   }
 
@@ -23869,7 +23869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.officeChair;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.officeChair.primary;
+        return PhosphorIconsDuotone.officeChair;
     }
   }
 
@@ -23893,7 +23893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.onigiri;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.onigiri.primary;
+        return PhosphorIconsDuotone.onigiri;
     }
   }
 
@@ -23917,7 +23917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.openAiLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.openAiLogo.primary;
+        return PhosphorIconsDuotone.openAiLogo;
     }
   }
 
@@ -23941,7 +23941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.option;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.option.primary;
+        return PhosphorIconsDuotone.option;
     }
   }
 
@@ -23965,7 +23965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.orange;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.orange.primary;
+        return PhosphorIconsDuotone.orange;
     }
   }
 
@@ -23989,7 +23989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.orangeSlice;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.orangeSlice.primary;
+        return PhosphorIconsDuotone.orangeSlice;
     }
   }
 
@@ -24013,7 +24013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.oven;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.oven.primary;
+        return PhosphorIconsDuotone.oven;
     }
   }
 
@@ -24037,7 +24037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.package;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.package.primary;
+        return PhosphorIconsDuotone.package;
     }
   }
 
@@ -24061,7 +24061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paintBrush;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paintBrush.primary;
+        return PhosphorIconsDuotone.paintBrush;
     }
   }
 
@@ -24085,7 +24085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paintBrushBroad;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paintBrushBroad.primary;
+        return PhosphorIconsDuotone.paintBrushBroad;
     }
   }
 
@@ -24109,7 +24109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paintBrushHousehold;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paintBrushHousehold.primary;
+        return PhosphorIconsDuotone.paintBrushHousehold;
     }
   }
 
@@ -24133,7 +24133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paintBucket;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paintBucket.primary;
+        return PhosphorIconsDuotone.paintBucket;
     }
   }
 
@@ -24157,7 +24157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paintRoller;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paintRoller.primary;
+        return PhosphorIconsDuotone.paintRoller;
     }
   }
 
@@ -24181,7 +24181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.palette;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.palette.primary;
+        return PhosphorIconsDuotone.palette;
     }
   }
 
@@ -24205,7 +24205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.panorama;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.panorama.primary;
+        return PhosphorIconsDuotone.panorama;
     }
   }
 
@@ -24229,7 +24229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pants;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pants.primary;
+        return PhosphorIconsDuotone.pants;
     }
   }
 
@@ -24253,7 +24253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paperPlane;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paperPlane.primary;
+        return PhosphorIconsDuotone.paperPlane;
     }
   }
 
@@ -24277,7 +24277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paperPlaneRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paperPlaneRight.primary;
+        return PhosphorIconsDuotone.paperPlaneRight;
     }
   }
 
@@ -24301,7 +24301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paperPlaneTilt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paperPlaneTilt.primary;
+        return PhosphorIconsDuotone.paperPlaneTilt;
     }
   }
 
@@ -24325,7 +24325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paperclip;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paperclip.primary;
+        return PhosphorIconsDuotone.paperclip;
     }
   }
 
@@ -24349,7 +24349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paperclipHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paperclipHorizontal.primary;
+        return PhosphorIconsDuotone.paperclipHorizontal;
     }
   }
 
@@ -24373,7 +24373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.parachute;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.parachute.primary;
+        return PhosphorIconsDuotone.parachute;
     }
   }
 
@@ -24397,7 +24397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paragraph;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paragraph.primary;
+        return PhosphorIconsDuotone.paragraph;
     }
   }
 
@@ -24421,7 +24421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.parallelogram;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.parallelogram.primary;
+        return PhosphorIconsDuotone.parallelogram;
     }
   }
 
@@ -24445,7 +24445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.park;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.park.primary;
+        return PhosphorIconsDuotone.park;
     }
   }
 
@@ -24469,7 +24469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.password;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.password.primary;
+        return PhosphorIconsDuotone.password;
     }
   }
 
@@ -24493,7 +24493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.path;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.path.primary;
+        return PhosphorIconsDuotone.path;
     }
   }
 
@@ -24517,7 +24517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.patreonLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.patreonLogo.primary;
+        return PhosphorIconsDuotone.patreonLogo;
     }
   }
 
@@ -24541,7 +24541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pause;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pause.primary;
+        return PhosphorIconsDuotone.pause;
     }
   }
 
@@ -24565,7 +24565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pauseCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pauseCircle.primary;
+        return PhosphorIconsDuotone.pauseCircle;
     }
   }
 
@@ -24589,7 +24589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pawPrint;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pawPrint.primary;
+        return PhosphorIconsDuotone.pawPrint;
     }
   }
 
@@ -24613,7 +24613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.paypalLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.paypalLogo.primary;
+        return PhosphorIconsDuotone.paypalLogo;
     }
   }
 
@@ -24637,7 +24637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.peace;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.peace.primary;
+        return PhosphorIconsDuotone.peace;
     }
   }
 
@@ -24661,7 +24661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pen.primary;
+        return PhosphorIconsDuotone.pen;
     }
   }
 
@@ -24685,7 +24685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.penNib;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.penNib.primary;
+        return PhosphorIconsDuotone.penNib;
     }
   }
 
@@ -24709,7 +24709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.penNibStraight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.penNibStraight.primary;
+        return PhosphorIconsDuotone.penNibStraight;
     }
   }
 
@@ -24733,7 +24733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pencil;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pencil.primary;
+        return PhosphorIconsDuotone.pencil;
     }
   }
 
@@ -24757,7 +24757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pencilCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pencilCircle.primary;
+        return PhosphorIconsDuotone.pencilCircle;
     }
   }
 
@@ -24781,7 +24781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pencilLine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pencilLine.primary;
+        return PhosphorIconsDuotone.pencilLine;
     }
   }
 
@@ -24805,7 +24805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pencilRuler;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pencilRuler.primary;
+        return PhosphorIconsDuotone.pencilRuler;
     }
   }
 
@@ -24829,7 +24829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pencilSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pencilSimple.primary;
+        return PhosphorIconsDuotone.pencilSimple;
     }
   }
 
@@ -24853,7 +24853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pencilSimpleLine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pencilSimpleLine.primary;
+        return PhosphorIconsDuotone.pencilSimpleLine;
     }
   }
 
@@ -24877,7 +24877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pencilSimpleSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pencilSimpleSlash.primary;
+        return PhosphorIconsDuotone.pencilSimpleSlash;
     }
   }
 
@@ -24901,7 +24901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pencilSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pencilSlash.primary;
+        return PhosphorIconsDuotone.pencilSlash;
     }
   }
 
@@ -24925,7 +24925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pentagon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pentagon.primary;
+        return PhosphorIconsDuotone.pentagon;
     }
   }
 
@@ -24949,7 +24949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pentagram;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pentagram.primary;
+        return PhosphorIconsDuotone.pentagram;
     }
   }
 
@@ -24973,7 +24973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pepper;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pepper.primary;
+        return PhosphorIconsDuotone.pepper;
     }
   }
 
@@ -24997,7 +24997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.percent;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.percent.primary;
+        return PhosphorIconsDuotone.percent;
     }
   }
 
@@ -25021,7 +25021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.person;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.person.primary;
+        return PhosphorIconsDuotone.person;
     }
   }
 
@@ -25045,7 +25045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personArmsSpread;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personArmsSpread.primary;
+        return PhosphorIconsDuotone.personArmsSpread;
     }
   }
 
@@ -25069,7 +25069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimple.primary;
+        return PhosphorIconsDuotone.personSimple;
     }
   }
 
@@ -25093,7 +25093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleBike;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleBike.primary;
+        return PhosphorIconsDuotone.personSimpleBike;
     }
   }
 
@@ -25117,7 +25117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleCircle.primary;
+        return PhosphorIconsDuotone.personSimpleCircle;
     }
   }
 
@@ -25141,7 +25141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleHike;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleHike.primary;
+        return PhosphorIconsDuotone.personSimpleHike;
     }
   }
 
@@ -25165,7 +25165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleRun;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleRun.primary;
+        return PhosphorIconsDuotone.personSimpleRun;
     }
   }
 
@@ -25189,7 +25189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleSki;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleSki.primary;
+        return PhosphorIconsDuotone.personSimpleSki;
     }
   }
 
@@ -25213,7 +25213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleSnowboard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleSnowboard.primary;
+        return PhosphorIconsDuotone.personSimpleSnowboard;
     }
   }
 
@@ -25237,7 +25237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleSwim;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleSwim.primary;
+        return PhosphorIconsDuotone.personSimpleSwim;
     }
   }
 
@@ -25261,7 +25261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleTaiChi;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleTaiChi.primary;
+        return PhosphorIconsDuotone.personSimpleTaiChi;
     }
   }
 
@@ -25285,7 +25285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleThrow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleThrow.primary;
+        return PhosphorIconsDuotone.personSimpleThrow;
     }
   }
 
@@ -25309,7 +25309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.personSimpleWalk;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.personSimpleWalk.primary;
+        return PhosphorIconsDuotone.personSimpleWalk;
     }
   }
 
@@ -25333,7 +25333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.perspective;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.perspective.primary;
+        return PhosphorIconsDuotone.perspective;
     }
   }
 
@@ -25357,7 +25357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phone.primary;
+        return PhosphorIconsDuotone.phone;
     }
   }
 
@@ -25381,7 +25381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phoneCall;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phoneCall.primary;
+        return PhosphorIconsDuotone.phoneCall;
     }
   }
 
@@ -25405,7 +25405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phoneDisconnect;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phoneDisconnect.primary;
+        return PhosphorIconsDuotone.phoneDisconnect;
     }
   }
 
@@ -25429,7 +25429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phoneIncoming;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phoneIncoming.primary;
+        return PhosphorIconsDuotone.phoneIncoming;
     }
   }
 
@@ -25453,7 +25453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phoneList;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phoneList.primary;
+        return PhosphorIconsDuotone.phoneList;
     }
   }
 
@@ -25477,7 +25477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phoneOutgoing;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phoneOutgoing.primary;
+        return PhosphorIconsDuotone.phoneOutgoing;
     }
   }
 
@@ -25501,7 +25501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phonePause;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phonePause.primary;
+        return PhosphorIconsDuotone.phonePause;
     }
   }
 
@@ -25525,7 +25525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phonePlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phonePlus.primary;
+        return PhosphorIconsDuotone.phonePlus;
     }
   }
 
@@ -25549,7 +25549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phoneSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phoneSlash.primary;
+        return PhosphorIconsDuotone.phoneSlash;
     }
   }
 
@@ -25573,7 +25573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phoneTransfer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phoneTransfer.primary;
+        return PhosphorIconsDuotone.phoneTransfer;
     }
   }
 
@@ -25597,7 +25597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phoneX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phoneX.primary;
+        return PhosphorIconsDuotone.phoneX;
     }
   }
 
@@ -25621,7 +25621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.phosphorLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.phosphorLogo.primary;
+        return PhosphorIconsDuotone.phosphorLogo;
     }
   }
 
@@ -25645,7 +25645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pi;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pi.primary;
+        return PhosphorIconsDuotone.pi;
     }
   }
 
@@ -25669,7 +25669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pianoKeys;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pianoKeys.primary;
+        return PhosphorIconsDuotone.pianoKeys;
     }
   }
 
@@ -25693,7 +25693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.picnicTable;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.picnicTable.primary;
+        return PhosphorIconsDuotone.picnicTable;
     }
   }
 
@@ -25717,7 +25717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pictureInpicture;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pictureInpicture.primary;
+        return PhosphorIconsDuotone.pictureInpicture;
     }
   }
 
@@ -25741,7 +25741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.piggyBank;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.piggyBank.primary;
+        return PhosphorIconsDuotone.piggyBank;
     }
   }
 
@@ -25765,7 +25765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pill;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pill.primary;
+        return PhosphorIconsDuotone.pill;
     }
   }
 
@@ -25789,7 +25789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pingPong;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pingPong.primary;
+        return PhosphorIconsDuotone.pingPong;
     }
   }
 
@@ -25813,7 +25813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pintGlass;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pintGlass.primary;
+        return PhosphorIconsDuotone.pintGlass;
     }
   }
 
@@ -25837,7 +25837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pinterestLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pinterestLogo.primary;
+        return PhosphorIconsDuotone.pinterestLogo;
     }
   }
 
@@ -25861,7 +25861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pinwheel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pinwheel.primary;
+        return PhosphorIconsDuotone.pinwheel;
     }
   }
 
@@ -25885,7 +25885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pipe;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pipe.primary;
+        return PhosphorIconsDuotone.pipe;
     }
   }
 
@@ -25909,7 +25909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pipeWrench;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pipeWrench.primary;
+        return PhosphorIconsDuotone.pipeWrench;
     }
   }
 
@@ -25933,7 +25933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pixLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pixLogo.primary;
+        return PhosphorIconsDuotone.pixLogo;
     }
   }
 
@@ -25957,7 +25957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pizza;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pizza.primary;
+        return PhosphorIconsDuotone.pizza;
     }
   }
 
@@ -25981,7 +25981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.placeholder;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.placeholder.primary;
+        return PhosphorIconsDuotone.placeholder;
     }
   }
 
@@ -26005,7 +26005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.planet;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.planet.primary;
+        return PhosphorIconsDuotone.planet;
     }
   }
 
@@ -26029,7 +26029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plant;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plant.primary;
+        return PhosphorIconsDuotone.plant;
     }
   }
 
@@ -26053,7 +26053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.play;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.play.primary;
+        return PhosphorIconsDuotone.play;
     }
   }
 
@@ -26077,7 +26077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.playCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.playCircle.primary;
+        return PhosphorIconsDuotone.playCircle;
     }
   }
 
@@ -26101,7 +26101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.playPause;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.playPause.primary;
+        return PhosphorIconsDuotone.playPause;
     }
   }
 
@@ -26125,7 +26125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.playlist;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.playlist.primary;
+        return PhosphorIconsDuotone.playlist;
     }
   }
 
@@ -26149,7 +26149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plug;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plug.primary;
+        return PhosphorIconsDuotone.plug;
     }
   }
 
@@ -26173,7 +26173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plugCharging;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plugCharging.primary;
+        return PhosphorIconsDuotone.plugCharging;
     }
   }
 
@@ -26197,7 +26197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plugs;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plugs.primary;
+        return PhosphorIconsDuotone.plugs;
     }
   }
 
@@ -26221,7 +26221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plugsConnected;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plugsConnected.primary;
+        return PhosphorIconsDuotone.plugsConnected;
     }
   }
 
@@ -26245,7 +26245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plus.primary;
+        return PhosphorIconsDuotone.plus;
     }
   }
 
@@ -26269,7 +26269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plusCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plusCircle.primary;
+        return PhosphorIconsDuotone.plusCircle;
     }
   }
 
@@ -26293,7 +26293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plusMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plusMinus.primary;
+        return PhosphorIconsDuotone.plusMinus;
     }
   }
 
@@ -26317,7 +26317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.plusSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.plusSquare.primary;
+        return PhosphorIconsDuotone.plusSquare;
     }
   }
 
@@ -26341,7 +26341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pokerChip;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pokerChip.primary;
+        return PhosphorIconsDuotone.pokerChip;
     }
   }
 
@@ -26365,7 +26365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.policeCar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.policeCar.primary;
+        return PhosphorIconsDuotone.policeCar;
     }
   }
 
@@ -26389,7 +26389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.polygon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.polygon.primary;
+        return PhosphorIconsDuotone.polygon;
     }
   }
 
@@ -26413,7 +26413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.popcorn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.popcorn.primary;
+        return PhosphorIconsDuotone.popcorn;
     }
   }
 
@@ -26437,7 +26437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.popsicle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.popsicle.primary;
+        return PhosphorIconsDuotone.popsicle;
     }
   }
 
@@ -26461,7 +26461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pottedPlant;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pottedPlant.primary;
+        return PhosphorIconsDuotone.pottedPlant;
     }
   }
 
@@ -26485,7 +26485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.power;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.power.primary;
+        return PhosphorIconsDuotone.power;
     }
   }
 
@@ -26509,7 +26509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.prescription;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.prescription.primary;
+        return PhosphorIconsDuotone.prescription;
     }
   }
 
@@ -26533,7 +26533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.presentation;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.presentation.primary;
+        return PhosphorIconsDuotone.presentation;
     }
   }
 
@@ -26557,7 +26557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.presentationChart;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.presentationChart.primary;
+        return PhosphorIconsDuotone.presentationChart;
     }
   }
 
@@ -26581,7 +26581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.printer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.printer.primary;
+        return PhosphorIconsDuotone.printer;
     }
   }
 
@@ -26605,7 +26605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.prohibit;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.prohibit.primary;
+        return PhosphorIconsDuotone.prohibit;
     }
   }
 
@@ -26629,7 +26629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.prohibitInset;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.prohibitInset.primary;
+        return PhosphorIconsDuotone.prohibitInset;
     }
   }
 
@@ -26653,7 +26653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.projectorScreen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.projectorScreen.primary;
+        return PhosphorIconsDuotone.projectorScreen;
     }
   }
 
@@ -26677,7 +26677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.projectorScreenChart;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.projectorScreenChart.primary;
+        return PhosphorIconsDuotone.projectorScreenChart;
     }
   }
 
@@ -26701,7 +26701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pulse;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pulse.primary;
+        return PhosphorIconsDuotone.pulse;
     }
   }
 
@@ -26725,7 +26725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pushPin;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pushPin.primary;
+        return PhosphorIconsDuotone.pushPin;
     }
   }
 
@@ -26749,7 +26749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pushPinSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pushPinSimple.primary;
+        return PhosphorIconsDuotone.pushPinSimple;
     }
   }
 
@@ -26773,7 +26773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pushPinSimpleSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pushPinSimpleSlash.primary;
+        return PhosphorIconsDuotone.pushPinSimpleSlash;
     }
   }
 
@@ -26797,7 +26797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.pushPinSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.pushPinSlash.primary;
+        return PhosphorIconsDuotone.pushPinSlash;
     }
   }
 
@@ -26821,7 +26821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.puzzlePiece;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.puzzlePiece.primary;
+        return PhosphorIconsDuotone.puzzlePiece;
     }
   }
 
@@ -26845,7 +26845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.qrCode;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.qrCode.primary;
+        return PhosphorIconsDuotone.qrCode;
     }
   }
 
@@ -26869,7 +26869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.question;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.question.primary;
+        return PhosphorIconsDuotone.question;
     }
   }
 
@@ -26893,7 +26893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.questionMark;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.questionMark.primary;
+        return PhosphorIconsDuotone.questionMark;
     }
   }
 
@@ -26917,7 +26917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.queue;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.queue.primary;
+        return PhosphorIconsDuotone.queue;
     }
   }
 
@@ -26941,7 +26941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.quotes;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.quotes.primary;
+        return PhosphorIconsDuotone.quotes;
     }
   }
 
@@ -26965,7 +26965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rabbit;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rabbit.primary;
+        return PhosphorIconsDuotone.rabbit;
     }
   }
 
@@ -26989,7 +26989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.racquet;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.racquet.primary;
+        return PhosphorIconsDuotone.racquet;
     }
   }
 
@@ -27013,7 +27013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.radical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.radical.primary;
+        return PhosphorIconsDuotone.radical;
     }
   }
 
@@ -27037,7 +27037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.radio;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.radio.primary;
+        return PhosphorIconsDuotone.radio;
     }
   }
 
@@ -27061,7 +27061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.radioButton;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.radioButton.primary;
+        return PhosphorIconsDuotone.radioButton;
     }
   }
 
@@ -27085,7 +27085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.radioactive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.radioactive.primary;
+        return PhosphorIconsDuotone.radioactive;
     }
   }
 
@@ -27109,7 +27109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rainbow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rainbow.primary;
+        return PhosphorIconsDuotone.rainbow;
     }
   }
 
@@ -27133,7 +27133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rainbowCloud;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rainbowCloud.primary;
+        return PhosphorIconsDuotone.rainbowCloud;
     }
   }
 
@@ -27157,7 +27157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ranking;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ranking.primary;
+        return PhosphorIconsDuotone.ranking;
     }
   }
 
@@ -27181,7 +27181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.readCvLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.readCvLogo.primary;
+        return PhosphorIconsDuotone.readCvLogo;
     }
   }
 
@@ -27205,7 +27205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.receipt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.receipt.primary;
+        return PhosphorIconsDuotone.receipt;
     }
   }
 
@@ -27229,7 +27229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.receiptX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.receiptX.primary;
+        return PhosphorIconsDuotone.receiptX;
     }
   }
 
@@ -27253,7 +27253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.record;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.record.primary;
+        return PhosphorIconsDuotone.record;
     }
   }
 
@@ -27277,7 +27277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rectangle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rectangle.primary;
+        return PhosphorIconsDuotone.rectangle;
     }
   }
 
@@ -27301,7 +27301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rectangleDashed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rectangleDashed.primary;
+        return PhosphorIconsDuotone.rectangleDashed;
     }
   }
 
@@ -27325,7 +27325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.recycle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.recycle.primary;
+        return PhosphorIconsDuotone.recycle;
     }
   }
 
@@ -27349,7 +27349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.redditLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.redditLogo.primary;
+        return PhosphorIconsDuotone.redditLogo;
     }
   }
 
@@ -27373,7 +27373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.repeat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.repeat.primary;
+        return PhosphorIconsDuotone.repeat;
     }
   }
 
@@ -27397,7 +27397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.repeatOnce;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.repeatOnce.primary;
+        return PhosphorIconsDuotone.repeatOnce;
     }
   }
 
@@ -27421,7 +27421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.replitLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.replitLogo.primary;
+        return PhosphorIconsDuotone.replitLogo;
     }
   }
 
@@ -27445,7 +27445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.resize;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.resize.primary;
+        return PhosphorIconsDuotone.resize;
     }
   }
 
@@ -27469,7 +27469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rewind;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rewind.primary;
+        return PhosphorIconsDuotone.rewind;
     }
   }
 
@@ -27493,7 +27493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rewindCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rewindCircle.primary;
+        return PhosphorIconsDuotone.rewindCircle;
     }
   }
 
@@ -27517,7 +27517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.roadHorizon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.roadHorizon.primary;
+        return PhosphorIconsDuotone.roadHorizon;
     }
   }
 
@@ -27541,7 +27541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.robot;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.robot.primary;
+        return PhosphorIconsDuotone.robot;
     }
   }
 
@@ -27565,7 +27565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rocket;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rocket.primary;
+        return PhosphorIconsDuotone.rocket;
     }
   }
 
@@ -27589,7 +27589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rocketLaunch;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rocketLaunch.primary;
+        return PhosphorIconsDuotone.rocketLaunch;
     }
   }
 
@@ -27613,7 +27613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rows;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rows.primary;
+        return PhosphorIconsDuotone.rows;
     }
   }
 
@@ -27637,7 +27637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rowsPlusBottom;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rowsPlusBottom.primary;
+        return PhosphorIconsDuotone.rowsPlusBottom;
     }
   }
 
@@ -27661,7 +27661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rowsPlusTop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rowsPlusTop.primary;
+        return PhosphorIconsDuotone.rowsPlusTop;
     }
   }
 
@@ -27685,7 +27685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rss;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rss.primary;
+        return PhosphorIconsDuotone.rss;
     }
   }
 
@@ -27709,7 +27709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rssSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rssSimple.primary;
+        return PhosphorIconsDuotone.rssSimple;
     }
   }
 
@@ -27733,7 +27733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.rug;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.rug.primary;
+        return PhosphorIconsDuotone.rug;
     }
   }
 
@@ -27757,7 +27757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ruler;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ruler.primary;
+        return PhosphorIconsDuotone.ruler;
     }
   }
 
@@ -27781,7 +27781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sailboat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sailboat.primary;
+        return PhosphorIconsDuotone.sailboat;
     }
   }
 
@@ -27805,7 +27805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.scales;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.scales.primary;
+        return PhosphorIconsDuotone.scales;
     }
   }
 
@@ -27829,7 +27829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.scan;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.scan.primary;
+        return PhosphorIconsDuotone.scan;
     }
   }
 
@@ -27853,7 +27853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.scanSmiley;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.scanSmiley.primary;
+        return PhosphorIconsDuotone.scanSmiley;
     }
   }
 
@@ -27877,7 +27877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.scissors;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.scissors.primary;
+        return PhosphorIconsDuotone.scissors;
     }
   }
 
@@ -27901,7 +27901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.scooter;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.scooter.primary;
+        return PhosphorIconsDuotone.scooter;
     }
   }
 
@@ -27925,7 +27925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.screencast;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.screencast.primary;
+        return PhosphorIconsDuotone.screencast;
     }
   }
 
@@ -27949,7 +27949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.screwdriver;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.screwdriver.primary;
+        return PhosphorIconsDuotone.screwdriver;
     }
   }
 
@@ -27973,7 +27973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.scribble;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.scribble.primary;
+        return PhosphorIconsDuotone.scribble;
     }
   }
 
@@ -27997,7 +27997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.scribbleLoop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.scribbleLoop.primary;
+        return PhosphorIconsDuotone.scribbleLoop;
     }
   }
 
@@ -28021,7 +28021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.scroll;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.scroll.primary;
+        return PhosphorIconsDuotone.scroll;
     }
   }
 
@@ -28045,7 +28045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.seal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.seal.primary;
+        return PhosphorIconsDuotone.seal;
     }
   }
 
@@ -28069,7 +28069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sealCheck;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sealCheck.primary;
+        return PhosphorIconsDuotone.sealCheck;
     }
   }
 
@@ -28093,7 +28093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sealPercent;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sealPercent.primary;
+        return PhosphorIconsDuotone.sealPercent;
     }
   }
 
@@ -28117,7 +28117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sealQuestion;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sealQuestion.primary;
+        return PhosphorIconsDuotone.sealQuestion;
     }
   }
 
@@ -28141,7 +28141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sealWarning;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sealWarning.primary;
+        return PhosphorIconsDuotone.sealWarning;
     }
   }
 
@@ -28165,7 +28165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.seat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.seat.primary;
+        return PhosphorIconsDuotone.seat;
     }
   }
 
@@ -28189,7 +28189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.seatbelt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.seatbelt.primary;
+        return PhosphorIconsDuotone.seatbelt;
     }
   }
 
@@ -28213,7 +28213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.securityCamera;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.securityCamera.primary;
+        return PhosphorIconsDuotone.securityCamera;
     }
   }
 
@@ -28237,7 +28237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.selection;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.selection.primary;
+        return PhosphorIconsDuotone.selection;
     }
   }
 
@@ -28261,7 +28261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.selectionAll;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.selectionAll.primary;
+        return PhosphorIconsDuotone.selectionAll;
     }
   }
 
@@ -28285,7 +28285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.selectionBackground;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.selectionBackground.primary;
+        return PhosphorIconsDuotone.selectionBackground;
     }
   }
 
@@ -28309,7 +28309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.selectionForeground;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.selectionForeground.primary;
+        return PhosphorIconsDuotone.selectionForeground;
     }
   }
 
@@ -28333,7 +28333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.selectionInverse;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.selectionInverse.primary;
+        return PhosphorIconsDuotone.selectionInverse;
     }
   }
 
@@ -28357,7 +28357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.selectionPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.selectionPlus.primary;
+        return PhosphorIconsDuotone.selectionPlus;
     }
   }
 
@@ -28381,7 +28381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.selectionSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.selectionSlash.primary;
+        return PhosphorIconsDuotone.selectionSlash;
     }
   }
 
@@ -28405,7 +28405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shapes;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shapes.primary;
+        return PhosphorIconsDuotone.shapes;
     }
   }
 
@@ -28429,7 +28429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.share;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.share.primary;
+        return PhosphorIconsDuotone.share;
     }
   }
 
@@ -28453,7 +28453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shareFat;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shareFat.primary;
+        return PhosphorIconsDuotone.shareFat;
     }
   }
 
@@ -28477,7 +28477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shareNetwork;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shareNetwork.primary;
+        return PhosphorIconsDuotone.shareNetwork;
     }
   }
 
@@ -28501,7 +28501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shield;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shield.primary;
+        return PhosphorIconsDuotone.shield;
     }
   }
 
@@ -28525,7 +28525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shieldCheck;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shieldCheck.primary;
+        return PhosphorIconsDuotone.shieldCheck;
     }
   }
 
@@ -28549,7 +28549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shieldCheckered;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shieldCheckered.primary;
+        return PhosphorIconsDuotone.shieldCheckered;
     }
   }
 
@@ -28573,7 +28573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shieldChevron;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shieldChevron.primary;
+        return PhosphorIconsDuotone.shieldChevron;
     }
   }
 
@@ -28597,7 +28597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shieldPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shieldPlus.primary;
+        return PhosphorIconsDuotone.shieldPlus;
     }
   }
 
@@ -28621,7 +28621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shieldSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shieldSlash.primary;
+        return PhosphorIconsDuotone.shieldSlash;
     }
   }
 
@@ -28645,7 +28645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shieldStar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shieldStar.primary;
+        return PhosphorIconsDuotone.shieldStar;
     }
   }
 
@@ -28669,7 +28669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shieldWarning;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shieldWarning.primary;
+        return PhosphorIconsDuotone.shieldWarning;
     }
   }
 
@@ -28693,7 +28693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shippingContainer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shippingContainer.primary;
+        return PhosphorIconsDuotone.shippingContainer;
     }
   }
 
@@ -28717,7 +28717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shirtFolded;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shirtFolded.primary;
+        return PhosphorIconsDuotone.shirtFolded;
     }
   }
 
@@ -28741,7 +28741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shootingStar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shootingStar.primary;
+        return PhosphorIconsDuotone.shootingStar;
     }
   }
 
@@ -28765,7 +28765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shoppingBag;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shoppingBag.primary;
+        return PhosphorIconsDuotone.shoppingBag;
     }
   }
 
@@ -28789,7 +28789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shoppingBagOpen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shoppingBagOpen.primary;
+        return PhosphorIconsDuotone.shoppingBagOpen;
     }
   }
 
@@ -28813,7 +28813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shoppingCart;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shoppingCart.primary;
+        return PhosphorIconsDuotone.shoppingCart;
     }
   }
 
@@ -28837,7 +28837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shoppingCartSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shoppingCartSimple.primary;
+        return PhosphorIconsDuotone.shoppingCartSimple;
     }
   }
 
@@ -28861,7 +28861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shovel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shovel.primary;
+        return PhosphorIconsDuotone.shovel;
     }
   }
 
@@ -28885,7 +28885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shower;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shower.primary;
+        return PhosphorIconsDuotone.shower;
     }
   }
 
@@ -28909,7 +28909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shrimp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shrimp.primary;
+        return PhosphorIconsDuotone.shrimp;
     }
   }
 
@@ -28933,7 +28933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shuffle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shuffle.primary;
+        return PhosphorIconsDuotone.shuffle;
     }
   }
 
@@ -28957,7 +28957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shuffleAngular;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shuffleAngular.primary;
+        return PhosphorIconsDuotone.shuffleAngular;
     }
   }
 
@@ -28981,7 +28981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.shuffleSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.shuffleSimple.primary;
+        return PhosphorIconsDuotone.shuffleSimple;
     }
   }
 
@@ -29005,7 +29005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sidebar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sidebar.primary;
+        return PhosphorIconsDuotone.sidebar;
     }
   }
 
@@ -29029,7 +29029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sidebarSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sidebarSimple.primary;
+        return PhosphorIconsDuotone.sidebarSimple;
     }
   }
 
@@ -29053,7 +29053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sigma;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sigma.primary;
+        return PhosphorIconsDuotone.sigma;
     }
   }
 
@@ -29077,7 +29077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.signIn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.signIn.primary;
+        return PhosphorIconsDuotone.signIn;
     }
   }
 
@@ -29101,7 +29101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.signOut;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.signOut.primary;
+        return PhosphorIconsDuotone.signOut;
     }
   }
 
@@ -29125,7 +29125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.signature;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.signature.primary;
+        return PhosphorIconsDuotone.signature;
     }
   }
 
@@ -29149,7 +29149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.signpost;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.signpost.primary;
+        return PhosphorIconsDuotone.signpost;
     }
   }
 
@@ -29173,7 +29173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.simCard;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.simCard.primary;
+        return PhosphorIconsDuotone.simCard;
     }
   }
 
@@ -29197,7 +29197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.siren;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.siren.primary;
+        return PhosphorIconsDuotone.siren;
     }
   }
 
@@ -29221,7 +29221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sketchLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sketchLogo.primary;
+        return PhosphorIconsDuotone.sketchLogo;
     }
   }
 
@@ -29245,7 +29245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.skipBack;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.skipBack.primary;
+        return PhosphorIconsDuotone.skipBack;
     }
   }
 
@@ -29269,7 +29269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.skipBackCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.skipBackCircle.primary;
+        return PhosphorIconsDuotone.skipBackCircle;
     }
   }
 
@@ -29293,7 +29293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.skipForward;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.skipForward.primary;
+        return PhosphorIconsDuotone.skipForward;
     }
   }
 
@@ -29317,7 +29317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.skipForwardCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.skipForwardCircle.primary;
+        return PhosphorIconsDuotone.skipForwardCircle;
     }
   }
 
@@ -29341,7 +29341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.skull;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.skull.primary;
+        return PhosphorIconsDuotone.skull;
     }
   }
 
@@ -29365,7 +29365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.skypeLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.skypeLogo.primary;
+        return PhosphorIconsDuotone.skypeLogo;
     }
   }
 
@@ -29389,7 +29389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.slackLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.slackLogo.primary;
+        return PhosphorIconsDuotone.slackLogo;
     }
   }
 
@@ -29413,7 +29413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sliders;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sliders.primary;
+        return PhosphorIconsDuotone.sliders;
     }
   }
 
@@ -29437,7 +29437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.slidersHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.slidersHorizontal.primary;
+        return PhosphorIconsDuotone.slidersHorizontal;
     }
   }
 
@@ -29461,7 +29461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.slideshow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.slideshow.primary;
+        return PhosphorIconsDuotone.slideshow;
     }
   }
 
@@ -29485,7 +29485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smiley;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smiley.primary;
+        return PhosphorIconsDuotone.smiley;
     }
   }
 
@@ -29509,7 +29509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileyAngry;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileyAngry.primary;
+        return PhosphorIconsDuotone.smileyAngry;
     }
   }
 
@@ -29533,7 +29533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileyBlank;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileyBlank.primary;
+        return PhosphorIconsDuotone.smileyBlank;
     }
   }
 
@@ -29557,7 +29557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileyMeh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileyMeh.primary;
+        return PhosphorIconsDuotone.smileyMeh;
     }
   }
 
@@ -29581,7 +29581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileyMelting;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileyMelting.primary;
+        return PhosphorIconsDuotone.smileyMelting;
     }
   }
 
@@ -29605,7 +29605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileyNervous;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileyNervous.primary;
+        return PhosphorIconsDuotone.smileyNervous;
     }
   }
 
@@ -29629,7 +29629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileySad;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileySad.primary;
+        return PhosphorIconsDuotone.smileySad;
     }
   }
 
@@ -29653,7 +29653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileySticker;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileySticker.primary;
+        return PhosphorIconsDuotone.smileySticker;
     }
   }
 
@@ -29677,7 +29677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileyWink;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileyWink.primary;
+        return PhosphorIconsDuotone.smileyWink;
     }
   }
 
@@ -29701,7 +29701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.smileyXEyes;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.smileyXEyes.primary;
+        return PhosphorIconsDuotone.smileyXEyes;
     }
   }
 
@@ -29725,7 +29725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.snapchatLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.snapchatLogo.primary;
+        return PhosphorIconsDuotone.snapchatLogo;
     }
   }
 
@@ -29749,7 +29749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sneaker;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sneaker.primary;
+        return PhosphorIconsDuotone.sneaker;
     }
   }
 
@@ -29773,7 +29773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sneakerMove;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sneakerMove.primary;
+        return PhosphorIconsDuotone.sneakerMove;
     }
   }
 
@@ -29797,7 +29797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.snowflake;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.snowflake.primary;
+        return PhosphorIconsDuotone.snowflake;
     }
   }
 
@@ -29821,7 +29821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.soccerBall;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.soccerBall.primary;
+        return PhosphorIconsDuotone.soccerBall;
     }
   }
 
@@ -29845,7 +29845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sock;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sock.primary;
+        return PhosphorIconsDuotone.sock;
     }
   }
 
@@ -29869,7 +29869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.solarPanel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.solarPanel.primary;
+        return PhosphorIconsDuotone.solarPanel;
     }
   }
 
@@ -29893,7 +29893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.solarRoof;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.solarRoof.primary;
+        return PhosphorIconsDuotone.solarRoof;
     }
   }
 
@@ -29917,7 +29917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sortAscending;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sortAscending.primary;
+        return PhosphorIconsDuotone.sortAscending;
     }
   }
 
@@ -29941,7 +29941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sortDescending;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sortDescending.primary;
+        return PhosphorIconsDuotone.sortDescending;
     }
   }
 
@@ -29965,7 +29965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.soundcloudLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.soundcloudLogo.primary;
+        return PhosphorIconsDuotone.soundcloudLogo;
     }
   }
 
@@ -29989,7 +29989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.spade;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.spade.primary;
+        return PhosphorIconsDuotone.spade;
     }
   }
 
@@ -30013,7 +30013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sparkle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sparkle.primary;
+        return PhosphorIconsDuotone.sparkle;
     }
   }
 
@@ -30037,7 +30037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerHifi;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerHifi.primary;
+        return PhosphorIconsDuotone.speakerHifi;
     }
   }
 
@@ -30061,7 +30061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerHigh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerHigh.primary;
+        return PhosphorIconsDuotone.speakerHigh;
     }
   }
 
@@ -30085,7 +30085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerLow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerLow.primary;
+        return PhosphorIconsDuotone.speakerLow;
     }
   }
 
@@ -30109,7 +30109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerNone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerNone.primary;
+        return PhosphorIconsDuotone.speakerNone;
     }
   }
 
@@ -30133,7 +30133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerSimpleHigh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerSimpleHigh.primary;
+        return PhosphorIconsDuotone.speakerSimpleHigh;
     }
   }
 
@@ -30157,7 +30157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerSimpleLow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerSimpleLow.primary;
+        return PhosphorIconsDuotone.speakerSimpleLow;
     }
   }
 
@@ -30181,7 +30181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerSimpleNone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerSimpleNone.primary;
+        return PhosphorIconsDuotone.speakerSimpleNone;
     }
   }
 
@@ -30205,7 +30205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerSimpleSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerSimpleSlash.primary;
+        return PhosphorIconsDuotone.speakerSimpleSlash;
     }
   }
 
@@ -30229,7 +30229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerSimpleX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerSimpleX.primary;
+        return PhosphorIconsDuotone.speakerSimpleX;
     }
   }
 
@@ -30253,7 +30253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerSlash.primary;
+        return PhosphorIconsDuotone.speakerSlash;
     }
   }
 
@@ -30277,7 +30277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speakerX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speakerX.primary;
+        return PhosphorIconsDuotone.speakerX;
     }
   }
 
@@ -30301,7 +30301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.speedometer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.speedometer.primary;
+        return PhosphorIconsDuotone.speedometer;
     }
   }
 
@@ -30325,7 +30325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sphere;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sphere.primary;
+        return PhosphorIconsDuotone.sphere;
     }
   }
 
@@ -30349,7 +30349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.spinner;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.spinner.primary;
+        return PhosphorIconsDuotone.spinner;
     }
   }
 
@@ -30373,7 +30373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.spinnerBall;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.spinnerBall.primary;
+        return PhosphorIconsDuotone.spinnerBall;
     }
   }
 
@@ -30397,7 +30397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.spinnerGap;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.spinnerGap.primary;
+        return PhosphorIconsDuotone.spinnerGap;
     }
   }
 
@@ -30421,7 +30421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.spiral;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.spiral.primary;
+        return PhosphorIconsDuotone.spiral;
     }
   }
 
@@ -30445,7 +30445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.splitHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.splitHorizontal.primary;
+        return PhosphorIconsDuotone.splitHorizontal;
     }
   }
 
@@ -30469,7 +30469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.splitVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.splitVertical.primary;
+        return PhosphorIconsDuotone.splitVertical;
     }
   }
 
@@ -30493,7 +30493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.spotifyLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.spotifyLogo.primary;
+        return PhosphorIconsDuotone.spotifyLogo;
     }
   }
 
@@ -30517,7 +30517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sprayBottle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sprayBottle.primary;
+        return PhosphorIconsDuotone.sprayBottle;
     }
   }
 
@@ -30541,7 +30541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.square;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.square.primary;
+        return PhosphorIconsDuotone.square;
     }
   }
 
@@ -30565,7 +30565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.squareHalf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.squareHalf.primary;
+        return PhosphorIconsDuotone.squareHalf;
     }
   }
 
@@ -30589,7 +30589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.squareHalfBottom;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.squareHalfBottom.primary;
+        return PhosphorIconsDuotone.squareHalfBottom;
     }
   }
 
@@ -30613,7 +30613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.squareLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.squareLogo.primary;
+        return PhosphorIconsDuotone.squareLogo;
     }
   }
 
@@ -30637,7 +30637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.squareSplitHorizontal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.squareSplitHorizontal.primary;
+        return PhosphorIconsDuotone.squareSplitHorizontal;
     }
   }
 
@@ -30661,7 +30661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.squareSplitVertical;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.squareSplitVertical.primary;
+        return PhosphorIconsDuotone.squareSplitVertical;
     }
   }
 
@@ -30685,7 +30685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.squaresFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.squaresFour.primary;
+        return PhosphorIconsDuotone.squaresFour;
     }
   }
 
@@ -30709,7 +30709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stack;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stack.primary;
+        return PhosphorIconsDuotone.stack;
     }
   }
 
@@ -30733,7 +30733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stackMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stackMinus.primary;
+        return PhosphorIconsDuotone.stackMinus;
     }
   }
 
@@ -30757,7 +30757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stackOverflowLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stackOverflowLogo.primary;
+        return PhosphorIconsDuotone.stackOverflowLogo;
     }
   }
 
@@ -30781,7 +30781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stackPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stackPlus.primary;
+        return PhosphorIconsDuotone.stackPlus;
     }
   }
 
@@ -30805,7 +30805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stackSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stackSimple.primary;
+        return PhosphorIconsDuotone.stackSimple;
     }
   }
 
@@ -30829,7 +30829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stairs;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stairs.primary;
+        return PhosphorIconsDuotone.stairs;
     }
   }
 
@@ -30853,7 +30853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stamp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stamp.primary;
+        return PhosphorIconsDuotone.stamp;
     }
   }
 
@@ -30877,7 +30877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.standardDefinition;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.standardDefinition.primary;
+        return PhosphorIconsDuotone.standardDefinition;
     }
   }
 
@@ -30901,7 +30901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.star;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.star.primary;
+        return PhosphorIconsDuotone.star;
     }
   }
 
@@ -30925,7 +30925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.starAndCrescent;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.starAndCrescent.primary;
+        return PhosphorIconsDuotone.starAndCrescent;
     }
   }
 
@@ -30949,7 +30949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.starFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.starFour.primary;
+        return PhosphorIconsDuotone.starFour;
     }
   }
 
@@ -30973,7 +30973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.starHalf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.starHalf.primary;
+        return PhosphorIconsDuotone.starHalf;
     }
   }
 
@@ -30997,7 +30997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.starOfDavid;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.starOfDavid.primary;
+        return PhosphorIconsDuotone.starOfDavid;
     }
   }
 
@@ -31021,7 +31021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.steamLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.steamLogo.primary;
+        return PhosphorIconsDuotone.steamLogo;
     }
   }
 
@@ -31045,7 +31045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.steeringWheel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.steeringWheel.primary;
+        return PhosphorIconsDuotone.steeringWheel;
     }
   }
 
@@ -31069,7 +31069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.steps;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.steps.primary;
+        return PhosphorIconsDuotone.steps;
     }
   }
 
@@ -31093,7 +31093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stethoscope;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stethoscope.primary;
+        return PhosphorIconsDuotone.stethoscope;
     }
   }
 
@@ -31117,7 +31117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sticker;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sticker.primary;
+        return PhosphorIconsDuotone.sticker;
     }
   }
 
@@ -31141,7 +31141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stool;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stool.primary;
+        return PhosphorIconsDuotone.stool;
     }
   }
 
@@ -31165,7 +31165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stop;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stop.primary;
+        return PhosphorIconsDuotone.stop;
     }
   }
 
@@ -31189,7 +31189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stopCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stopCircle.primary;
+        return PhosphorIconsDuotone.stopCircle;
     }
   }
 
@@ -31213,7 +31213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.storefront;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.storefront.primary;
+        return PhosphorIconsDuotone.storefront;
     }
   }
 
@@ -31237,7 +31237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.strategy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.strategy.primary;
+        return PhosphorIconsDuotone.strategy;
     }
   }
 
@@ -31261,7 +31261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.stripeLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.stripeLogo.primary;
+        return PhosphorIconsDuotone.stripeLogo;
     }
   }
 
@@ -31285,7 +31285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.student;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.student.primary;
+        return PhosphorIconsDuotone.student;
     }
   }
 
@@ -31309,7 +31309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.subsetOf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.subsetOf.primary;
+        return PhosphorIconsDuotone.subsetOf;
     }
   }
 
@@ -31333,7 +31333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.subsetProperOf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.subsetProperOf.primary;
+        return PhosphorIconsDuotone.subsetProperOf;
     }
   }
 
@@ -31357,7 +31357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.subtitles;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.subtitles.primary;
+        return PhosphorIconsDuotone.subtitles;
     }
   }
 
@@ -31381,7 +31381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.subtitlesSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.subtitlesSlash.primary;
+        return PhosphorIconsDuotone.subtitlesSlash;
     }
   }
 
@@ -31405,7 +31405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.subtract;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.subtract.primary;
+        return PhosphorIconsDuotone.subtract;
     }
   }
 
@@ -31429,7 +31429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.subtractSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.subtractSquare.primary;
+        return PhosphorIconsDuotone.subtractSquare;
     }
   }
 
@@ -31453,7 +31453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.subway;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.subway.primary;
+        return PhosphorIconsDuotone.subway;
     }
   }
 
@@ -31477,7 +31477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.suitcase;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.suitcase.primary;
+        return PhosphorIconsDuotone.suitcase;
     }
   }
 
@@ -31501,7 +31501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.suitcaseRolling;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.suitcaseRolling.primary;
+        return PhosphorIconsDuotone.suitcaseRolling;
     }
   }
 
@@ -31525,7 +31525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.suitcaseSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.suitcaseSimple.primary;
+        return PhosphorIconsDuotone.suitcaseSimple;
     }
   }
 
@@ -31549,7 +31549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sun;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sun.primary;
+        return PhosphorIconsDuotone.sun;
     }
   }
 
@@ -31573,7 +31573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sunDim;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sunDim.primary;
+        return PhosphorIconsDuotone.sunDim;
     }
   }
 
@@ -31597,7 +31597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sunHorizon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sunHorizon.primary;
+        return PhosphorIconsDuotone.sunHorizon;
     }
   }
 
@@ -31621,7 +31621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sunglasses;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sunglasses.primary;
+        return PhosphorIconsDuotone.sunglasses;
     }
   }
 
@@ -31645,7 +31645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.supersetOf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.supersetOf.primary;
+        return PhosphorIconsDuotone.supersetOf;
     }
   }
 
@@ -31669,7 +31669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.supersetProperOf;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.supersetProperOf.primary;
+        return PhosphorIconsDuotone.supersetProperOf;
     }
   }
 
@@ -31693,7 +31693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.swap;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.swap.primary;
+        return PhosphorIconsDuotone.swap;
     }
   }
 
@@ -31717,7 +31717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.swatches;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.swatches.primary;
+        return PhosphorIconsDuotone.swatches;
     }
   }
 
@@ -31741,7 +31741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.swimmingPool;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.swimmingPool.primary;
+        return PhosphorIconsDuotone.swimmingPool;
     }
   }
 
@@ -31765,7 +31765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.sword;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.sword.primary;
+        return PhosphorIconsDuotone.sword;
     }
   }
 
@@ -31789,7 +31789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.synagogue;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.synagogue.primary;
+        return PhosphorIconsDuotone.synagogue;
     }
   }
 
@@ -31813,7 +31813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.syringe;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.syringe.primary;
+        return PhosphorIconsDuotone.syringe;
     }
   }
 
@@ -31837,7 +31837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tShirt;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tShirt.primary;
+        return PhosphorIconsDuotone.tShirt;
     }
   }
 
@@ -31861,7 +31861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.table;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.table.primary;
+        return PhosphorIconsDuotone.table;
     }
   }
 
@@ -31885,7 +31885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tabs;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tabs.primary;
+        return PhosphorIconsDuotone.tabs;
     }
   }
 
@@ -31909,7 +31909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tag;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tag.primary;
+        return PhosphorIconsDuotone.tag;
     }
   }
 
@@ -31933,7 +31933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tagChevron;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tagChevron.primary;
+        return PhosphorIconsDuotone.tagChevron;
     }
   }
 
@@ -31957,7 +31957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tagSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tagSimple.primary;
+        return PhosphorIconsDuotone.tagSimple;
     }
   }
 
@@ -31981,7 +31981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.target;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.target.primary;
+        return PhosphorIconsDuotone.target;
     }
   }
 
@@ -32005,7 +32005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.taxi;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.taxi.primary;
+        return PhosphorIconsDuotone.taxi;
     }
   }
 
@@ -32029,7 +32029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.teaBag;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.teaBag.primary;
+        return PhosphorIconsDuotone.teaBag;
     }
   }
 
@@ -32053,7 +32053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.telegramLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.telegramLogo.primary;
+        return PhosphorIconsDuotone.telegramLogo;
     }
   }
 
@@ -32077,7 +32077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.television;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.television.primary;
+        return PhosphorIconsDuotone.television;
     }
   }
 
@@ -32101,7 +32101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.televisionSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.televisionSimple.primary;
+        return PhosphorIconsDuotone.televisionSimple;
     }
   }
 
@@ -32125,7 +32125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tennisBall;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tennisBall.primary;
+        return PhosphorIconsDuotone.tennisBall;
     }
   }
 
@@ -32149,7 +32149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tent;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tent.primary;
+        return PhosphorIconsDuotone.tent;
     }
   }
 
@@ -32173,7 +32173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.terminal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.terminal.primary;
+        return PhosphorIconsDuotone.terminal;
     }
   }
 
@@ -32197,7 +32197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.terminalWindow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.terminalWindow.primary;
+        return PhosphorIconsDuotone.terminalWindow;
     }
   }
 
@@ -32221,7 +32221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.testTube;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.testTube.primary;
+        return PhosphorIconsDuotone.testTube;
     }
   }
 
@@ -32245,7 +32245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textAUnderline;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textAUnderline.primary;
+        return PhosphorIconsDuotone.textAUnderline;
     }
   }
 
@@ -32269,7 +32269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textAa;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textAa.primary;
+        return PhosphorIconsDuotone.textAa;
     }
   }
 
@@ -32293,7 +32293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textAlignCenter;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textAlignCenter.primary;
+        return PhosphorIconsDuotone.textAlignCenter;
     }
   }
 
@@ -32317,7 +32317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textAlignJustify;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textAlignJustify.primary;
+        return PhosphorIconsDuotone.textAlignJustify;
     }
   }
 
@@ -32341,7 +32341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textAlignLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textAlignLeft.primary;
+        return PhosphorIconsDuotone.textAlignLeft;
     }
   }
 
@@ -32365,7 +32365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textAlignRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textAlignRight.primary;
+        return PhosphorIconsDuotone.textAlignRight;
     }
   }
 
@@ -32389,7 +32389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textB;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textB.primary;
+        return PhosphorIconsDuotone.textB;
     }
   }
 
@@ -32413,7 +32413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textColumns;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textColumns.primary;
+        return PhosphorIconsDuotone.textColumns;
     }
   }
 
@@ -32437,7 +32437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textH;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textH.primary;
+        return PhosphorIconsDuotone.textH;
     }
   }
 
@@ -32461,7 +32461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textHFive;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textHFive.primary;
+        return PhosphorIconsDuotone.textHFive;
     }
   }
 
@@ -32485,7 +32485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textHFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textHFour.primary;
+        return PhosphorIconsDuotone.textHFour;
     }
   }
 
@@ -32509,7 +32509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textHOne;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textHOne.primary;
+        return PhosphorIconsDuotone.textHOne;
     }
   }
 
@@ -32533,7 +32533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textHSix;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textHSix.primary;
+        return PhosphorIconsDuotone.textHSix;
     }
   }
 
@@ -32557,7 +32557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textHThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textHThree.primary;
+        return PhosphorIconsDuotone.textHThree;
     }
   }
 
@@ -32581,7 +32581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textHTwo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textHTwo.primary;
+        return PhosphorIconsDuotone.textHTwo;
     }
   }
 
@@ -32605,7 +32605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textIndent;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textIndent.primary;
+        return PhosphorIconsDuotone.textIndent;
     }
   }
 
@@ -32629,7 +32629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textItalic;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textItalic.primary;
+        return PhosphorIconsDuotone.textItalic;
     }
   }
 
@@ -32653,7 +32653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textOutdent;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textOutdent.primary;
+        return PhosphorIconsDuotone.textOutdent;
     }
   }
 
@@ -32677,7 +32677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textStrikethrough;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textStrikethrough.primary;
+        return PhosphorIconsDuotone.textStrikethrough;
     }
   }
 
@@ -32701,7 +32701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textSubscript;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textSubscript.primary;
+        return PhosphorIconsDuotone.textSubscript;
     }
   }
 
@@ -32725,7 +32725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textSuperscript;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textSuperscript.primary;
+        return PhosphorIconsDuotone.textSuperscript;
     }
   }
 
@@ -32749,7 +32749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textT;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textT.primary;
+        return PhosphorIconsDuotone.textT;
     }
   }
 
@@ -32773,7 +32773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textTSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textTSlash.primary;
+        return PhosphorIconsDuotone.textTSlash;
     }
   }
 
@@ -32797,7 +32797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textUnderline;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textUnderline.primary;
+        return PhosphorIconsDuotone.textUnderline;
     }
   }
 
@@ -32821,7 +32821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.textbox;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.textbox.primary;
+        return PhosphorIconsDuotone.textbox;
     }
   }
 
@@ -32845,7 +32845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.thermometer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.thermometer.primary;
+        return PhosphorIconsDuotone.thermometer;
     }
   }
 
@@ -32869,7 +32869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.thermometerCold;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.thermometerCold.primary;
+        return PhosphorIconsDuotone.thermometerCold;
     }
   }
 
@@ -32893,7 +32893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.thermometerHot;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.thermometerHot.primary;
+        return PhosphorIconsDuotone.thermometerHot;
     }
   }
 
@@ -32917,7 +32917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.thermometerSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.thermometerSimple.primary;
+        return PhosphorIconsDuotone.thermometerSimple;
     }
   }
 
@@ -32941,7 +32941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.threadsLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.threadsLogo.primary;
+        return PhosphorIconsDuotone.threadsLogo;
     }
   }
 
@@ -32965,7 +32965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.threeD;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.threeD.primary;
+        return PhosphorIconsDuotone.threeD;
     }
   }
 
@@ -32989,7 +32989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.thumbsDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.thumbsDown.primary;
+        return PhosphorIconsDuotone.thumbsDown;
     }
   }
 
@@ -33013,7 +33013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.thumbsUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.thumbsUp.primary;
+        return PhosphorIconsDuotone.thumbsUp;
     }
   }
 
@@ -33037,7 +33037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.ticket;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.ticket.primary;
+        return PhosphorIconsDuotone.ticket;
     }
   }
 
@@ -33061,7 +33061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tidalLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tidalLogo.primary;
+        return PhosphorIconsDuotone.tidalLogo;
     }
   }
 
@@ -33085,7 +33085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tiktokLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tiktokLogo.primary;
+        return PhosphorIconsDuotone.tiktokLogo;
     }
   }
 
@@ -33109,7 +33109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tilde;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tilde.primary;
+        return PhosphorIconsDuotone.tilde;
     }
   }
 
@@ -33133,7 +33133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.timer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.timer.primary;
+        return PhosphorIconsDuotone.timer;
     }
   }
 
@@ -33157,7 +33157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tipJar;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tipJar.primary;
+        return PhosphorIconsDuotone.tipJar;
     }
   }
 
@@ -33181,7 +33181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tipi;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tipi.primary;
+        return PhosphorIconsDuotone.tipi;
     }
   }
 
@@ -33205,7 +33205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tire;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tire.primary;
+        return PhosphorIconsDuotone.tire;
     }
   }
 
@@ -33229,7 +33229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.toggleLeft;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.toggleLeft.primary;
+        return PhosphorIconsDuotone.toggleLeft;
     }
   }
 
@@ -33253,7 +33253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.toggleRight;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.toggleRight.primary;
+        return PhosphorIconsDuotone.toggleRight;
     }
   }
 
@@ -33277,7 +33277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.toilet;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.toilet.primary;
+        return PhosphorIconsDuotone.toilet;
     }
   }
 
@@ -33301,7 +33301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.toiletPaper;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.toiletPaper.primary;
+        return PhosphorIconsDuotone.toiletPaper;
     }
   }
 
@@ -33325,7 +33325,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.toolbox;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.toolbox.primary;
+        return PhosphorIconsDuotone.toolbox;
     }
   }
 
@@ -33349,7 +33349,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tooth;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tooth.primary;
+        return PhosphorIconsDuotone.tooth;
     }
   }
 
@@ -33373,7 +33373,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tornado;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tornado.primary;
+        return PhosphorIconsDuotone.tornado;
     }
   }
 
@@ -33397,7 +33397,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tote;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tote.primary;
+        return PhosphorIconsDuotone.tote;
     }
   }
 
@@ -33421,7 +33421,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.toteSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.toteSimple.primary;
+        return PhosphorIconsDuotone.toteSimple;
     }
   }
 
@@ -33445,7 +33445,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.towel;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.towel.primary;
+        return PhosphorIconsDuotone.towel;
     }
   }
 
@@ -33469,7 +33469,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tractor;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tractor.primary;
+        return PhosphorIconsDuotone.tractor;
     }
   }
 
@@ -33493,7 +33493,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trademark;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trademark.primary;
+        return PhosphorIconsDuotone.trademark;
     }
   }
 
@@ -33517,7 +33517,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trademarkRegistered;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trademarkRegistered.primary;
+        return PhosphorIconsDuotone.trademarkRegistered;
     }
   }
 
@@ -33541,7 +33541,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trafficCone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trafficCone.primary;
+        return PhosphorIconsDuotone.trafficCone;
     }
   }
 
@@ -33565,7 +33565,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trafficSign;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trafficSign.primary;
+        return PhosphorIconsDuotone.trafficSign;
     }
   }
 
@@ -33589,7 +33589,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trafficSignal;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trafficSignal.primary;
+        return PhosphorIconsDuotone.trafficSignal;
     }
   }
 
@@ -33613,7 +33613,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.train;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.train.primary;
+        return PhosphorIconsDuotone.train;
     }
   }
 
@@ -33637,7 +33637,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trainRegional;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trainRegional.primary;
+        return PhosphorIconsDuotone.trainRegional;
     }
   }
 
@@ -33661,7 +33661,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trainSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trainSimple.primary;
+        return PhosphorIconsDuotone.trainSimple;
     }
   }
 
@@ -33685,7 +33685,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tram;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tram.primary;
+        return PhosphorIconsDuotone.tram;
     }
   }
 
@@ -33709,7 +33709,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.translate;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.translate.primary;
+        return PhosphorIconsDuotone.translate;
     }
   }
 
@@ -33733,7 +33733,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trash.primary;
+        return PhosphorIconsDuotone.trash;
     }
   }
 
@@ -33757,7 +33757,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trashSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trashSimple.primary;
+        return PhosphorIconsDuotone.trashSimple;
     }
   }
 
@@ -33781,7 +33781,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tray;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tray.primary;
+        return PhosphorIconsDuotone.tray;
     }
   }
 
@@ -33805,7 +33805,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trayArrowDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trayArrowDown.primary;
+        return PhosphorIconsDuotone.trayArrowDown;
     }
   }
 
@@ -33829,7 +33829,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trayArrowUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trayArrowUp.primary;
+        return PhosphorIconsDuotone.trayArrowUp;
     }
   }
 
@@ -33853,7 +33853,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.treasureChest;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.treasureChest.primary;
+        return PhosphorIconsDuotone.treasureChest;
     }
   }
 
@@ -33877,7 +33877,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tree.primary;
+        return PhosphorIconsDuotone.tree;
     }
   }
 
@@ -33901,7 +33901,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.treeEvergreen;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.treeEvergreen.primary;
+        return PhosphorIconsDuotone.treeEvergreen;
     }
   }
 
@@ -33925,7 +33925,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.treePalm;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.treePalm.primary;
+        return PhosphorIconsDuotone.treePalm;
     }
   }
 
@@ -33949,7 +33949,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.treeStructure;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.treeStructure.primary;
+        return PhosphorIconsDuotone.treeStructure;
     }
   }
 
@@ -33973,7 +33973,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.treeView;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.treeView.primary;
+        return PhosphorIconsDuotone.treeView;
     }
   }
 
@@ -33997,7 +33997,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trendDown;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trendDown.primary;
+        return PhosphorIconsDuotone.trendDown;
     }
   }
 
@@ -34021,7 +34021,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trendUp;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trendUp.primary;
+        return PhosphorIconsDuotone.trendUp;
     }
   }
 
@@ -34045,7 +34045,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.triangle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.triangle.primary;
+        return PhosphorIconsDuotone.triangle;
     }
   }
 
@@ -34069,7 +34069,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.triangleDashed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.triangleDashed.primary;
+        return PhosphorIconsDuotone.triangleDashed;
     }
   }
 
@@ -34093,7 +34093,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trolley;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trolley.primary;
+        return PhosphorIconsDuotone.trolley;
     }
   }
 
@@ -34117,7 +34117,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trolleySuitcase;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trolleySuitcase.primary;
+        return PhosphorIconsDuotone.trolleySuitcase;
     }
   }
 
@@ -34141,7 +34141,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.trophy;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.trophy.primary;
+        return PhosphorIconsDuotone.trophy;
     }
   }
 
@@ -34165,7 +34165,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.truck;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.truck.primary;
+        return PhosphorIconsDuotone.truck;
     }
   }
 
@@ -34189,7 +34189,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.truckTrailer;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.truckTrailer.primary;
+        return PhosphorIconsDuotone.truckTrailer;
     }
   }
 
@@ -34213,7 +34213,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.tumblrLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.tumblrLogo.primary;
+        return PhosphorIconsDuotone.tumblrLogo;
     }
   }
 
@@ -34237,7 +34237,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.twitchLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.twitchLogo.primary;
+        return PhosphorIconsDuotone.twitchLogo;
     }
   }
 
@@ -34261,7 +34261,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.twitterLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.twitterLogo.primary;
+        return PhosphorIconsDuotone.twitterLogo;
     }
   }
 
@@ -34285,7 +34285,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.umbrella;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.umbrella.primary;
+        return PhosphorIconsDuotone.umbrella;
     }
   }
 
@@ -34309,7 +34309,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.umbrellaSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.umbrellaSimple.primary;
+        return PhosphorIconsDuotone.umbrellaSimple;
     }
   }
 
@@ -34333,7 +34333,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.union;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.union.primary;
+        return PhosphorIconsDuotone.union;
     }
   }
 
@@ -34357,7 +34357,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.unite;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.unite.primary;
+        return PhosphorIconsDuotone.unite;
     }
   }
 
@@ -34381,7 +34381,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.uniteSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.uniteSquare.primary;
+        return PhosphorIconsDuotone.uniteSquare;
     }
   }
 
@@ -34405,7 +34405,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.upload;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.upload.primary;
+        return PhosphorIconsDuotone.upload;
     }
   }
 
@@ -34429,7 +34429,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.uploadSimple;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.uploadSimple.primary;
+        return PhosphorIconsDuotone.uploadSimple;
     }
   }
 
@@ -34453,7 +34453,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.usb;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.usb.primary;
+        return PhosphorIconsDuotone.usb;
     }
   }
 
@@ -34477,7 +34477,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.user;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.user.primary;
+        return PhosphorIconsDuotone.user;
     }
   }
 
@@ -34501,7 +34501,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userCheck;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userCheck.primary;
+        return PhosphorIconsDuotone.userCheck;
     }
   }
 
@@ -34525,7 +34525,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userCircle.primary;
+        return PhosphorIconsDuotone.userCircle;
     }
   }
 
@@ -34549,7 +34549,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userCircleCheck;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userCircleCheck.primary;
+        return PhosphorIconsDuotone.userCircleCheck;
     }
   }
 
@@ -34573,7 +34573,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userCircleDashed;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userCircleDashed.primary;
+        return PhosphorIconsDuotone.userCircleDashed;
     }
   }
 
@@ -34597,7 +34597,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userCircleGear;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userCircleGear.primary;
+        return PhosphorIconsDuotone.userCircleGear;
     }
   }
 
@@ -34621,7 +34621,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userCircleMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userCircleMinus.primary;
+        return PhosphorIconsDuotone.userCircleMinus;
     }
   }
 
@@ -34645,7 +34645,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userCirclePlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userCirclePlus.primary;
+        return PhosphorIconsDuotone.userCirclePlus;
     }
   }
 
@@ -34669,7 +34669,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userFocus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userFocus.primary;
+        return PhosphorIconsDuotone.userFocus;
     }
   }
 
@@ -34693,7 +34693,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userGear;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userGear.primary;
+        return PhosphorIconsDuotone.userGear;
     }
   }
 
@@ -34717,7 +34717,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userList;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userList.primary;
+        return PhosphorIconsDuotone.userList;
     }
   }
 
@@ -34741,7 +34741,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userMinus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userMinus.primary;
+        return PhosphorIconsDuotone.userMinus;
     }
   }
 
@@ -34765,7 +34765,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userPlus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userPlus.primary;
+        return PhosphorIconsDuotone.userPlus;
     }
   }
 
@@ -34789,7 +34789,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userRectangle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userRectangle.primary;
+        return PhosphorIconsDuotone.userRectangle;
     }
   }
 
@@ -34813,7 +34813,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userSound;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userSound.primary;
+        return PhosphorIconsDuotone.userSound;
     }
   }
 
@@ -34837,7 +34837,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userSquare.primary;
+        return PhosphorIconsDuotone.userSquare;
     }
   }
 
@@ -34861,7 +34861,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.userSwitch;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.userSwitch.primary;
+        return PhosphorIconsDuotone.userSwitch;
     }
   }
 
@@ -34885,7 +34885,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.users;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.users.primary;
+        return PhosphorIconsDuotone.users;
     }
   }
 
@@ -34909,7 +34909,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.usersFour;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.usersFour.primary;
+        return PhosphorIconsDuotone.usersFour;
     }
   }
 
@@ -34933,7 +34933,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.usersThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.usersThree.primary;
+        return PhosphorIconsDuotone.usersThree;
     }
   }
 
@@ -34957,7 +34957,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.van;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.van.primary;
+        return PhosphorIconsDuotone.van;
     }
   }
 
@@ -34981,7 +34981,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.vault;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.vault.primary;
+        return PhosphorIconsDuotone.vault;
     }
   }
 
@@ -35005,7 +35005,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.vectorThree;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.vectorThree.primary;
+        return PhosphorIconsDuotone.vectorThree;
     }
   }
 
@@ -35029,7 +35029,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.vectorTwo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.vectorTwo.primary;
+        return PhosphorIconsDuotone.vectorTwo;
     }
   }
 
@@ -35053,7 +35053,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.vibrate;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.vibrate.primary;
+        return PhosphorIconsDuotone.vibrate;
     }
   }
 
@@ -35077,7 +35077,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.video;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.video.primary;
+        return PhosphorIconsDuotone.video;
     }
   }
 
@@ -35101,7 +35101,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.videoCamera;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.videoCamera.primary;
+        return PhosphorIconsDuotone.videoCamera;
     }
   }
 
@@ -35125,7 +35125,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.videoCameraSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.videoCameraSlash.primary;
+        return PhosphorIconsDuotone.videoCameraSlash;
     }
   }
 
@@ -35149,7 +35149,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.videoConference;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.videoConference.primary;
+        return PhosphorIconsDuotone.videoConference;
     }
   }
 
@@ -35173,7 +35173,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.vignette;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.vignette.primary;
+        return PhosphorIconsDuotone.vignette;
     }
   }
 
@@ -35197,7 +35197,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.vinylRecord;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.vinylRecord.primary;
+        return PhosphorIconsDuotone.vinylRecord;
     }
   }
 
@@ -35221,7 +35221,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.virtualReality;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.virtualReality.primary;
+        return PhosphorIconsDuotone.virtualReality;
     }
   }
 
@@ -35245,7 +35245,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.virus;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.virus.primary;
+        return PhosphorIconsDuotone.virus;
     }
   }
 
@@ -35269,7 +35269,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.visor;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.visor.primary;
+        return PhosphorIconsDuotone.visor;
     }
   }
 
@@ -35293,7 +35293,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.voicemail;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.voicemail.primary;
+        return PhosphorIconsDuotone.voicemail;
     }
   }
 
@@ -35317,7 +35317,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.volleyball;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.volleyball.primary;
+        return PhosphorIconsDuotone.volleyball;
     }
   }
 
@@ -35341,7 +35341,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wall;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wall.primary;
+        return PhosphorIconsDuotone.wall;
     }
   }
 
@@ -35365,7 +35365,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wallet;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wallet.primary;
+        return PhosphorIconsDuotone.wallet;
     }
   }
 
@@ -35389,7 +35389,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.warehouse;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.warehouse.primary;
+        return PhosphorIconsDuotone.warehouse;
     }
   }
 
@@ -35413,7 +35413,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.warning;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.warning.primary;
+        return PhosphorIconsDuotone.warning;
     }
   }
 
@@ -35437,7 +35437,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.warningCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.warningCircle.primary;
+        return PhosphorIconsDuotone.warningCircle;
     }
   }
 
@@ -35461,7 +35461,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.warningDiamond;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.warningDiamond.primary;
+        return PhosphorIconsDuotone.warningDiamond;
     }
   }
 
@@ -35485,7 +35485,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.warningOctagon;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.warningOctagon.primary;
+        return PhosphorIconsDuotone.warningOctagon;
     }
   }
 
@@ -35509,7 +35509,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.washingMachine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.washingMachine.primary;
+        return PhosphorIconsDuotone.washingMachine;
     }
   }
 
@@ -35533,7 +35533,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.watch;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.watch.primary;
+        return PhosphorIconsDuotone.watch;
     }
   }
 
@@ -35557,7 +35557,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.waveSawtooth;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.waveSawtooth.primary;
+        return PhosphorIconsDuotone.waveSawtooth;
     }
   }
 
@@ -35581,7 +35581,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.waveSine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.waveSine.primary;
+        return PhosphorIconsDuotone.waveSine;
     }
   }
 
@@ -35605,7 +35605,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.waveSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.waveSquare.primary;
+        return PhosphorIconsDuotone.waveSquare;
     }
   }
 
@@ -35629,7 +35629,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.waveTriangle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.waveTriangle.primary;
+        return PhosphorIconsDuotone.waveTriangle;
     }
   }
 
@@ -35653,7 +35653,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.waveform;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.waveform.primary;
+        return PhosphorIconsDuotone.waveform;
     }
   }
 
@@ -35677,7 +35677,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.waveformSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.waveformSlash.primary;
+        return PhosphorIconsDuotone.waveformSlash;
     }
   }
 
@@ -35701,7 +35701,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.waves;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.waves.primary;
+        return PhosphorIconsDuotone.waves;
     }
   }
 
@@ -35725,7 +35725,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.webcam;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.webcam.primary;
+        return PhosphorIconsDuotone.webcam;
     }
   }
 
@@ -35749,7 +35749,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.webcamSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.webcamSlash.primary;
+        return PhosphorIconsDuotone.webcamSlash;
     }
   }
 
@@ -35773,7 +35773,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.webhooksLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.webhooksLogo.primary;
+        return PhosphorIconsDuotone.webhooksLogo;
     }
   }
 
@@ -35797,7 +35797,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wechatLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wechatLogo.primary;
+        return PhosphorIconsDuotone.wechatLogo;
     }
   }
 
@@ -35821,7 +35821,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.whatsappLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.whatsappLogo.primary;
+        return PhosphorIconsDuotone.whatsappLogo;
     }
   }
 
@@ -35845,7 +35845,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wheelchair;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wheelchair.primary;
+        return PhosphorIconsDuotone.wheelchair;
     }
   }
 
@@ -35869,7 +35869,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wheelchairMotion;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wheelchairMotion.primary;
+        return PhosphorIconsDuotone.wheelchairMotion;
     }
   }
 
@@ -35893,7 +35893,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wifiHigh;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wifiHigh.primary;
+        return PhosphorIconsDuotone.wifiHigh;
     }
   }
 
@@ -35917,7 +35917,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wifiLow;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wifiLow.primary;
+        return PhosphorIconsDuotone.wifiLow;
     }
   }
 
@@ -35941,7 +35941,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wifiMedium;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wifiMedium.primary;
+        return PhosphorIconsDuotone.wifiMedium;
     }
   }
 
@@ -35965,7 +35965,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wifiNone;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wifiNone.primary;
+        return PhosphorIconsDuotone.wifiNone;
     }
   }
 
@@ -35989,7 +35989,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wifiSlash;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wifiSlash.primary;
+        return PhosphorIconsDuotone.wifiSlash;
     }
   }
 
@@ -36013,7 +36013,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wifiX;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wifiX.primary;
+        return PhosphorIconsDuotone.wifiX;
     }
   }
 
@@ -36037,7 +36037,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wind;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wind.primary;
+        return PhosphorIconsDuotone.wind;
     }
   }
 
@@ -36061,7 +36061,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.windmill;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.windmill.primary;
+        return PhosphorIconsDuotone.windmill;
     }
   }
 
@@ -36085,7 +36085,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.windowsLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.windowsLogo.primary;
+        return PhosphorIconsDuotone.windowsLogo;
     }
   }
 
@@ -36109,7 +36109,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wine;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wine.primary;
+        return PhosphorIconsDuotone.wine;
     }
   }
 
@@ -36133,7 +36133,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.wrench;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.wrench.primary;
+        return PhosphorIconsDuotone.wrench;
     }
   }
 
@@ -36157,7 +36157,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.x;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.x.primary;
+        return PhosphorIconsDuotone.x;
     }
   }
 
@@ -36181,7 +36181,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.xCircle;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.xCircle.primary;
+        return PhosphorIconsDuotone.xCircle;
     }
   }
 
@@ -36205,7 +36205,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.xLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.xLogo.primary;
+        return PhosphorIconsDuotone.xLogo;
     }
   }
 
@@ -36229,7 +36229,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.xSquare;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.xSquare.primary;
+        return PhosphorIconsDuotone.xSquare;
     }
   }
 
@@ -36253,7 +36253,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.yarn;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.yarn.primary;
+        return PhosphorIconsDuotone.yarn;
     }
   }
 
@@ -36277,7 +36277,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.yinYang;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.yinYang.primary;
+        return PhosphorIconsDuotone.yinYang;
     }
   }
 
@@ -36301,7 +36301,7 @@ class PhosphorIcons {
       case PhosphorIconsStyle.fill:
         return PhosphorIconsFill.youtubeLogo;
       case PhosphorIconsStyle.duotone:
-        return PhosphorIconsDuotone.youtubeLogo.primary;
+        return PhosphorIconsDuotone.youtubeLogo;
     }
   }
 }

@@ -26,6 +26,7 @@ class AppColors {
 
   // ── Light theme surfaces ─────────────────────────────────────────
   static const Color background = Color(0xFFF2F3F8);
+  static const Color lightBackground = Color(0xFFF2F3F8);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceVariant = Color(0xFFF5F6FA);
 
@@ -42,6 +43,7 @@ class AppColors {
   // ── Text ─────────────────────────────────────────────────────────
   static const Color textPrimary = Color(0xFF17262A);
   static const Color textSecondary = Color(0xFF4A6572);
+  static const Color textTertiary = Color(0xFF9E9E9E);
   static const Color textHint = Color(0xFF767676);
   static const Color textDisabled = Color(0xFFBDBDBD);
   static const Color darkText = Color(0xFF253840);
@@ -58,6 +60,7 @@ class AppColors {
   static const Color darkSurfaceVariant = Color(0xFF262640);
   static const Color darkTextPrimary = Color(0xFFE8E8F0);
   static const Color darkTextSecondary = Color(0xFF9CA3AF);
+  static const Color darkTextTertiary = Color(0xFF6B7280);
   static const Color darkDivider = Color(0xFF3A3A5C);
   static const Color darkBorder = Color(0xFF3A3A5C);
 

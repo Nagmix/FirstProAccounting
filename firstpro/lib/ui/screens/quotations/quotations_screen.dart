@@ -4,7 +4,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../invoices/create_invoice_screen.dart';
-import 'create_quotation_screen.dart';
 
 class QuotationsScreen extends StatefulWidget {
   const QuotationsScreen({super.key});
@@ -410,12 +409,10 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                 ),
               ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreateQuotationScreen()),
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('قريباً - إنشاء عرض سعر جديد')),
             );
-            if (result == true) _loadData();
           },
           icon: const Icon(PhosphorIconsRegular.plus, color: Colors.white),
           label: const Text('عرض سعر جديد', style: TextStyle(color: Colors.white)),
