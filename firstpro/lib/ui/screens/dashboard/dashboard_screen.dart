@@ -29,7 +29,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   double _todaySales = 0.0;
   int _todayInvoiceCount = 0;
   double _monthSales = 0.0;
@@ -52,6 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     _loadDashboardData();
+    WidgetsBinding.instance.addObserver(this);
 
     // Pulse animation for chart icon (repeating)
     _pulseController = AnimationController(
@@ -78,7 +79,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     _pulseController.dispose();
     _waveController.dispose();
     _headerEntryController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadDashboardData();
+    }
   }
 
   Future<void> _loadDashboardData() async {

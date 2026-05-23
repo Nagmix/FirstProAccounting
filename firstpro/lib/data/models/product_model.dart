@@ -28,6 +28,7 @@ class Product {
   final bool includeInReports;
   final bool isActive;
   final bool hasVariants;
+  final String? imagePath;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -61,6 +62,7 @@ class Product {
     this.includeInReports = true,
     this.isActive = true,
     this.hasVariants = false,
+    this.imagePath,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -97,6 +99,7 @@ class Product {
       'include_in_reports': includeInReports ? 1 : 0,
       'is_active': isActive ? 1 : 0,
       'has_variants': hasVariants ? 1 : 0,
+      'image_path': imagePath,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -135,6 +138,7 @@ class Product {
       includeInReports: (map['include_in_reports'] ?? 1) == 1,
       isActive: (map['is_active'] ?? 1) == 1,
       hasVariants: (map['has_variants'] ?? 0) == 1,
+      imagePath: map['image_path'],
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
     );
@@ -170,6 +174,7 @@ class Product {
     bool? includeInReports,
     bool? isActive,
     bool? hasVariants,
+    String? imagePath,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -203,6 +208,7 @@ class Product {
       includeInReports: includeInReports ?? this.includeInReports,
       isActive: isActive ?? this.isActive,
       hasVariants: hasVariants ?? this.hasVariants,
+      imagePath: imagePath ?? this.imagePath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

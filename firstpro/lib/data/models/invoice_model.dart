@@ -25,6 +25,9 @@ class Invoice {
   final String? bankTransferProvider;
   final String? transferNumber;
   final String? attachmentPath;
+  final int? shiftId;
+  final String? cashierName;
+  final bool isPosted;
   final DateTime createdAt;
 
   Invoice({
@@ -54,6 +57,9 @@ class Invoice {
     this.bankTransferProvider,
     this.transferNumber,
     this.attachmentPath,
+    this.shiftId,
+    this.cashierName,
+    this.isPosted = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -93,6 +99,9 @@ class Invoice {
       'bank_transfer_provider': bankTransferProvider,
       'transfer_number': transferNumber,
       'attachment_path': attachmentPath,
+      'shift_id': shiftId,
+      'cashier_name': cashierName,
+      'is_posted': isPosted ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -125,6 +134,9 @@ class Invoice {
       bankTransferProvider: map['bank_transfer_provider'],
       transferNumber: map['transfer_number'],
       attachmentPath: map['attachment_path'],
+      shiftId: map['shift_id'],
+      cashierName: map['cashier_name'],
+      isPosted: (map['is_posted'] ?? 0) == 1,
       createdAt: DateTime.parse(map['created_at']),
     );
   }
@@ -138,6 +150,7 @@ class Invoice {
     String? currency, double? exchangeRate, double? transportCharges,
     String? ewalletProvider, String? bankTransferProvider,
     String? transferNumber, String? attachmentPath,
+    int? shiftId, String? cashierName, bool? isPosted,
     DateTime? createdAt,
   }) {
     return Invoice(
@@ -158,6 +171,8 @@ class Invoice {
       bankTransferProvider: bankTransferProvider ?? this.bankTransferProvider,
       transferNumber: transferNumber ?? this.transferNumber,
       attachmentPath: attachmentPath ?? this.attachmentPath,
+      shiftId: shiftId ?? this.shiftId, cashierName: cashierName ?? this.cashierName,
+      isPosted: isPosted ?? this.isPosted,
       createdAt: createdAt ?? this.createdAt,
     );
   }

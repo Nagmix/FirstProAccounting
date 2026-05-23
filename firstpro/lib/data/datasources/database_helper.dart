@@ -7,13 +7,15 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   static Database? _database;
+  static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 13;
+  static const int _databaseVersion = 14;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await initDatabase();
+    _databaseFuture ??= initDatabase();
+    _database = await _databaseFuture!;
     return _database!;
   }
 
@@ -83,6 +85,7 @@ class DatabaseHelper {
         notes TEXT,
         include_in_reports INTEGER NOT NULL DEFAULT 1,
         is_active INTEGER NOT NULL DEFAULT 1,
+        image_path TEXT,
         has_variants INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -1152,6 +1155,10 @@ class DatabaseHelper {
       // Add cashier_name column to shifts
       try { await db.execute("ALTER TABLE shifts ADD COLUMN cashier_name TEXT"); } catch (_) {}
     }
+    if (oldVersion < 14) {
+      // Add image_path column to products
+      try { await db.execute('ALTER TABLE products ADD COLUMN image_path TEXT'); } catch (_) {}
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1204,6 +1211,15 @@ class DatabaseHelper {
   Future<int> deleteProduct(int id) async {
     final db = await database;
     return await db.delete('products', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> decrementProductStock(int productId, double quantity) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    await db.rawUpdate(
+      'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
+      [quantity, now, productId],
+    );
   }
 
   Future<int> getProductCount() async {
@@ -1423,7 +1439,7 @@ class DatabaseHelper {
       int? debitAccountId;
       int? creditAccountId;
 
-      if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+      if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
         if (isReturn) {
           // Sale Return: Debit Sales Revenue, Credit Customer/Cash
           debitAccountId = salesAccountId;
@@ -1451,7 +1467,7 @@ class DatabaseHelper {
           'journal_id': journalId,
           'debit': total,
           'credit': 0.0,
-          'description': '${invoiceMap['type'] == 'sale' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - ${invoiceMap['id']}',
+          'description': '${(invoiceMap['type'] == 'sale' || invoiceMap['type'] == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - ${invoiceMap['id']}',
           'date': now,
           'created_at': now,
         });
@@ -1463,7 +1479,7 @@ class DatabaseHelper {
           'journal_id': journalId,
           'debit': 0.0,
           'credit': total,
-          'description': '${invoiceMap['type'] == 'sale' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - ${invoiceMap['id']}',
+          'description': '${(invoiceMap['type'] == 'sale' || invoiceMap['type'] == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - ${invoiceMap['id']}',
           'date': now,
           'created_at': now,
         });
@@ -1580,7 +1596,7 @@ class DatabaseHelper {
 
       // Update cash box balance (for invoice total, excluding transport which is handled above)
       if (cashBoxId != null) {
-        final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase_return' && !isReturn);
+        final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn);
         if (isCashIn) {
           await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
         } else {
@@ -2022,9 +2038,22 @@ class DatabaseHelper {
     final db = await database;
     // Check if it's a system account
     final account = await db.query('accounts', where: 'id = ?', whereArgs: [id], limit: 1);
-    if (account.isNotEmpty && (account.first['is_system'] as int?) == 1) {
+    if (account.isEmpty) return 0;
+    if ((account.first['is_system'] as int?) == 1) {
       return -1; // Cannot delete system account
     }
+    // Check for child accounts
+    final children = await db.query('accounts', where: 'parent_id = ?', whereArgs: [id], limit: 1);
+    if (children.isNotEmpty) {
+      return -2; // Cannot delete account with child accounts
+    }
+    // Check for transactions referencing this account
+    final transactions = await db.query('transactions', where: 'account_id = ?', whereArgs: [id], limit: 1);
+    if (transactions.isNotEmpty) {
+      return -3; // Cannot delete account with transactions
+    }
+    // Remove linked_cash_box_id references
+    await db.rawUpdate('UPDATE cash_boxes SET linked_account_id = NULL WHERE linked_account_id = ?', [id]);
     return await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -2039,8 +2068,8 @@ class DatabaseHelper {
     };
     final prefix = prefixMap[accountType] ?? '9';
     final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(account_code, 2) AS INTEGER)), 0) + 1 AS next_code FROM accounts WHERE account_code LIKE '$prefix%' AND account_type = ?",
-      [accountType],
+      "SELECT COALESCE(MAX(CAST(SUBSTR(account_code, 2) AS INTEGER)), 0) + 1 AS next_code FROM accounts WHERE account_code LIKE ? AND account_type = ?",
+      ['$prefix%', accountType],
     );
     final nextNum = (result.first['next_code'] as num?)?.toInt() ?? int.parse('${prefix}001');
     return nextNum.toString().padLeft(4, '0');
@@ -2104,7 +2133,7 @@ class DatabaseHelper {
   Future<double> getTotalSalesForDate(DateTime date) async {
     final db = await database;
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'sale_return') AND is_return = 0 AND date(created_at) = ?", [dateStr]);
+    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) = ?", [dateStr]);
     return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
@@ -2120,7 +2149,7 @@ class DatabaseHelper {
     final db = await database;
     final now = DateTime.now();
     final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'sale_return') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
+    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
     return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
@@ -2164,7 +2193,7 @@ class DatabaseHelper {
     return await db.rawQuery('''
       SELECT date(created_at) AS date, COALESCE(SUM(total), 0.0) AS total
       FROM invoices
-      WHERE type IN ('sale', 'sale_return') AND is_return = 0 AND date(created_at) >= ?
+      WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) >= ?
       GROUP BY date(created_at)
       ORDER BY date(created_at) ASC
     ''', [startDateStr]);
@@ -2868,7 +2897,7 @@ class DatabaseHelper {
         int? debitAccountId;
         int? creditAccountId;
 
-        if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+        if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
           if (isReturn) {
             debitAccountId = salesAccountId;
             creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
@@ -3000,7 +3029,7 @@ class DatabaseHelper {
 
         // تحديث رصيد الصندوق
         if (cashBoxId != null) {
-          final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase_return' && !isReturn);
+          final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
           if (isCashIn) {
             await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
           } else {
@@ -3041,12 +3070,7 @@ class DatabaseHelper {
   /// Get account by code and currency.
   Future<Map<String, dynamic>?> getAccountByCodeAndCurrency(String code, String currency) async {
     final db = await database;
-    final results = await db.query(
-      'accounts',
-      where: 'account_code = ? AND currency = ? AND is_active = ?',
-      whereArgs: [code, currency, 1],
-      limit: 1,
-    );
+    final results = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [code, currency], limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 

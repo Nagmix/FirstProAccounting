@@ -5,6 +5,7 @@ class CashBox {
   final String? bankAccountNumber;
   final String? bankName;
   final String? bankBranch;
+  final String currency;
   final double balance;
   final String balanceType; // 'debit' or 'credit'
   final int? linkedAccountId;
@@ -19,6 +20,7 @@ class CashBox {
     this.bankAccountNumber,
     this.bankName,
     this.bankBranch,
+    this.currency = 'YER',
     this.balance = 0.0,
     this.balanceType = 'credit',
     this.linkedAccountId,
@@ -41,6 +43,7 @@ class CashBox {
       'bank_account_number': bankAccountNumber,
       'bank_name': bankName,
       'bank_branch': bankBranch,
+      'currency': currency,
       'balance': balance,
       'balance_type': balanceType,
       'linked_account_id': linkedAccountId,
@@ -58,6 +61,7 @@ class CashBox {
       bankAccountNumber: map['bank_account_number'],
       bankName: map['bank_name'],
       bankBranch: map['bank_branch'],
+      currency: map['currency'] ?? 'YER',
       balance: (map['balance'] ?? 0.0).toDouble(),
       balanceType: map['balance_type'] ?? 'credit',
       linkedAccountId: map['linked_account_id'],
@@ -69,14 +73,14 @@ class CashBox {
 
   CashBox copyWith({
     int? id, String? name, String? type, String? bankAccountNumber,
-    String? bankName, String? bankBranch, double? balance, String? balanceType,
+    String? bankName, String? bankBranch, String? currency, double? balance, String? balanceType,
     int? linkedAccountId, bool? isActive, DateTime? createdAt, DateTime? updatedAt,
   }) {
     return CashBox(
       id: id ?? this.id, name: name ?? this.name, type: type ?? this.type,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
       bankName: bankName ?? this.bankName, bankBranch: bankBranch ?? this.bankBranch,
-      balance: balance ?? this.balance, balanceType: balanceType ?? this.balanceType,
+      currency: currency ?? this.currency, balance: balance ?? this.balance, balanceType: balanceType ?? this.balanceType,
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,

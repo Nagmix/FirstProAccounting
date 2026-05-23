@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -10,7 +14,8 @@ import '../../widgets/barcode_scanner_screen.dart';
 
 /// Full-screen form for adding a new product with complete accounting fields.
 class AddProductSheet extends StatefulWidget {
-  const AddProductSheet({super.key});
+  final Product? existing;
+  const AddProductSheet({super.key, this.existing});
 
   @override
   State<AddProductSheet> createState() => _AddProductSheetState();
@@ -54,6 +59,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
   bool _isActive = true;
   bool _isSaving = false;
 
+  String? _imagePath;
+  bool _isEdit = false;
+
+  bool get _isEditMode => widget.existing != null;
+
   // ── Dropdown data from DB ─────────────────────────────────────
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _suppliers = [];
@@ -78,9 +88,14 @@ class _AddProductSheetState extends State<AddProductSheet> {
   void initState() {
     super.initState();
     _loadDropdownData();
-    _generateItemCode();
-    _taxRateController.text =
-        AppConstants.defaultVatRate.toStringAsFixed(0);
+    _isEdit = widget.existing != null;
+    if (_isEdit) {
+      _populateFromExisting();
+    } else {
+      _generateItemCode();
+      _taxRateController.text =
+          AppConstants.defaultVatRate.toStringAsFixed(0);
+    }
   }
 
   @override
@@ -131,6 +146,58 @@ class _AddProductSheetState extends State<AddProductSheet> {
     final code = await DatabaseHelper().getNextItemCode();
     if (mounted) {
       _itemCodeController.text = code;
+    }
+  }
+
+  void _populateFromExisting() {
+    final p = widget.existing!;
+    _itemCodeController.text = p.itemCode ?? '';
+    _barcodeController.text = p.barcode ?? '';
+    _nameArController.text = p.nameAr;
+    _nameEnController.text = p.nameEn;
+    _groupIdController.text = p.groupId ?? '';
+    _descriptionController.text = p.description ?? '';
+    _costPriceController.text = p.costPrice.toStringAsFixed(2);
+    _sellPriceController.text = p.sellPrice.toStringAsFixed(2);
+    _wholesalePriceController.text = p.wholesalePrice.toStringAsFixed(2);
+    _specialWholesalePriceController.text = p.specialWholesalePrice.toStringAsFixed(2);
+    _minimumSalePriceController.text = p.minimumSalePrice.toStringAsFixed(2);
+    _taxRateController.text = p.taxRate.toStringAsFixed(2);
+    _currentStockController.text = p.currentStock.toStringAsFixed(0);
+    _minStockController.text = p.minStock.toStringAsFixed(0);
+    _weightController.text = p.weight.toStringAsFixed(2);
+    _notesController.text = p.notes ?? '';
+    _selectedCategoryId = p.categoryId;
+    _selectedUnitId = p.unitId;
+    _selectedSupplierId = p.supplierId;
+    _selectedWarehouseId = p.warehouseId;
+    _selectedSalesAccountId = p.salesAccountId;
+    _selectedPurchaseAccountId = p.purchaseAccountId;
+    _selectedInventoryAccountId = p.inventoryAccountId;
+    _expiryDate = p.expiryDate;
+    _expiryTracking = p.expiryTracking;
+    _includeInReports = p.includeInReports;
+    _isActive = p.isActive;
+    _imagePath = p.imagePath;
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 80,
+    );
+    if (picked != null) {
+      // Copy to app documents directory for persistence
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.${picked.name.split('.').last}';
+      final savedPath = '${dir.path}/$fileName';
+      await File(picked.path).copy(savedPath);
+      setState(() {
+        _imagePath = savedPath;
+      });
     }
   }
 
@@ -231,7 +298,25 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
 
     try {
-      await DatabaseHelper().insertProduct(product.toMap());
+      final db = DatabaseHelper();
+      if (_isEdit) {
+        final updateMap = product.toMap();
+        // When editing, lock accounting-critical fields: keep original stock and warehouse
+        // Stock is managed by the system (decrement on sale, increment on purchase)
+        if (widget.existing != null) {
+          updateMap['current_stock'] = widget.existing!.currentStock;
+          updateMap['warehouse_id'] = widget.existing!.warehouseId;
+          updateMap['sales_account_id'] = widget.existing!.salesAccountId;
+          updateMap['purchase_account_id'] = widget.existing!.purchaseAccountId;
+          updateMap['inventory_account_id'] = widget.existing!.inventoryAccountId;
+        }
+        updateMap['image_path'] = _imagePath;
+        await db.updateProduct(widget.existing!.id!, updateMap);
+      } else {
+        final map = product.toMap();
+        map['image_path'] = _imagePath;
+        await db.insertProduct(map);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -250,7 +335,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            'تم إضافة الصنف "${_nameArController.text}" بنجاح'),
+            _isEdit ? 'تم تعديل الصنف "${_nameArController.text}" بنجاح' : 'تم إضافة الصنف "${_nameArController.text}" بنجاح'),
         backgroundColor: AppColors.success,
       ),
     );
@@ -312,7 +397,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إضافة صنف جديد'),
+        title: Text(_isEdit ? 'تعديل صنف' : 'إضافة صنف جديد'),
         leading: IconButton(
           icon: const Icon(PhosphorIconsRegular.arrowRight),
           onPressed:
@@ -351,6 +436,59 @@ class _AddProductSheetState extends State<AddProductSheet> {
               // ══════════════════════════════════════════════════════
               _sectionHeader(
                   'بيانات أساسية', PhosphorIconsRegular.article),
+
+              // ── Product Image ─────────────────────────────────────
+              Center(
+                child: GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                    child: _imagePath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.file(
+                              File(_imagePath!),
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                PhosphorIconsRegular.image,
+                                size: 40,
+                                color: AppColors.primary.withValues(alpha: 0.4),
+                              ),
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(PhosphorIconsRegular.camera, size: 32, color: AppColors.primary.withValues(alpha: 0.5)),
+                              const SizedBox(height: 6),
+                              Text('إضافة صورة', style: TextStyle(fontSize: 12, color: AppColors.primary.withValues(alpha: 0.7))),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+              if (_imagePath != null) ...[
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _imagePath = null),
+                    icon: const Icon(PhosphorIconsRegular.trash, size: 16, color: AppColors.error),
+                    label: const Text('إزالة الصورة', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
 
               // رمز الصنف
               TextFormField(
@@ -607,6 +745,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   Expanded(
                     child: TextFormField(
                       controller: _currentStockController,
+                      readOnly: _isEdit,
                       keyboardType:
                           const TextInputType.numberWithOptions(
                               decimal: true),
@@ -660,9 +799,32 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               overflow: TextOverflow.ellipsis),
                         ))
                     .toList(),
-                onChanged: (v) =>
+                onChanged: _isEdit ? null : (v) =>
                     setState(() => _selectedWarehouseId = v),
               ),
+              if (_isEdit) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(PhosphorIconsRegular.lock, size: 16, color: AppColors.warning),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'الكمية والمستودع والحقول المحاسبية مقفلة لتجنب تخريب العمليات المحاسبية',
+                          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.warning),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
 
               // تاريخ الصلاحية

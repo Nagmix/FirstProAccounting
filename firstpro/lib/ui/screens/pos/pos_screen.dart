@@ -2730,11 +2730,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     // Update product stock
     for (final item in _cart) {
       try {
-        final products = await db.getAllProducts(activeOnly: false);
-        final match = products.where((p) => p['id'] == item.productId).firstOrNull;
-        if (match != null) {
-          final currentStock = (match['current_stock'] as num?)?.toDouble() ?? 0.0;
-        }
+        await db.decrementProductStock(item.productId, item.quantity);
       } catch (_) {
         // Best effort stock update
       }

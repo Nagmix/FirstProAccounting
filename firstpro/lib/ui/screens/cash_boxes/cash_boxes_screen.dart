@@ -52,10 +52,12 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
   }
 
   Future<void> _showAddSheet({CashBox? existing}) async {
+    final theme = Theme.of(context);
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
       builder: (context) => AddCashBoxSheet(existing: existing),
     );
     _loadCashBoxes();

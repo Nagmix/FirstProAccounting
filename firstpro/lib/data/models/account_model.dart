@@ -10,6 +10,8 @@ class Account {
   final double balance;
   final String currency;
   final int? linkedCashBoxId;
+  final double debtCeiling;
+  final String balanceType; // 'credit' or 'debit'
   final bool isActive;
   final bool isSystem;
   final DateTime createdAt;
@@ -26,6 +28,8 @@ class Account {
     this.currency = 'YER',
     this.linkedCashBoxId,
     this.isActive = true,
+    this.debtCeiling = 0.0,
+    this.balanceType = 'credit',
     this.isSystem = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -74,6 +78,8 @@ class Account {
       'currency': currency,
       'linked_cash_box_id': linkedCashBoxId,
       'is_active': isActive ? 1 : 0,
+      'debt_ceiling': debtCeiling,
+      'balance_type': balanceType,
       'is_system': isSystem ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -92,6 +98,8 @@ class Account {
       currency: map['currency'] ?? 'YER',
       linkedCashBoxId: map['linked_cash_box_id'],
       isActive: (map['is_active'] ?? 1) == 1,
+      debtCeiling: (map['debt_ceiling'] ?? 0.0).toDouble(),
+      balanceType: map['balance_type'] ?? 'credit',
       isSystem: (map['is_system'] ?? 0) == 1,
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
@@ -101,6 +109,7 @@ class Account {
   Account copyWith({
     int? id, String? nameAr, String? nameEn, int? parentId, String? accountCode,
     AccountType? accountType, double? balance, String? currency, int? linkedCashBoxId,
+    double? debtCeiling, String? balanceType,
     bool? isActive, bool? isSystem, DateTime? createdAt, DateTime? updatedAt,
   }) {
     return Account(
@@ -108,6 +117,7 @@ class Account {
       parentId: parentId ?? this.parentId, accountCode: accountCode ?? this.accountCode,
       accountType: accountType ?? this.accountType, balance: balance ?? this.balance,
       currency: currency ?? this.currency, linkedCashBoxId: linkedCashBoxId ?? this.linkedCashBoxId,
+      debtCeiling: debtCeiling ?? this.debtCeiling, balanceType: balanceType ?? this.balanceType,
       isActive: isActive ?? this.isActive, isSystem: isSystem ?? this.isSystem,
       createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 
-/// Barcode scanner screen with manual entry fallback.
-/// Returns the barcode string via Navigator.pop.
-/// Note: Camera-based scanning is available via image_picker integration.
+/// Barcode scanner screen using device camera with manual entry fallback.
 class BarcodeScannerScreen extends StatefulWidget {
   const BarcodeScannerScreen({super.key});
 
@@ -14,16 +12,39 @@ class BarcodeScannerScreen extends StatefulWidget {
 }
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
-  final _controller = TextEditingController();
+  final MobileScannerController _scannerController = MobileScannerController();
+  final _manualController = TextEditingController();
+  bool _hasScanned = false;
+  bool _showManualEntry = false;
+  bool _cameraError = false;
 
   @override
   void dispose() {
-    _controller.dispose();
+    _scannerController.dispose();
+    _manualController.dispose();
     super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_hasScanned) return;
+    final barcode = capture.barcodes.firstOrNull;
+    if (barcode != null && barcode.rawValue != null) {
+      _hasScanned = true;
+      Navigator.of(context).pop(barcode.rawValue);
+    }
+  }
+
+  void _submitManual() {
+    final text = _manualController.text.trim();
+    if (text.isNotEmpty) {
+      Navigator.of(context).pop(text);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -31,121 +52,188 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           title: const Text('مسح الباركود'),
           actions: [
             TextButton.icon(
-              onPressed: _submit,
-              icon: const Icon(PhosphorIconsRegular.check, color: Colors.white),
-              label: const Text('تأكيد', style: TextStyle(color: Colors.white)),
+              onPressed: () => setState(() => _showManualEntry = !_showManualEntry),
+              icon: Icon(_showManualEntry ? PhosphorIconsRegular.camera : PhosphorIconsRegular.keyboard, size: 20),
+              label: Text(_showManualEntry ? 'الكاميرا' : 'إدخال يدوي'),
             ),
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Icon header
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    PhosphorIconsFill.barcode,
-                    size: 40,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'أدخل الباركود يدوياً',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'أدخل رقم الباركود الموجود على المنتج',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textHint,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-
-              // Barcode input field
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
-                decoration: InputDecoration(
-                  labelText: 'رقم الباركود',
-                  hintText: 'أدخل الباركود هنا...',
-                  prefixIcon: const Icon(PhosphorIconsRegular.barcode),
-                  suffixIcon: IconButton(
-                    icon: const Icon(PhosphorIconsRegular.x),
-                    onPressed: () => _controller.clear(),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Action buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _controller.clear(),
-                      icon: const Icon(PhosphorIconsRegular.backspace, size: 18),
-                      label: const Text('مسح'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton.icon(
-                      onPressed: _submit,
-                      icon: const Icon(PhosphorIconsRegular.check, size: 18),
-                      label: const Text('بحث وتأكيد'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        body: _showManualEntry ? _buildManualEntry(theme) : _buildScanner(theme),
       ),
     );
   }
 
-  void _submit() {
-    final code = _controller.text.trim();
-    if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء إدخال رقم الباركود'),
-          backgroundColor: AppColors.warning,
+  Widget _buildManualEntry(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Icon(PhosphorIconsRegular.barcode, size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _manualController,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submitManual(),
+            decoration: InputDecoration(
+              labelText: 'أدخل الباركود يدوياً',
+              prefixIcon: const Icon(PhosphorIconsRegular.barcode),
+              suffixIcon: IconButton(
+                icon: const Icon(PhosphorIconsRegular.check),
+                onPressed: _submitManual,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _submitManual,
+              icon: const Icon(PhosphorIconsRegular.check, size: 20),
+              label: const Text('تأكيد'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScanner(ThemeData theme) {
+    if (_cameraError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(PhosphorIconsRegular.warning, size: 64, color: AppColors.warning),
+            const SizedBox(height: 16),
+            Text('لا يمكن الوصول إلى الكاميرا', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => setState(() => _showManualEntry = true),
+              icon: Icon(PhosphorIconsRegular.keyboard, size: 20),
+              label: const Text('إدخال يدوي'),
+            ),
+          ],
         ),
       );
-      return;
     }
-    Navigator.of(context).pop(code);
+
+    return Stack(
+      children: [
+        MobileScanner(
+          controller: _scannerController,
+          onDetect: _onDetect,
+          errorBuilder: (context, error, child) {
+            // Camera error - show fallback
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && !_cameraError) {
+                setState(() => _cameraError = true);
+              }
+            });
+            return const Center(child: CircularProgressIndicator());
+          },
+        ),
+        // Scanning overlay
+        Container(
+          decoration: ShapeDecoration(
+            shape: ScannerOverlayShape(),
+          ),
+        ),
+        // Instructions
+        Positioned(
+          bottom: 80,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            color: Colors.black54,
+            child: Column(
+              children: [
+                const Text(
+                  'وجّه الكاميرا نحو الباركود',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => setState(() => _showManualEntry = true),
+                  icon: const Icon(PhosphorIconsRegular.keyboard, color: Colors.white70, size: 18),
+                  label: const Text('إدخال يدوي', style: TextStyle(color: Colors.white70)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
+}
+
+/// Custom scanner overlay with a cutout rectangle
+class ScannerOverlayShape extends ShapeBorder {
+  @override
+  EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) {
+    return Path()..addRect(rect);
+  }
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
+    final cutoutWidth = rect.width * 0.7;
+    final cutoutHeight = rect.height * 0.25;
+    final cutoutLeft = (rect.width - cutoutWidth) / 2;
+    final cutoutTop = (rect.height - cutoutHeight) / 2;
+
+    return Path()
+      ..addRect(rect)
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(cutoutLeft, cutoutTop, cutoutWidth, cutoutHeight),
+        const Radius.circular(16),
+      ))
+      ..fillType = PathFillType.evenOdd;
+  }
+
+  @override
+  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
+    final paint = Paint()..color = Colors.black54;
+    canvas.drawPath(getOuterPath(rect), paint);
+
+    // Draw corner brackets
+    final cutoutWidth = rect.width * 0.7;
+    final cutoutHeight = rect.height * 0.25;
+    final cutoutLeft = (rect.width - cutoutWidth) / 2;
+    final cutoutTop = (rect.height - cutoutHeight) / 2;
+    final bracketLen = 24.0;
+    final bracketWidth = 3.0;
+    final bracketColor = AppColors.primary;
+
+    final bracketPaint = Paint()
+      ..color = bracketColor
+      ..strokeWidth = bracketWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // Top-left
+    canvas.drawLine(Offset(cutoutLeft, cutoutTop + bracketLen), Offset(cutoutLeft, cutoutTop), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft, cutoutTop), Offset(cutoutLeft + bracketLen, cutoutTop), bracketPaint);
+    // Top-right
+    canvas.drawLine(Offset(cutoutLeft + cutoutWidth - bracketLen, cutoutTop), Offset(cutoutLeft + cutoutWidth, cutoutTop), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft + cutoutWidth, cutoutTop), Offset(cutoutLeft + cutoutWidth, cutoutTop + bracketLen), bracketPaint);
+    // Bottom-left
+    canvas.drawLine(Offset(cutoutLeft, cutoutTop + cutoutHeight - bracketLen), Offset(cutoutLeft, cutoutTop + cutoutHeight), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft, cutoutTop + cutoutHeight), Offset(cutoutLeft + bracketLen, cutoutTop + cutoutHeight), bracketPaint);
+    // Bottom-right
+    canvas.drawLine(Offset(cutoutLeft + cutoutWidth - bracketLen, cutoutTop + cutoutHeight), Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight - bracketLen), Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight), bracketPaint);
+  }
+
+  @override
+  ShapeBorder scale(double t) => this;
 }

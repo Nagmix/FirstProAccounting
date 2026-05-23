@@ -383,8 +383,15 @@ class _ProductsScreenState extends State<ProductsScreen>
                               product: filtered[index],
                               categoryName:
                                   _getCategoryName(filtered[index]),
-                              onTap: () {
-                                // TODO: Navigate to product detail
+                              onTap: () async {
+                                final result = await Navigator.of(context).push<bool>(
+                                  MaterialPageRoute(
+                                    builder: (_) => AddProductSheet(existing: filtered[index]),
+                                  ),
+                                );
+                                if (result == true) {
+                                  _loadData();
+                                }
                               },
                             );
                           },

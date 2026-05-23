@@ -113,7 +113,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     final allArgs = [...dateArgs, ...currencyArgs];
 
     final revenueResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type = 'sale' AND is_return = 0"
+      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'pos') AND is_return = 0"
           "$dateFilter$currencyFilter",
       allArgs,
     );
@@ -157,7 +157,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       final dayStart = DateTime(date.year, date.month, date.day);
       final dayEnd = dayStart.add(const Duration(days: 1));
       final dayResult = await db.rawQuery(
-        "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type = 'sale' AND is_return = 0 AND created_at >= ? AND created_at < ?",
+        "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'pos') AND is_return = 0 AND created_at >= ? AND created_at < ?",
         [dayStart.toIso8601String(), dayEnd.toIso8601String()],
       );
       final dayTotal =
@@ -174,7 +174,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     }
 
     final topProductsResult = await db.rawQuery(
-      "SELECT product_id, product_name, SUM(quantity) AS total_quantity, SUM(total_price) AS total_revenue FROM invoice_items GROUP BY product_id ORDER BY total_quantity DESC LIMIT 5",
+      "SELECT ii.product_id, ii.product_name, SUM(ii.quantity) AS total_quantity, SUM(ii.total_price) AS total_revenue FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id = i.id WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 GROUP BY ii.product_id ORDER BY total_quantity DESC LIMIT 5",
     );
     final List<_TopProduct> topProducts =
         topProductsResult.map((row) => _TopProduct(
