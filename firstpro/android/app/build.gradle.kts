@@ -17,6 +17,8 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    ndkVersion = "28.2.13676358"
+
     defaultConfig {
         applicationId = "com.firstpro.firstpro"
         minSdk = 24
