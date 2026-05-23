@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 14;
+  static const int _databaseVersion = 15;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -196,6 +196,7 @@ class DatabaseHelper {
         bank_account_number TEXT,
         bank_name TEXT,
         bank_branch TEXT,
+        currency TEXT NOT NULL DEFAULT 'YER',
         balance REAL NOT NULL DEFAULT 0.0,
         balance_type TEXT NOT NULL DEFAULT 'credit',
         linked_account_id INTEGER,
@@ -487,6 +488,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         shift_number TEXT NOT NULL,
         cashier_id INTEGER,
+        cashier_name TEXT,
         cash_box_id INTEGER NOT NULL,
         opening_amount REAL NOT NULL DEFAULT 0.0,
         closing_amount REAL,
@@ -1158,6 +1160,15 @@ class DatabaseHelper {
     if (oldVersion < 14) {
       // Add image_path column to products
       try { await db.execute('ALTER TABLE products ADD COLUMN image_path TEXT'); } catch (_) {}
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v15 Migration: ensure currency column exists in cash_boxes,
+    //  cashier_name in shifts (fixes missing columns from fresh installs)
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 15) {
+      try { await db.execute("ALTER TABLE cash_boxes ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'"); } catch (_) {}
+      try { await db.execute('ALTER TABLE shifts ADD COLUMN cashier_name TEXT'); } catch (_) {}
     }
   }
 

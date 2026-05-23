@@ -124,14 +124,25 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
       // Try one more time to resolve the account
       final code = _cashBanksAccountCodes[_currency]!;
       final db = DatabaseHelper();
-      final account = await db.getAccountByCodeAndCurrency(code, _currency);
-      if (account != null) {
-        _linkedAccountId = account['id'] as int;
-      } else {
+      try {
+        final account = await db.getAccountByCodeAndCurrency(code, _currency);
+        if (account != null) {
+          _linkedAccountId = account['id'] as int;
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return;
+        }
+      } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة'),
+          SnackBar(
+            content: Text('خطأ في البحث عن الحساب: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -141,41 +152,56 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
 
     setState(() => _isSaving = true);
 
-    final cashBox = CashBox(
-      id: widget.existing?.id,
-      name: _nameController.text.trim(),
-      type: _type,
-      bankAccountNumber: _type == 'bank' ? _bankAccountNumberController.text.trim() : null,
-      bankName: _type == 'bank' ? _bankNameController.text.trim() : null,
-      bankBranch: _type == 'bank' ? _bankBranchController.text.trim() : null,
-      balance: double.tryParse(_balanceController.text) ?? 0.0,
-      balanceType: _balanceType,
-      linkedAccountId: _linkedAccountId,
-      createdAt: widget.existing?.createdAt ?? DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    try {
+      final cashBox = CashBox(
+        id: widget.existing?.id,
+        name: _nameController.text.trim(),
+        type: _type,
+        bankAccountNumber: _type == 'bank' ? _bankAccountNumberController.text.trim() : null,
+        bankName: _type == 'bank' ? _bankNameController.text.trim() : null,
+        bankBranch: _type == 'bank' ? _bankBranchController.text.trim() : null,
+        balance: double.tryParse(_balanceController.text) ?? 0.0,
+        balanceType: _balanceType,
+        linkedAccountId: _linkedAccountId,
+        createdAt: widget.existing?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-    final map = cashBox.toMap();
-    // Include currency in the map so it gets persisted (column added in v13 migration)
-    map['currency'] = _currency;
+      final map = cashBox.toMap();
+      // Include currency in the map so it gets persisted
+      map['currency'] = _currency;
+      // Remove null id for new inserts (sqflite auto-generates)
+      if (!_isEdit) {
+        map.remove('id');
+      }
 
-    final db = DatabaseHelper();
-    if (_isEdit) {
-      await db.updateCashBox(cashBox.id!, map);
-    } else {
-      await db.insertCashBox(map);
+      final db = DatabaseHelper();
+      if (_isEdit) {
+        await db.updateCashBox(cashBox.id!, map);
+      } else {
+        await db.insertCashBox(map);
+      }
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في الحفظ: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
-        backgroundColor: AppColors.success,
-      ),
-    );
-    Navigator.of(context).pop();
   }
 
   @override
