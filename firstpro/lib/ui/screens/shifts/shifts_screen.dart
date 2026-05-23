@@ -1,6 +1,5 @@
 
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 
@@ -50,7 +49,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: Icon(isOpen ? PhosphorIconsRegular.lockOpen : PhosphorIconsRegular.lock,
+        leading: Icon(isOpen ? Icons.lock_open : Icons.lock,
           color: isOpen ? AppColors.success : AppColors.textHint),
         title: Text(shift['shift_number'] ?? ''),
         subtitle: Text(isOpen ? 'مفتوحة' : 'مغلقة'),

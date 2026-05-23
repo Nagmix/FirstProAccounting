@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -259,7 +257,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  PhosphorIconsFill.chartLineUp,
+                  Icons.show_chart,
                   color: Colors.white,
                   size: 24,
                 ),
@@ -301,8 +299,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   ),
                   child: Icon(
                     _netProfit >= 0
-                        ? PhosphorIconsFill.trendUp
-                        : PhosphorIconsFill.trendDown,
+                        ? Icons.trending_up
+                        : Icons.trending_down,
                     color: Colors.white,
                     size: 24,
                   ),
@@ -402,7 +400,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           StatCard(
             title: 'إجمالي المبيعات',
             value: _monthSales,
-            icon: PhosphorIconsFill.chartLineUp,
+            icon: Icons.show_chart,
             color: AppColors.accentBlue,
             subtitle: 'هذا الشهر',
             accentBarColor: AppColors.accentBlue,
@@ -410,7 +408,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           StatCard(
             title: 'إجمالي المشتريات',
             value: _monthPurchases,
-            icon: PhosphorIconsFill.shoppingCart,
+            icon: Icons.shopping_cart,
             color: AppColors.accentPink,
             subtitle: 'هذا الشهر',
             accentBarColor: AppColors.accentPink,
@@ -418,7 +416,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           StatCard(
             title: 'إجمالي المصروفات',
             value: _monthExpenses,
-            icon: PhosphorIconsFill.currencyDollar,
+            icon: Icons.attach_money,
             color: AppColors.error,
             subtitle: 'هذا الشهر',
             accentBarColor: AppColors.error,
@@ -426,7 +424,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           StatCard(
             title: 'رصيد الصندوق',
             value: _cashBalance,
-            icon: PhosphorIconsFill.vault,
+            icon: Icons.account_balance_wallet,
             color: AppColors.accentOrange,
             subtitle: 'الرصيد الحالي',
             accentBarColor: AppColors.accentOrange,
@@ -603,7 +601,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           child: Column(
             children: [
               Icon(
-                PhosphorIconsRegular.users,
+                Icons.people,
                 size: 36,
                 color: AppColors.textHint,
               ),
@@ -799,7 +797,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                   Icon(
-                    PhosphorIconsRegular.caretLeft,
+                    Icons.arrow_back_ios,
                     size: 16,
                     color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                   ),
@@ -831,7 +829,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           child: Column(
             children: [
               Icon(
-                PhosphorIconsRegular.clockCounterClockwise,
+                Icons.history,
                 size: 36,
                 color: AppColors.textHint,
               ),
@@ -882,8 +880,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                     child: Icon(
                       isSale
-                          ? PhosphorIconsFill.arrowUpRight
-                          : PhosphorIconsFill.arrowDownLeft,
+                          ? Icons.arrow_outward
+                          : Icons.south_west,
                       color: iconColor,
                       size: 20,
                     ),

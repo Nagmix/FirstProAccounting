@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -175,7 +174,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(PhosphorIconsRegular.wallet, size: 22),
+              const Icon(Icons.account_balance_wallet, size: 22),
               const SizedBox(width: 8),
               const Text('الديون', style: TextStyle(fontWeight: FontWeight.w800)),
             ],
@@ -184,11 +183,11 @@ class _DebtsScreenState extends State<DebtsScreen>
             controller: _tabController,
             tabs: const [
               Tab(
-                icon: Icon(PhosphorIconsRegular.userMinus, size: 20),
+                icon: Icon(Icons.person_remove, size: 20),
                 text: 'ديون العملاء',
               ),
               Tab(
-                icon: Icon(PhosphorIconsRegular.buildings, size: 20),
+                icon: Icon(Icons.business, size: 20),
                 text: 'ديون صاحب العمل',
               ),
             ],
@@ -245,12 +244,12 @@ class _DebtsScreenState extends State<DebtsScreen>
                 fontSize: 13,
               ),
               prefixIcon: const Icon(
-                PhosphorIconsRegular.magnifyingGlass,
+                Icons.search,
                 size: 20,
               ),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(PhosphorIconsRegular.x, size: 18),
+                      icon: const Icon(Icons.close, size: 18),
                       onPressed: () {
                         _searchController.clear();
                         setState(() => _searchQuery = '');
@@ -333,7 +332,7 @@ class _DebtsScreenState extends State<DebtsScreen>
               theme: theme,
               totals: totals,
               title: 'إجمالي ديون العملاء',
-              icon: PhosphorIconsRegular.userMinus,
+              icon: Icons.person_remove,
               accentColor: AppColors.error,
               count: debtCustomers.length,
               countLabel: 'عميل مدين',
@@ -344,7 +343,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           if (debtCustomers.isEmpty)
             SliverFillRemaining(
               child: _buildEmptyState(
-                icon: PhosphorIconsRegular.smiley,
+                icon: Icons.emoji_emotions,
                 title: 'لا توجد ديون عملاء',
                 subtitle: 'جميع العملاء ليس لديهم رصيد مستحق',
               ),
@@ -455,7 +454,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       Row(
                         children: [
                           Icon(
-                            PhosphorIconsRegular.phone,
+                            Icons.phone,
                             size: 13,
                             color: AppColors.textHint,
                           ),
@@ -515,7 +514,7 @@ class _DebtsScreenState extends State<DebtsScreen>
 
               const SizedBox(width: 6),
               Icon(
-                PhosphorIconsRegular.caretLeft,
+                Icons.arrow_back_ios,
                 size: 16,
                 color: AppColors.textHint,
               ),
@@ -545,7 +544,7 @@ class _DebtsScreenState extends State<DebtsScreen>
               theme: theme,
               totals: totals,
               title: 'إجمالي ديون صاحب العمل',
-              icon: PhosphorIconsRegular.buildings,
+              icon: Icons.business,
               accentColor: AppColors.warning,
               count: debtSuppliers.length + debtAccounts.length,
               countLabel: 'مورد/حساب مستحق',
@@ -567,7 +566,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        PhosphorIconsRegular.truck,
+                        Icons.local_shipping,
                         size: 16,
                         color: AppColors.warning,
                       ),
@@ -627,7 +626,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        PhosphorIconsRegular.bookmarks,
+                        Icons.bookmark,
                         size: 16,
                         color: AppColors.info,
                       ),
@@ -676,7 +675,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           if (debtSuppliers.isEmpty && debtAccounts.isEmpty)
             SliverFillRemaining(
               child: _buildEmptyState(
-                icon: PhosphorIconsRegular.smiley,
+                icon: Icons.emoji_emotions,
                 title: 'لا توجد ديون على صاحب العمل',
                 subtitle: 'لا يوجد رصيد مستحق للموردين أو حسابات الخصوم',
               ),
@@ -716,7 +715,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 ),
                 child: Center(
                   child: Icon(
-                    PhosphorIconsRegular.truck,
+                    Icons.local_shipping,
                     size: 20,
                     color: AppColors.warning,
                   ),
@@ -742,7 +741,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       Row(
                         children: [
                           Icon(
-                            PhosphorIconsRegular.phone,
+                            Icons.phone,
                             size: 13,
                             color: AppColors.textHint,
                           ),
@@ -798,7 +797,7 @@ class _DebtsScreenState extends State<DebtsScreen>
 
               const SizedBox(width: 6),
               Icon(
-                PhosphorIconsRegular.caretLeft,
+                Icons.arrow_back_ios,
                 size: 16,
                 color: AppColors.textHint,
               ),
@@ -836,7 +835,7 @@ class _DebtsScreenState extends State<DebtsScreen>
               ),
               child: Center(
                 child: Icon(
-                  PhosphorIconsRegular.bookmarks,
+                  Icons.bookmark,
                   size: 20,
                   color: AppColors.info,
                 ),
@@ -861,7 +860,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   Row(
                     children: [
                       Icon(
-                        PhosphorIconsRegular.hash,
+                        Icons.tag,
                         size: 13,
                         color: AppColors.textHint,
                       ),
@@ -1352,7 +1351,7 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
-                        PhosphorIconsRegular.receipt,
+                        Icons.receipt,
                         size: 18,
                         color: AppColors.error,
                       ),
@@ -1404,7 +1403,7 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  PhosphorIconsRegular.receipt,
+                                  Icons.receipt,
                                   size: 40,
                                   color: AppColors.textHint,
                                 ),
@@ -1466,7 +1465,7 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
           Row(
             children: [
               Icon(
-                PhosphorIconsRegular.receipt,
+                Icons.receipt,
                 size: 16,
                 color: isPaid ? AppColors.success : AppColors.primary,
               ),
@@ -1661,7 +1660,7 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
-                        PhosphorIconsRegular.receipt,
+                        Icons.receipt,
                         size: 18,
                         color: AppColors.warning,
                       ),
@@ -1713,7 +1712,7 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  PhosphorIconsRegular.receipt,
+                                  Icons.receipt,
                                   size: 40,
                                   color: AppColors.textHint,
                                 ),
@@ -1775,7 +1774,7 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
           Row(
             children: [
               Icon(
-                PhosphorIconsRegular.receipt,
+                Icons.receipt,
                 size: 16,
                 color: isPaid ? AppColors.success : AppColors.warning,
               ),

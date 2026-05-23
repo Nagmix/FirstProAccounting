@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -86,7 +84,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       appBar: AppBar(
         title: const Text('إضافة عميل جديد'),
         leading: IconButton(
-          icon: const Icon(PhosphorIconsRegular.arrowRight),
+          icon: const Icon(Icons.arrow_forward),
           onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
         ),
         actions: [
@@ -94,7 +92,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
             onPressed: _isSaving ? null : _save,
             icon: _isSaving
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(PhosphorIconsRegular.check, size: 20),
+                : const Icon(Icons.check, size: 20),
             label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
             style: TextButton.styleFrom(foregroundColor: Colors.white),
           ),
@@ -111,7 +109,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               TextFormField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'الاسم *', prefixIcon: Icon(PhosphorIconsRegular.user)),
+                decoration: const InputDecoration(labelText: 'الاسم *', prefixIcon: Icon(Icons.person)),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
               ),
               const SizedBox(height: 14),
@@ -121,7 +119,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.next,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(15)],
-                decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixIcon: Icon(PhosphorIconsRegular.phone)),
+                decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixIcon: Icon(Icons.phone)),
               ),
               const SizedBox(height: 14),
 
@@ -129,7 +127,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(PhosphorIconsRegular.envelope)),
+                decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.email)),
                 validator: (v) {
                   if (v != null && v.trim().isNotEmpty) {
                     final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
@@ -143,14 +141,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               TextFormField(
                 controller: _addressController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(PhosphorIconsRegular.mapPin)),
+                decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(Icons.location_on)),
               ),
               const SizedBox(height: 14),
 
               TextFormField(
                 controller: _countryController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'البلد', prefixIcon: Icon(PhosphorIconsRegular.globe)),
+                decoration: const InputDecoration(labelText: 'البلد', prefixIcon: Icon(Icons.language)),
               ),
               const SizedBox(height: 14),
 
@@ -167,7 +165,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
                       decoration: InputDecoration(
                         labelText: 'الرصيد الافتتاحي',
-                        prefixIcon: const Icon(PhosphorIconsRegular.calculator),
+                        prefixIcon: const Icon(Icons.calculate),
                         suffixText: AppConstants.currency,
                       ),
                     ),
@@ -246,7 +244,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
                 decoration: InputDecoration(
                   labelText: 'حد الائتمان',
-                  prefixIcon: const Icon(PhosphorIconsRegular.creditCard),
+                  prefixIcon: const Icon(Icons.credit_card),
                   suffixText: AppConstants.currency,
                 ),
               ),
@@ -258,7 +256,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 textInputAction: TextInputAction.newline,
                 decoration: const InputDecoration(
                   labelText: 'الملاحظات',
-                  prefixIcon: Icon(PhosphorIconsRegular.notepad),
+                  prefixIcon: Icon(Icons.edit_note),
                   alignLabelWithHint: true,
                 ),
               ),
@@ -314,7 +312,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       onPressed: _isSaving ? null : _save,
                       icon: _isSaving
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(PhosphorIconsRegular.check, size: 20),
+                          : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary, foregroundColor: Colors.white,

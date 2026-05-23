@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -188,7 +186,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                         controller: nameController,
                         decoration: const InputDecoration(
                           labelText: 'اسم التصنيف',
-                          prefixIcon: Icon(PhosphorIconsRegular.folder),
+                          prefixIcon: Icon(Icons.folder),
                         ),
                       ),
                     ),
@@ -207,7 +205,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                         setDialogState(() => categories.addAll(updated));
                         _loadData();
                       },
-                      icon: const Icon(PhosphorIconsRegular.plusCircle, color: AppColors.primary),
+                      icon: const Icon(Icons.add_circle, color: AppColors.primary),
                     ),
                   ],
                 ),
@@ -225,10 +223,10 @@ class _ProductsScreenState extends State<ProductsScreen>
                             final cat = categories[index];
                             return ListTile(
                               dense: true,
-                              leading: const Icon(PhosphorIconsRegular.folder, size: 20, color: AppColors.accentOrange),
+                              leading: const Icon(Icons.folder, size: 20, color: AppColors.accentOrange),
                               title: Text(cat['name'] as String),
                               trailing: IconButton(
-                                icon: const Icon(PhosphorIconsRegular.trash, size: 18, color: AppColors.error),
+                                icon: const Icon(Icons.delete, size: 18, color: AppColors.error),
                                 onPressed: () async {
                                   await db.deleteCategory(cat['id'] as int);
                                   final updated = await db.getAllCategories();
@@ -265,12 +263,12 @@ class _ProductsScreenState extends State<ProductsScreen>
         title: const Text('قائمة الأصناف'),
         actions: [
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.folderPlus),
+            icon: const Icon(Icons.create_new_folder),
             tooltip: 'إدارة التصنيفات',
             onPressed: _showCategoryManagement,
           ),
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.plusSquare),
+            icon: const Icon(Icons.add_box),
             tooltip: 'إضافة صنف',
             onPressed: _showAddProductSheet,
           ),
@@ -297,7 +295,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                   child: SearchBar(
                     controller: _searchController,
                     hintText: 'بحث بالاسم، الباركود، أو رمز الصنف...',
-                    leading: const Icon(PhosphorIconsRegular.magnifyingGlass),
+                    leading: const Icon(Icons.search),
                     padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(horizontal: 16),
                     ),
@@ -344,10 +342,10 @@ class _ProductsScreenState extends State<ProductsScreen>
                       if (filtered.isEmpty) {
                         return EmptyState(
                           icon: tabIndex == 0
-                              ? PhosphorIconsRegular.package
+                              ? Icons.inventory_2
                               : tabIndex == 2
-                                  ? PhosphorIconsRegular.prohibit
-                                  : PhosphorIconsRegular.warning,
+                                  ? Icons.block
+                                  : Icons.warning,
                           title: tabIndex == 0
                               ? 'لا يوجد أصناف'
                               : tabIndex == 1
@@ -407,7 +405,7 @@ class _ProductsScreenState extends State<ProductsScreen>
         tooltip: 'إضافة صنف',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(PhosphorIconsRegular.plus),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -477,7 +475,7 @@ class _ProductCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    PhosphorIconsRegular.package,
+                    Icons.inventory_2,
                     size: 36,
                     color: AppColors.primary.withValues(alpha: 0.4),
                   ),
@@ -562,7 +560,7 @@ class _ProductCard extends StatelessWidget {
                   // Barcode / item code icon
                   if (product.barcode != null || product.itemCode != null)
                     Icon(
-                      PhosphorIconsRegular.barcode,
+                      Icons.qr_code,
                       size: 18,
                       color: isLight
                           ? AppColors.textHint

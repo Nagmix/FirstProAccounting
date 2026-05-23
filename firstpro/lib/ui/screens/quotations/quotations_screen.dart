@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -257,7 +256,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () { Navigator.pop(ctx); _showStatusMenu(quotation['id'], status); },
-                        icon: const Icon(PhosphorIconsRegular.arrowsCounterClockwise, size: 18),
+                        icon: const Icon(Icons.sync, size: 18),
                         label: const Text('تغيير الحالة'),
                       ),
                     ),
@@ -269,7 +268,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                             Navigator.pop(ctx);
                             _convertToInvoice(quotation);
                           },
-                          icon: const Icon(PhosphorIconsRegular.arrowSquareOut, size: 18),
+                          icon: const Icon(Icons.open_in_new, size: 18),
                           label: const Text('تحويل لفاتورة'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -371,7 +370,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                           onChanged: (v) { _searchQuery = v; _applyFilters(); },
                           decoration: InputDecoration(
                             hintText: 'بحث برقم العرض أو اسم العميل...',
-                            prefixIcon: const Icon(PhosphorIconsRegular.magnifyingGlass, size: 20),
+                            prefixIcon: const Icon(Icons.search, size: 20),
                             filled: true,
                             fillColor: isDark ? AppColors.darkSurface : Colors.white,
                             border: OutlineInputBorder(
@@ -414,7 +413,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
               const SnackBar(content: Text('قريباً - إنشاء عرض سعر جديد')),
             );
           },
-          icon: const Icon(PhosphorIconsRegular.plus, color: Colors.white),
+          icon: const Icon(Icons.add, color: Colors.white),
           label: const Text('عرض سعر جديد', style: TextStyle(color: Colors.white)),
           backgroundColor: AppColors.primary,
         ),
@@ -510,7 +509,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                       color: statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(PhosphorIconsRegular.fileText, color: statusColor, size: 22),
+                    child: Icon(Icons.description, color: statusColor, size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -586,7 +585,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () => _convertToInvoice(q),
-                    icon: const Icon(PhosphorIconsRegular.arrowSquareOut, size: 16),
+                    icon: const Icon(Icons.open_in_new, size: 16),
                     label: const Text('تحويل إلى فاتورة مبيعات', style: TextStyle(fontSize: 13)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -609,7 +608,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(PhosphorIconsRegular.fileText, size: 64, color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
+          Icon(Icons.description, size: 64, color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
           const SizedBox(height: 16),
           Text('لا توجد عروض أسعار', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
           const SizedBox(height: 8),

@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
@@ -195,7 +194,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           actions: [
             IconButton(
               onPressed: _saveInvoice,
-              icon: const Icon(PhosphorIconsRegular.floppyDisk),
+              icon: const Icon(Icons.save),
               tooltip: 'حفظ',
             ),
           ],
@@ -253,7 +252,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.coin, size: 20, color: AppColors.primary),
+              Icon(Icons.monetization_on, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('العملة', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             ],
@@ -263,7 +262,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             value: _selectedCurrency,
             decoration: const InputDecoration(
               labelText: 'العملة',
-              prefixIcon: Icon(PhosphorIconsRegular.coin),
+              prefixIcon: Icon(Icons.monetization_on),
             ),
             items: _currencies.map((c) => DropdownMenuItem<String>(
               value: c['code'] as String,
@@ -333,7 +332,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.wallet, size: 20, color: AppColors.primary),
+              Icon(Icons.account_balance_wallet, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('آلية الدفع', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             ],
@@ -343,7 +342,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             children: [
               Expanded(
                 child: _PaymentOptionCard(
-                  icon: PhosphorIconsFill.money,
+                  icon: Icons.payments,
                   label: 'نقداً',
                   subtitle: 'دفع فوري',
                   isSelected: _paymentMechanism == 'cash',
@@ -354,7 +353,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: _PaymentOptionCard(
-                  icon: PhosphorIconsFill.clock,
+                  icon: Icons.access_time,
                   label: 'أجل',
                   subtitle: 'دفع لاحق',
                   isSelected: _paymentMechanism == 'credit',
@@ -375,12 +374,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // ── Payment method (cash, check, transfer, bank, ewallet, bank_transfer) ──
   Widget _buildPaymentMethodSection() {
     const methods = [
-      ('cash', 'نقدي', PhosphorIconsFill.money, AppColors.success),
-      ('check', 'شيك', PhosphorIconsFill.note, AppColors.accentBlue),
-      ('transfer', 'حوالة', PhosphorIconsFill.arrowsLeftRight, AppColors.accentOrange),
-      ('bank', 'بنك', PhosphorIconsFill.bank, AppColors.primary),
-      ('ewallet', 'محفظة إلكترونية', PhosphorIconsFill.wallet, AppColors.accentGreen),
-      ('bank_transfer', 'حوالة مصرفية', PhosphorIconsFill.buildings, Color(0xFF6A1B9A)),
+      ('cash', 'نقدي', Icons.payments, AppColors.success),
+      ('check', 'شيك', Icons.sticky_note_2, AppColors.accentBlue),
+      ('transfer', 'حوالة', Icons.swap_horiz, AppColors.accentOrange),
+      ('bank', 'بنك', Icons.account_balance, AppColors.primary),
+      ('ewallet', 'محفظة إلكترونية', Icons.account_balance_wallet, AppColors.accentGreen),
+      ('bank_transfer', 'حوالة مصرفية', Icons.business, Color(0xFF6A1B9A)),
     ];
 
     return Container(
@@ -396,7 +395,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.creditCard, size: 20, color: AppColors.primary),
+              Icon(Icons.credit_card, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('طريقة الدفع', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             ],
@@ -454,7 +453,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsFill.wallet, size: 20, color: AppColors.accentGreen),
+              Icon(Icons.account_balance_wallet, size: 20, color: AppColors.accentGreen),
               const SizedBox(width: 8),
               Text('محافظ إلكترونية', style: context.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
@@ -467,7 +466,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             value: _selectedEwalletProvider,
             decoration: InputDecoration(
               labelText: 'اختر المحفظة الإلكترونية',
-              prefixIcon: const Icon(PhosphorIconsRegular.wallet, color: AppColors.accentGreen),
+              prefixIcon: const Icon(Icons.account_balance_wallet, color: AppColors.accentGreen),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: _ewalletProviders.map((p) => DropdownMenuItem<String>(
@@ -507,7 +506,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         children: [
           Row(
             children: [
-              const Icon(PhosphorIconsFill.buildings, size: 20, color: purpleColor),
+              const Icon(Icons.business, size: 20, color: purpleColor),
               const SizedBox(width: 8),
               Text('حوالات مصرفية', style: context.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
@@ -520,7 +519,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             value: _selectedBankTransferProvider,
             decoration: InputDecoration(
               labelText: 'اختر شركة الحوالة',
-              prefixIcon: const Icon(PhosphorIconsRegular.buildings, color: purpleColor),
+              prefixIcon: const Icon(Icons.business, color: purpleColor),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: _bankTransferProviders.map((p) => DropdownMenuItem<String>(
@@ -536,7 +535,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: 'رقم الحوالة (اختياري)',
-              prefixIcon: const Icon(PhosphorIconsRegular.hash, color: purpleColor),
+              prefixIcon: const Icon(Icons.tag, color: purpleColor),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               hintStyle: TextStyle(color: AppColors.textHint, fontSize: 13),
             ),
@@ -602,7 +601,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _pickImageFromGallery,
-                icon: const Icon(PhosphorIconsRegular.image, size: 18),
+                icon: const Icon(Icons.image, size: 18),
                 label: Text(
                   isBankTransfer ? 'رفق صورة الإشعار من المعرض' : 'رفق صورة من المعرض',
                   style: const TextStyle(fontSize: 12),
@@ -616,7 +615,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _pickImageFromCamera,
-                icon: const Icon(PhosphorIconsRegular.camera, size: 18),
+                icon: const Icon(Icons.camera_alt, size: 18),
                 label: const Text('تصوير عبر الكاميرا', style: TextStyle(fontSize: 12)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -646,7 +645,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.vault, size: 20, color: isCash ? AppColors.primary : AppColors.textHint),
+              Icon(Icons.account_balance_wallet, size: 20, color: isCash ? AppColors.primary : AppColors.textHint),
               const SizedBox(width: 8),
               Text('حساب الصندوق', style: context.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
@@ -670,7 +669,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             value: isCash ? _selectedCashBoxId : null,
             decoration: InputDecoration(
               hintText: isCash ? 'اختر الصندوق *' : 'غير متاح للفاتورة الآجلة',
-              prefixIcon: Icon(PhosphorIconsRegular.vault, color: isCash ? null : AppColors.textHint),
+              prefixIcon: Icon(Icons.account_balance_wallet, color: isCash ? null : AppColors.textHint),
               disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.3)),
@@ -721,7 +720,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             value: _selectedEntityId,
             decoration: InputDecoration(
               hintText: 'اختر $label',
-              prefixIcon: Icon(_isSale ? PhosphorIconsRegular.user : PhosphorIconsRegular.buildings),
+              prefixIcon: Icon(_isSale ? Icons.person : Icons.business),
             ),
             items: entities.map((e) {
               final balance = (e['balance'] as num?)?.toDouble() ?? 0.0;
@@ -764,7 +763,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             value: _selectedWarehouseId,
             decoration: const InputDecoration(
               hintText: 'اختر المستودع',
-              prefixIcon: Icon(PhosphorIconsRegular.warehouse),
+              prefixIcon: Icon(Icons.warehouse),
             ),
             items: _warehouses.map((w) => DropdownMenuItem<int>(
               value: w['id'] as int,
@@ -803,7 +802,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(PhosphorIconsRegular.shoppingCart, size: 48, color: AppColors.textHint),
+                    Icon(Icons.shopping_cart, size: 48, color: AppColors.textHint),
                     const SizedBox(height: 8),
                     Text('لم يتم إضافة أصناف بعد', style: context.textTheme.bodyMedium),
                   ],
@@ -829,7 +828,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: _addItem,
-              icon: const Icon(PhosphorIconsRegular.plusCircle),
+              icon: const Icon(Icons.add_circle),
               label: const Text('إضافة صنف'),
               style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
             ),
@@ -854,7 +853,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.truck, size: 20, color: AppColors.primary),
+              Icon(Icons.local_shipping, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('أجور النقل (اختياري)', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             ],
@@ -866,7 +865,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: 'أجور النقل',
-              prefixIcon: const Icon(PhosphorIconsRegular.truck),
+              prefixIcon: const Icon(Icons.local_shipping),
               suffixText: AppConstants.currency,
               hintText: '0.00',
             ),
@@ -964,7 +963,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             maxLines: 2,
             decoration: const InputDecoration(
               labelText: 'ملاحظات',
-              prefixIcon: Icon(PhosphorIconsRegular.notepad),
+              prefixIcon: Icon(Icons.edit_note),
               alignLabelWithHint: true,
             ),
           ),
@@ -997,14 +996,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           children: [
             IconButton.outlined(
               onPressed: () {},
-              icon: const Icon(PhosphorIconsRegular.shareNetwork),
+              icon: const Icon(Icons.share),
               tooltip: 'مشاركة',
             ),
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {},
-                icon: const Icon(PhosphorIconsRegular.printer),
+                icon: const Icon(Icons.print),
                 label: const Text('طباعة'),
               ),
             ),
@@ -1012,7 +1011,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: _saveInvoice,
-                icon: const Icon(PhosphorIconsRegular.floppyDisk),
+                icon: const Icon(Icons.save),
                 label: const Text('حفظ'),
               ),
             ),
@@ -1178,7 +1177,7 @@ class _PaymentOptionCard extends StatelessWidget {
             if (isSelected)
               Padding(
                 padding: const EdgeInsets.only(right: 4),
-                child: Icon(PhosphorIconsFill.checkCircle, size: 18, color: color),
+                child: Icon(Icons.check_circle, size: 18, color: color),
               ),
           ],
         ),

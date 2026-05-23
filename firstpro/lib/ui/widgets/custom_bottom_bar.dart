@@ -1,7 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/design_system.dart';
 
@@ -187,7 +185,7 @@ class CenterFabButton extends StatelessWidget {
           ],
         ),
         child: const Icon(
-          PhosphorIconsFill.plus,
+          Icons.add,
           color: Colors.white,
           size: 28,
         ),

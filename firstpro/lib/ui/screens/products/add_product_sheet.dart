@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -399,7 +397,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
       appBar: AppBar(
         title: Text(_isEdit ? 'تعديل صنف' : 'إضافة صنف جديد'),
         leading: IconButton(
-          icon: const Icon(PhosphorIconsRegular.arrowRight),
+          icon: const Icon(Icons.arrow_forward),
           onPressed:
               _isSaving ? null : () => Navigator.of(context).pop(false),
         ),
@@ -415,7 +413,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       color: Colors.white,
                     ),
                   )
-                : const Icon(PhosphorIconsRegular.check, size: 20),
+                : const Icon(Icons.check, size: 20),
             label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
             style: TextButton.styleFrom(
                 foregroundColor: Colors.white),
@@ -435,7 +433,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               //  Section 1: بيانات أساسية
               // ══════════════════════════════════════════════════════
               _sectionHeader(
-                  'بيانات أساسية', PhosphorIconsRegular.article),
+                  'بيانات أساسية', Icons.article),
 
               // ── Product Image ─────────────────────────────────────
               Center(
@@ -461,7 +459,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               height: 120,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Icon(
-                                PhosphorIconsRegular.image,
+                                Icons.image,
                                 size: 40,
                                 color: AppColors.primary.withValues(alpha: 0.4),
                               ),
@@ -470,7 +468,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                         : Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(PhosphorIconsRegular.camera, size: 32, color: AppColors.primary.withValues(alpha: 0.5)),
+                              Icon(Icons.camera_alt, size: 32, color: AppColors.primary.withValues(alpha: 0.5)),
                               const SizedBox(height: 6),
                               Text('إضافة صورة', style: TextStyle(fontSize: 12, color: AppColors.primary.withValues(alpha: 0.7))),
                             ],
@@ -483,7 +481,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 Center(
                   child: TextButton.icon(
                     onPressed: () => setState(() => _imagePath = null),
-                    icon: const Icon(PhosphorIconsRegular.trash, size: 16, color: AppColors.error),
+                    icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
                     label: const Text('إزالة الصورة', style: TextStyle(color: AppColors.error, fontSize: 12)),
                   ),
                 ),
@@ -497,10 +495,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: InputDecoration(
                   labelText: 'رمز الصنف',
                   prefixIcon:
-                      const Icon(PhosphorIconsRegular.barcode),
+                      const Icon(Icons.qr_code),
                   suffixIcon: IconButton(
                     icon: const Icon(
-                        PhosphorIconsRegular.arrowClockwise,
+                        Icons.refresh,
                         size: 18),
                     tooltip: 'توليد رمز جديد',
                     onPressed: _generateItemCode,
@@ -516,7 +514,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: InputDecoration(
                   labelText: 'باركود',
                   prefixIcon:
-                      const Icon(PhosphorIconsRegular.barcode),
+                      const Icon(Icons.qr_code),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -524,7 +522,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       if (_barcodeController.text.isNotEmpty)
                         IconButton(
                           icon: const Icon(
-                              PhosphorIconsRegular.x,
+                              Icons.close,
                               size: 18),
                           tooltip: 'مسح',
                           onPressed: () {
@@ -535,7 +533,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       // Scan button
                       IconButton(
                         icon: const Icon(
-                            PhosphorIconsRegular.camera,
+                            Icons.camera_alt,
                             size: 20),
                         tooltip: 'مسح الباركود بالكاميرا',
                         onPressed: _scanBarcode,
@@ -553,7 +551,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'اسم الصنف بالعربي *',
-                  prefixIcon: Icon(PhosphorIconsRegular.textAa),
+                  prefixIcon: Icon(Icons.text_fields),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? 'اسم الصنف بالعربي مطلوب'
@@ -567,7 +565,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'اسم الصنف بالإنجليزي',
-                  prefixIcon: Icon(PhosphorIconsRegular.textAa),
+                  prefixIcon: Icon(Icons.text_fields),
                 ),
               ),
               const SizedBox(height: 14),
@@ -581,7 +579,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       decoration: const InputDecoration(
                         labelText: 'الوحدة',
                         prefixIcon:
-                            Icon(PhosphorIconsRegular.ruler),
+                            Icon(Icons.straighten),
                       ),
                       items: _units
                           .map((u) => DropdownMenuItem<int>(
@@ -602,7 +600,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       decoration: const InputDecoration(
                         labelText: 'التصنيف',
                         prefixIcon:
-                            Icon(PhosphorIconsRegular.folder),
+                            Icon(Icons.folder),
                       ),
                       items: _categories
                           .map((c) => DropdownMenuItem<int>(
@@ -630,7 +628,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       decoration: const InputDecoration(
                         labelText: 'المجموعة',
                         prefixIcon:
-                            Icon(PhosphorIconsRegular.package),
+                            Icon(Icons.inventory_2),
                       ),
                     ),
                   ),
@@ -641,7 +639,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       decoration: const InputDecoration(
                         labelText: 'المورد',
                         prefixIcon:
-                            Icon(PhosphorIconsRegular.truck),
+                            Icon(Icons.local_shipping),
                       ),
                       items: _suppliers
                           .map((s) => DropdownMenuItem<int>(
@@ -668,7 +666,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: const InputDecoration(
                   labelText: 'وصف الصنف',
                   prefixIcon:
-                      Icon(PhosphorIconsRegular.notepad),
+                      Icon(Icons.edit_note),
                   alignLabelWithHint: true,
                 ),
               ),
@@ -677,7 +675,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               //  Section 2: الأسعار
               // ══════════════════════════════════════════════════════
               _sectionHeader(
-                  'الأسعار', PhosphorIconsRegular.tag),
+                  'الأسعار', Icons.label),
 
               // سعر التكلفة + سعر البيع
               Row(
@@ -726,7 +724,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                         labelText: 'نسبة الضريبة %',
                         suffixText: '%',
                         prefixIcon:
-                            Icon(PhosphorIconsRegular.receipt),
+                            Icon(Icons.receipt),
                       ),
                     ),
                   ),
@@ -737,7 +735,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               //  Section 3: المخزون
               // ══════════════════════════════════════════════════════
               _sectionHeader(
-                  'المخزون', PhosphorIconsRegular.warehouse),
+                  'المخزون', Icons.warehouse),
 
               // الكمية الحالية + الحد الأدنى
               Row(
@@ -757,7 +755,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       decoration: const InputDecoration(
                         labelText: 'الكمية الحالية',
                         prefixIcon:
-                            Icon(PhosphorIconsRegular.stack),
+                            Icon(Icons.layers),
                       ),
                     ),
                   ),
@@ -776,7 +774,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       decoration: const InputDecoration(
                         labelText: 'الحد الأدنى',
                         prefixIcon:
-                            Icon(PhosphorIconsRegular.warning),
+                            Icon(Icons.warning),
                       ),
                     ),
                   ),
@@ -790,7 +788,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: const InputDecoration(
                   labelText: 'المخزن',
                   prefixIcon:
-                      Icon(PhosphorIconsRegular.warehouse),
+                      Icon(Icons.warehouse),
                 ),
                 items: _warehouses
                     .map((w) => DropdownMenuItem<int>(
@@ -813,7 +811,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(PhosphorIconsRegular.lock, size: 16, color: AppColors.warning),
+                      const Icon(Icons.lock, size: 16, color: AppColors.warning),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -838,11 +836,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: InputDecoration(
                   labelText: 'تاريخ الصلاحية',
                   prefixIcon:
-                      const Icon(PhosphorIconsRegular.calendar),
+                      const Icon(Icons.calendar_month),
                   hintText: 'اختر التاريخ',
                   suffixIcon: IconButton(
                     icon: const Icon(
-                        PhosphorIconsRegular.calendarDots,
+                        Icons.event,
                         size: 20),
                     onPressed: _pickDate,
                   ),
@@ -883,7 +881,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                         labelText: 'الوزن',
                         suffixText: 'كجم',
                         prefixIcon:
-                            Icon(PhosphorIconsRegular.scales),
+                            Icon(Icons.balance),
                       ),
                     ),
                   ),
@@ -894,7 +892,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               //  Section 4: الحسابات
               // ══════════════════════════════════════════════════════
               _sectionHeader(
-                  'الحسابات', PhosphorIconsRegular.chartPie),
+                  'الحسابات', Icons.pie_chart),
 
               // حساب المبيعات
               DropdownButtonFormField<int>(
@@ -902,7 +900,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: const InputDecoration(
                   labelText: 'حساب المبيعات',
                   prefixIcon:
-                      Icon(PhosphorIconsRegular.arrowUpRight),
+                      Icon(Icons.arrow_outward),
                 ),
                 items: _salesAccounts
                     .map((a) => DropdownMenuItem<int>(
@@ -924,7 +922,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: const InputDecoration(
                   labelText: 'حساب المشتريات',
                   prefixIcon:
-                      Icon(PhosphorIconsRegular.arrowDownLeft),
+                      Icon(Icons.south_west),
                 ),
                 items: _purchaseAccounts
                     .map((a) => DropdownMenuItem<int>(
@@ -946,7 +944,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: const InputDecoration(
                   labelText: 'حساب المخزون',
                   prefixIcon:
-                      Icon(PhosphorIconsRegular.archive),
+                      Icon(Icons.archive),
                 ),
                 items: _inventoryAccounts
                     .map((a) => DropdownMenuItem<int>(
@@ -965,7 +963,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               //  Section 5: إعدادات أخرى
               // ══════════════════════════════════════════════════════
               _sectionHeader(
-                  'إعدادات أخرى', PhosphorIconsRegular.gearSix),
+                  'إعدادات أخرى', Icons.settings),
 
               TextFormField(
                 controller: _notesController,
@@ -975,7 +973,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 decoration: const InputDecoration(
                   labelText: 'ملاحظات',
                   prefixIcon:
-                      Icon(PhosphorIconsRegular.notepad),
+                      Icon(Icons.edit_note),
                   alignLabelWithHint: true,
                 ),
               ),
@@ -1031,7 +1029,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               ),
                             )
                           : const Icon(
-                              PhosphorIconsRegular.check,
+                              Icons.check,
                               size: 20),
                       label: Text(_isSaving
                           ? 'جاري الحفظ...'

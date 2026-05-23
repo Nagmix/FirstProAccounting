@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -32,11 +30,11 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   ];
 
   final _typeIcons = {
-    AccountType.ASSET: PhosphorIconsRegular.buildings,
-    AccountType.LIABILITY: PhosphorIconsRegular.handCoins,
-    AccountType.COST: PhosphorIconsRegular.arrowDownLeft,
-    AccountType.REVENUE: PhosphorIconsRegular.arrowUpRight,
-    AccountType.EXPENSE: PhosphorIconsRegular.arrowDown,
+    AccountType.ASSET: Icons.business,
+    AccountType.LIABILITY: Icons.savings,
+    AccountType.COST: Icons.south_west,
+    AccountType.REVENUE: Icons.arrow_outward,
+    AccountType.EXPENSE: Icons.arrow_downward,
   };
 
   final _typeColors = {
@@ -91,7 +89,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(PhosphorIconsRegular.warning, color: AppColors.error, size: 40),
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
         title: const Text('حذف الحساب'),
         content: Text('هل أنت متأكد من حذف "${account.nameAr}"؟'),
         actions: [
@@ -146,7 +144,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
             child: DropdownButton<String>(
               value: _selectedCurrency,
               underline: const SizedBox.shrink(),
-              icon: const Icon(PhosphorIconsRegular.caretDown, size: 16),
+              icon: const Icon(Icons.arrow_drop_down, size: 16),
               items: _currencyOptions.map((c) => DropdownMenuItem<String>(
                 value: c,
                 child: Text(_currencyLabels[c] ?? c, style: const TextStyle(fontSize: 12)),
@@ -159,7 +157,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.plus),
+            icon: const Icon(Icons.add),
             tooltip: 'إضافة حساب',
             onPressed: () => _showAddSheet(),
           ),
@@ -212,7 +210,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         tooltip: 'إضافة حساب جديد',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(PhosphorIconsRegular.plus),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -243,8 +241,8 @@ class _AccountTile extends StatelessWidget {
       dense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 24),
       leading: account.isSystem
-          ? Icon(PhosphorIconsFill.lockSimple, size: 18, color: AppColors.textHint)
-          : Icon(PhosphorIconsRegular.circle, size: 10, color: color),
+          ? Icon(Icons.lock, size: 18, color: AppColors.textHint)
+          : Icon(Icons.circle, size: 10, color: color),
       title: Row(
         children: [
           Text(account.accountCode, style: theme.textTheme.bodySmall?.copyWith(
@@ -261,7 +259,7 @@ class _AccountTile extends StatelessWidget {
               style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
           if (onEdit != null)
             IconButton(
-              icon: const Icon(PhosphorIconsRegular.pencilSimple, size: 16),
+              icon: const Icon(Icons.edit, size: 16),
               color: AppColors.info,
               onPressed: onEdit,
               padding: EdgeInsets.zero,
@@ -269,7 +267,7 @@ class _AccountTile extends StatelessWidget {
             ),
           if (onDelete != null)
             IconButton(
-              icon: const Icon(PhosphorIconsRegular.trash, size: 16),
+              icon: const Icon(Icons.delete, size: 16),
               color: AppColors.error,
               onPressed: onDelete,
               padding: EdgeInsets.zero,

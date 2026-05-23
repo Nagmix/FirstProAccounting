@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -180,7 +178,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           actions: [
             IconButton(
               onPressed: _saveExpense,
-              icon: const Icon(PhosphorIconsRegular.floppyDisk),
+              icon: const Icon(Icons.save),
               tooltip: 'حفظ',
             ),
           ],
@@ -245,12 +243,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _buildTitleSection() {
     return _buildSectionCard(
       title: 'بيانات المصروف',
-      icon: PhosphorIconsRegular.article,
+      icon: Icons.article,
       child: TextFormField(
         controller: _titleController,
         decoration: const InputDecoration(
           labelText: 'العنوان *',
-          prefixIcon: Icon(PhosphorIconsRegular.textAa),
+          prefixIcon: Icon(Icons.text_fields),
           hintText: 'مثال: إيجار المحل',
         ),
         validator: (v) => v == null || v.trim().isEmpty ? 'العنوان مطلوب' : null,
@@ -261,7 +259,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _buildAttachmentSection() {
     return _buildSectionCard(
       title: 'إرفاق صورة أو مرفق',
-      icon: PhosphorIconsRegular.paperclip,
+      icon: Icons.attach_file,
       child: Column(
         children: [
           if (_attachmentPath != null) ...[
@@ -285,7 +283,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(PhosphorIconsRegular.file, size: 32, color: AppColors.textHint),
+                            const Icon(Icons.insert_drive_file, size: 32, color: AppColors.textHint),
                             const SizedBox(height: 8),
                             Text(
                               p.basename(_attachmentPath!),
@@ -308,7 +306,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           color: AppColors.error,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(PhosphorIconsFill.x, color: Colors.white, size: 14),
+                        child: const Icon(Icons.close, color: Colors.white, size: 14),
                       ),
                     ),
                   ),
@@ -322,7 +320,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _pickImageFromGallery,
-                  icon: const Icon(PhosphorIconsRegular.image, size: 18),
+                  icon: const Icon(Icons.image, size: 18),
                   label: const Text('رفع من المعرض'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -333,7 +331,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _pickImageFromCamera,
-                  icon: const Icon(PhosphorIconsRegular.camera, size: 18),
+                  icon: const Icon(Icons.camera_alt, size: 18),
                   label: const Text('تصوير بالكاميرا'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -350,7 +348,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _buildAmountSection() {
     return _buildSectionCard(
       title: 'المبلغ والعملة',
-      icon: PhosphorIconsRegular.currencyDollar,
+      icon: Icons.attach_money,
       child: Column(
         children: [
           Row(
@@ -363,7 +361,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: 'المبلغ *',
-                    prefixIcon: Icon(PhosphorIconsRegular.currencyDollar),
+                    prefixIcon: Icon(Icons.attach_money),
                     hintText: '0.00',
                   ),
                   validator: (v) {
@@ -381,7 +379,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   value: _selectedCurrency,
                   decoration: const InputDecoration(
                     labelText: 'العملة',
-                    prefixIcon: Icon(PhosphorIconsRegular.coin),
+                    prefixIcon: Icon(Icons.monetization_on),
                   ),
                   items: _currencies.map((c) => DropdownMenuItem<String>(
                     value: c['code'] as String,
@@ -399,7 +397,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
               labelText: 'سعر الصرف',
-              prefixIcon: Icon(PhosphorIconsRegular.arrowsLeftRight),
+              prefixIcon: Icon(Icons.swap_horiz),
               hintText: '1.0000',
             ),
             onChanged: (_) {
@@ -437,7 +435,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _buildCashBoxSection() {
     return _buildSectionCard(
       title: 'الصندوق ونوع العملية',
-      icon: PhosphorIconsRegular.vault,
+      icon: Icons.account_balance_wallet,
       child: Column(
         children: [
           // Cash box dropdown
@@ -445,7 +443,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             value: _selectedCashBoxId,
             decoration: const InputDecoration(
               labelText: 'الصندوق',
-              prefixIcon: Icon(PhosphorIconsRegular.vault),
+              prefixIcon: Icon(Icons.account_balance_wallet),
               hintText: 'اختر الصندوق',
             ),
             items: _cashBoxes.map((cb) {
@@ -490,7 +488,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     child: Column(
                       children: [
                         Icon(
-                          PhosphorIconsFill.arrowUpLeft,
+                          Icons.north_west,
                           size: 22,
                           color: _operationType == 'صرف' ? AppColors.error : AppColors.textHint,
                         ),
@@ -536,7 +534,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     child: Column(
                       children: [
                         Icon(
-                          PhosphorIconsFill.arrowDownRight,
+                          Icons.south_east,
                           size: 22,
                           color: _operationType == 'قبض' ? AppColors.success : AppColors.textHint,
                         ),
@@ -572,7 +570,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
     return _buildSectionCard(
       title: 'تاريخ المصروف',
-      icon: PhosphorIconsRegular.calendarBlank,
+      icon: Icons.calendar_today,
       child: InkWell(
         onTap: () async {
           final picked = await showDatePicker(
@@ -592,11 +590,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           ),
           child: Row(
             children: [
-              Icon(PhosphorIconsRegular.calendarDots, color: AppColors.primary),
+              Icon(Icons.event, color: AppColors.primary),
               const SizedBox(width: 10),
               Text(dateStr, style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               const Spacer(),
-              Icon(PhosphorIconsRegular.caretLeft, size: 16, color: AppColors.textHint),
+              Icon(Icons.arrow_back_ios, size: 16, color: AppColors.textHint),
             ],
           ),
         ),
@@ -607,14 +605,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _buildDetailsSection() {
     return _buildSectionCard(
       title: 'تفاصيل إضافية',
-      icon: PhosphorIconsRegular.notepad,
+      icon: Icons.edit_note,
       child: Column(
         children: [
           TextFormField(
             controller: _beneficiaryController,
             decoration: const InputDecoration(
               labelText: 'المستفيد',
-              prefixIcon: Icon(PhosphorIconsRegular.user),
+              prefixIcon: Icon(Icons.person),
               hintText: 'من استلم الدفع',
             ),
           ),
@@ -623,7 +621,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             controller: _referenceNumberController,
             decoration: const InputDecoration(
               labelText: 'رقم المرجع',
-              prefixIcon: Icon(PhosphorIconsRegular.hash),
+              prefixIcon: Icon(Icons.tag),
               hintText: 'رقم الشيك أو الإيصال',
             ),
           ),
@@ -632,7 +630,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             controller: _notesController,
             decoration: const InputDecoration(
               labelText: 'ملاحظات',
-              prefixIcon: Icon(PhosphorIconsRegular.notepad),
+              prefixIcon: Icon(Icons.edit_note),
               alignLabelWithHint: true,
             ),
             maxLines: 2,
@@ -645,7 +643,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _buildRecurringSection() {
     return _buildSectionCard(
       title: 'المصروف المتكرر',
-      icon: PhosphorIconsRegular.repeat,
+      icon: Icons.repeat,
       child: Column(
         children: [
           CheckboxListTile(
@@ -666,7 +664,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               value: _recurringPeriod,
               decoration: const InputDecoration(
                 labelText: 'فترة التكرار',
-                prefixIcon: Icon(PhosphorIconsRegular.repeat),
+                prefixIcon: Icon(Icons.repeat),
               ),
               items: const [
                 DropdownMenuItem(value: 'daily', child: Text('يومي')),
@@ -697,7 +695,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(PhosphorIconsRegular.x),
+                icon: const Icon(Icons.close),
                 label: const Text('إلغاء'),
               ),
             ),
@@ -706,7 +704,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               flex: 2,
               child: ElevatedButton.icon(
                 onPressed: _saveExpense,
-                icon: const Icon(PhosphorIconsRegular.floppyDisk),
+                icon: const Icon(Icons.save),
                 label: Text(_isEditing ? 'تحديث' : 'حفظ'),
               ),
             ),

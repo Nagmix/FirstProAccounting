@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/design_system.dart';
 
@@ -92,7 +90,7 @@ class EmptyState extends StatelessWidget {
                 ),
                 child: ElevatedButton.icon(
                   onPressed: onAction,
-                  icon: const Icon(PhosphorIconsFill.plus, size: 18),
+                  icon: const Icon(Icons.add, size: 18),
                   label: Text(actionLabel!),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -29,11 +27,11 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   };
 
   final _typeIcons = {
-    AccountType.ASSET: PhosphorIconsRegular.buildings,
-    AccountType.LIABILITY: PhosphorIconsRegular.handCoins,
-    AccountType.COST: PhosphorIconsRegular.arrowDownLeft,
-    AccountType.REVENUE: PhosphorIconsRegular.arrowUpRight,
-    AccountType.EXPENSE: PhosphorIconsRegular.arrowDown,
+    AccountType.ASSET: Icons.business,
+    AccountType.LIABILITY: Icons.savings,
+    AccountType.COST: Icons.south_west,
+    AccountType.REVENUE: Icons.arrow_outward,
+    AccountType.EXPENSE: Icons.arrow_downward,
   };
 
   @override
@@ -61,7 +59,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final color = _typeColors[widget.account.accountType] ?? AppColors.primary;
-    final icon = _typeIcons[widget.account.accountType] ?? PhosphorIconsRegular.bookOpen;
+    final icon = _typeIcons[widget.account.accountType] ?? Icons.menu_book;
 
     // Compute summary totals
     double totalDebit = 0;
@@ -311,7 +309,7 @@ class _SummaryRow extends StatelessWidget {
               label: 'مدين',
               value: CurrencyFormatter.format(totalDebit),
               color: AppColors.error,
-              icon: PhosphorIconsRegular.arrowUpLeft,
+              icon: Icons.north_west,
             ),
           ),
           Container(
@@ -325,7 +323,7 @@ class _SummaryRow extends StatelessWidget {
               label: 'دائن',
               value: CurrencyFormatter.format(totalCredit),
               color: AppColors.success,
-              icon: PhosphorIconsRegular.arrowDownRight,
+              icon: Icons.south_east,
             ),
           ),
           Container(
@@ -339,7 +337,7 @@ class _SummaryRow extends StatelessWidget {
               label: 'الصافي',
               value: CurrencyFormatter.format(netBalance),
               color: netBalance >= 0 ? AppColors.primary : AppColors.error,
-              icon: PhosphorIconsRegular.scales,
+              icon: Icons.balance,
             ),
           ),
         ],
@@ -472,7 +470,7 @@ class _TransactionCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(PhosphorIconsRegular.calendarBlank, size: 12, color: AppColors.primary),
+                    const Icon(Icons.calendar_today, size: 12, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
                       formattedDate,
@@ -520,7 +518,7 @@ class _TransactionCard extends StatelessWidget {
           // Row 2: Description
           Row(
             children: [
-              const Icon(PhosphorIconsRegular.article, size: 16, color: AppColors.textSecondary),
+              const Icon(Icons.article, size: 16, color: AppColors.textSecondary),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -642,7 +640,7 @@ class _EmptyState extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
-                PhosphorIconsRegular.notebook,
+                Icons.book,
                 size: 36,
                 color: color,
               ),

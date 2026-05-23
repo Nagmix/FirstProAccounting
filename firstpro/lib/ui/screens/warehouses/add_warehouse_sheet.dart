@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 
@@ -108,7 +106,7 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'اسم المستودع',
-                  prefixIcon: Icon(PhosphorIconsRegular.warehouse),
+                  prefixIcon: Icon(Icons.warehouse),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'اسم المستودع مطلوب' : null,
               ),
@@ -120,7 +118,7 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
                 textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'الموقع (اختياري)',
-                  prefixIcon: Icon(PhosphorIconsRegular.mapPin),
+                  prefixIcon: Icon(Icons.location_on),
                 ),
               ),
               const SizedBox(height: 24),
@@ -138,7 +136,7 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
-                          : const Icon(PhosphorIconsRegular.check, size: 20),
+                          : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -101,7 +99,7 @@ class _CustomersScreenState extends State<CustomersScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(PhosphorIconsRegular.warning, color: AppColors.error, size: 40),
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
         title: const Text('حذف العميل'),
         content: Text('هل أنت متأكد من حذف العميل "${customer.name}"؟'),
         actions: [
@@ -156,21 +154,21 @@ class _CustomersScreenState extends State<CustomersScreen>
         title: const Text('قائمة العملاء'),
         actions: [
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.magnifyingGlass),
+            icon: const Icon(Icons.search),
             tooltip: 'بحث',
             onPressed: () {
               FocusScope.of(context).unfocus();
             },
           ),
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.funnel),
+            icon: const Icon(Icons.filter_list),
             tooltip: 'تصفية',
             onPressed: () {
               // TODO: Implement advanced filter dialog
             },
           ),
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.userPlus),
+            icon: const Icon(Icons.person_add),
             tooltip: 'إضافة عميل',
             onPressed: _showAddCustomerSheet,
           ),
@@ -194,7 +192,7 @@ class _CustomersScreenState extends State<CustomersScreen>
                   child: SearchBar(
                     controller: _searchController,
                     hintText: 'بحث عن عميل...',
-                    leading: const Icon(PhosphorIconsRegular.magnifyingGlass),
+                    leading: const Icon(Icons.search),
                     padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(horizontal: 16),
                     ),
@@ -211,10 +209,10 @@ class _CustomersScreenState extends State<CustomersScreen>
                       if (filtered.isEmpty) {
                         return EmptyState(
                           icon: tabIndex == 0
-                              ? PhosphorIconsRegular.users
+                              ? Icons.people
                               : tabIndex == 1
-                                  ? PhosphorIconsRegular.trendDown
-                                  : PhosphorIconsRegular.trendUp,
+                                  ? Icons.trending_down
+                                  : Icons.trending_up,
                           title: tabIndex == 0
                               ? 'لا يوجد عملاء'
                               : tabIndex == 1
@@ -253,7 +251,7 @@ class _CustomersScreenState extends State<CustomersScreen>
         tooltip: 'إضافة عميل',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(PhosphorIconsRegular.userPlus),
+        child: const Icon(Icons.person_add),
       ),
     );
   }
@@ -330,7 +328,7 @@ class _CustomerCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          PhosphorIconsRegular.phone,
+                          Icons.phone,
                           size: 14,
                           color: isLight
                               ? AppColors.textHint
@@ -375,7 +373,7 @@ class _CustomerCard extends StatelessWidget {
 
               // ── Arrow icon (RTL – points left visually) ─────
               Icon(
-                PhosphorIconsRegular.caretLeft,
+                Icons.arrow_back_ios,
                 size: 16,
                 color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
               ),

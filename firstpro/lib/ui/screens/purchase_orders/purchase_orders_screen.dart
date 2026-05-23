@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -20,7 +19,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(PhosphorIconsRegular.plus),
+            icon: const Icon(Icons.add),
             tooltip: 'طلب شراء جديد',
           ),
         ],
@@ -30,7 +29,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              PhosphorIconsRegular.shoppingCart,
+              Icons.shopping_cart,
               size: 64,
               color: AppColors.textSecondary,
             ),

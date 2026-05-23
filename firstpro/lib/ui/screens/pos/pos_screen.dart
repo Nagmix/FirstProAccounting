@@ -1,7 +1,6 @@
 import "package:flutter/scheduler.dart";
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -244,7 +243,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 backgroundColor: AppColors.secondary,
                 foregroundColor: Colors.white,
                 tooltip: 'مسح باركود',
-                child: const Icon(PhosphorIconsRegular.barcode),
+                child: const Icon(Icons.qr_code),
               )
             : null,
       ),
@@ -257,7 +256,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(PhosphorIconsRegular.storefront, size: 22),
+          const Icon(Icons.storefront, size: 22),
           const SizedBox(width: 8),
           const Text('نقطة البيع', style: TextStyle(fontWeight: FontWeight.w800)),
         ],
@@ -267,14 +266,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         if (_activeShift != null)
           IconButton(
             onPressed: _showXReport,
-            icon: const Icon(PhosphorIconsRegular.chartBar),
+            icon: const Icon(Icons.bar_chart),
             tooltip: 'تقرير X',
           ),
         // Z-Report / Close Shift
         if (_activeShift != null)
           IconButton(
             onPressed: _showZReport,
-            icon: const Icon(PhosphorIconsRegular.signOut),
+            icon: const Icon(Icons.logout),
             tooltip: 'إغلاق الوردية',
           ),
         // Held orders
@@ -283,14 +282,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           label: Text('${_heldOrders.length}'),
           child: IconButton(
             onPressed: _showHeldOrders,
-            icon: const Icon(PhosphorIconsRegular.pauseCircle),
+            icon: const Icon(Icons.pause_circle),
             tooltip: 'طلبات معلقة',
           ),
         ),
         // Discount
         IconButton(
           onPressed: _cart.isEmpty ? null : _showDiscountDialog,
-          icon: const Icon(PhosphorIconsRegular.tag),
+          icon: const Icon(Icons.label),
           tooltip: 'خصم',
         ),
       ],
@@ -321,7 +320,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    PhosphorIconsRegular.warningCircle,
+                    Icons.error_outline,
                     size: 48,
                     color: AppColors.warning,
                   ),
@@ -348,7 +347,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   height: 56,
                   child: ElevatedButton.icon(
                     onPressed: _showOpenShiftDialog,
-                    icon: const Icon(PhosphorIconsFill.lockOpen, size: 24),
+                    icon: const Icon(Icons.lock_open, size: 24),
                     label: const Text(
                       'فتح وردية جديدة',
                       style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
@@ -429,7 +428,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
               // Cashier name
               _shiftChip(
-                icon: PhosphorIconsRegular.user,
+                icon: Icons.person,
                 label: 'الكاشير',
                 value: _cashierName,
               ),
@@ -437,7 +436,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
               // Duration
               _shiftChip(
-                icon: PhosphorIconsRegular.clock,
+                icon: Icons.access_time,
                 label: 'المدة',
                 value: _formatDuration(_shiftDuration),
               ),
@@ -445,7 +444,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
               // Cash box
               _shiftChip(
-                icon: PhosphorIconsRegular.wallet,
+                icon: Icons.account_balance_wallet,
                 label: 'الصندوق',
                 value: _shiftCashBoxName,
               ),
@@ -453,7 +452,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
               // Total sales
               _shiftChip(
-                icon: PhosphorIconsRegular.chartLineUp,
+                icon: Icons.show_chart,
                 label: 'المبيعات',
                 value: CurrencyFormatter.format(totalSales),
               ),
@@ -461,7 +460,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
               // Opening amount
               _shiftChip(
-                icon: PhosphorIconsRegular.vault,
+                icon: Icons.account_balance_wallet,
                 label: 'الافتتاح',
                 value: CurrencyFormatter.format(openingAmount),
               ),
@@ -470,14 +469,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               // Cash In/Out
               _shiftActionChip(
                 label: 'إيداع',
-                icon: PhosphorIconsRegular.arrowDown,
+                icon: Icons.arrow_downward,
                 color: AppColors.success,
                 onTap: () => _showCashInOutDialog(true),
               ),
               const SizedBox(width: 6),
               _shiftActionChip(
                 label: 'سحب',
-                icon: PhosphorIconsRegular.arrowUp,
+                icon: Icons.arrow_upward,
                 color: AppColors.error,
                 onTap: () => _showCashInOutDialog(false),
               ),
@@ -571,7 +570,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               decoration: InputDecoration(
                 hintText: 'بحث أو باركود...',
                 hintStyle: const TextStyle(fontSize: 14),
-                prefixIcon: const Icon(PhosphorIconsRegular.magnifyingGlass, size: 20),
+                prefixIcon: const Icon(Icons.search, size: 20),
                 filled: true,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -588,7 +587,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             height: 46,
             child: ElevatedButton.icon(
               onPressed: _scanBarcode,
-              icon: const Icon(PhosphorIconsRegular.barcode, size: 20),
+              icon: const Icon(Icons.qr_code, size: 20),
               label: const Text('مسح'),
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(
@@ -617,7 +616,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           if (index == 0) {
             final isSelected = _selectedCategoryId == null;
             return FilterChip(
-              avatar: const Icon(PhosphorIconsRegular.squaresFour, size: 15),
+              avatar: const Icon(Icons.grid_view, size: 15),
               label: const Text('الكل'),
               selected: isSelected,
               onSelected: (_) => setState(() => _selectedCategoryId = null),
@@ -650,7 +649,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(PhosphorIconsRegular.magnifyingGlass, size: 56, color: AppColors.textHint),
+            Icon(Icons.search, size: 56, color: AppColors.textHint),
             const SizedBox(height: 12),
             Text('لا توجد منتجات', style: context.textTheme.titleMedium),
             const SizedBox(height: 4),
@@ -736,7 +735,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Column(
                         children: [
-                          Icon(PhosphorIconsRegular.shoppingCart,
+                          Icon(Icons.shopping_cart,
                               size: 48, color: AppColors.textHint),
                           const SizedBox(height: 8),
                           Text('السلة فارغة', style: context.textTheme.bodyLarge),
@@ -797,7 +796,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Row(
           children: [
-            Icon(PhosphorIconsRegular.shoppingCart,
+            Icon(Icons.shopping_cart,
                 size: 20, color: AppColors.primary),
             const SizedBox(width: 8),
             Text(
@@ -836,8 +835,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             const SizedBox(width: 8),
             Icon(
               _sheetExtent > 0.5
-                  ? PhosphorIconsRegular.caretDown
-                  : PhosphorIconsRegular.caretUp,
+                  ? Icons.arrow_drop_down
+                  : Icons.arrow_drop_up,
               size: 18,
               color: AppColors.textSecondary,
             ),
@@ -898,7 +897,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _qtyButton(
-                      icon: PhosphorIconsRegular.minus,
+                      icon: Icons.remove,
                       onTap: () => _decrementCart(index),
                     ),
                     Container(
@@ -913,7 +912,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       ),
                     ),
                     _qtyButton(
-                      icon: PhosphorIconsRegular.plus,
+                      icon: Icons.add,
                       onTap: () => _incrementCart(index),
                     ),
                   ],
@@ -939,7 +938,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               // Delete
               IconButton(
                 onPressed: () => setState(() => _cart.removeAt(index)),
-                icon: const Icon(PhosphorIconsRegular.trash, size: 16, color: AppColors.error),
+                icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -980,15 +979,15 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           const SizedBox(height: 6),
           Row(
             children: [
-              _payMethodChip('نقدي', 'cash', PhosphorIconsRegular.money),
+              _payMethodChip('نقدي', 'cash', Icons.payments),
               const SizedBox(width: 4),
-              _payMethodChip('آجل', 'credit', PhosphorIconsRegular.clock),
+              _payMethodChip('آجل', 'credit', Icons.access_time),
               const SizedBox(width: 4),
-              _payMethodChip('بطاقة', 'card', PhosphorIconsRegular.creditCard),
+              _payMethodChip('بطاقة', 'card', Icons.credit_card),
               const SizedBox(width: 4),
-              _payMethodChip('محفظة', 'ewallet', PhosphorIconsRegular.wallet),
+              _payMethodChip('محفظة', 'ewallet', Icons.account_balance_wallet),
               const SizedBox(width: 4),
-              _payMethodChip('تحويل', 'bank_transfer', PhosphorIconsRegular.buildings),
+              _payMethodChip('تحويل', 'bank_transfer', Icons.business),
             ],
           ),
         ],
@@ -1057,7 +1056,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           ),
           child: Row(
             children: [
-              const Icon(PhosphorIconsRegular.user, size: 18, color: AppColors.info),
+              const Icon(Icons.person, size: 18, color: AppColors.info),
               const SizedBox(width: 8),
               Text(
                 _selectedCustomerName.isEmpty ? 'اختر العميل' : _selectedCustomerName,
@@ -1067,7 +1066,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 ),
               ),
               const Spacer(),
-              const Icon(PhosphorIconsRegular.caretDown, size: 16, color: AppColors.info),
+              const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.info),
             ],
           ),
         ),
@@ -1092,7 +1091,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           children: [
             Row(
               children: [
-                const Icon(PhosphorIconsRegular.wallet, size: 18, color: AppColors.secondary),
+                const Icon(Icons.account_balance_wallet, size: 18, color: AppColors.secondary),
                 const SizedBox(width: 6),
                 Text(
                   'بيانات المحفظة الإلكترونية',
@@ -1110,7 +1109,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                prefixIcon: const Icon(PhosphorIconsRegular.identificationCard, size: 18),
+                prefixIcon: const Icon(Icons.badge, size: 18),
               ),
               onChanged: (v) {
                 // Update the ewallet provider name in payments
@@ -1129,7 +1128,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               children: [
                 OutlinedButton.icon(
                   onPressed: () => _pickImage('ewallet'),
-                  icon: const Icon(PhosphorIconsRegular.camera, size: 16),
+                  icon: const Icon(Icons.camera_alt, size: 16),
                   label: const Text('التقاط صورة'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1139,7 +1138,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: () => _pickImageFromGallery('ewallet'),
-                  icon: const Icon(PhosphorIconsRegular.image, size: 16),
+                  icon: const Icon(Icons.image, size: 16),
                   label: const Text('إرفاق صورة'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1171,7 +1170,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           children: [
             Row(
               children: [
-                const Icon(PhosphorIconsRegular.buildings, size: 18, color: AppColors.info),
+                const Icon(Icons.business, size: 18, color: AppColors.info),
                 const SizedBox(width: 6),
                 Text(
                   'بيانات التحويل البنكي',
@@ -1189,7 +1188,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                prefixIcon: const Icon(PhosphorIconsRegular.bank, size: 18),
+                prefixIcon: const Icon(Icons.account_balance, size: 18),
               ),
               onChanged: (v) {
                 final idx = _payments.indexWhere((p) => p.method == 'bank_transfer');
@@ -1209,7 +1208,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                prefixIcon: const Icon(PhosphorIconsRegular.hash, size: 18),
+                prefixIcon: const Icon(Icons.tag, size: 18),
               ),
               onChanged: (v) {
                 final idx = _payments.indexWhere((p) => p.method == 'bank_transfer');
@@ -1227,7 +1226,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               children: [
                 OutlinedButton.icon(
                   onPressed: () => _pickImage('bank_transfer'),
-                  icon: const Icon(PhosphorIconsRegular.camera, size: 16),
+                  icon: const Icon(Icons.camera_alt, size: 16),
                   label: const Text('التقاط صورة'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1237,7 +1236,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: () => _pickImageFromGallery('bank_transfer'),
-                  icon: const Icon(PhosphorIconsRegular.image, size: 16),
+                  icon: const Icon(Icons.image, size: 16),
                   label: const Text('إرفاق صورة'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1291,7 +1290,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           children: [
             Row(
               children: [
-                const Icon(PhosphorIconsRegular.creditCard, size: 16, color: AppColors.primary),
+                const Icon(Icons.credit_card, size: 16, color: AppColors.primary),
                 const SizedBox(width: 6),
                 Text(
                   'المدفوعات',
@@ -1312,14 +1311,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         children: [
                           Icon(
                             p.method == 'cash'
-                                ? PhosphorIconsRegular.money
+                                ? Icons.payments
                                 : p.method == 'credit'
-                                    ? PhosphorIconsRegular.clock
+                                    ? Icons.access_time
                                     : p.method == 'card'
-                                        ? PhosphorIconsRegular.creditCard
+                                        ? Icons.credit_card
                                         : p.method == 'ewallet'
-                                            ? PhosphorIconsRegular.wallet
-                                            : PhosphorIconsRegular.buildings,
+                                            ? Icons.account_balance_wallet
+                                            : Icons.business,
                             size: 14,
                             color: AppColors.primary,
                           ),
@@ -1350,7 +1349,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                           InkWell(
                             onTap: () => setState(() => _payments.remove(p)),
                             child: const Icon(
-                              PhosphorIconsRegular.x,
+                              Icons.close,
                               size: 14,
                               color: AppColors.error,
                             ),
@@ -1473,7 +1472,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               height: 44,
               child: OutlinedButton.icon(
                 onPressed: () => _addPayment(_activePaymentMethod, _total),
-                icon: const Icon(PhosphorIconsRegular.plus, size: 18),
+                icon: const Icon(Icons.add, size: 18),
                 label: Text('إضافة دفعة: ${_paymentLabel(_activePaymentMethod)}'),
                 style: OutlinedButton.styleFrom(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1490,7 +1489,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 height: 40,
                 child: OutlinedButton.icon(
                   onPressed: () => _showAddPartialPaymentDialog(),
-                  icon: const Icon(PhosphorIconsRegular.plusCircle, size: 16),
+                  icon: const Icon(Icons.add_circle, size: 16),
                   label: const Text('إضافة دفعة أخرى'),
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1517,7 +1516,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(PhosphorIconsFill.checkCircle, size: 20),
+                  const Icon(Icons.check_circle, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'إنهاء البيع  ${CurrencyFormatter.format(_total)}',
@@ -1535,7 +1534,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             height: 42,
             child: OutlinedButton.icon(
               onPressed: _cart.isEmpty ? null : _holdOrder,
-              icon: const Icon(PhosphorIconsRegular.pauseCircle, size: 18),
+              icon: const Icon(Icons.pause_circle, size: 18),
               label: const Text('تعليق الطلب'),
               style: OutlinedButton.styleFrom(
                 shape: RoundedRectangleBorder(
@@ -1606,7 +1605,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         color: AppColors.success.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(PhosphorIconsFill.lockOpen, color: AppColors.success, size: 24),
+                      child: const Icon(Icons.lock_open, color: AppColors.success, size: 24),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -1627,7 +1626,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
                     hintText: 'أدخل اسم الكاشير',
-                    prefixIcon: const Icon(PhosphorIconsRegular.user, size: 20),
+                    prefixIcon: const Icon(Icons.person, size: 20),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
@@ -1675,7 +1674,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   decoration: InputDecoration(
                     hintText: 'أدخل مبلغ الافتتاح',
                     suffixText: AppConstants.currency,
-                    prefixIcon: const Icon(PhosphorIconsRegular.vault, size: 20),
+                    prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
@@ -1833,7 +1832,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      isCashIn ? PhosphorIconsRegular.arrowDown : PhosphorIconsRegular.arrowUp,
+                      isCashIn ? Icons.arrow_downward : Icons.arrow_upward,
                       color: isCashIn ? AppColors.success : AppColors.error,
                       size: 24,
                     ),
@@ -1856,7 +1855,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   hintText: isCashIn ? 'أدخل مبلغ الإيداع' : 'أدخل مبلغ السحب',
                   suffixText: AppConstants.currency,
                   prefixIcon: Icon(
-                    PhosphorIconsRegular.money,
+                    Icons.payments,
                     size: 20,
                     color: isCashIn ? AppColors.success : AppColors.error,
                   ),
@@ -1962,7 +1961,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       color: AppColors.info.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(PhosphorIconsRegular.chartBar, color: AppColors.info, size: 24),
+                    child: const Icon(Icons.bar_chart, color: AppColors.info, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -2074,7 +2073,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         color: AppColors.error.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(PhosphorIconsRegular.signOut, color: AppColors.error, size: 24),
+                      child: const Icon(Icons.logout, color: AppColors.error, size: 24),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -2120,7 +2119,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   decoration: InputDecoration(
                     hintText: 'أدخل المبلغ الفعلي',
                     suffixText: AppConstants.currency,
-                    prefixIcon: const Icon(PhosphorIconsRegular.vault, size: 20),
+                    prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
@@ -2180,8 +2179,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                               children: [
                                 Icon(
                                   difference.abs() < 0.005
-                                      ? PhosphorIconsFill.checkCircle
-                                      : PhosphorIconsRegular.warning,
+                                      ? Icons.check_circle
+                                      : Icons.warning,
                                   color: difference.abs() < 0.005
                                       ? AppColors.success
                                       : AppColors.warning,
@@ -2309,7 +2308,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   hintText: 'بحث عن عميل...',
-                  prefixIcon: const Icon(PhosphorIconsRegular.magnifyingGlass, size: 20),
+                  prefixIcon: const Icon(Icons.search, size: 20),
                   filled: true,
                   isDense: true,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -2334,7 +2333,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(PhosphorIconsRegular.user, size: 48, color: AppColors.textHint),
+                            Icon(Icons.person, size: 48, color: AppColors.textHint),
                             const SizedBox(height: 8),
                             Text('لا يوجد عملاء', style: context.textTheme.bodyLarge),
                           ],
@@ -2358,7 +2357,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                                 ? AppColors.primary.withValues(alpha: 0.15)
                                 : AppColors.surfaceVariant,
                             child: Icon(
-                              isSelected ? PhosphorIconsFill.check : PhosphorIconsRegular.user,
+                              isSelected ? Icons.check : Icons.person,
                               size: 20,
                               color: isSelected ? AppColors.primary : null,
                             ),
@@ -2755,7 +2754,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         child: AlertDialog(
           title: Row(
             children: [
-              const Icon(PhosphorIconsFill.checkCircle, color: AppColors.success, size: 28),
+              const Icon(Icons.check_circle, color: AppColors.success, size: 28),
               const SizedBox(width: 8),
               const Text('تم إنهاء البيع'),
             ],
@@ -2888,7 +2887,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                           _sheetController.animateTo(0.5,
                               duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
                         },
-                        icon: const Icon(PhosphorIconsRegular.arrowCounterClockwise,
+                        icon: const Icon(Icons.refresh,
                             color: AppColors.primary),
                         tooltip: 'استرجاع',
                       ),
@@ -2897,7 +2896,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                           setState(() => _heldOrders.removeAt(idx));
                           Navigator.pop(ctx);
                         },
-                        icon: const Icon(PhosphorIconsRegular.trash, color: AppColors.error),
+                        icon: const Icon(Icons.delete, color: AppColors.error),
                         tooltip: 'حذف',
                       ),
                     ],
@@ -3054,7 +3053,7 @@ class _ProductCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
-                  PhosphorIconsRegular.package,
+                  Icons.inventory_2,
                   color: AppColors.primary,
                   size: 20,
                 ),

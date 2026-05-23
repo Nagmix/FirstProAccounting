@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -237,12 +236,12 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                   ButtonSegment(
                     value: 'cash_box',
                     label: Text('صندوق'),
-                    icon: Icon(PhosphorIconsRegular.vault, size: 18),
+                    icon: Icon(Icons.account_balance_wallet, size: 18),
                   ),
                   ButtonSegment(
                     value: 'bank',
                     label: Text('بنك'),
-                    icon: Icon(PhosphorIconsRegular.bank, size: 18),
+                    icon: Icon(Icons.account_balance, size: 18),
                   ),
                 ],
                 selected: {_type},
@@ -256,7 +255,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: _type == 'bank' ? 'اسم البنك' : 'اسم الصندوق',
-                  prefixIcon: Icon(_type == 'bank' ? PhosphorIconsRegular.bank : PhosphorIconsRegular.vault),
+                  prefixIcon: Icon(_type == 'bank' ? Icons.account_balance : Icons.account_balance_wallet),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
               ),
@@ -267,9 +266,9 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 value: _currency,
                 decoration: InputDecoration(
                   labelText: 'العملة',
-                  prefixIcon: const Icon(PhosphorIconsRegular.currencyDollar),
+                  prefixIcon: const Icon(Icons.attach_money),
                   suffixIcon: _linkedAccountId != null
-                      ? const Icon(PhosphorIconsRegular.link, size: 18, color: AppColors.success)
+                      ? const Icon(Icons.link, size: 18, color: AppColors.success)
                       : null,
                 ),
                 items: _currencyInfo.entries.map((entry) {
@@ -298,7 +297,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'اسم البنك',
-                    prefixIcon: Icon(PhosphorIconsRegular.buildings),
+                    prefixIcon: Icon(Icons.business),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -307,7 +306,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'فرع البنك',
-                    prefixIcon: Icon(PhosphorIconsRegular.mapPin),
+                    prefixIcon: Icon(Icons.location_on),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -316,7 +315,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'رقم الحساب البنكي',
-                    prefixIcon: Icon(PhosphorIconsRegular.identificationCard),
+                    prefixIcon: Icon(Icons.badge),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -331,7 +330,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
                   decoration: InputDecoration(
                     labelText: _type == 'cash_box' ? 'الرصيد الأولي' : 'الرصيد',
-                    prefixIcon: const Icon(PhosphorIconsRegular.calculator),
+                    prefixIcon: const Icon(Icons.calculate),
                     suffixText: currencySymbol,
                   ),
                 ),
@@ -386,7 +385,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 child: Row(
                   children: [
                     Icon(
-                      _linkedAccountId != null ? PhosphorIconsRegular.link : PhosphorIconsRegular.warning,
+                      _linkedAccountId != null ? Icons.link : Icons.warning,
                       size: 18,
                       color: _linkedAccountId != null ? AppColors.success : AppColors.error,
                     ),
@@ -419,7 +418,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
-                          : const Icon(PhosphorIconsRegular.check, size: 20),
+                          : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,

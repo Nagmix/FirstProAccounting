@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -251,7 +250,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(PhosphorIconsRegular.arrowsLeftRight, size: 22),
+              const Icon(Icons.swap_horiz, size: 22),
               const SizedBox(width: 8),
               const Text('تحويل بين الصناديق',
                   style: TextStyle(fontWeight: FontWeight.w800)),
@@ -261,12 +260,12 @@ class _CashTransferScreenState extends State<CashTransferScreen>
             controller: _tabController,
             tabs: const [
               Tab(
-                icon: Icon(PhosphorIconsRegular.arrowSquareOut, size: 20),
+                icon: Icon(Icons.open_in_new, size: 20),
                 text: 'تحويل',
               ),
               Tab(
                 icon:
-                    Icon(PhosphorIconsRegular.clockCounterClockwise, size: 20),
+                    Icon(Icons.history, size: 20),
                 text: 'السجل',
               ),
             ],
@@ -318,7 +317,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
             decoration: InputDecoration(
               labelText: 'ملاحظات',
               hintText: 'أضف ملاحظات على العملية (اختياري)',
-              prefixIcon: const Icon(PhosphorIconsRegular.notePencil),
+              prefixIcon: const Icon(Icons.edit_note),
               alignLabelWithHint: true,
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12)),
@@ -365,7 +364,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    PhosphorIconsRegular.currencyDollar,
+                    Icons.attach_money,
                     size: 18,
                     color: AppColors.primary,
                   ),
@@ -385,7 +384,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               decoration: InputDecoration(
                 hintText: 'اختر العملة',
                 prefixIcon:
-                    const Icon(PhosphorIconsRegular.currencyDollar, size: 20),
+                    const Icon(Icons.attach_money, size: 20),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
@@ -449,7 +448,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    PhosphorIconsRegular.arrowUp,
+                    Icons.arrow_upward,
                     size: 18,
                     color: AppColors.error,
                   ),
@@ -485,7 +484,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               value: _fromCashBoxId,
               decoration: InputDecoration(
                 hintText: 'اختر صندوق المصدر',
-                prefixIcon: const Icon(PhosphorIconsRegular.vault, size: 20),
+                prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
@@ -561,7 +560,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   child: IconButton(
                     onPressed: _swapCashBoxes,
                     icon: Icon(
-                      PhosphorIconsRegular.arrowsDownUp,
+                      Icons.swap_vert,
                       size: 22,
                       color: AppColors.primary,
                     ),
@@ -584,7 +583,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    PhosphorIconsRegular.arrowDown,
+                    Icons.arrow_downward,
                     size: 18,
                     color: AppColors.success,
                   ),
@@ -620,7 +619,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               value: _toCashBoxId,
               decoration: InputDecoration(
                 hintText: 'اختر صندوق الوجهة',
-                prefixIcon: const Icon(PhosphorIconsRegular.vault, size: 20),
+                prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
@@ -698,7 +697,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   ),
                   child: Row(
                     children: [
-                      Icon(PhosphorIconsRegular.warning,
+                      Icon(Icons.warning,
                           size: 16, color: AppColors.error),
                       const SizedBox(width: 8),
                       Text(
@@ -778,7 +777,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               ],
               decoration: InputDecoration(
                 hintText: 'أدخل المبلغ',
-                prefixIcon: const Icon(PhosphorIconsRegular.money, size: 20),
+                prefixIcon: const Icon(Icons.payments, size: 20),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
@@ -832,8 +831,8 @@ class _CashTransferScreenState extends State<CashTransferScreen>
         children: [
           Icon(
             isInsufficient
-                ? PhosphorIconsRegular.warning
-                : PhosphorIconsRegular.info,
+                ? Icons.warning
+                : Icons.info,
             size: 16,
             color: isInsufficient ? AppColors.error : AppColors.info,
           ),
@@ -884,7 +883,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Icon(PhosphorIconsRegular.paperPlaneTilt, size: 20),
+                : const Icon(Icons.send, size: 20),
             label: Text(_isSaving ? 'جاري التحويل...' : 'تحويل'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -900,7 +899,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
         Expanded(
           child: OutlinedButton.icon(
             onPressed: _isSaving ? null : _resetForm,
-            icon: const Icon(PhosphorIconsRegular.arrowCounterClockwise,
+            icon: const Icon(Icons.refresh,
                 size: 18),
             label: const Text('مسح'),
             style: OutlinedButton.styleFrom(
@@ -949,7 +948,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    PhosphorIconsRegular.bookOpen,
+                    Icons.menu_book,
                     size: 18,
                     color: AppColors.success,
                   ),
@@ -1020,7 +1019,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Column(
                       children: [
-                        Icon(PhosphorIconsRegular.arrowLeft,
+                        Icon(Icons.arrow_back,
                             size: 20, color: AppColors.primary),
                         const SizedBox(height: 2),
                         Text(
@@ -1098,7 +1097,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
   }) {
     final color = isDebit ? AppColors.primary : AppColors.error;
     final icon =
-        isDebit ? PhosphorIconsRegular.arrowDownLeft : PhosphorIconsRegular.arrowUpRight;
+        isDebit ? Icons.south_west : Icons.arrow_outward;
 
     return Row(
       children: [
@@ -1158,7 +1157,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(PhosphorIconsRegular.arrowsLeftRight,
+            Icon(Icons.swap_horiz,
                 size: 56, color: AppColors.textHint),
             const SizedBox(height: 12),
             Text('لا توجد عمليات تحويل',
@@ -1229,7 +1228,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(PhosphorIconsRegular.arrowsLeftRight,
+                      const Icon(Icons.swap_horiz,
                           size: 14, color: AppColors.primary),
                       const SizedBox(width: 4),
                       Text(
@@ -1267,7 +1266,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                     children: [
                       Row(
                         children: [
-                          Icon(PhosphorIconsRegular.arrowUp,
+                          Icon(Icons.arrow_upward,
                               size: 12, color: AppColors.error),
                           const SizedBox(width: 4),
                           Text(
@@ -1298,7 +1297,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Column(
                     children: [
-                      Icon(PhosphorIconsRegular.arrowLeft,
+                      Icon(Icons.arrow_back,
                           size: 18, color: AppColors.primary),
                       const SizedBox(height: 2),
                       Container(
@@ -1341,7 +1340,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(PhosphorIconsRegular.arrowDown,
+                          Icon(Icons.arrow_downward,
                               size: 12, color: AppColors.success),
                         ],
                       ),
@@ -1373,7 +1372,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                 ),
                 child: Row(
                   children: [
-                    Icon(PhosphorIconsRegular.notePencil,
+                    Icon(Icons.edit_note,
                         size: 14, color: AppColors.textSecondary),
                     const SizedBox(width: 6),
                     Expanded(

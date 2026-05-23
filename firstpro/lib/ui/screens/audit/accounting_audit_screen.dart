@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -170,7 +168,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           actions: [
             IconButton(
               onPressed: _runAudit,
-              icon: const Icon(PhosphorIconsRegular.arrowClockwise),
+              icon: const Icon(Icons.refresh),
               tooltip: 'إعادة التدقيق',
             ),
           ],
@@ -214,7 +212,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
 
   Widget _buildHealthCard(ThemeData theme, bool isDark) {
     final color = _isBalanced ? AppColors.success : AppColors.error;
-    final icon = _isBalanced ? PhosphorIconsFill.shieldCheck : PhosphorIconsFill.shieldWarning;
+    final icon = _isBalanced ? Icons.verified_user : Icons.shield;
     final title = _isBalanced ? 'النظام المحاسبي متوازن' : 'يوجد خلل في التوازن المحاسبي';
     final subtitle = _isBalanced
         ? 'جميع القيود مجلوبة ومتوازنة حسب العملات'
@@ -296,7 +294,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.chartBar, size: 18, color: AppColors.primary),
+              Icon(Icons.bar_chart, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('نظرة عامة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             ],
@@ -304,13 +302,13 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              _buildStatChip(theme, isDark, PhosphorIconsFill.swap, 'القيود', '$_totalTransactions', AppColors.primary),
+              _buildStatChip(theme, isDark, Icons.swap_horiz, 'القيود', '$_totalTransactions', AppColors.primary),
               const SizedBox(width: 8),
-              _buildStatChip(theme, isDark, PhosphorIconsFill.chartPie, 'الحسابات', '$_totalAccounts', AppColors.accentBlue),
+              _buildStatChip(theme, isDark, Icons.pie_chart, 'الحسابات', '$_totalAccounts', AppColors.accentBlue),
               const SizedBox(width: 8),
-              _buildStatChip(theme, isDark, PhosphorIconsFill.receipt, 'الفواتير', '$_totalInvoices', AppColors.accentGreen),
+              _buildStatChip(theme, isDark, Icons.receipt, 'الفواتير', '$_totalInvoices', AppColors.accentGreen),
               const SizedBox(width: 8),
-              _buildStatChip(theme, isDark, PhosphorIconsFill.currencyDollar, 'المصروفات', '$_totalExpenses', AppColors.accentOrange),
+              _buildStatChip(theme, isDark, Icons.attach_money, 'المصروفات', '$_totalExpenses', AppColors.accentOrange),
             ],
           ),
         ],
@@ -353,7 +351,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.scales, size: 18, color: AppColors.primary),
+              Icon(Icons.balance, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('ميزان المراجعة حسب العملة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             ],
@@ -394,7 +392,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
                     flex: 2,
                     child: Row(
                       children: [
-                        Icon(isOk ? PhosphorIconsFill.checkCircle : PhosphorIconsFill.warningCircle,
+                        Icon(isOk ? Icons.check_circle : Icons.error_outline,
                             size: 14, color: isOk ? AppColors.success : AppColors.error),
                         const SizedBox(width: 4),
                         Text(currencyNames[currency] ?? currency, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
@@ -441,7 +439,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.chartPie, size: 18, color: AppColors.primary),
+              Icon(Icons.pie_chart, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('ملخص الحسابات حسب النوع والعملة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             ],
@@ -495,7 +493,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.warningCircle, size: 18, color: AppColors.warning),
+              Icon(Icons.error_outline, size: 18, color: AppColors.warning),
               const SizedBox(width: 8),
               Text('فواتير بدون قيود محاسبية', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.warning)),
             ],
@@ -516,7 +514,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(PhosphorIconsFill.receipt, size: 16, color: AppColors.warning),
+                  Icon(Icons.receipt, size: 16, color: AppColors.warning),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -550,7 +548,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.warningOctagon, size: 18, color: AppColors.error),
+              Icon(Icons.report, size: 18, color: AppColors.error),
               const SizedBox(width: 8),
               Text('مصروفات بدون حساب محاسبي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
             ],
@@ -571,7 +569,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(PhosphorIconsFill.currencyDollar, size: 16, color: AppColors.error),
+                  Icon(Icons.attach_money, size: 16, color: AppColors.error),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -605,7 +603,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
         children: [
           Row(
             children: [
-              Icon(PhosphorIconsRegular.scales, size: 18, color: AppColors.error),
+              Icon(Icons.balance, size: 18, color: AppColors.error),
               const SizedBox(width: 8),
               Text('قيود غير متوازنة (مدين ≠ دائن)', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
             ],
@@ -622,7 +620,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(PhosphorIconsFill.warningCircle, size: 16, color: AppColors.error),
+                  Icon(Icons.error_outline, size: 16, color: AppColors.error),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -658,7 +656,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       ),
       child: Column(
         children: [
-          Icon(PhosphorIconsFill.checkSquare, size: 48, color: AppColors.success),
+          Icon(Icons.check_box, size: 48, color: AppColors.success),
           const SizedBox(height: 16),
           Text(
             'التدقيق مكتمل - لا توجد مشاكل',

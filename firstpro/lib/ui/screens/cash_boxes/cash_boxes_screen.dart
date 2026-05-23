@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -67,7 +65,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(PhosphorIconsRegular.warning, color: AppColors.error, size: 40),
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
         title: const Text('حذف الصندوق'),
         content: Text('هل أنت متأكد من حذف "${cashBox.name}"؟'),
         actions: [
@@ -102,7 +100,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
         title: const Text('الصناديق والبنوك'),
         actions: [
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.plus),
+            icon: const Icon(Icons.add),
             tooltip: 'إضافة',
             onPressed: () => _showAddSheet(),
           ),
@@ -127,14 +125,14 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(PhosphorIconsRegular.vault, size: 72, color: AppColors.textHint),
+                        Icon(Icons.account_balance_wallet, size: 72, color: AppColors.textHint),
                         const SizedBox(height: 16),
                         Text(tabIndex == 0 ? 'لا توجد صناديق أو بنوك' : tabIndex == 1 ? 'لا توجد صناديق' : 'لا توجد بنوك',
                             style: theme.textTheme.titleMedium),
                         const SizedBox(height: 8),
                         FilledButton.icon(
                           onPressed: () => _showAddSheet(),
-                          icon: const Icon(PhosphorIconsRegular.plus, size: 18),
+                          icon: const Icon(Icons.add, size: 18),
                           label: const Text('إضافة جديدة'),
                         ),
                       ],
@@ -166,7 +164,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
                               color: AppColors.primary.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(PhosphorIconsRegular.vault, color: AppColors.primary),
+                            child: const Icon(Icons.account_balance_wallet, color: AppColors.primary),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -212,7 +210,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
         tooltip: 'إضافة صندوق أو بنك',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(PhosphorIconsRegular.plus),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -250,7 +248,7 @@ class _CashBoxCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  cashBox.isBank ? PhosphorIconsRegular.bank : PhosphorIconsRegular.vault,
+                  cashBox.isBank ? Icons.account_balance : Icons.account_balance_wallet,
                   color: cashBox.isBank ? AppColors.info : AppColors.secondaryDark,
                 ),
               ),

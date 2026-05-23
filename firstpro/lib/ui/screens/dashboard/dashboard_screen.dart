@@ -1,8 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
@@ -128,23 +126,23 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── All service actions combined into one list ────────────────
   List<_QuickActionData> get _allServices => [
-    _QuickActionData(label: 'فاتورة بيع', icon: PhosphorIconsFill.receipt, color: AppColors.accentBlue, route: AppConstants.newSaleInvoice),
-    _QuickActionData(label: 'فاتورة شراء', icon: PhosphorIconsFill.shoppingCart, color: AppColors.accentPink, route: AppConstants.newPurchaseInvoice),
-    _QuickActionData(label: 'نقطة البيع', icon: PhosphorIconsFill.storefront, color: AppColors.secondaryDark, route: AppConstants.pos),
-    _QuickActionData(label: 'العملاء', icon: PhosphorIconsFill.users, color: AppColors.accentGreen, route: AppConstants.customers),
-    _QuickActionData(label: 'الموردون', icon: PhosphorIconsFill.truck, color: AppColors.info, route: AppConstants.suppliers),
-    _QuickActionData(label: 'المنتجات', icon: PhosphorIconsFill.package, color: AppColors.accentOrange, route: AppConstants.products),
-    _QuickActionData(label: 'المصروفات', icon: PhosphorIconsFill.currencyDollar, color: AppColors.error, route: AppConstants.expenses),
-    _QuickActionData(label: 'الفواتير', icon: PhosphorIconsFill.invoice, color: AppColors.primary, route: AppConstants.invoices),
-    _QuickActionData(label: 'الصناديق', icon: PhosphorIconsFill.vault, color: AppColors.accentGreen, route: AppConstants.cashBoxes),
-    _QuickActionData(label: 'دليل الحسابات', icon: PhosphorIconsFill.chartPie, color: AppColors.primaryLight, route: AppConstants.chartOfAccounts),
-    _QuickActionData(label: 'التقارير', icon: PhosphorIconsFill.chartBar, color: AppColors.primary, route: AppConstants.reports),
-    _QuickActionData(label: 'الإحصائيات', icon: PhosphorIconsFill.chartLineUp, color: const Color(0xFF7B1FA2), route: AppConstants.statistics),
-    _QuickActionData(label: 'الموظفين', icon: PhosphorIconsFill.user, color: AppColors.warning, route: AppConstants.employees),
-    _QuickActionData(label: 'المستودعات', icon: PhosphorIconsFill.warehouse, color: AppColors.secondaryDark, route: AppConstants.warehouses),
-    _QuickActionData(label: 'العملات', icon: PhosphorIconsFill.coins, color: AppColors.success, route: AppConstants.currencies),
-    _QuickActionData(label: 'الإعدادات', icon: PhosphorIconsFill.gear, color: AppColors.textSecondary, route: AppConstants.settings),
-    _QuickActionData(label: 'الدعم الفني', icon: PhosphorIconsFill.headset, color: AppColors.warning, route: AppConstants.support),
+    _QuickActionData(label: 'فاتورة بيع', icon: Icons.receipt, color: AppColors.accentBlue, route: AppConstants.newSaleInvoice),
+    _QuickActionData(label: 'فاتورة شراء', icon: Icons.shopping_cart, color: AppColors.accentPink, route: AppConstants.newPurchaseInvoice),
+    _QuickActionData(label: 'نقطة البيع', icon: Icons.storefront, color: AppColors.secondaryDark, route: AppConstants.pos),
+    _QuickActionData(label: 'العملاء', icon: Icons.people, color: AppColors.accentGreen, route: AppConstants.customers),
+    _QuickActionData(label: 'الموردون', icon: Icons.local_shipping, color: AppColors.info, route: AppConstants.suppliers),
+    _QuickActionData(label: 'المنتجات', icon: Icons.inventory_2, color: AppColors.accentOrange, route: AppConstants.products),
+    _QuickActionData(label: 'المصروفات', icon: Icons.attach_money, color: AppColors.error, route: AppConstants.expenses),
+    _QuickActionData(label: 'الفواتير', icon: Icons.receipt_long, color: AppColors.primary, route: AppConstants.invoices),
+    _QuickActionData(label: 'الصناديق', icon: Icons.account_balance_wallet, color: AppColors.accentGreen, route: AppConstants.cashBoxes),
+    _QuickActionData(label: 'دليل الحسابات', icon: Icons.pie_chart, color: AppColors.primaryLight, route: AppConstants.chartOfAccounts),
+    _QuickActionData(label: 'التقارير', icon: Icons.bar_chart, color: AppColors.primary, route: AppConstants.reports),
+    _QuickActionData(label: 'الإحصائيات', icon: Icons.show_chart, color: const Color(0xFF7B1FA2), route: AppConstants.statistics),
+    _QuickActionData(label: 'الموظفين', icon: Icons.person, color: AppColors.warning, route: AppConstants.employees),
+    _QuickActionData(label: 'المستودعات', icon: Icons.warehouse, color: AppColors.secondaryDark, route: AppConstants.warehouses),
+    _QuickActionData(label: 'العملات', icon: Icons.monetization_on, color: AppColors.success, route: AppConstants.currencies),
+    _QuickActionData(label: 'الإعدادات', icon: Icons.settings, color: AppColors.textSecondary, route: AppConstants.settings),
+    _QuickActionData(label: 'الدعم الفني', icon: Icons.headset, color: AppColors.warning, route: AppConstants.support),
   ];
 
   // 6 items per page (3 columns x 2 rows)
@@ -298,15 +296,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                   Row(
                     children: [
                       _HeaderIconButton(
-                        icon: PhosphorIconsRegular.whatsappLogo,
+                        icon: Icons.chat,
                         onTap: () {},
                       ),
                       _HeaderIconButton(
-                        icon: PhosphorIconsRegular.bell,
+                        icon: Icons.notifications,
                         onTap: () {},
                       ),
                       _HeaderIconButton(
-                        icon: PhosphorIconsRegular.list,
+                        icon: Icons.list,
                         onTap: () => Scaffold.of(context).openEndDrawer(),
                       ),
                     ],
@@ -386,7 +384,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ],
                           ),
                           child: const Icon(
-                            PhosphorIconsFill.chartLineUp,
+                            Icons.show_chart,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -672,7 +670,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _StatData(
         title: 'إجمالي المبيعات',
         value: _monthSales,
-        icon: PhosphorIconsFill.chartLineUp,
+        icon: Icons.show_chart,
         color: AppColors.accentBlue,
         subtitle: 'هذا الشهر',
         isCount: false,
@@ -681,7 +679,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _StatData(
         title: 'إجمالي المشتريات',
         value: _monthPurchases,
-        icon: PhosphorIconsFill.shoppingCart,
+        icon: Icons.shopping_cart,
         color: AppColors.accentPink,
         subtitle: 'هذا الشهر',
         isCount: false,
@@ -690,7 +688,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _StatData(
         title: 'عدد العملاء',
         value: _customerCount.toDouble(),
-        icon: PhosphorIconsFill.users,
+        icon: Icons.people,
         color: AppColors.accentGreen,
         subtitle: 'إجمالي',
         isCount: true,
@@ -699,7 +697,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _StatData(
         title: 'رصيد الصندوق',
         value: _cashBalance,
-        icon: PhosphorIconsFill.vault,
+        icon: Icons.account_balance_wallet,
         color: AppColors.accentOrange,
         subtitle: 'الرصيد الحالي',
         isCount: false,
@@ -767,7 +765,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    PhosphorIconsRegular.receipt,
+                    Icons.receipt,
                     size: 36,
                     color: AppColors.primary,
                   ),
@@ -886,7 +884,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           const SizedBox(width: 6),
                           const Icon(
-                            PhosphorIconsRegular.arrowLeft,
+                            Icons.arrow_back,
                             color: Colors.white,
                             size: 16,
                           ),

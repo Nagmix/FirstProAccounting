@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
@@ -248,7 +246,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         // ── FAB ─────────────────────────────────────────────────
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _showAddInvoiceMenu,
-          icon: const Icon(PhosphorIconsRegular.plus),
+          icon: const Icon(Icons.add),
           label: const Text('فاتورة جديدة'),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
@@ -284,12 +282,12 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             });
           },
           icon: Icon(_isSearching
-              ? PhosphorIconsRegular.x
-              : PhosphorIconsRegular.magnifyingGlass),
+              ? Icons.close
+              : Icons.search),
         ),
         IconButton(
           onPressed: _showFilterDialog,
-          icon: const Icon(PhosphorIconsRegular.funnel),
+          icon: const Icon(Icons.filter_list),
         ),
       ],
     );
@@ -307,7 +305,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             // Invoice type filter
             _buildFilterChip(
               label: 'النوع: $_invoiceTypeFilter',
-              icon: PhosphorIconsRegular.receipt,
+              icon: Icons.receipt,
               items: const ['الكل', 'مبيعات', 'مشتريات', 'نقطة بيع'],
               selected: _invoiceTypeFilter,
               onChanged: (v) => setState(() => _invoiceTypeFilter = v),
@@ -317,7 +315,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             // Payment status dropdown
             _buildFilterChip(
               label: 'حالة الدفع: $_paymentStatusFilter',
-              icon: PhosphorIconsRegular.money,
+              icon: Icons.payments,
               items: const ['الكل', 'مدفوع', 'غير مدفوع', 'معلق'],
               selected: _paymentStatusFilter,
               onChanged: (v) => setState(() => _paymentStatusFilter = v),
@@ -327,7 +325,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             // Payment mechanism dropdown
             _buildFilterChip(
               label: 'آلية الدفع: $_paymentMethodFilter',
-              icon: PhosphorIconsRegular.creditCard,
+              icon: Icons.credit_card,
               items: const ['الكل', 'نقداً', 'آجل'],
               selected: _paymentMethodFilter,
               onChanged: (v) => setState(() => _paymentMethodFilter = v),
@@ -337,7 +335,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             // Date range
             ActionChip(
               avatar:
-                  const Icon(PhosphorIconsRegular.calendar, size: 18),
+                  const Icon(Icons.calendar_month, size: 18),
               label: Text(
                 _dateRange != null
                     ? '${DateFormatter.formatDate(_dateRange!.start)} – ${DateFormatter.formatDate(_dateRange!.end)}'
@@ -349,7 +347,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             if (_dateRange != null) ...[
               const SizedBox(width: 4),
               IconButton(
-                icon: const Icon(PhosphorIconsRegular.x, size: 18),
+                icon: const Icon(Icons.close, size: 18),
                 onPressed: () => setState(() => _dateRange = null),
                 padding: EdgeInsets.zero,
                 constraints:
@@ -386,7 +384,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                       child: Row(
                         children: [
                           if (item == selected)
-                            const Icon(PhosphorIconsRegular.check,
+                            const Icon(Icons.check,
                                 size: 18, color: AppColors.primary),
                           if (item == selected)
                             const SizedBox(width: 8),
@@ -407,7 +405,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(PhosphorIconsRegular.receipt,
+          Icon(Icons.receipt,
               size: 72, color: AppColors.textHint),
           const SizedBox(height: 16),
           Text('لا توجد فواتير',
@@ -431,7 +429,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(PhosphorIconsRegular.receipt,
+              leading: const Icon(Icons.receipt,
                   color: AppColors.success),
               title: const Text('فاتورة بيع جديدة'),
               subtitle: const Text('إنشاء فاتورة مبيعات'),
@@ -448,7 +446,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               },
             ),
             ListTile(
-              leading: const Icon(PhosphorIconsRegular.shoppingCart,
+              leading: const Icon(Icons.shopping_cart,
                   color: AppColors.info),
               title: const Text('فاتورة شراء جديدة'),
               subtitle: const Text('إنشاء فاتورة مشتريات'),
@@ -660,7 +658,7 @@ class _InvoiceCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Icon(PhosphorIconsRegular.user,
+                          Icon(Icons.person,
                               size: 14,
                               color: isDark
                                   ? AppColors.darkTextSecondary
@@ -728,21 +726,21 @@ class _InvoiceCard extends StatelessWidget {
     final isReturn = (invoiceData['is_return'] as int?) == 1;
     final (icon, color) = switch (type) {
       'sale' => isReturn
-          ? (PhosphorIconsRegular.arrowCounterClockwise,
+          ? (Icons.refresh,
               AppColors.warning)
-          : (PhosphorIconsRegular.receipt, AppColors.success),
+          : (Icons.receipt, AppColors.success),
       'purchase' => isReturn
-          ? (PhosphorIconsRegular.arrowCounterClockwise,
+          ? (Icons.refresh,
               AppColors.warning)
-          : (PhosphorIconsRegular.shoppingCart, AppColors.info),
-      'pos' => (PhosphorIconsRegular.storefront, AppColors.primary),
-      'sale_return' => (PhosphorIconsRegular.arrowCounterClockwise,
+          : (Icons.shopping_cart, AppColors.info),
+      'pos' => (Icons.storefront, AppColors.primary),
+      'sale_return' => (Icons.refresh,
           AppColors.warning),
-      'purchase_return' => (PhosphorIconsRegular.arrowCounterClockwise,
+      'purchase_return' => (Icons.refresh,
           AppColors.warning),
-      'return' => (PhosphorIconsRegular.arrowCounterClockwise,
+      'return' => (Icons.refresh,
           AppColors.warning),
-      _ => (PhosphorIconsRegular.receipt, AppColors.textSecondary),
+      _ => (Icons.receipt, AppColors.textSecondary),
     };
 
     return Container(

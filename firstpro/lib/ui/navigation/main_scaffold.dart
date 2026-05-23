@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/design_system.dart';
@@ -32,50 +30,50 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
   // Only 4 items: 2 left (الرئيسية, العملاء) + center FAB + 2 right (الفواتير, المزيد)
   static const _bottomBarItems = [
     CustomBottomBarItem(
-      icon: PhosphorIconsRegular.house,
-      activeIcon: PhosphorIconsFill.house,
+      icon: Icons.home,
+      activeIcon: Icons.home,
       label: 'الرئيسية',
     ),
     CustomBottomBarItem(
-      icon: PhosphorIconsRegular.users,
-      activeIcon: PhosphorIconsFill.users,
+      icon: Icons.people,
+      activeIcon: Icons.people,
       label: 'العملاء',
     ),
     CustomBottomBarItem(
-      icon: PhosphorIconsRegular.receipt,
-      activeIcon: PhosphorIconsFill.receipt,
+      icon: Icons.receipt,
+      activeIcon: Icons.receipt,
       label: 'الفواتير',
     ),
     CustomBottomBarItem(
-      icon: PhosphorIconsRegular.dotsThree,
-      activeIcon: PhosphorIconsFill.dotsThree,
+      icon: Icons.more_vert,
+      activeIcon: Icons.more_vert,
       label: 'المزيد',
     ),
   ];
 
   final _drawerItems = const <_DrawerMenuItem>[
-    _DrawerMenuItem(icon: PhosphorIconsRegular.receipt, label: 'فاتورة بيع جديدة', route: AppConstants.newSaleInvoice, color: AppColors.accentBlue),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.shoppingCart, label: 'فاتورة شراء جديدة', route: AppConstants.newPurchaseInvoice, color: AppColors.accentPink),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.fileText, label: 'عروض الأسعار', route: AppConstants.quotations, color: Colors.purple),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.shoppingCart, label: 'طلبات الشراء', route: AppConstants.purchaseOrders, color: Colors.teal),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.package, label: 'طلبات البيع', route: AppConstants.salesOrders, color: Colors.indigo),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.clockCounterClockwise, label: 'الورديات', route: AppConstants.shifts, color: Colors.brown),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.users, label: 'قائمة العملاء', route: AppConstants.customers, color: AppColors.primaryLight),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.package, label: 'المنتجات والمخزون', route: AppConstants.products, color: AppColors.accentOrange),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.currencyDollar, label: 'المصروفات', route: AppConstants.expenses, color: AppColors.error),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.user, label: 'الموظفين', route: AppConstants.employees, color: AppColors.accentBlue),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.vault, label: 'الصناديق والبنوك', route: AppConstants.cashBoxes, color: AppColors.accentGreen),
+    _DrawerMenuItem(icon: Icons.receipt, label: 'فاتورة بيع جديدة', route: AppConstants.newSaleInvoice, color: AppColors.accentBlue),
+    _DrawerMenuItem(icon: Icons.shopping_cart, label: 'فاتورة شراء جديدة', route: AppConstants.newPurchaseInvoice, color: AppColors.accentPink),
+    _DrawerMenuItem(icon: Icons.description, label: 'عروض الأسعار', route: AppConstants.quotations, color: Colors.purple),
+    _DrawerMenuItem(icon: Icons.shopping_cart, label: 'طلبات الشراء', route: AppConstants.purchaseOrders, color: Colors.teal),
+    _DrawerMenuItem(icon: Icons.inventory_2, label: 'طلبات البيع', route: AppConstants.salesOrders, color: Colors.indigo),
+    _DrawerMenuItem(icon: Icons.history, label: 'الورديات', route: AppConstants.shifts, color: Colors.brown),
+    _DrawerMenuItem(icon: Icons.people, label: 'قائمة العملاء', route: AppConstants.customers, color: AppColors.primaryLight),
+    _DrawerMenuItem(icon: Icons.inventory_2, label: 'المنتجات والمخزون', route: AppConstants.products, color: AppColors.accentOrange),
+    _DrawerMenuItem(icon: Icons.attach_money, label: 'المصروفات', route: AppConstants.expenses, color: AppColors.error),
+    _DrawerMenuItem(icon: Icons.person, label: 'الموظفين', route: AppConstants.employees, color: AppColors.accentBlue),
+    _DrawerMenuItem(icon: Icons.account_balance_wallet, label: 'الصناديق والبنوك', route: AppConstants.cashBoxes, color: AppColors.accentGreen),
     // ── New: Currency Exchange, Cash Transfers, Debt Tracking ─────
-    _DrawerMenuItem(icon: PhosphorIconsRegular.arrowsLeftRight, label: 'مصارفة عملات', route: AppConstants.currencyExchange, color: Color(0xFF00ACC1)),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.swap, label: 'تحويل بين الصناديق', route: AppConstants.cashTransfers, color: Color(0xFF1E88E5)),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.handCoins, label: 'تتبع الديون', route: AppConstants.debts, color: Color(0xFFE65100)),
+    _DrawerMenuItem(icon: Icons.swap_horiz, label: 'مصارفة عملات', route: AppConstants.currencyExchange, color: Color(0xFF00ACC1)),
+    _DrawerMenuItem(icon: Icons.swap_horiz, label: 'تحويل بين الصناديق', route: AppConstants.cashTransfers, color: Color(0xFF1E88E5)),
+    _DrawerMenuItem(icon: Icons.savings, label: 'تتبع الديون', route: AppConstants.debts, color: Color(0xFFE65100)),
     // ───────────────────────────────────────────────────────────────
-    _DrawerMenuItem(icon: PhosphorIconsRegular.truck, label: 'الموردين', route: AppConstants.suppliers, color: AppColors.info),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.warehouse, label: 'المستودعات', route: AppConstants.warehouses, color: AppColors.secondaryDark),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.chartPie, label: 'دليل الحسابات', route: AppConstants.chartOfAccounts, color: AppColors.primary),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.currencyDollar, label: 'إدارة العملات', route: AppConstants.currencies, color: AppColors.success),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.chartLine, label: 'تقرير المبيعات اليومية', route: AppConstants.dailySalesReport, color: AppColors.warning),
-    _DrawerMenuItem(icon: PhosphorIconsRegular.gear, label: 'الإعدادات', route: AppConstants.settings, color: AppColors.textSecondary),
+    _DrawerMenuItem(icon: Icons.local_shipping, label: 'الموردين', route: AppConstants.suppliers, color: AppColors.info),
+    _DrawerMenuItem(icon: Icons.warehouse, label: 'المستودعات', route: AppConstants.warehouses, color: AppColors.secondaryDark),
+    _DrawerMenuItem(icon: Icons.pie_chart, label: 'دليل الحسابات', route: AppConstants.chartOfAccounts, color: AppColors.primary),
+    _DrawerMenuItem(icon: Icons.attach_money, label: 'إدارة العملات', route: AppConstants.currencies, color: AppColors.success),
+    _DrawerMenuItem(icon: Icons.show_chart, label: 'تقرير المبيعات اليومية', route: AppConstants.dailySalesReport, color: AppColors.warning),
+    _DrawerMenuItem(icon: Icons.settings, label: 'الإعدادات', route: AppConstants.settings, color: AppColors.textSecondary),
   ];
 
   @override
@@ -131,17 +129,17 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
               actions: [
                 IconButton(
                   onPressed: () {},
-                  icon: const Icon(PhosphorIconsRegular.whatsappLogo),
+                  icon: const Icon(Icons.chat),
                   tooltip: 'واتساب',
                 ),
                 IconButton(
                   onPressed: () {},
-                  icon: const Icon(PhosphorIconsRegular.bell),
+                  icon: const Icon(Icons.notifications),
                   tooltip: 'الإشعارات',
                 ),
                 IconButton(
                   onPressed: () => _openDrawer(context),
-                  icon: const Icon(PhosphorIconsRegular.list),
+                  icon: const Icon(Icons.list),
                   tooltip: 'القائمة',
                 ),
                 const SizedBox(width: 4),
@@ -200,7 +198,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                   Row(
                     children: [
                       _QuickAddOption(
-                        icon: PhosphorIconsFill.receipt,
+                        icon: Icons.receipt,
                         label: 'فاتورة بيع',
                         color: AppColors.accentBlue,
                         onTap: () {
@@ -210,7 +208,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                       ),
                       const SizedBox(width: 12),
                       _QuickAddOption(
-                        icon: PhosphorIconsFill.shoppingCart,
+                        icon: Icons.shopping_cart,
                         label: 'فاتورة شراء',
                         color: AppColors.accentPink,
                         onTap: () {
@@ -220,7 +218,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                       ),
                       const SizedBox(width: 12),
                       _QuickAddOption(
-                        icon: PhosphorIconsFill.userPlus,
+                        icon: Icons.person_add,
                         label: 'عميل جديد',
                         color: AppColors.accentGreen,
                         onTap: () {
@@ -230,7 +228,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                       ),
                       const SizedBox(width: 12),
                       _QuickAddOption(
-                        icon: PhosphorIconsFill.package,
+                        icon: Icons.inventory_2,
                         label: 'منتج جديد',
                         color: AppColors.accentOrange,
                         onTap: () {
@@ -245,7 +243,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                   Row(
                     children: [
                       _QuickAddOption(
-                        icon: PhosphorIconsFill.arrowsLeftRight,
+                        icon: Icons.swap_horiz,
                         label: 'مصارفة عملات',
                         color: const Color(0xFF00ACC1),
                         onTap: () {
@@ -255,7 +253,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                       ),
                       const SizedBox(width: 12),
                       _QuickAddOption(
-                        icon: PhosphorIconsFill.swap,
+                        icon: Icons.swap_horiz,
                         label: 'تحويل صناديق',
                         color: const Color(0xFF1E88E5),
                         onTap: () {
@@ -265,7 +263,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                       ),
                       const SizedBox(width: 12),
                       _QuickAddOption(
-                        icon: PhosphorIconsFill.handCoins,
+                        icon: Icons.savings,
                         label: 'تتبع الديون',
                         color: const Color(0xFFE65100),
                         onTap: () {
@@ -380,7 +378,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                                 ),
                               ),
                               Icon(
-                                PhosphorIconsRegular.caretLeft,
+                                Icons.arrow_back_ios,
                                 size: 14,
                                 color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                               ),
@@ -448,28 +446,28 @@ class _MoreTab extends StatelessWidget {
           _buildSectionHeader(context, 'المبيعات والشراء'),
           const SizedBox(height: 8),
           _MoreTile(
-            icon: PhosphorIconsRegular.storefront,
+            icon: Icons.storefront,
             title: 'نقطة البيع',
             subtitle: 'واجهة بيع سريعة',
             color: AppColors.accentBlue,
             onTap: () => Navigator.pushNamed(context, AppConstants.pos),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.fileText,
+            icon: Icons.description,
             title: 'عروض الأسعار',
             subtitle: 'إدارة عروض الأسعار',
             color: Colors.purple,
             onTap: () => AppRouter.push(context, AppConstants.quotations),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.shoppingCart,
+            icon: Icons.shopping_cart,
             title: 'طلبات الشراء',
             subtitle: 'إدارة طلبات الشراء',
             color: Colors.teal,
             onTap: () => AppRouter.push(context, AppConstants.purchaseOrders),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.package,
+            icon: Icons.inventory_2,
             title: 'طلبات البيع',
             subtitle: 'إدارة طلبات البيع',
             color: Colors.indigo,
@@ -481,35 +479,35 @@ class _MoreTab extends StatelessWidget {
           _buildSectionHeader(context, 'إدارة الأعمال'),
           const SizedBox(height: 8),
           _MoreTile(
-            icon: PhosphorIconsRegular.package,
+            icon: Icons.inventory_2,
             title: 'المنتجات والمخزون',
             subtitle: 'إدارة الأصناف والمخازن',
             color: AppColors.accentOrange,
             onTap: () => Navigator.pushNamed(context, AppConstants.products),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.currencyDollar,
+            icon: Icons.attach_money,
             title: 'المصروفات',
             subtitle: 'إدارة المصروفات والمصاريف',
             color: AppColors.error,
             onTap: () => Navigator.pushNamed(context, AppConstants.expenses),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.user,
+            icon: Icons.person,
             title: 'الموظفين',
             subtitle: 'إدارة الموظفين والأرصدة',
             color: AppColors.accentBlue,
             onTap: () => Navigator.pushNamed(context, AppConstants.employees),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.truck,
+            icon: Icons.local_shipping,
             title: 'الموردين',
             subtitle: 'إدارة الموردين وأرصدتهم',
             color: AppColors.info,
             onTap: () => Navigator.pushNamed(context, AppConstants.suppliers),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.warehouse,
+            icon: Icons.warehouse,
             title: 'المستودعات',
             subtitle: 'إدارة المستودعات والمخازن',
             color: AppColors.secondaryDark,
@@ -521,7 +519,7 @@ class _MoreTab extends StatelessWidget {
           _buildSectionHeader(context, 'المالية والحسابات'),
           const SizedBox(height: 8),
           _MoreTile(
-            icon: PhosphorIconsRegular.vault,
+            icon: Icons.account_balance_wallet,
             title: 'الصناديق والبنوك',
             subtitle: 'إدارة الصناديق والبنوك والأرصدة',
             color: AppColors.accentGreen,
@@ -529,7 +527,7 @@ class _MoreTab extends StatelessWidget {
           ),
           // ── New: Currency Exchange ────────────────────────────────
           _MoreTile(
-            icon: PhosphorIconsRegular.arrowsLeftRight,
+            icon: Icons.swap_horiz,
             title: 'مصارفة عملات',
             subtitle: 'تحويل العملات بأسعار الصرف',
             color: const Color(0xFF00ACC1),
@@ -537,7 +535,7 @@ class _MoreTab extends StatelessWidget {
           ),
           // ── New: Cash Transfers ───────────────────────────────────
           _MoreTile(
-            icon: PhosphorIconsRegular.swap,
+            icon: Icons.swap_horiz,
             title: 'تحويل بين الصناديق',
             subtitle: 'تحويل الأموال بين الصناديق والبنوك',
             color: const Color(0xFF1E88E5),
@@ -545,42 +543,42 @@ class _MoreTab extends StatelessWidget {
           ),
           // ── New: Debt Tracking ────────────────────────────────────
           _MoreTile(
-            icon: PhosphorIconsRegular.handCoins,
+            icon: Icons.savings,
             title: 'تتبع الديون',
             subtitle: 'متابعة الديون المستحقة والمطلوبة',
             color: const Color(0xFFE65100),
             onTap: () => AppRouter.push(context, AppConstants.debts),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.chartPie,
+            icon: Icons.pie_chart,
             title: 'دليل الحسابات',
             subtitle: 'شجرة الحسابات المحاسبية',
             color: AppColors.primary,
             onTap: () => Navigator.pushNamed(context, AppConstants.chartOfAccounts),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.currencyDollar,
+            icon: Icons.attach_money,
             title: 'إدارة العملات',
             subtitle: 'العملات وأسعار الصرف',
             color: AppColors.success,
             onTap: () => Navigator.pushNamed(context, AppConstants.currencies),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.chartBar,
+            icon: Icons.bar_chart,
             title: 'التقارير',
             subtitle: 'تقارير المبيعات والمشتريات',
             color: AppColors.primaryLight,
             onTap: () => Navigator.pushNamed(context, AppConstants.reports),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.chartLineUp,
+            icon: Icons.show_chart,
             title: 'الإحصائيات',
             subtitle: 'إحصائيات شاملة',
             color: const Color(0xFF7B1FA2),
             onTap: () => Navigator.pushNamed(context, AppConstants.statistics),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.clockCounterClockwise,
+            icon: Icons.history,
             title: 'الورديات',
             subtitle: 'إدارة ورديات الكاشير',
             color: Colors.brown,
@@ -592,14 +590,14 @@ class _MoreTab extends StatelessWidget {
           _buildSectionHeader(context, 'أخرى'),
           const SizedBox(height: 8),
           _MoreTile(
-            icon: PhosphorIconsRegular.gear,
+            icon: Icons.settings,
             title: 'الإعدادات',
             subtitle: 'تخصيص التطبيق',
             color: AppColors.textSecondary,
             onTap: () => Navigator.pushNamed(context, AppConstants.settings),
           ),
           _MoreTile(
-            icon: PhosphorIconsRegular.headset,
+            icon: Icons.headset,
             title: 'الدعم الفني',
             subtitle: 'الشكاوى والملاحظات',
             color: AppColors.warning,
@@ -613,7 +611,7 @@ class _MoreTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           ListTile(
-            leading: const Icon(PhosphorIconsRegular.info),
+            leading: const Icon(Icons.info),
             title: Text('الإصدار ${AppConstants.appVersion}'),
             subtitle: Text(AppConstants.appFullName),
           ),
@@ -720,7 +718,7 @@ class _MoreTile extends StatelessWidget {
                   ),
                 ),
                 Icon(
-                  PhosphorIconsRegular.caretLeft,
+                  Icons.arrow_back_ios,
                   size: 16,
                   color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                 ),

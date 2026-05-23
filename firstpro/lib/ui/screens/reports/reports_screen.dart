@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -515,19 +514,19 @@ class _ReportsScreenState extends State<ReportsScreen>
           bottom: TabBar(
             controller: _tabController,
             tabs: [
-              Tab(text: 'التقارير', icon: Icon(PhosphorIconsRegular.chartBar, size: 20)),
-              Tab(text: 'حركة الحسابات', icon: Icon(PhosphorIconsRegular.arrowsLeftRight, size: 20)),
+              Tab(text: 'التقارير', icon: Icon(Icons.bar_chart, size: 20)),
+              Tab(text: 'حركة الحسابات', icon: Icon(Icons.swap_horiz, size: 20)),
             ],
           ),
           actions: [
             if (_dateFrom != null || _dateTo != null || _selectedCurrency != 'الكل')
               IconButton(
-                icon: const Icon(PhosphorIconsRegular.xCircle),
+                icon: const Icon(Icons.cancel),
                 tooltip: 'مسح الفلاتر',
                 onPressed: _clearFilters,
               ),
             IconButton(
-              icon: const Icon(PhosphorIconsRegular.arrowClockwise),
+              icon: const Icon(Icons.refresh),
               tooltip: 'تحديث',
               onPressed: () {
                 setState(() => _isLoading = true);
@@ -635,14 +634,14 @@ class _ReportsScreenState extends State<ReportsScreen>
             children: [
               Row(
                 children: [
-                  Icon(PhosphorIconsRegular.shoppingCart, color: AppColors.error, size: 22),
+                  Icon(Icons.shopping_cart, color: AppColors.error, size: 22),
                   const SizedBox(width: 8),
                   Text('فواتير المشتريات', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                 ],
               ),
               const SizedBox(height: 12),
               if (purchaseInvoices.isEmpty)
-                _buildEmptyState(theme, PhosphorIconsRegular.shoppingCart, 'لا توجد فواتير مشتريات')
+                _buildEmptyState(theme, Icons.shopping_cart, 'لا توجد فواتير مشتريات')
               else
                 ...purchaseInvoices.map((invoice) => _RecentInvoiceCard(invoice: invoice, isDark: isDark)),
             ],
@@ -677,7 +676,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
             child: Column(
               children: [
-                Icon(_netProfit >= 0 ? PhosphorIconsRegular.trendUp : PhosphorIconsRegular.trendDown,
+                Icon(_netProfit >= 0 ? Icons.trending_up : Icons.trending_down,
                     size: 48, color: _netProfit >= 0 ? AppColors.success : AppColors.error),
                 const SizedBox(height: 12),
                 Text(
@@ -712,11 +711,11 @@ class _ReportsScreenState extends State<ReportsScreen>
           ),
           const SizedBox(height: 20),
           // Revenue breakdown
-          _buildPLRow(theme, isDark, 'إجمالي الإيرادات', _totalRevenue, AppColors.success, PhosphorIconsRegular.arrowUpRight),
+          _buildPLRow(theme, isDark, 'إجمالي الإيرادات', _totalRevenue, AppColors.success, Icons.arrow_outward),
           const SizedBox(height: 8),
-          _buildPLRow(theme, isDark, 'تكلفة المشتريات', _totalExpenses - (_totalExpenses - _totalRevenue + _netProfit).abs(), AppColors.error, PhosphorIconsRegular.arrowDownRight),
+          _buildPLRow(theme, isDark, 'تكلفة المشتريات', _totalExpenses - (_totalExpenses - _totalRevenue + _netProfit).abs(), AppColors.error, Icons.south_east),
           const SizedBox(height: 8),
-          _buildPLRow(theme, isDark, 'المصاريف التشغيلية', (_totalExpenses - (_totalRevenue - _netProfit)).abs().clamp(0, _totalExpenses), AppColors.warning, PhosphorIconsRegular.minus),
+          _buildPLRow(theme, isDark, 'المصاريف التشغيلية', (_totalExpenses - (_totalRevenue - _netProfit)).abs().clamp(0, _totalExpenses), AppColors.warning, Icons.remove),
           const SizedBox(height: 16),
           // Visual Bar
           Container(
@@ -789,7 +788,7 @@ class _ReportsScreenState extends State<ReportsScreen>
   // ══════════════════════════════════════════════════════════════
   Widget _buildCashBoxReport(ThemeData theme, bool isDark) {
     if (_cashBoxMovements.isEmpty) {
-      return _buildEmptyState(theme, PhosphorIconsRegular.vault, 'لا توجد صناديق');
+      return _buildEmptyState(theme, Icons.account_balance_wallet, 'لا توجد صناديق');
     }
     final totalBalance = _cashBoxMovements.fold(0.0, (s, m) => s + (m.balanceType == 'credit' ? m.balance : -m.balance));
     return Padding(
@@ -810,7 +809,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
             child: Column(
               children: [
-                Icon(PhosphorIconsRegular.vault, size: 36, color: AppColors.primary),
+                Icon(Icons.account_balance_wallet, size: 36, color: AppColors.primary),
                 const SizedBox(height: 8),
                 Text('إجمالي الأرصدة', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
@@ -843,7 +842,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          cb.type == 'bank' ? PhosphorIconsRegular.bank : PhosphorIconsRegular.vault,
+                          cb.type == 'bank' ? Icons.account_balance : Icons.account_balance_wallet,
                           color: cb.type == 'bank' ? AppColors.info : AppColors.primary, size: 22,
                         ),
                       ),
@@ -924,26 +923,26 @@ class _ReportsScreenState extends State<ReportsScreen>
           // Summary cards
           Row(
             children: [
-              Expanded(child: _buildInventoryStatCard(theme, 'إجمالي الأصناف', '${_inventoryItems.length}', AppColors.primary, PhosphorIconsRegular.package)),
+              Expanded(child: _buildInventoryStatCard(theme, 'إجمالي الأصناف', '${_inventoryItems.length}', AppColors.primary, Icons.inventory_2)),
               const SizedBox(width: 8),
-              Expanded(child: _buildInventoryStatCard(theme, 'قيمة المخزون', CurrencyFormatter.formatCompactWithSymbol(totalStockValue), AppColors.success, PhosphorIconsRegular.currencyDollar)),
+              Expanded(child: _buildInventoryStatCard(theme, 'قيمة المخزون', CurrencyFormatter.formatCompactWithSymbol(totalStockValue), AppColors.success, Icons.attach_money)),
               const SizedBox(width: 8),
-              Expanded(child: _buildInventoryStatCard(theme, 'نفذ المخزون', '${outOfStockItems.length}', AppColors.error, PhosphorIconsRegular.warning)),
+              Expanded(child: _buildInventoryStatCard(theme, 'نفذ المخزون', '${outOfStockItems.length}', AppColors.error, Icons.warning)),
             ],
           ),
           const SizedBox(height: 16),
           // Alerts
           if (outOfStockItems.isNotEmpty) ...[
-            _buildAlertBanner(theme, 'أصناف نفذت من المخزون (${outOfStockItems.length})', AppColors.error, PhosphorIconsRegular.warningCircle),
+            _buildAlertBanner(theme, 'أصناف نفذت من المخزون (${outOfStockItems.length})', AppColors.error, Icons.error_outline),
             const SizedBox(height: 8),
           ],
           if (lowStockItems.isNotEmpty) ...[
-            _buildAlertBanner(theme, 'أصناف قاربت على النفاد (${lowStockItems.length})', AppColors.warning, PhosphorIconsRegular.warning),
+            _buildAlertBanner(theme, 'أصناف قاربت على النفاد (${lowStockItems.length})', AppColors.warning, Icons.warning),
             const SizedBox(height: 12),
           ],
           // Inventory list
           if (_inventoryItems.isEmpty)
-            _buildEmptyState(theme, PhosphorIconsRegular.package, 'لا توجد أصناف في المخزون')
+            _buildEmptyState(theme, Icons.inventory_2, 'لا توجد أصناف في المخزون')
           else
             ..._inventoryItems.map((item) => Card(
               margin: const EdgeInsets.only(bottom: 8),
@@ -957,7 +956,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    item.isOutOfStock ? PhosphorIconsRegular.warningCircle : item.isLowStock ? PhosphorIconsRegular.warning : PhosphorIconsRegular.package,
+                    item.isOutOfStock ? Icons.error_outline : item.isLowStock ? Icons.warning : Icons.inventory_2,
                     color: item.isOutOfStock ? AppColors.error : item.isLowStock ? AppColors.warning : AppColors.success, size: 20,
                   ),
                 ),
@@ -1073,7 +1072,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                           borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
-                      prefixIcon: const Icon(PhosphorIconsRegular.wallet,
+                      prefixIcon: const Icon(Icons.account_balance_wallet,
                           size: 20),
                     ),
                     items: accounts
@@ -1110,7 +1109,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         ),
         Expanded(
           child: _accountMovements.isEmpty
-              ? _buildEmptyState(theme, PhosphorIconsRegular.arrowsLeftRight, 'اختر حساباً لعرض حركته')
+              ? _buildEmptyState(theme, Icons.swap_horiz, 'اختر حساباً لعرض حركته')
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: _accountMovements.length + 1,
@@ -1155,7 +1154,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         ),
         child: Row(
           children: [
-            Icon(PhosphorIconsRegular.calendar, size: 16, color: AppColors.primary),
+            Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
             const SizedBox(width: 8),
             Text(
               date != null ? DateFormatter.formatDate(date) : label,
@@ -1216,7 +1215,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildAllAccountMovementReport(ThemeData theme, bool isDark) {
     if (_allAccountMovements.isEmpty) {
-      return _buildEmptyState(theme, PhosphorIconsRegular.arrowsLeftRight, 'لا توجد حركات - قم بإجراء عمليات بيع أو شراء أولاً');
+      return _buildEmptyState(theme, Icons.swap_horiz, 'لا توجد حركات - قم بإجراء عمليات بيع أو شراء أولاً');
     }
 
     double totalDebit = _allAccountMovements.fold(0.0, (s, m) => s + m.debit);
@@ -1317,7 +1316,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildTrialBalanceReport(ThemeData theme, bool isDark) {
     if (_trialBalanceItems.isEmpty) {
-      return _buildEmptyState(theme, PhosphorIconsRegular.scales, 'لا توجد أرصدة - قم بإجراء عمليات أولاً');
+      return _buildEmptyState(theme, Icons.balance, 'لا توجد أرصدة - قم بإجراء عمليات أولاً');
     }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1484,7 +1483,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                       filled: true,
                       fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      prefixIcon: const Icon(PhosphorIconsRegular.wallet, size: 20),
+                      prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
                     ),
                     items: filteredAccounts.map((acc) => DropdownMenuItem<int>(
                       value: acc['id'] as int,
@@ -1504,7 +1503,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             _buildMovementHeader(theme, isDark),
             ..._accountMovements.asMap().entries.map((e) => _buildMovementRow(e.value, theme, isDark, e.key)),
           ] else ...[
-            _buildEmptyState(theme, PhosphorIconsRegular.arrowsLeftRight, 'اختر حساباً لعرض حركته'),
+            _buildEmptyState(theme, Icons.swap_horiz, 'اختر حساباً لعرض حركته'),
           ],
         ],
       ),
@@ -1531,7 +1530,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
             child: Column(
               children: [
-                Icon(isCustomer ? PhosphorIconsRegular.users : PhosphorIconsRegular.truck, size: 32, color: AppColors.error),
+                Icon(isCustomer ? Icons.people : Icons.local_shipping, size: 32, color: AppColors.error),
                 const SizedBox(height: 8),
                 Text(
                   'إجمالي ${isCustomer ? "ديون العملاء" : "مديونيات الموردين"}',
@@ -1548,7 +1547,7 @@ class _ReportsScreenState extends State<ReportsScreen>
           ),
           const SizedBox(height: 16),
           if (_debtItems.isEmpty)
-            _buildEmptyState(theme, isCustomer ? PhosphorIconsRegular.users : PhosphorIconsRegular.truck,
+            _buildEmptyState(theme, isCustomer ? Icons.people : Icons.local_shipping,
                 'لا توجد ${isCustomer ? "ديون عملاء" : "مديونيات موردين"}')
           else
             ..._debtItems.map((item) => Card(
@@ -1560,7 +1559,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                     Container(
                       width: 44, height: 44,
                       decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                      child: Icon(isCustomer ? PhosphorIconsRegular.user : PhosphorIconsRegular.truck, color: AppColors.error, size: 22),
+                      child: Icon(isCustomer ? Icons.person : Icons.local_shipping, color: AppColors.error, size: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1634,7 +1633,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
                   child: Row(children: [
-                    Icon(PhosphorIconsRegular.calendar, size: 16, color: AppColors.primary),
+                    Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
                     const SizedBox(width: 8),
                     Text(_dateFrom != null ? DateFormatter.formatDate(_dateFrom!) : 'من تاريخ', style: theme.textTheme.bodySmall?.copyWith(color: _dateFrom != null ? null : AppColors.textHint)),
                   ]),
@@ -1648,7 +1647,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
                   child: Row(children: [
-                    Icon(PhosphorIconsRegular.calendar, size: 16, color: AppColors.primary),
+                    Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
                     const SizedBox(width: 8),
                     Text(_dateTo != null ? DateFormatter.formatDate(_dateTo!) : 'إلى تاريخ', style: theme.textTheme.bodySmall?.copyWith(color: _dateTo != null ? null : AppColors.textHint)),
                   ]),
@@ -1682,10 +1681,10 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildSummaryCards(ThemeData theme, bool isDark) {
     final cards = [
-      _SummaryCardData(title: 'إجمالي الإيرادات', value: _totalRevenue, icon: PhosphorIconsRegular.trendUp, color: AppColors.success, lightBg: AppColors.successLight),
-      _SummaryCardData(title: 'إجمالي المصروفات', value: _totalExpenses, icon: PhosphorIconsRegular.trendDown, color: AppColors.error, lightBg: AppColors.errorLight),
-      _SummaryCardData(title: 'صافي الربح', value: _netProfit, icon: PhosphorIconsRegular.currencyDollar, color: AppColors.secondaryDark, lightBg: const Color(0xFFFFF8E1)),
-      _SummaryCardData(title: 'عدد الفواتير', value: _invoiceCount.toDouble(), icon: PhosphorIconsRegular.receipt, color: AppColors.info, lightBg: AppColors.infoLight, isCount: true),
+      _SummaryCardData(title: 'إجمالي الإيرادات', value: _totalRevenue, icon: Icons.trending_up, color: AppColors.success, lightBg: AppColors.successLight),
+      _SummaryCardData(title: 'إجمالي المصروفات', value: _totalExpenses, icon: Icons.trending_down, color: AppColors.error, lightBg: AppColors.errorLight),
+      _SummaryCardData(title: 'صافي الربح', value: _netProfit, icon: Icons.attach_money, color: AppColors.secondaryDark, lightBg: const Color(0xFFFFF8E1)),
+      _SummaryCardData(title: 'عدد الفواتير', value: _invoiceCount.toDouble(), icon: Icons.receipt, color: AppColors.info, lightBg: AppColors.infoLight, isCount: true),
     ];
     return SizedBox(
       height: 110,

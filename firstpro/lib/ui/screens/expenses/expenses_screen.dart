@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -107,7 +105,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         floatingActionButton: FloatingActionButton(
           onPressed: _showAddExpenseAccountDialog,
           backgroundColor: AppColors.primary,
-          child: const Icon(PhosphorIconsFill.plus, color: Colors.white),
+          child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
     );
@@ -133,7 +131,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(PhosphorIconsFill.wallet, color: Colors.white, size: 22),
+                child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -164,13 +162,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           Row(
             children: [
               _buildSummaryChip(
-                icon: PhosphorIconsRegular.bank,
+                icon: Icons.account_balance,
                 label: 'عدد الحسابات',
                 value: _totalAccounts.toString(),
               ),
               const SizedBox(width: 12),
               _buildSummaryChip(
-                icon: PhosphorIconsRegular.trendDown,
+                icon: Icons.trending_down,
                 label: 'الحالة',
                 value: _totalExpenseBalance >= 0 ? 'له' : 'عليه',
               ),
@@ -272,7 +270,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      isSystem ? PhosphorIconsFill.wallet : PhosphorIconsFill.folderOpen,
+                      isSystem ? Icons.account_balance_wallet : Icons.folder_open,
                       color: currencyColor,
                       size: 20,
                     ),
@@ -353,7 +351,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     ],
                   ),
                   const SizedBox(width: 4),
-                  Icon(PhosphorIconsRegular.caretLeft, size: 16, color: AppColors.textHint),
+                  Icon(Icons.arrow_back_ios, size: 16, color: AppColors.textHint),
                 ],
               ),
 
@@ -369,7 +367,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(PhosphorIconsRegular.shieldWarning, size: 16, color: AppColors.warning),
+                      Icon(Icons.shield, size: 16, color: AppColors.warning),
                       const SizedBox(width: 8),
                       Text(
                         'سقف المديونية: ',
@@ -419,7 +417,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: Icon(PhosphorIconsRegular.wallet, size: 40, color: AppColors.primary),
+              child: Icon(Icons.account_balance_wallet, size: 40, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
             Text(
@@ -497,7 +495,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       // Title
                       Row(
                         children: [
-                          Icon(PhosphorIconsFill.folderPlus, color: AppColors.primary, size: 24),
+                          Icon(Icons.create_new_folder, color: AppColors.primary, size: 24),
                           const SizedBox(width: 10),
                           Text(
                             'إضافة حساب مصروف جديد',
@@ -512,7 +510,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         controller: nameController,
                         decoration: const InputDecoration(
                           labelText: 'اسم الحساب *',
-                          prefixIcon: Icon(PhosphorIconsRegular.textAa),
+                          prefixIcon: Icon(Icons.text_fields),
                           hintText: 'مثال: مصاريف إيجار',
                         ),
                       ),
@@ -523,7 +521,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         value: selectedCurrency,
                         decoration: const InputDecoration(
                           labelText: 'العملة',
-                          prefixIcon: Icon(PhosphorIconsRegular.coin),
+                          prefixIcon: Icon(Icons.monetization_on),
                         ),
                         items: const [
                           DropdownMenuItem(value: 'YER', child: Text('ريال يمني (ر.ي)')),
@@ -542,7 +540,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           labelText: 'سقف المديونية',
-                          prefixIcon: Icon(PhosphorIconsRegular.shieldWarning),
+                          prefixIcon: Icon(Icons.shield),
                           hintText: '0.00',
                         ),
                       ),
@@ -554,7 +552,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           labelText: 'الرصيد الافتتاحي',
-                          prefixIcon: Icon(PhosphorIconsRegular.currencyDollar),
+                          prefixIcon: Icon(Icons.attach_money),
                           hintText: '0.00',
                         ),
                       ),
@@ -590,7 +588,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 child: Column(
                                   children: [
                                     Icon(
-                                      PhosphorIconsFill.arrowDownRight,
+                                      Icons.south_east,
                                       size: 20,
                                       color: balanceType == 'credit' ? AppColors.success : AppColors.textHint,
                                     ),
@@ -635,7 +633,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 child: Column(
                                   children: [
                                     Icon(
-                                      PhosphorIconsFill.arrowUpLeft,
+                                      Icons.north_west,
                                       size: 20,
                                       color: balanceType == 'debit' ? AppColors.error : AppColors.textHint,
                                     ),
@@ -669,7 +667,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         controller: notesController,
                         decoration: const InputDecoration(
                           labelText: 'ملاحظات',
-                          prefixIcon: Icon(PhosphorIconsRegular.notepad),
+                          prefixIcon: Icon(Icons.edit_note),
                         ),
                         maxLines: 2,
                       ),
@@ -699,7 +697,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                               _loadData();
                             }
                           },
-                          icon: const Icon(PhosphorIconsRegular.floppyDisk),
+                          icon: const Icon(Icons.save),
                           label: const Text('حفظ الحساب'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),

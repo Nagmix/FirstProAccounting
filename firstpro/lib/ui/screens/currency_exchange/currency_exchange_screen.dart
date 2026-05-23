@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -391,7 +390,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(PhosphorIconsRegular.arrowsLeftRight, size: 22),
+              const Icon(Icons.swap_horiz, size: 22),
               const SizedBox(width: 8),
               const Text('صرافة العملات',
                   style: TextStyle(fontWeight: FontWeight.w800)),
@@ -401,11 +400,11 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             controller: _tabController,
             tabs: const [
               Tab(
-                icon: Icon(PhosphorIconsRegular.arrowSquareOut, size: 20),
+                icon: Icon(Icons.open_in_new, size: 20),
                 text: 'صرافة',
               ),
               Tab(
-                icon: Icon(PhosphorIconsRegular.clockCounterClockwise, size: 20),
+                icon: Icon(Icons.history, size: 20),
                 text: 'السجل',
               ),
             ],
@@ -459,7 +458,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             decoration: InputDecoration(
               labelText: 'ملاحظات',
               hintText: 'أضف ملاحظات على العملية (اختياري)',
-              prefixIcon: const Icon(PhosphorIconsRegular.notePencil),
+              prefixIcon: const Icon(Icons.edit_note),
               alignLabelWithHint: true,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
@@ -504,7 +503,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    PhosphorIconsRegular.arrowUp,
+                    Icons.arrow_upward,
                     size: 18,
                     color: AppColors.error,
                   ),
@@ -560,7 +559,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                   child: IconButton(
                     onPressed: _swapCurrencies,
                     icon: Icon(
-                      PhosphorIconsRegular.arrowsDownUp,
+                      Icons.swap_vert,
                       size: 22,
                       color: AppColors.primary,
                     ),
@@ -581,7 +580,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    PhosphorIconsRegular.arrowDown,
+                    Icons.arrow_downward,
                     size: 18,
                     color: AppColors.success,
                   ),
@@ -651,7 +650,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             );
           }).toList(),
           onChanged: onChanged,
-          icon: const Icon(PhosphorIconsRegular.caretDown, size: 16),
+          icon: const Icon(Icons.arrow_drop_down, size: 16),
           style: TextStyle(
             color: AppColors.primary,
             fontWeight: FontWeight.w700,
@@ -707,7 +706,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: 'أدخل المبلغ',
-                prefixIcon: const Icon(PhosphorIconsRegular.money, size: 20),
+                prefixIcon: const Icon(Icons.payments, size: 20),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -748,7 +747,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            PhosphorIconsRegular.clockCounterClockwise,
+                            Icons.history,
                             size: 12,
                             color: AppColors.warning,
                           ),
@@ -776,7 +775,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          PhosphorIconsRegular.lightning,
+                          Icons.flash_on,
                           size: 12,
                           color: AppColors.success,
                         ),
@@ -808,11 +807,11 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: 'سعر الصرف',
-                prefixIcon: const Icon(PhosphorIconsRegular.chartLineUp, size: 20),
+                prefixIcon: const Icon(Icons.show_chart, size: 20),
                 suffixIcon: _isRateManual
                     ? IconButton(
                         icon: Icon(
-                          PhosphorIconsRegular.arrowCounterClockwise,
+                          Icons.refresh,
                           size: 18,
                           color: AppColors.warning,
                         ),
@@ -849,7 +848,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      PhosphorIconsRegular.arrowDown,
+                      Icons.arrow_downward,
                       size: 18,
                       color: AppColors.primary,
                     ),
@@ -900,7 +899,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               child: Row(
                 children: [
                   Icon(
-                    PhosphorIconsRegular.calculator,
+                    Icons.calculate,
                     size: 20,
                     color: AppColors.success,
                   ),
@@ -942,8 +941,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     final isGain = gainLoss.type == 'gain';
     final color = isGain ? AppColors.success : AppColors.error;
     final icon = isGain
-        ? PhosphorIconsRegular.trendUp
-        : PhosphorIconsRegular.trendDown;
+        ? Icons.trending_up
+        : Icons.trending_down;
     final label = isGain ? 'أرباح صرافة' : 'خسائر صرافة';
 
     return Container(
@@ -993,7 +992,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             // From Cash Box
             Row(
               children: [
-                Icon(PhosphorIconsRegular.vault, size: 18, color: AppColors.error),
+                Icon(Icons.account_balance_wallet, size: 18, color: AppColors.error),
                 const SizedBox(width: 8),
                 Text(
                   'صندوق المصدر',
@@ -1017,7 +1016,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               value: _fromCashBoxId,
               decoration: InputDecoration(
                 hintText: 'اختر صندوق المصدر',
-                prefixIcon: const Icon(PhosphorIconsRegular.vault, size: 20),
+                prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1062,7 +1061,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             // To Cash Box
             Row(
               children: [
-                Icon(PhosphorIconsRegular.vault, size: 18, color: AppColors.success),
+                Icon(Icons.account_balance_wallet, size: 18, color: AppColors.success),
                 const SizedBox(width: 8),
                 Text(
                   'صندوق الوجهة',
@@ -1086,7 +1085,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               value: _toCashBoxId,
               decoration: InputDecoration(
                 hintText: 'اختر صندوق الوجهة',
-                prefixIcon: const Icon(PhosphorIconsRegular.vault, size: 20),
+                prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1146,7 +1145,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Icon(PhosphorIconsRegular.arrowsLeftRight, size: 20),
+                : const Icon(Icons.swap_horiz, size: 20),
             label: Text(
               _isSaving ? 'جاري التنفيذ...' : 'تنفيذ الصرافة',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -1165,7 +1164,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
         Expanded(
           child: OutlinedButton.icon(
             onPressed: _isSaving ? null : _resetForm,
-            icon: const Icon(PhosphorIconsRegular.arrowCounterClockwise, size: 18),
+            icon: const Icon(Icons.refresh, size: 18),
             label: const Text('جديد'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1212,7 +1211,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    PhosphorIconsRegular.bookOpen,
+                    Icons.menu_book,
                     size: 18,
                     color: AppColors.primary,
                   ),
@@ -1328,7 +1327,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               child: Row(
                 children: [
                   Icon(
-                    PhosphorIconsRegular.checkCircle,
+                    Icons.check_circle,
                     size: 16,
                     color: AppColors.success,
                   ),
@@ -1422,7 +1421,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              PhosphorIconsRegular.clockCounterClockwise,
+              Icons.history,
               size: 56,
               color: AppColors.textHint,
             ),
@@ -1513,7 +1512,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 ),
                 const Spacer(),
                 Icon(
-                  PhosphorIconsRegular.calendarBlank,
+                  Icons.calendar_today,
                   size: 14,
                   color: AppColors.textSecondary,
                 ),
@@ -1567,7 +1566,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                   Column(
                     children: [
                       Icon(
-                        PhosphorIconsRegular.arrowLeft,
+                        Icons.arrow_back,
                         size: 20,
                         color: AppColors.primary,
                       ),
@@ -1615,7 +1614,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             // Cash box info
             Row(
               children: [
-                Icon(PhosphorIconsRegular.vault, size: 14, color: AppColors.textSecondary),
+                Icon(Icons.account_balance_wallet, size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -1648,8 +1647,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                   children: [
                     Icon(
                       gainLossType == 'gain'
-                          ? PhosphorIconsRegular.trendUp
-                          : PhosphorIconsRegular.trendDown,
+                          ? Icons.trending_up
+                          : Icons.trending_down,
                       size: 14,
                       color: gainLossType == 'gain' ? AppColors.success : AppColors.error,
                     ),
@@ -1680,7 +1679,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(PhosphorIconsRegular.note, size: 14, color: AppColors.textHint),
+                  Icon(Icons.sticky_note_2, size: 14, color: AppColors.textHint),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(

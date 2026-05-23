@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// Barcode scanner screen using device camera with manual entry fallback.
@@ -53,7 +52,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           actions: [
             TextButton.icon(
               onPressed: () => setState(() => _showManualEntry = !_showManualEntry),
-              icon: Icon(_showManualEntry ? PhosphorIconsRegular.camera : PhosphorIconsRegular.keyboard, size: 20),
+              icon: Icon(_showManualEntry ? Icons.camera_alt : Icons.keyboard, size: 20),
               label: Text(_showManualEntry ? 'الكاميرا' : 'إدخال يدوي'),
             ),
           ],
@@ -68,7 +67,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Icon(PhosphorIconsRegular.barcode, size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
+          Icon(Icons.qr_code, size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
           const SizedBox(height: 20),
           TextField(
             controller: _manualController,
@@ -77,9 +76,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             onSubmitted: (_) => _submitManual(),
             decoration: InputDecoration(
               labelText: 'أدخل الباركود يدوياً',
-              prefixIcon: const Icon(PhosphorIconsRegular.barcode),
+              prefixIcon: const Icon(Icons.qr_code),
               suffixIcon: IconButton(
-                icon: const Icon(PhosphorIconsRegular.check),
+                icon: const Icon(Icons.check),
                 onPressed: _submitManual,
               ),
             ),
@@ -89,7 +88,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _submitManual,
-              icon: const Icon(PhosphorIconsRegular.check, size: 20),
+              icon: const Icon(Icons.check, size: 20),
               label: const Text('تأكيد'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -109,13 +108,13 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(PhosphorIconsRegular.warning, size: 64, color: AppColors.warning),
+            Icon(Icons.warning, size: 64, color: AppColors.warning),
             const SizedBox(height: 16),
             Text('لا يمكن الوصول إلى الكاميرا', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: () => setState(() => _showManualEntry = true),
-              icon: Icon(PhosphorIconsRegular.keyboard, size: 20),
+              icon: Icon(Icons.keyboard, size: 20),
               label: const Text('إدخال يدوي'),
             ),
           ],
@@ -162,7 +161,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                 const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: () => setState(() => _showManualEntry = true),
-                  icon: const Icon(PhosphorIconsRegular.keyboard, color: Colors.white70, size: 18),
+                  icon: const Icon(Icons.keyboard, color: Colors.white70, size: 18),
                   label: const Text('إدخال يدوي', style: TextStyle(color: Colors.white70)),
                 ),
               ],

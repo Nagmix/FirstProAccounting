@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/theme/app_colors.dart';
 
 /// A reusable dropdown widget that fixes common issues:
@@ -51,7 +50,7 @@ class AppDropdown<T> extends StatelessWidget {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       ),
-      icon: const Icon(PhosphorIconsRegular.caretDown, size: 18),
+      icon: const Icon(Icons.arrow_drop_down, size: 18),
       items: items,
       onChanged: enabled ? onChanged : null,
       validator: validator,

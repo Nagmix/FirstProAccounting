@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../navigation/main_scaffold.dart';
@@ -446,7 +445,7 @@ class _AppLockScreenState extends State<AppLockScreen>
       ),
       child: Center(
         child: Icon(
-          PhosphorIconsRegular.calculator,
+          Icons.calculate,
           color: Colors.white,
           size: size * 0.5,
         ),
@@ -521,7 +520,7 @@ class _AppLockScreenState extends State<AppLockScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              PhosphorIconsRegular.fingerprint,
+              Icons.fingerprint,
               color: AppColors.primary,
               size: 22,
             ),
@@ -693,7 +692,7 @@ class _AppLockScreenState extends State<AppLockScreen>
     return _KeypadButton(
       onPressed: _onBackspacePressed,
       child: Icon(
-        PhosphorIconsRegular.backspace,
+        Icons.backspace,
         color: Colors.grey[500],
         size: 24,
       ),
@@ -709,7 +708,7 @@ class _AppLockScreenState extends State<AppLockScreen>
     return _KeypadButton(
       onPressed: _isLockedOut ? null : _authenticateWithBiometric,
       child: Icon(
-        PhosphorIconsRegular.fingerprint,
+        Icons.fingerprint,
         color: AppColors.primary,
         size: 28,
       ),

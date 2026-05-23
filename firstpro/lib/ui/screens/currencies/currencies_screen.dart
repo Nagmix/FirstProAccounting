@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/currency_model.dart';
@@ -91,7 +89,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                   textCapitalization: TextCapitalization.characters,
                   decoration: const InputDecoration(
                     labelText: 'رمز العملة',
-                    prefixIcon: Icon(PhosphorIconsRegular.currencyDollar),
+                    prefixIcon: Icon(Icons.attach_money),
                     hintText: 'USD',
                   ),
                   enabled: !isEdit,
@@ -102,7 +100,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'الاسم بالعربية',
-                    prefixIcon: Icon(PhosphorIconsRegular.textAa),
+                    prefixIcon: Icon(Icons.text_fields),
                     hintText: 'دولار أمريكي',
                   ),
                 ),
@@ -112,7 +110,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'الاسم بالإنجليزية',
-                    prefixIcon: Icon(PhosphorIconsRegular.textAa),
+                    prefixIcon: Icon(Icons.text_fields),
                     hintText: 'US Dollar',
                   ),
                 ),
@@ -122,7 +120,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'الرمز',
-                    prefixIcon: Icon(PhosphorIconsRegular.currencyCircleDollar),
+                    prefixIcon: Icon(Icons.paid),
                     hintText: 'USD',
                   ),
                 ),
@@ -136,7 +134,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                   ],
                   decoration: const InputDecoration(
                     labelText: 'سعر الصرف (إلى العملة الأساسية)',
-                    prefixIcon: Icon(PhosphorIconsRegular.arrowsLeftRight),
+                    prefixIcon: Icon(Icons.swap_horiz),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -180,7 +178,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                           if (ctx.mounted) Navigator.pop(ctx);
                           _loadCurrencies();
                         },
-                        icon: const Icon(PhosphorIconsRegular.check, size: 20),
+                        icon: const Icon(Icons.check, size: 20),
                         label: const Text('حفظ'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
@@ -223,7 +221,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(PhosphorIconsRegular.warning, color: AppColors.error, size: 40),
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
         title: const Text('حذف العملة'),
         content: Text('هل أنت متأكد من حذف "${currency.nameAr}"؟'),
         actions: [
@@ -256,7 +254,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
         title: const Text('إدارة العملات'),
         actions: [
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.plus),
+            icon: const Icon(Icons.add),
             tooltip: 'إضافة عملة',
             onPressed: () => _showAddEditSheet(),
           ),
@@ -269,7 +267,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(PhosphorIconsRegular.currencyDollar,
+                      Icon(Icons.attach_money,
                           size: 72, color: AppColors.textHint),
                       const SizedBox(height: 16),
                       Text('لا توجد عملات',
@@ -393,7 +391,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                   if (!currency.isDefault)
                                     IconButton(
                                       icon: Icon(
-                                        PhosphorIconsRegular.star,
+                                        Icons.star,
                                         size: 20,
                                         color: AppColors.textHint,
                                       ),
@@ -407,7 +405,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                   ),
                                   IconButton(
                                     icon: Icon(
-                                      PhosphorIconsRegular.trash,
+                                      Icons.delete,
                                       size: 20,
                                       color: currency.isDefault
                                           ? AppColors.textDisabled
@@ -432,7 +430,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
         tooltip: 'إضافة عملة',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(PhosphorIconsRegular.plus),
+        child: const Icon(Icons.add),
       ),
     );
   }

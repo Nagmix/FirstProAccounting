@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -63,7 +62,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         title: const Text('الموظفين'),
         actions: [
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.magnifyingGlass),
+            icon: const Icon(Icons.search),
             onPressed: _showSearchDialog,
           ),
         ],
@@ -85,7 +84,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEmployeeSheet(),
         backgroundColor: AppColors.primary,
-        child: const Icon(PhosphorIconsRegular.plus, color: Colors.white),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -95,7 +94,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(PhosphorIconsRegular.users, size: 64, color: AppColors.textHint),
+          Icon(Icons.people, size: 64, color: AppColors.textHint),
           const SizedBox(height: 16),
           Text('لا يوجد موظفين بعد', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
           const SizedBox(height: 8),
@@ -140,7 +139,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
-                  PhosphorIconsRegular.user,
+                  Icons.person,
                   color: AppColors.primary,
                   size: 24,
                 ),
@@ -230,7 +229,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           autofocus: true,
           decoration: const InputDecoration(
             hintText: 'اسم الموظف أو الهاتف...',
-            prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass),
+            prefixIcon: Icon(Icons.search),
           ),
           onChanged: _filterEmployees,
         ),
@@ -261,7 +260,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
             ),
             ListTile(
-              leading: const Icon(PhosphorIconsRegular.pencilSimple, color: AppColors.primary),
+              leading: const Icon(Icons.edit, color: AppColors.primary),
               title: const Text('تعديل'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -270,7 +269,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             ),
             ListTile(
               leading: Icon(
-                isActive ? PhosphorIconsRegular.prohibit : PhosphorIconsRegular.checkCircle,
+                isActive ? Icons.block : Icons.check_circle,
                 color: isActive ? AppColors.warning : AppColors.success,
               ),
               title: Text(isActive ? 'تعطيل' : 'تفعيل'),
@@ -285,7 +284,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(PhosphorIconsRegular.trash, color: AppColors.error),
+              leading: const Icon(Icons.delete, color: AppColors.error),
               title: const Text('حذف', style: TextStyle(color: AppColors.error)),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -491,7 +490,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
             onPressed: _isSaving ? null : _save,
             icon: _isSaving
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(PhosphorIconsRegular.check, size: 20),
+                : const Icon(Icons.check, size: 20),
             label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
             style: TextButton.styleFrom(foregroundColor: Colors.white),
           ),
@@ -510,7 +509,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'الاسم *',
-                  prefixIcon: Icon(PhosphorIconsRegular.user),
+                  prefixIcon: Icon(Icons.person),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
               ),
@@ -526,7 +525,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         labelText: 'رقم الهاتف',
-                        prefixIcon: Icon(PhosphorIconsRegular.phone),
+                        prefixIcon: Icon(Icons.phone),
                       ),
                     ),
                   ),
@@ -537,7 +536,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         labelText: 'المسمى الوظيفي',
-                        prefixIcon: Icon(PhosphorIconsRegular.briefcase),
+                        prefixIcon: Icon(Icons.work),
                       ),
                     ),
                   ),
@@ -550,7 +549,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 value: _currency,
                 decoration: const InputDecoration(
                   labelText: 'العملة',
-                  prefixIcon: Icon(PhosphorIconsRegular.coin),
+                  prefixIcon: Icon(Icons.monetization_on),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'YER', child: Text('ريال يمني (ر.ي)')),
@@ -573,7 +572,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'الرصيد الافتتاحي',
-                        prefixIcon: const Icon(PhosphorIconsRegular.calculator),
+                        prefixIcon: const Icon(Icons.calculate),
                         suffixText: currencySymbol,
                       ),
                     ),
@@ -651,7 +650,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                 maxLines: 2,
                 decoration: const InputDecoration(
                   labelText: 'ملاحظات',
-                  prefixIcon: Icon(PhosphorIconsRegular.notepad),
+                  prefixIcon: Icon(Icons.edit_note),
                   alignLabelWithHint: true,
                 ),
               ),
@@ -666,7 +665,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                       onPressed: _isSaving ? null : _save,
                       icon: _isSaving
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(PhosphorIconsRegular.check, size: 20),
+                          : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,

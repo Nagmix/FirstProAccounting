@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -102,7 +101,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                         child: Row(
                           children: [
-                            Icon(PhosphorIconsRegular.listBullets, size: 18, color: AppColors.primary),
+                            Icon(Icons.format_list_bulleted, size: 18, color: AppColors.primary),
                             const SizedBox(width: 8),
                             Text(
                               'العمليات المالية',
@@ -148,7 +147,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
           onPressed: _navigateToAddExpense,
           backgroundColor: AppColors.primary,
           tooltip: 'إضافة مصروف جديد',
-          child: const Icon(PhosphorIconsFill.plus, color: Colors.white),
+          child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
     );
@@ -177,7 +176,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                   color: AppColors.error.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(PhosphorIconsFill.wallet, color: AppColors.error, size: 24),
+                child: const Icon(Icons.account_balance_wallet, color: AppColors.error, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -275,7 +274,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(PhosphorIconsRegular.shieldWarning, size: 14, color: AppColors.warning),
+                Icon(Icons.shield, size: 14, color: AppColors.warning),
                 const SizedBox(width: 6),
                 Text(
                   'سقف المديونية: ${CurrencyFormatter.format(debtCeiling)}',
@@ -308,7 +307,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
               label: 'صرف (عليه)',
               value: CurrencyFormatter.format(_totalDebit),
               color: AppColors.error,
-              icon: PhosphorIconsRegular.arrowUpLeft,
+              icon: Icons.north_west,
             ),
           ),
           Container(
@@ -322,7 +321,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
               label: 'قبض (له)',
               value: CurrencyFormatter.format(_totalCredit),
               color: AppColors.success,
-              icon: PhosphorIconsRegular.arrowDownRight,
+              icon: Icons.south_east,
             ),
           ),
           Container(
@@ -336,7 +335,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
               label: 'الصافي',
               value: CurrencyFormatter.format(_currentBalance),
               color: _currentBalance >= 0 ? AppColors.primary : AppColors.error,
-              icon: PhosphorIconsRegular.scales,
+              icon: Icons.balance,
             ),
           ),
         ],
@@ -431,7 +430,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(PhosphorIconsRegular.calendarBlank, size: 12, color: AppColors.primary),
+                    const Icon(Icons.calendar_today, size: 12, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
                       formattedDate,
@@ -476,7 +475,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
           // Row 2: Description
           Row(
             children: [
-              Icon(PhosphorIconsRegular.article, size: 16, color: AppColors.textSecondary),
+              Icon(Icons.article, size: 16, color: AppColors.textSecondary),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -583,7 +582,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
-                PhosphorIconsRegular.notebook,
+                Icons.book,
                 size: 36,
                 color: AppColors.error,
               ),

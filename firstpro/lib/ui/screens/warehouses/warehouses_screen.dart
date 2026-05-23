@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'add_warehouse_sheet.dart';
@@ -80,7 +78,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          icon: const Icon(PhosphorIconsRegular.warning, color: AppColors.warning, size: 40),
+          icon: const Icon(Icons.warning, color: AppColors.warning, size: 40),
           title: const Text('لا يمكن الحذف'),
           content: Text('لا يمكن حذف "$name" لأنه يحتوي على $productCount منتج. قم بنقل المنتجات أولاً.'),
           actions: [
@@ -97,7 +95,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(PhosphorIconsRegular.warning, color: AppColors.error, size: 40),
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
         title: const Text('حذف المستودع'),
         content: Text('هل أنت متأكد من حذف "$name"؟'),
         actions: [
@@ -152,7 +150,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
         actions: [
           if (_isSearching)
             IconButton(
-              icon: const Icon(PhosphorIconsRegular.x),
+              icon: const Icon(Icons.close),
               tooltip: 'إغلاق البحث',
               onPressed: () {
                 _searchController.clear();
@@ -164,13 +162,13 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
             )
           else
             IconButton(
-              icon: const Icon(PhosphorIconsRegular.magnifyingGlass),
+              icon: const Icon(Icons.search),
               tooltip: 'بحث',
               onPressed: () => setState(() => _isSearching = true),
             ),
           if (!_isSearching)
             IconButton(
-              icon: const Icon(PhosphorIconsRegular.plus),
+              icon: const Icon(Icons.add),
               tooltip: 'إضافة',
               onPressed: () => _showAddSheet(),
             ),
@@ -184,7 +182,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        PhosphorIconsRegular.warehouse,
+                        Icons.warehouse,
                         size: 72,
                         color: AppColors.textHint,
                       ),
@@ -197,7 +195,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
                       if (_searchQuery.isEmpty)
                         FilledButton.icon(
                           onPressed: () => _showAddSheet(),
-                          icon: const Icon(PhosphorIconsRegular.plus, size: 18),
+                          icon: const Icon(Icons.add, size: 18),
                           label: const Text('إضافة مستودع'),
                         ),
                     ],
@@ -224,7 +222,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
-                              PhosphorIconsRegular.warehouse,
+                              Icons.warehouse,
                               color: AppColors.primary,
                             ),
                           ),
@@ -290,7 +288,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
         tooltip: 'إضافة مستودع',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(PhosphorIconsRegular.plus),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -335,7 +333,7 @@ class _WarehouseCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  PhosphorIconsRegular.warehouse,
+                  Icons.warehouse,
                   color: AppColors.secondaryDark,
                 ),
               ),
@@ -355,7 +353,7 @@ class _WarehouseCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            PhosphorIconsRegular.mapPin,
+                            Icons.location_on,
                             size: 14,
                             color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
                           ),

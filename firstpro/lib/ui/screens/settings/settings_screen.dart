@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -166,7 +164,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── General ────────────────────────────────────────
             _buildSettingsGroup(
               title: 'عام',
-              icon: PhosphorIconsRegular.gear,
+              icon: Icons.settings,
               isDark: isDark,
               children: [
                 _buildTextSetting(
@@ -186,7 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildReadOnlySetting(
                   label: 'اللغة',
                   value: 'العربية',
-                  icon: PhosphorIconsRegular.globe,
+                  icon: Icons.language,
                   isDark: isDark,
                 ),
               ],
@@ -195,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Invoices ───────────────────────────────────────
             _buildSettingsGroup(
               title: 'الفواتير',
-              icon: PhosphorIconsRegular.receipt,
+              icon: Icons.receipt,
               isDark: isDark,
               children: [
                 SwitchListTile(
@@ -237,7 +235,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Inventory ──────────────────────────────────────
             _buildSettingsGroup(
               title: 'المخزون',
-              icon: PhosphorIconsRegular.package,
+              icon: Icons.inventory_2,
               isDark: isDark,
               children: [
                 SwitchListTile(
@@ -275,7 +273,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Display ────────────────────────────────────────
             _buildSettingsGroup(
               title: 'العرض',
-              icon: PhosphorIconsRegular.paintBrush,
+              icon: Icons.brush,
               isDark: isDark,
               children: [
                 _buildThemeModeSelector(isDark),
@@ -286,11 +284,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Operations (الأعمال) ────────────────────────────
             _buildSettingsGroup(
               title: 'الأعمال',
-              icon: PhosphorIconsRegular.briefcase,
+              icon: Icons.work,
               isDark: isDark,
               children: [
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.arrowsLeftRight,
+                  icon: Icons.swap_horiz,
                   title: 'مصارفة عملات',
                   subtitle: 'تحويل العملات بأسعار الصرف المحددة',
                   onTap: () => Navigator.push(
@@ -300,7 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.swap,
+                  icon: Icons.swap_horiz,
                   title: 'تحويل بين الصناديق',
                   subtitle: 'نقل الأموال بين الصناديق والخزائن',
                   onTap: () => Navigator.push(
@@ -310,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.warningCircle,
+                  icon: Icons.error_outline,
                   title: 'تتبع الديون',
                   subtitle: 'متابعة ديون العملاء والموردين',
                   onTap: () => Navigator.push(
@@ -325,12 +323,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── App Lock (قفل التطبيق) ─────────────────────────
             _buildSettingsGroup(
               title: 'قفل التطبيق',
-              icon: PhosphorIconsRegular.lockSimple,
+              icon: Icons.lock,
               isDark: isDark,
               children: [
                 SwitchListTile(
                   secondary: Icon(
-                    PhosphorIconsRegular.lockSimple,
+                    Icons.lock,
                     color: _pinEnabled ? AppColors.primary : null,
                   ),
                   title: const Text('تفعيل قفل PIN'),
@@ -358,7 +356,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.key,
+                  icon: Icons.key,
                   title: _pinEnabled ? 'تغيير رمز PIN' : 'تعيين رمز PIN',
                   subtitle: _pinEnabled
                       ? 'تعديل رمز القفل المكون من 4 أرقام'
@@ -385,7 +383,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SwitchListTile(
                   secondary: Icon(
-                    PhosphorIconsRegular.fingerprint,
+                    Icons.fingerprint,
                     color: _biometricEnabled ? AppColors.primary : null,
                   ),
                   title: const Text('المصادقة البيومترية'),
@@ -429,11 +427,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Accounting Audit ────────────────────────────────
             _buildSettingsGroup(
               title: 'المحاسبة',
-              icon: PhosphorIconsRegular.shieldCheck,
+              icon: Icons.verified_user,
               isDark: isDark,
               children: [
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.magnifyingGlass,
+                  icon: Icons.search,
                   title: 'التدقيق المحاسبي',
                   subtitle: 'التحقق من توازن القيود وربط العمليات بدليل الحسابات',
                   onTap: () => Navigator.pushNamed(context, AppConstants.accountingAudit),
@@ -445,25 +443,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Data ───────────────────────────────────────────
             _buildSettingsGroup(
               title: 'البيانات',
-              icon: PhosphorIconsRegular.database,
+              icon: Icons.storage,
               isDark: isDark,
               children: [
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.cloudArrowUp,
+                  icon: Icons.cloud_upload,
                   title: 'نسخ احتياطي',
                   subtitle: 'حفظ نسخة من جميع البيانات',
                   onTap: _onBackup,
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.cloudArrowDown,
+                  icon: Icons.cloud_download,
                   title: 'استعادة البيانات',
                   subtitle: 'استعادة من نسخة احتياطية',
                   onTap: _onRestore,
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.fileArrowDown,
+                  icon: Icons.file_download,
                   title: 'تصدير التقارير',
                   subtitle: 'تصدير التقارير كملف Excel',
                   onTap: _onExportReports,
@@ -480,45 +478,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── About ──────────────────────────────────────────
             _buildSettingsGroup(
               title: 'حول التطبيق',
-              icon: PhosphorIconsRegular.info,
+              icon: Icons.info,
               isDark: isDark,
               children: [
                 _buildReadOnlySetting(
                   label: 'الإصدار',
                   value: AppConstants.appVersion,
-                  icon: PhosphorIconsRegular.shootingStar,
+                  icon: Icons.auto_awesome,
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.star,
+                  icon: Icons.star,
                   title: 'تقييم التطبيق',
                   subtitle: 'شاركنا رأيك على المتجر',
                   onTap: _onRateApp,
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.envelope,
+                  icon: Icons.email,
                   title: 'تواصل معنا',
                   subtitle: 'support@firstpro.com',
                   onTap: _onContactUs,
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.phone,
+                  icon: Icons.phone,
                   title: 'رقم الهاتف',
                   subtitle: '+967777777777',
                   onTap: _onCallUs,
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.whatsappLogo,
+                  icon: Icons.chat,
                   title: 'واتساب',
                   subtitle: '+967777777777',
                   onTap: _onWhatsApp,
                   isDark: isDark,
                 ),
                 _buildActionTile(
-                  icon: PhosphorIconsRegular.shieldCheck,
+                  icon: Icons.verified_user,
                   title: 'سياسة الخصوصية',
                   subtitle: 'عرض سياسة الخصوصية',
                   onTap: _onPrivacyPolicy,
@@ -559,7 +557,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              PhosphorIconsRegular.buildings,
+              Icons.business,
               size: 36,
               color: Colors.white,
             ),
@@ -590,7 +588,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // ── Edit profile button ──────────────────────────────
           OutlinedButton.icon(
             onPressed: _showEditProfileDialog,
-            icon: const Icon(PhosphorIconsRegular.pencilSimple, size: 18),
+            icon: const Icon(Icons.edit, size: 18),
             label: const Text('تعديل البيانات'),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
@@ -682,11 +680,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Currency link to currency management screen.
   Widget _buildCurrencyLink(bool isDark) {
     return ListTile(
-      leading: Icon(PhosphorIconsRegular.currencyDollar, color: AppColors.primary, size: 22),
+      leading: Icon(Icons.attach_money, color: AppColors.primary, size: 22),
       title: const Text('إدارة العملات'),
       subtitle: const Text('العملات وأسعار الصرف'),
       trailing: Icon(
-        PhosphorIconsRegular.caretLeft,
+        Icons.arrow_back_ios,
         size: 16,
         color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
       ),
@@ -697,11 +695,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Exchange rates management link.
   Widget _buildExchangeRatesLink(bool isDark) {
     return ListTile(
-      leading: Icon(PhosphorIconsRegular.arrowsLeftRight, color: AppColors.primary, size: 22),
+      leading: Icon(Icons.swap_horiz, color: AppColors.primary, size: 22),
       title: const Text('أسعار الصرف'),
       subtitle: const Text('تعديل أسعار الصرف للعملات'),
       trailing: Icon(
-        PhosphorIconsRegular.caretLeft,
+        Icons.arrow_back_ios,
         size: 16,
         color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
       ),
@@ -743,7 +741,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: '$code ($symbol)',
-                    prefixIcon: const Icon(PhosphorIconsRegular.coin, size: 20),
+                    prefixIcon: const Icon(Icons.monetization_on, size: 20),
                     suffixText: isDefault ? 'افتراضي' : '',
                     enabled: !isDefault,
                     helperText: isDefault ? 'العملة الافتراضية - سعر الصرف = 1' : 'سعر الصرف مقابل العملة الافتراضية',
@@ -864,7 +862,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 IconButton(
                   onPressed: value > 1 ? () => onChanged(value - 1) : null,
-                  icon: const Icon(PhosphorIconsRegular.minus, size: 20),
+                  icon: const Icon(Icons.remove, size: 20),
                   splashRadius: 18,
                 ),
                 Container(
@@ -880,7 +878,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 IconButton(
                   onPressed: value < 999 ? () => onChanged(value + 1) : null,
-                  icon: const Icon(PhosphorIconsRegular.plus, size: 20),
+                  icon: const Icon(Icons.add, size: 20),
                   splashRadius: 18,
                 ),
               ],
@@ -910,7 +908,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       trailing: Icon(
-        PhosphorIconsRegular.caretLeft,
+        Icons.arrow_back_ios,
         size: 16,
         color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
       ),
@@ -925,7 +923,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: const Icon(PhosphorIconsRegular.trash, color: AppColors.error, size: 22),
+      leading: const Icon(Icons.delete, color: AppColors.error, size: 22),
       title: Text(
         title,
         style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
@@ -934,7 +932,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         subtitle,
         style: const TextStyle(fontSize: 12, color: AppColors.errorLight),
       ),
-      trailing: const Icon(PhosphorIconsRegular.caretLeft, size: 16, color: AppColors.error),
+      trailing: const Icon(Icons.arrow_back_ios, size: 16, color: AppColors.error),
       onTap: onTap,
     );
   }
@@ -944,7 +942,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ════════════════════════════════════════════════════════════════
   Widget _buildThemeModeSelector(bool isDark) {
     const labels = ['فاتح', 'ليلي', 'تلقائي'];
-    const icons = [PhosphorIconsRegular.sun, PhosphorIconsRegular.moon, PhosphorIconsRegular.sunHorizon];
+    const icons = [Icons.light_mode, Icons.dark_mode, Icons.wb_twilight];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1134,7 +1132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         height: 48,
                         child: IconButton(
                           onPressed: onBackspace,
-                          icon: const Icon(PhosphorIconsRegular.backspace),
+                          icon: const Icon(Icons.backspace),
                           style: IconButton.styleFrom(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -1263,7 +1261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(PhosphorIconsRegular.warning, color: AppColors.error, size: 48),
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 48),
         title: const Text('مسح جميع البيانات'),
         content: const Text(
           'هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء.',

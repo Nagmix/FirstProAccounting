@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -127,7 +125,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'الاسم',
-                  prefixIcon: Icon(PhosphorIconsRegular.user),
+                  prefixIcon: Icon(Icons.person),
                 ),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
@@ -145,7 +143,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 ],
                 decoration: const InputDecoration(
                   labelText: 'رقم الهاتف',
-                  prefixIcon: Icon(PhosphorIconsRegular.phone),
+                  prefixIcon: Icon(Icons.phone),
                 ),
               ),
               const SizedBox(height: 14),
@@ -157,7 +155,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'البريد الإلكتروني',
-                  prefixIcon: Icon(PhosphorIconsRegular.envelope),
+                  prefixIcon: Icon(Icons.email),
                 ),
                 validator: (v) {
                   if (v != null && v.trim().isNotEmpty) {
@@ -178,7 +176,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'العنوان',
-                  prefixIcon: Icon(PhosphorIconsRegular.mapPin),
+                  prefixIcon: Icon(Icons.location_on),
                 ),
               ),
               const SizedBox(height: 14),
@@ -201,7 +199,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                       decoration: InputDecoration(
                         labelText: 'الرصيد الافتتاحي',
                         prefixIcon:
-                            const Icon(PhosphorIconsRegular.calculator),
+                            const Icon(Icons.calculate),
                         suffixText: AppConstants.currency,
                       ),
                     ),
@@ -266,7 +264,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 textInputAction: TextInputAction.newline,
                 decoration: const InputDecoration(
                   labelText: 'الملاحظات',
-                  prefixIcon: Icon(PhosphorIconsRegular.notepad),
+                  prefixIcon: Icon(Icons.edit_note),
                   alignLabelWithHint: true,
                 ),
               ),
@@ -285,7 +283,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                               height: 18,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
-                          : const Icon(PhosphorIconsRegular.check, size: 20),
+                          : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving
                           ? 'جاري الحفظ...'
                           : _isEditing

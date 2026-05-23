@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -87,7 +85,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(PhosphorIconsRegular.warning,
+        icon: const Icon(Icons.warning,
             color: AppColors.error, size: 40),
         title: const Text('حذف المورد'),
         content: Text('هل أنت متأكد من حذف المورد "${supplier.name}"؟'),
@@ -145,14 +143,14 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         title: const Text('قائمة الموردين'),
         actions: [
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.magnifyingGlass),
+            icon: const Icon(Icons.search),
             tooltip: 'بحث',
             onPressed: () {
               FocusScope.of(context).unfocus();
             },
           ),
           IconButton(
-            icon: const Icon(PhosphorIconsRegular.truck),
+            icon: const Icon(Icons.local_shipping),
             tooltip: 'إضافة مورد',
             onPressed: () => _showAddSupplierSheet(),
           ),
@@ -168,7 +166,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   child: SearchBar(
                     controller: _searchController,
                     hintText: 'بحث عن مورد...',
-                    leading: const Icon(PhosphorIconsRegular.magnifyingGlass),
+                    leading: const Icon(Icons.search),
                     padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(horizontal: 16),
                     ),
@@ -179,7 +177,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 Expanded(
                   child: filtered.isEmpty
                       ? EmptyState(
-                          icon: PhosphorIconsRegular.truck,
+                          icon: Icons.local_shipping,
                           title: _searchQuery.isNotEmpty
                               ? 'لا توجد نتائج'
                               : 'لا يوجد موردين',
@@ -213,7 +211,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         tooltip: 'إضافة مورد',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(PhosphorIconsRegular.truck),
+        child: const Icon(Icons.local_shipping),
       ),
     );
   }
@@ -292,7 +290,7 @@ class _SupplierCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          PhosphorIconsRegular.phone,
+                          Icons.phone,
                           size: 14,
                           color: isLight
                               ? AppColors.textHint
@@ -337,7 +335,7 @@ class _SupplierCard extends StatelessWidget {
 
               // ── Arrow icon (RTL – points left visually) ─────
               Icon(
-                PhosphorIconsRegular.caretLeft,
+                Icons.arrow_back_ios,
                 size: 16,
                 color: isLight
                     ? AppColors.textHint

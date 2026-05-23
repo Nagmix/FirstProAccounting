@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/account_model.dart';
@@ -25,11 +23,11 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   List<Map<String, dynamic>> _cashBoxes = [];
 
   final _typeOptions = [
-    (AccountType.ASSET, 'الأصول', PhosphorIconsRegular.buildings),
-    (AccountType.LIABILITY, 'الخصوم', PhosphorIconsRegular.handCoins),
-    (AccountType.COST, 'التكاليف', PhosphorIconsRegular.arrowDownLeft),
-    (AccountType.REVENUE, 'الإيرادات', PhosphorIconsRegular.arrowUpRight),
-    (AccountType.EXPENSE, 'المصاريف', PhosphorIconsRegular.arrowDown),
+    (AccountType.ASSET, 'الأصول', Icons.business),
+    (AccountType.LIABILITY, 'الخصوم', Icons.savings),
+    (AccountType.COST, 'التكاليف', Icons.south_west),
+    (AccountType.REVENUE, 'الإيرادات', Icons.arrow_outward),
+    (AccountType.EXPENSE, 'المصاريف', Icons.arrow_downward),
   ];
 
   bool get _isEdit => widget.existing != null;
@@ -153,7 +151,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'اسم الحساب',
-                  prefixIcon: Icon(PhosphorIconsRegular.textAa),
+                  prefixIcon: Icon(Icons.text_fields),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'اسم الحساب مطلوب' : null,
               ),
@@ -165,9 +163,9 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: 'رقم الترتيب',
-                  prefixIcon: const Icon(PhosphorIconsRegular.hash),
+                  prefixIcon: const Icon(Icons.tag),
                   suffixIcon: IconButton(
-                    icon: const Icon(PhosphorIconsRegular.arrowClockwise, size: 18),
+                    icon: const Icon(Icons.refresh, size: 18),
                     tooltip: 'توليد رقم جديد',
                     onPressed: _generateCode,
                   ),
@@ -181,7 +179,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                 value: _selectedCashBoxId,
                 decoration: const InputDecoration(
                   labelText: 'حساب الصندوق المرتبط',
-                  prefixIcon: Icon(PhosphorIconsRegular.link),
+                  prefixIcon: Icon(Icons.link),
                 ),
                 items: [
                   const DropdownMenuItem<int>(value: null, child: Text('بدون ربط')),
@@ -203,7 +201,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                       onPressed: _isSaving ? null : _save,
                       icon: _isSaving
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(PhosphorIconsRegular.check, size: 20),
+                          : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
