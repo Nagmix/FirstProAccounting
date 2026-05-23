@@ -818,7 +818,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       Expanded(
                         child: Text(
                           'الكمية والمستودع والحقول المحاسبية مقفلة لتجنب تخريب العمليات المحاسبية',
-                          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.warning),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.warning),
                         ),
                       ),
                     ],
