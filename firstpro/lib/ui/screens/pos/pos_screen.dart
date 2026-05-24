@@ -8,6 +8,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/product_model.dart';
@@ -37,6 +38,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   DiscountType _discountType = DiscountType.fixed;
   int? _selectedCustomerId;
   String _selectedCustomerName = '';
+
+  // ── Checkout guard ────────────────────────────────────────────────
+  bool _isCheckingOut = false; // Prevents concurrent checkout calls
 
   // ── Payment state ─────────────────────────────────────────────────
   final List<_PaymentEntry> _payments = [];
@@ -933,13 +937,24 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       onTap: () => _decrementCart(index),
                     ),
                     Container(
-                      width: 32,
+                      width: 40,
                       alignment: Alignment.center,
-                      child: Text(
-                        '${item.quantity}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
+                      child: GestureDetector(
+                        onTap: () => _editQuantity(index),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${item.quantity}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1537,7 +1552,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _cart.isEmpty ? null : _checkout,
+              onPressed: (_cart.isEmpty || _isCheckingOut) ? null : _checkout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.success,
                 foregroundColor: Colors.white,
@@ -2619,6 +2634,55 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     _syncPaymentsWithTotal();
   }
 
+  /// Allow user to manually enter a quantity via keyboard.
+  Future<void> _editQuantity(int index) async {
+    final controller = TextEditingController(text: '${_cart[index].quantity}');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text('الكمية - ${_cart[index].name}'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: false),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: 'الكمية',
+              prefixIcon: Icon(Icons.format_list_numbered),
+            ),
+            onSubmitted: (v) {
+              final qty = int.tryParse(v);
+              Navigator.pop(ctx, qty);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final qty = int.tryParse(controller.text);
+                Navigator.pop(ctx, qty);
+              },
+              child: const Text('تأكيد'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+
+    if (result != null && result > 0) {
+      setState(() {
+        _cart[index] = _cart[index].copyWith(quantity: result);
+      });
+      _syncPaymentsWithTotal();
+    }
+  }
+
   void _syncPaymentsWithTotal() {
     // If single payment, update the amount
     if (_payments.length == 1 && _activePaymentMethod != 'credit') {
@@ -2698,6 +2762,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  CHECKOUT (Deferred Invoice Posting)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _checkout() async {
+    // Guard: prevent concurrent checkout calls (fixes multi-click bug)
+    if (_isCheckingOut) return;
+
     if (_activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً قبل إتمام عملية البيع');
       return;
@@ -2769,8 +2836,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     if (confirmed != true) return;
 
+    // Set checkout guard
+    setState(() => _isCheckingOut = true);
+
+    try {
     final invoiceId = _generateInvoiceId();
-    final isCash = primaryMethod != 'credit';
     final cashBoxId = _activeShift!['cash_box_id'] as int;
     final shiftId = _activeShift!['id'] as int;
     final now = DateTime.now();
@@ -2821,83 +2891,183 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       paymentMechanism: paymentMechanism,
       isReturn: false,
       cashBoxId: cashBoxId,
-      deferPosting: true, // Deferred: journal entries created on shift close via postShiftInvoices()
+      deferPosting: true,
     );
 
-    // Update shift totals (sales, discounts, transaction count)
+    // Update shift totals
     final saleAmount = _total;
     final discountAmount = _effectiveDiscount;
     await db.updateShiftTotals(shiftId, saleAmount, 0.0, discountAmount);
-
-    // NOTE: Stock is already decremented inside saveInvoiceWithJournalEntries().
-    // No need to call decrementProductStock again (was causing double stock deduction).
 
     // Reload shift data
     await _loadActiveShift();
 
     if (!mounted) return;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.check_circle, color: AppColors.success, size: 28),
-              const SizedBox(width: 8),
-              const Text('تم إنهاء البيع'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('رقم الفاتورة: $invoiceId'),
-              Text('الإجمالي: ${CurrencyFormatter.format(_total)}'),
-              Text('طريقة الدفع: ${_paymentLabel(primaryMethod)}'),
-              if (_selectedCustomerName.isNotEmpty)
-                Text('العميل: $_selectedCustomerName'),
-              const SizedBox(height: 8),
-              const Text(
-                'لم يتم ترحيل الفاتورة بعد – سيتم ترحيلها عند إغلاق الوردية',
-                style: TextStyle(fontSize: 11, color: AppColors.info),
+    // Show sale complete dialog
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.success, size: 28),
+                const SizedBox(width: 8),
+                const Text('تم إنهاء البيع'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('رقم الفاتورة: $invoiceId'),
+                Text('الإجمالي: ${CurrencyFormatter.format(_total)}'),
+                Text('طريقة الدفع: ${_paymentLabel(primaryMethod)}'),
+                if (_selectedCustomerName.isNotEmpty)
+                  Text('العميل: $_selectedCustomerName'),
+                const SizedBox(height: 8),
+                const Text(
+                  'لم يتم ترحيل الفاتورة بعد – سيتم ترحيلها عند إغلاق الوردية',
+                  style: TextStyle(fontSize: 11, color: AppColors.info),
+                ),
+              ],
+            ),
+            actions: [
+              // Print button - compact icon with text, shows options on tap
+              IconButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showPrintOptions(invoiceId);
+                },
+                icon: const Icon(Icons.print),
+                tooltip: 'طباعه',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 4),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('إغلاق'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _resetForNewInvoice();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('فاتورة جديدة'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('إغلاق'),
+        ),
+      );
+    }
+    } finally {
+      // Always release the checkout guard
+      if (mounted) {
+        setState(() => _isCheckingOut = false);
+      }
+    }
+  }
+
+  /// Reset all state for a new invoice.
+  void _resetForNewInvoice() {
+    setState(() {
+      _cart.clear();
+      _payments.clear();
+      _orderDiscount = 0;
+      _discountType = DiscountType.fixed;
+      _selectedCustomerId = null;
+      _selectedCustomerName = '';
+      _activePaymentMethod = 'cash';
+      _searchController.clear();
+      _isSearching = false;
+    });
+    _sheetController.animateTo(0.12,
+        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+  }
+
+  /// Show print options (PDF or Bluetooth thermal).
+  void _showPrintOptions(String invoiceId) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('خيارات الطباعة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
+                  ),
+                  title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('مشاركة أو حفظ كملف PDF'),
+                  trailing: const Icon(Icons.arrow_back_ios, size: 16),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await _printPdfInvoice(invoiceId);
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),
+                  ),
+                  title: const Text('طباعة حرارية بلوتوث', style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('طباعة على طابعة حرارية 80mm'),
+                  trailing: const Icon(Icons.arrow_back_ios, size: 16),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _printBluetoothReceipt(invoiceId);
+                  },
+                ),
+              ],
             ),
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _printBluetoothReceipt(invoiceId);
-              },
-              icon: const Icon(Icons.bluetooth, size: 18),
-              label: const Text('طباعة حرارية'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                setState(() {
-                  _cart.clear();
-                  _payments.clear();
-                  _orderDiscount = 0;
-                  _selectedCustomerId = null;
-                  _selectedCustomerName = '';
-                  // Reset sheet
-                  _sheetController.animateTo(0.12,
-                      duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-                });
-              },
-              child: const Text('فاتورة جديدة'),
-            ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Print invoice as PDF.
+  Future<void> _printPdfInvoice(String invoiceId) async {
+    try {
+      final db = DatabaseHelper();
+      final invoiceData = await db.getInvoiceById(invoiceId);
+      if (invoiceData == null) {
+        if (mounted) context.showErrorSnackBar('لم يتم العثور على الفاتورة');
+        return;
+      }
+      final itemsData = await db.getInvoiceItems(invoiceId);
+      await InvoicePdfGenerator.printInvoice(invoiceData, itemsData);
+    } catch (e) {
+      if (mounted) context.showErrorSnackBar('خطأ في طباعة PDF: $e');
+    }
   }
 
   /// Print receipt via Bluetooth thermal printer.

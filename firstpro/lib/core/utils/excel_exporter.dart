@@ -113,6 +113,59 @@ class ExcelExporter {
     return await _saveAndShare(excel, 'الحركات');
   }
 
+  /// تصدير كشف حساب (عميل أو مورد)
+  static Future<String> exportAccountStatementToExcel({
+    required String entityName,
+    required String entityType,
+    required List<Map<String, dynamic>> movements,
+    required double totalDebit,
+    required double totalCredit,
+    required double netBalance,
+  }) async {
+    final excel = Excel.createExcel();
+    final sheet = excel['كشف الحساب'];
+
+    excel.delete('Sheet1');
+
+    // ترويسات الأعمدة
+    final headers = ['التاريخ', 'البيان', 'عليه', 'له', 'الرصيد'];
+    _addHeaders(sheet, headers);
+
+    double runningBalance = 0;
+
+    // البيانات
+    for (var i = 0; i < movements.length; i++) {
+      final m = movements[i];
+      final row = i + 2;
+      final dateStr = m['date'] as String? ?? '';
+      final description = m['description'] as String? ?? (m['type_ar'] as String? ?? '');
+      final debit = (m['debit'] as num?)?.toDouble() ?? 0.0;
+      final credit = (m['credit'] as num?)?.toDouble() ?? 0.0;
+      runningBalance += credit - debit;
+
+      sheet.cell(CellIndex.indexByString('A$row')).value = TextCellValue(_formatDate(dateStr));
+      sheet.cell(CellIndex.indexByString('B$row')).value = TextCellValue(description);
+      sheet.cell(CellIndex.indexByString('C$row')).value = DoubleCellValue(debit);
+      sheet.cell(CellIndex.indexByString('D$row')).value = DoubleCellValue(credit);
+      sheet.cell(CellIndex.indexByString('E$row')).value = DoubleCellValue(runningBalance);
+    }
+
+    // صف الإجماليات
+    final totalRow = movements.length + 2;
+    sheet.cell(CellIndex.indexByString('A$totalRow')).value = TextCellValue('');
+    sheet.cell(CellIndex.indexByString('B$totalRow')).value = TextCellValue('الإجمالي');
+    sheet.cell(CellIndex.indexByString('C$totalRow')).value = DoubleCellValue(totalDebit);
+    sheet.cell(CellIndex.indexByString('D$totalRow')).value = DoubleCellValue(totalCredit);
+    sheet.cell(CellIndex.indexByString('E$totalRow')).value = DoubleCellValue(netBalance);
+    // Bold the total row
+    for (var col = 0; col < 5; col++) {
+      final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: totalRow - 1));
+      cell.cellStyle = CellStyle(bold: true);
+    }
+
+    return await _saveAndShare(excel, 'كشف_حساب_${entityName.replaceAll(' ', '_')}');
+  }
+
   // ══════════════════════════════════════════════════════════════
   //  مساعدات خاصة
   // ══════════════════════════════════════════════════════════════

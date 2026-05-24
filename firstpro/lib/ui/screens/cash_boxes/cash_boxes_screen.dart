@@ -227,7 +227,10 @@ class _CashBoxCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isCredit = cashBox.balanceType == 'credit';
+    // Compute actual balance dynamically: credit = positive, debit = negative
+    // The balance_type stored in DB is ONLY for the opening balance direction
+    final effectiveBalance = cashBox.balanceType == 'credit' ? cashBox.balance : -cashBox.balance;
+    final isCredit = effectiveBalance >= 0;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -288,7 +291,7 @@ class _CashBoxCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(CurrencyFormatter.format(cashBox.balance),
+                  Text(CurrencyFormatter.format(effectiveBalance.abs()),
                       style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
                   Text(isCredit ? 'له' : 'عليه',

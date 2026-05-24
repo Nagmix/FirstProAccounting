@@ -2559,6 +2559,13 @@ class DatabaseHelper {
     return await db.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
   }
 
+  /// Get a single invoice by its ID.
+  Future<Map<String, dynamic>?> getInvoiceById(String invoiceId) async {
+    final db = await database;
+    final results = await db.query('invoices', where: 'id = ?', whereArgs: [invoiceId], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
   /// Soft-delete an invoice by setting status to 'cancelled'.
   /// Does NOT reverse journal entries — use [cancelInvoice] for full reversal.
   Future<int> deleteInvoice(String id) async {

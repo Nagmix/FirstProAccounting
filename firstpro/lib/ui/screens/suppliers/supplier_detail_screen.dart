@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/account_statement_pdf_generator.dart';
+import '../../../core/utils/excel_exporter.dart';
+import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/supplier_model.dart';
-import '../vouchers/create_voucher_screen.dart';
+import '../settings/bluetooth_printer_settings_screen.dart';
 
 /// Supplier Detail / Ledger Screen
 ///
@@ -30,6 +34,12 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   DateTime? _startDate;
   DateTime? _endDate;
 
+  // Cash boxes for voucher dialog
+  List<Map<String, dynamic>> _cashBoxes = [];
+
+  // Refreshable supplier data
+  Supplier? _freshSupplier;
+
   // Filter tab definitions
   static const _tabs = [
     Tab(text: 'الكل'),
@@ -49,9 +59,10 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   @override
   void initState() {
     super.initState();
+    _freshSupplier = widget.supplier;
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(_onTabChanged);
-    _loadMovements();
+    _loadData();
   }
 
   @override
@@ -65,6 +76,28 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
     if (!_tabController.indexIsChanging) {
       _applyFilters();
     }
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    final db = DatabaseHelper();
+
+    // Refresh supplier data
+    final supplierMap = await db.getSupplierById(widget.supplier.id!);
+    if (supplierMap != null) {
+      _freshSupplier = Supplier.fromMap(supplierMap);
+    }
+
+    // Load cash boxes for voucher dialog
+    _cashBoxes = await db.getAllCashBoxes();
+
+    // Load movements
+    final movements = await db.getSupplierMovements(widget.supplier.id!);
+    setState(() {
+      _allMovements = movements;
+      _isLoading = false;
+    });
+    _applyFilters();
   }
 
   Future<void> _loadMovements() async {
@@ -324,17 +357,540 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
     _applyFilters();
   }
 
-  Future<void> _navigateToCreateVoucher({String? initialType}) async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CreateVoucherScreen(
-          initialType: initialType,
-          initialSupplierId: widget.supplier.id,
+  // ── Inline Voucher Dialog (same as customer) ──────────────────
+  Future<void> _showAddVoucherDialog(String voucherType) async {
+    final supplier = _freshSupplier ?? widget.supplier;
+    final amountController = TextEditingController();
+    final descriptionController = TextEditingController();
+    int? selectedCashBoxId;
+    String selectedCurrency = supplier.currency ?? 'YER';
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Supplier name (read-only)
+                    InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'المورد',
+                        prefixIcon: Icon(Icons.local_shipping),
+                      ),
+                      child: Text(supplier.name),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Amount
+                    TextFormField(
+                      controller: amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                      decoration: InputDecoration(
+                        labelText: 'المبلغ',
+                        prefixIcon: const Icon(Icons.attach_money),
+                        suffixText: selectedCurrency,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Currency
+                    DropdownButtonFormField<String>(
+                      value: selectedCurrency,
+                      decoration: const InputDecoration(
+                        labelText: 'العملة',
+                        prefixIcon: Icon(Icons.currency_exchange),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'YER', child: Text('ريال يمني (YER)')),
+                        DropdownMenuItem(value: 'SAR', child: Text('ريال سعودي (SAR)')),
+                        DropdownMenuItem(value: 'USD', child: Text('دولار أمريكي (USD)')),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) {
+                          setDialogState(() => selectedCurrency = v);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Cash Box
+                    DropdownButtonFormField<int?>(
+                      value: selectedCashBoxId,
+                      decoration: const InputDecoration(
+                        labelText: 'الصندوق',
+                        prefixIcon: Icon(Icons.account_balance_wallet),
+                      ),
+                      items: _cashBoxes.map((cb) {
+                        return DropdownMenuItem<int?>(
+                          value: cb['id'] as int?,
+                          child: Text('${cb['name']} (${cb['currency'] ?? 'YER'})'),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        setDialogState(() => selectedCashBoxId = v);
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Description
+                    TextFormField(
+                      controller: descriptionController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: voucherType == 'receipt' ? 'بيان سند القبض' : 'بيان سند الصرف',
+                        prefixIcon: const Icon(Icons.description),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('إلغاء'),
+                ),
+                FilledButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final amount = double.tryParse(amountController.text);
+                          if (amount == null || amount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('يرجى إدخال مبلغ صالح'), backgroundColor: AppColors.error),
+                            );
+                            return;
+                          }
+                          setDialogState(() => isSaving = true);
+
+                          final dbHelper = DatabaseHelper();
+                          final db = await dbHelper.database;
+                          final now = DateTime.now();
+                          final voucherNumber = await dbHelper.getNextVoucherNumber(voucherType);
+
+                          // Find the supplier's account
+                          final supplierAccounts = await db.rawQuery(
+                            "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'LIABILITY' AND currency = ?",
+                            ['%الموردين%', selectedCurrency],
+                          );
+                          final supplierAccountId = supplierAccounts.isNotEmpty
+                              ? supplierAccounts.first['id'] as int
+                              : null;
+
+                          // Find the cash box account
+                          int? cashBoxAccountId;
+                          if (selectedCashBoxId != null) {
+                            final cbData = await dbHelper.getCashBoxById(selectedCashBoxId!);
+                            if (cbData != null) {
+                              cashBoxAccountId = cbData['linked_account_id'] as int?;
+                            }
+                          }
+
+                          final voucherMap = {
+                            'voucher_number': voucherNumber,
+                            'voucher_type': voucherType,
+                            'date': now.toIso8601String(),
+                            'description': descriptionController.text.trim().isEmpty
+                                ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${supplier.name}'
+                                : descriptionController.text.trim(),
+                            'currency': selectedCurrency,
+                            'total_amount': amount,
+                            'cash_box_id': selectedCashBoxId,
+                            'supplier_id': supplier.id,
+                            'is_posted': 1,
+                            'created_at': now.toIso8601String(),
+                            'updated_at': now.toIso8601String(),
+                          };
+
+                          List<Map<String, dynamic>> items = [];
+
+                          if (voucherType == 'payment') {
+                            // Payment to supplier: Debit supplier (decrease liability), Credit cash box
+                            if (supplierAccountId != null) {
+                              items.add({
+                                'account_id': supplierAccountId,
+                                'debit': amount,
+                                'credit': 0.0,
+                                'description': 'سند صرف إلى ${supplier.name}',
+                              });
+                            }
+                            if (cashBoxAccountId != null) {
+                              items.add({
+                                'account_id': cashBoxAccountId,
+                                'debit': 0.0,
+                                'credit': amount,
+                                'description': 'سند صرف إلى ${supplier.name}',
+                              });
+                            }
+                          } else {
+                            // Receipt from supplier: Debit cash box, Credit supplier (increase liability)
+                            if (cashBoxAccountId != null) {
+                              items.add({
+                                'account_id': cashBoxAccountId,
+                                'debit': amount,
+                                'credit': 0.0,
+                                'description': 'سند قبض من ${supplier.name}',
+                              });
+                            }
+                            if (supplierAccountId != null) {
+                              items.add({
+                                'account_id': supplierAccountId,
+                                'debit': 0.0,
+                                'credit': amount,
+                                'description': 'سند قبض من ${supplier.name}',
+                              });
+                            }
+                          }
+
+                          if (items.isNotEmpty) {
+                            await dbHelper.insertVoucher(voucherMap, items);
+                          }
+
+                          // Update supplier balance
+                          if (supplier.id != null) {
+                            final currentBalance = supplier.balance;
+                            final currentType = supplier.balanceType;
+                            double newBalance;
+                            if (voucherType == 'payment') {
+                              // Payment to supplier reduces what we owe them
+                              if (currentType == 'credit') {
+                                newBalance = currentBalance - amount;
+                                final newType = newBalance < 0 ? 'debit' : 'credit';
+                                await dbHelper.updateSupplier(supplier.id!, {
+                                  'balance': newBalance.abs(),
+                                  'balance_type': newType,
+                                  'updated_at': now.toIso8601String(),
+                                });
+                              } else {
+                                newBalance = currentBalance + amount;
+                                await dbHelper.updateSupplier(supplier.id!, {
+                                  'balance': newBalance,
+                                  'balance_type': 'debit',
+                                  'updated_at': now.toIso8601String(),
+                                });
+                              }
+                            } else {
+                              // Receipt from supplier increases what they owe us
+                              if (currentType == 'debit') {
+                                newBalance = currentBalance - amount;
+                                final newType = newBalance < 0 ? 'credit' : 'debit';
+                                await dbHelper.updateSupplier(supplier.id!, {
+                                  'balance': newBalance.abs(),
+                                  'balance_type': newType,
+                                  'updated_at': now.toIso8601String(),
+                                });
+                              } else {
+                                newBalance = currentBalance + amount;
+                                await dbHelper.updateSupplier(supplier.id!, {
+                                  'balance': newBalance,
+                                  'balance_type': 'credit',
+                                  'updated_at': now.toIso8601String(),
+                                });
+                              }
+                            }
+                          }
+
+                          if (context.mounted) {
+                            Navigator.pop(dialogContext);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(voucherType == 'receipt' ? 'تم إنشاء سند القبض بنجاح' : 'تم إنشاء سند الصرف بنجاح'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                            _loadData();
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text(voucherType == 'receipt' ? 'إنشاء سند قبض' : 'إنشاء سند صرف'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ── Print / Export ────────────────────────────────────────────
+  void _printReport() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('خيارات الطباعة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
+                ),
+                title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('إنشاء ملف PDF لكشف الحساب'),
+                trailing: const Icon(Icons.arrow_back_ios, size: 16),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _generatePdfStatement();
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),
+                ),
+                title: const Text('طباعة حرارية بلوتوث', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('طباعة كشف حساب على طابعة حرارية'),
+                trailing: const Icon(Icons.arrow_back_ios, size: 16),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _printBluetoothStatement();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
-    if (result == true) _loadMovements();
+  }
+
+  /// Generate PDF account statement for the supplier.
+  Future<void> _generatePdfStatement() async {
+    final supplier = _freshSupplier ?? widget.supplier;
+    try {
+      // Convert supplier movements to the format expected by the PDF generator
+      final movements = _filteredMovements.map((m) {
+        final source = m['_source'] as String? ?? '';
+        double debit = 0.0;
+        double credit = 0.0;
+        String typeAr = '';
+        String dateStr = '';
+        String description = '';
+
+        if (source == 'invoice') {
+          final type = m['type'] as String? ?? '';
+          final isReturn = (m['is_return'] as num?)?.toInt() == 1;
+          final total = (m['total'] as num?)?.toDouble() ?? 0.0;
+          dateStr = m['created_at'] as String? ?? '';
+          description = _getInvoiceTypeAr(type, isReturn);
+          typeAr = description;
+
+          if (type == 'purchase' && !isReturn) {
+            debit = total;
+          } else if (type == 'sale' && !isReturn) {
+            credit = total;
+          } else if (isReturn) {
+            if (type == 'purchase') credit = total;
+            else debit = total;
+          } else {
+            debit = total;
+          }
+        } else if (source == 'voucher') {
+          final vType = m['voucher_type'] as String? ?? '';
+          final totalAmount = (m['total_amount'] as num?)?.toDouble() ?? 0.0;
+          dateStr = m['date'] as String? ?? m['created_at'] as String? ?? '';
+          description = m['description'] as String? ?? _getVoucherTypeAr(vType);
+          typeAr = _getVoucherTypeAr(vType);
+
+          switch (vType) {
+            case 'payment': credit = totalAmount; break;
+            case 'receipt': debit = totalAmount; break;
+            default: credit = totalAmount;
+          }
+        }
+
+        return {
+          'date': dateStr,
+          'type_ar': typeAr,
+          'description': description,
+          'debit': debit,
+          'credit': credit,
+        };
+      }).toList();
+
+      await AccountStatementPdfGenerator.printAccountStatement(
+        entityName: supplier.name,
+        entityType: 'supplier',
+        movements: movements,
+        totalDebit: _totalDebit,
+        totalCredit: _totalCredit,
+        netBalance: _computeNetPosition(),
+        balanceLabel: Supplier.getDynamicBalanceLabel(_computeNetPosition(), supplier.balanceType),
+        phone: supplier.phone,
+        currency: supplier.currency ?? 'YER',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في إنشاء كشف الحساب: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  /// Print supplier statement via Bluetooth thermal printer.
+  Future<void> _printBluetoothStatement() async {
+    final printerService = BluetoothPrinterService.instance;
+    final supplier = _freshSupplier ?? widget.supplier;
+
+    if (!printerService.isConnected) {
+      final connected = await printerService.autoConnect();
+      if (!connected) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
+              backgroundColor: AppColors.warning,
+              action: SnackBarAction(
+                label: 'الإعدادات',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BluetoothPrinterSettingsScreen()),
+                  );
+                },
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    try {
+      await printerService.printCustomerStatement({
+        'name': supplier.name,
+        'balance': _computeNetPosition().abs(),
+        'balance_type': _computeNetPosition() >= 0 ? 'credit' : 'debit',
+        'currency': supplier.currency ?? 'YER',
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إرسال كشف الحساب للطابعة الحرارية'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  void _exportToExcel() async {
+    final supplier = _freshSupplier ?? widget.supplier;
+    try {
+      // Convert supplier movements to the format expected by ExcelExporter
+      final movements = _filteredMovements.map((m) {
+        final source = m['_source'] as String? ?? '';
+        double debit = 0.0;
+        double credit = 0.0;
+        String typeAr = '';
+        String dateStr = '';
+        String description = '';
+
+        if (source == 'invoice') {
+          final type = m['type'] as String? ?? '';
+          final isReturn = (m['is_return'] as num?)?.toInt() == 1;
+          final total = (m['total'] as num?)?.toDouble() ?? 0.0;
+          dateStr = m['created_at'] as String? ?? '';
+          description = _getInvoiceTypeAr(type, isReturn);
+          typeAr = description;
+
+          if (type == 'purchase' && !isReturn) {
+            debit = total;
+          } else if (type == 'sale' && !isReturn) {
+            credit = total;
+          } else if (isReturn) {
+            if (type == 'purchase') credit = total;
+            else debit = total;
+          } else {
+            debit = total;
+          }
+        } else if (source == 'voucher') {
+          final vType = m['voucher_type'] as String? ?? '';
+          final totalAmount = (m['total_amount'] as num?)?.toDouble() ?? 0.0;
+          dateStr = m['date'] as String? ?? m['created_at'] as String? ?? '';
+          description = m['description'] as String? ?? _getVoucherTypeAr(vType);
+          typeAr = _getVoucherTypeAr(vType);
+
+          switch (vType) {
+            case 'payment': credit = totalAmount; break;
+            case 'receipt': debit = totalAmount; break;
+            default: credit = totalAmount;
+          }
+        }
+
+        return {
+          'date': dateStr,
+          'type_ar': typeAr,
+          'description': description,
+          'debit': debit,
+          'credit': credit,
+        };
+      }).toList();
+
+      await ExcelExporter.exportAccountStatementToExcel(
+        entityName: supplier.name,
+        entityType: 'مورد',
+        movements: movements,
+        totalDebit: _totalDebit,
+        totalCredit: _totalCredit,
+        netBalance: _computeNetPosition(),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تصدير إكسل: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  String _getInvoiceTypeAr(String type, bool isReturn) {
+    if (type == 'purchase' && !isReturn) return 'فاتورة مشتريات';
+    if (type == 'purchase' && isReturn) return 'مرتجع مشتريات';
+    if (type == 'sale' && !isReturn) return 'فاتورة مبيعات';
+    if (type == 'sale' && isReturn) return 'مرتجع مبيعات';
+    return 'فاتورة';
+  }
+
+  String _getVoucherTypeAr(String vType) {
+    switch (vType) {
+      case 'receipt': return 'سند قبض';
+      case 'payment': return 'سند صرف';
+      case 'settlement': return 'قيد عام';
+      case 'compound': return 'قيد متعدد';
+      default: return 'سند';
+    }
   }
 
   @override
@@ -358,20 +914,12 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
             IconButton(
               icon: const Icon(Icons.print),
               tooltip: 'طباعة',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('جاري التحضير للطباعة...')),
-                );
-              },
+              onPressed: _printReport,
             ),
             IconButton(
               icon: const Icon(Icons.table_chart),
               tooltip: 'تصدير Excel',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('جاري تصدير Excel...')),
-                );
-              },
+              onPressed: _exportToExcel,
             ),
           ],
           bottom: TabBar(
@@ -435,11 +983,25 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                   ),
                 ],
               ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _navigateToCreateVoucher(),
-          backgroundColor: AppColors.primary,
-          tooltip: 'إضافة سند',
-          child: const Icon(Icons.add, color: Colors.white),
+        floatingActionButton: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingActionButton.small(
+              heroTag: 'receipt',
+              onPressed: () => _showAddVoucherDialog('receipt'),
+              backgroundColor: AppColors.success,
+              tooltip: 'سند قبض',
+              child: const Icon(Icons.assignment_turned_in, color: Colors.white, size: 20),
+            ),
+            const SizedBox(height: 8),
+            FloatingActionButton.small(
+              heroTag: 'payment',
+              onPressed: () => _showAddVoucherDialog('payment'),
+              backgroundColor: AppColors.error,
+              tooltip: 'سند صرف',
+              child: const Icon(Icons.assignment_return, color: Colors.white, size: 20),
+            ),
+          ],
         ),
       ),
     );

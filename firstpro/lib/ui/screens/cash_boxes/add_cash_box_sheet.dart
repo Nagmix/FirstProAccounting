@@ -321,7 +321,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 const SizedBox(height: 14),
               ],
 
-              // ── Initial balance (only for new cash boxes) ──
+              // ── Opening balance (only for new cash boxes) ──
               if (!_isEdit || _type == 'cash_box') ...[
                 TextFormField(
                   controller: _balanceController,
@@ -329,15 +329,15 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                   textInputAction: TextInputAction.next,
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
                   decoration: InputDecoration(
-                    labelText: _type == 'cash_box' ? 'الرصيد الأولي' : 'الرصيد',
+                    labelText: _type == 'cash_box' ? 'الرصيد الافتتاحي' : 'الرصيد',
                     prefixIcon: const Icon(Icons.calculate),
                     suffixText: currencySymbol,
                   ),
                 ),
                 const SizedBox(height: 10),
 
-                // ── Balance type: له / عليه ──
-                Text('حالة الرصيد', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                // ── Opening balance direction: له / عليه ──
+                Text('اتجاه الرصيد الافتتاحي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary)),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -364,6 +364,31 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                       ),
                     ),
                   ],
+                ),
+                // Note: This only applies to the opening balance
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: AppColors.warning),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'هذا الخيار خاص بالرصيد الافتتاحي فقط وليس حالة دائمة للصندوق',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
               ],

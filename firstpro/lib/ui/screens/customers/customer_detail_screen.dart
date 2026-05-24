@@ -4,6 +4,8 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
+import '../../../core/utils/account_statement_pdf_generator.dart';
+import '../../../core/utils/excel_exporter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/customer_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
@@ -627,7 +629,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     );
   }
 
-  // ── Print / Export placeholders ─────────────────────────────────
+  // ── Print / Export ─────────────────────────────────────────────
   void _printReport() {
     // Show print options bottom sheet
     showModalBottomSheet(
@@ -650,16 +652,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.print, color: AppColors.primary),
+                  child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
                 ),
                 title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: const Text('إنشاء ملف PDF للمتابعة'),
+                subtitle: const Text('إنشاء ملف PDF لكشف الحساب'),
                 trailing: const Icon(Icons.arrow_back_ios, size: 16),
                 onTap: () {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('جاري تحضير التقرير للطباعة...'), backgroundColor: AppColors.info),
-                  );
+                  _generatePdfStatement();
                 },
               ),
               const SizedBox(height: 8),
@@ -685,6 +685,30 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         ),
       ),
     );
+  }
+
+  /// Generate PDF account statement for the customer.
+  Future<void> _generatePdfStatement() async {
+    final customer = _freshCustomer ?? widget.customer;
+    try {
+      await AccountStatementPdfGenerator.printAccountStatement(
+        entityName: customer.name,
+        entityType: 'customer',
+        movements: _filteredMovements,
+        totalDebit: _totalDebit,
+        totalCredit: _totalCredit,
+        netBalance: _netBalance,
+        balanceLabel: _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
+        phone: customer.phone,
+        currency: customer.currency,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في إنشاء كشف الحساب: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   /// Print customer statement via Bluetooth thermal printer.
@@ -748,11 +772,24 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
   }
 
-  void _exportToExcel() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('جاري تصدير البيانات إلى إكسل...'), backgroundColor: AppColors.info),
-    );
-    // TODO: Implement Excel export using syncfusion or excel package
+  void _exportToExcel() async {
+    final customer = _freshCustomer ?? widget.customer;
+    try {
+      await ExcelExporter.exportAccountStatementToExcel(
+        entityName: customer.name,
+        entityType: 'عميل',
+        movements: _filteredMovements,
+        totalDebit: _totalDebit,
+        totalCredit: _totalCredit,
+        netBalance: _netBalance,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تصدير إكسل: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   // ── Currency symbol helper ──────────────────────────────────────
