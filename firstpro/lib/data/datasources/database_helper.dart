@@ -3748,8 +3748,8 @@ class DatabaseHelper {
           // تحديث رصيد الحساب
           final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
           if (account.isNotEmpty) {
-            final currentBalance = (account.first]['balance'] as num?)?.toDouble() ?? 0.0;
-            final balanceType = account.first]['balance_type'] as String? ?? 'credit';
+            final currentBalance = (account.first['balance'] as num?)?.toDouble() ?? 0.0;
+            final balanceType = account.first['balance_type'] as String? ?? 'credit';
             double newBalance;
             if (balanceType == 'credit') {
               newBalance = currentBalance + credit - debit;
@@ -3766,7 +3766,7 @@ class DatabaseHelper {
       if (cashBoxId != null) {
         final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
         if (cashBox.isNotEmpty) {
-          final currentBalance = (cashBox.first]['balance'] as num?)?.toDouble() ?? 0.0;
+          final currentBalance = (cashBox.first['balance'] as num?)?.toDouble() ?? 0.0;
           final totalAmount = (voucherMap['total_amount'] as num?)?.toDouble() ?? 0.0;
           final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
           double newCashBalance;
