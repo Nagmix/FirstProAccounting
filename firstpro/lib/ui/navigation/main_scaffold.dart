@@ -68,6 +68,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     _DrawerMenuItem(icon: Icons.swap_horiz, label: 'تحويل بين الصناديق', route: AppConstants.cashTransfers, color: Color(0xFF1E88E5)),
     _DrawerMenuItem(icon: Icons.savings, label: 'تتبع الديون', route: AppConstants.debts, color: Color(0xFFE65100)),
     // ───────────────────────────────────────────────────────────────
+    _DrawerMenuItem(icon: Icons.receipt_long, label: 'السندات', route: AppConstants.vouchers, color: Color(0xFF7B1FA2)),
     _DrawerMenuItem(icon: Icons.local_shipping, label: 'الموردين', route: AppConstants.suppliers, color: AppColors.info),
     _DrawerMenuItem(icon: Icons.warehouse, label: 'المستودعات', route: AppConstants.warehouses, color: AppColors.secondaryDark),
     _DrawerMenuItem(icon: Icons.pie_chart, label: 'دليل الحسابات', route: AppConstants.chartOfAccounts, color: AppColors.primary),
@@ -548,6 +549,13 @@ class _MoreTab extends StatelessWidget {
             subtitle: 'متابعة الديون المستحقة والمطلوبة',
             color: const Color(0xFFE65100),
             onTap: () => AppRouter.push(context, AppConstants.debts),
+          ),
+          _MoreTile(
+            icon: Icons.receipt_long,
+            title: 'السندات',
+            subtitle: 'سندات القبض والصرف والتسوية',
+            color: const Color(0xFF7B1FA2),
+            onTap: () => AppRouter.push(context, AppConstants.vouchers),
           ),
           _MoreTile(
             icon: Icons.pie_chart,

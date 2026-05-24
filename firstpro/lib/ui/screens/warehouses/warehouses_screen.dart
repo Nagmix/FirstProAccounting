@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'add_warehouse_sheet.dart';
 
@@ -289,6 +290,41 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
+      ),
+      // إضافة أزرار التحويل المخزني والجرد
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, AppConstants.stockTransfer),
+                  icon: const Icon(Icons.swap_horiz, size: 18),
+                  label: const Text('تحويل مخزني'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, AppConstants.stocktaking),
+                  icon: const Icon(Icons.fact_check, size: 18),
+                  label: const Text('جرد المخازن'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.secondaryDark,
+                    side: BorderSide(color: AppColors.secondaryDark),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

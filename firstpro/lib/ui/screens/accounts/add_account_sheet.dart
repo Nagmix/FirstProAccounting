@@ -5,7 +5,9 @@ import '../../../data/models/account_model.dart';
 
 class AddAccountSheet extends StatefulWidget {
   final Account? existing;
-  const AddAccountSheet({super.key, this.existing});
+  final List<Account> allAccounts;
+
+  const AddAccountSheet({super.key, this.existing, this.allAccounts = const []});
 
   @override
   State<AddAccountSheet> createState() => _AddAccountSheetState();
@@ -18,6 +20,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   AccountType _selectedType = AccountType.ASSET;
   int? _selectedCashBoxId;
+  int? _selectedParentId;
   bool _isSaving = false;
 
   List<Map<String, dynamic>> _cashBoxes = [];
@@ -32,6 +35,28 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   bool get _isEdit => widget.existing != null;
 
+  /// Get accounts that can be parent accounts (excluding self and descendants to avoid cycles)
+  List<Account> get _parentCandidates {
+    if (_isEdit && widget.existing != null) {
+      // Collect all descendant IDs to exclude
+      final descendantIds = <int>{};
+      void collectDescendants(int parentId) {
+        for (final a in widget.allAccounts) {
+          if (a.parentId == parentId && a.id != null) {
+            descendantIds.add(a.id!);
+            collectDescendants(a.id!);
+          }
+        }
+      }
+      if (widget.existing!.id != null) {
+        descendantIds.add(widget.existing!.id!);
+        collectDescendants(widget.existing!.id!);
+      }
+      return widget.allAccounts.where((a) => a.id != null && !descendantIds.contains(a.id)).toList();
+    }
+    return widget.allAccounts;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +65,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
       _nameController.text = widget.existing!.nameAr;
       _codeController.text = widget.existing!.accountCode;
       _selectedCashBoxId = widget.existing!.linkedCashBoxId;
+      _selectedParentId = widget.existing!.parentId;
     }
     _loadCashBoxes();
     _generateCode();
@@ -71,12 +97,11 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
-    final now = DateTime.now().toIso8601String();
-    // ignore: unused_local_variable
     final account = Account(
       id: widget.existing?.id,
       nameAr: _nameController.text.trim(),
       nameEn: _nameController.text.trim(),
+      parentId: _selectedParentId,
       accountCode: _codeController.text.trim(),
       accountType: _selectedType,
       currency: 'YER',
@@ -172,6 +197,33 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'رقم الترتيب مطلوب' : null,
               ),
+              const SizedBox(height: 14),
+
+              // Parent account dropdown
+              Builder(builder: (context) {
+                // Ensure selected value exists in items to avoid assertion error
+                final validParentIds = _parentCandidates.map((a) => a.id).toSet();
+                final effectiveParentId = (_selectedParentId != null && validParentIds.contains(_selectedParentId))
+                    ? _selectedParentId : null;
+                return DropdownButtonFormField<int>(
+                  value: effectiveParentId,
+                  decoration: const InputDecoration(
+                    labelText: 'الحساب الأب',
+                    prefixIcon: Icon(Icons.account_tree),
+                  ),
+                  items: [
+                    const DropdownMenuItem<int>(value: null, child: Text('حساب رئيسي (بدون أب)')),
+                    ..._parentCandidates.map((account) => DropdownMenuItem<int>(
+                      value: account.id,
+                      child: Text(
+                        '${account.accountCode} - ${account.nameAr}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
+                  ],
+                  onChanged: (v) => setState(() => _selectedParentId = v),
+                );
+              }),
               const SizedBox(height: 14),
 
               // Linked cash box

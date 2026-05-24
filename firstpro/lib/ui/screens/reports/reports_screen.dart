@@ -4,6 +4,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../widgets/bar_chart_widget.dart';
+import '../../../core/constants/app_constants.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -33,6 +34,11 @@ class _ReportsScreenState extends State<ReportsScreen>
     'المخزون',
     'ديون العملاء',
     'ديون الموردين',
+    'حسابات بدون حركة',
+    'ربح الفواتير',
+    'حركة المخزون',
+    'تكلفة المخزون',
+    'العمليات اليومية',
   ];
 
   static const List<String> _currencyOptions = ['الكل', 'ر.ي', 'ر.س', r'$'];
@@ -65,6 +71,12 @@ class _ReportsScreenState extends State<ReportsScreen>
   List<_InventoryItem> _inventoryItems = [];
   double _totalDebit = 0.0;
   double _totalCredit = 0.0;
+
+  // بيانات التقارير الجديدة
+  List<Map<String, dynamic>> _accountsWithoutMovements = [];
+  List<Map<String, dynamic>> _invoiceProfitItems = [];
+  List<Map<String, dynamic>> _inventoryMovementItems = [];
+  List<Map<String, dynamic>> _inventoryCostItems = [];
 
   @override
   void initState() {
@@ -488,6 +500,25 @@ class _ReportsScreenState extends State<ReportsScreen>
 
       final grossProfit = totalRevenue - totalExpenses;
 
+      // ── التقارير الإضافية ──
+      // حسابات بدون حركة
+      final accountsWithoutMovements = await dbHelper.getAccountsWithoutMovements();
+
+      // ربح الفواتير
+      final invoiceProfitItems = await dbHelper.getInvoiceProfitReport(
+        startDate: _dateFrom,
+        endDate: _dateTo,
+      );
+
+      // حركة المخزون
+      final inventoryMovementItems = await dbHelper.getInventoryMovementReport(
+        startDate: _dateFrom,
+        endDate: _dateTo,
+      );
+
+      // تكلفة المخزون
+      final inventoryCostItems = await dbHelper.getInventoryCostReport();
+
       if (mounted) {
         setState(() {
           _totalRevenue = totalRevenue;
@@ -508,6 +539,10 @@ class _ReportsScreenState extends State<ReportsScreen>
           _debtItems = debtItems;
           _cashBoxMovements = cashBoxMovements;
           _inventoryItems = inventoryItems;
+          _accountsWithoutMovements = accountsWithoutMovements;
+          _invoiceProfitItems = invoiceProfitItems;
+          _inventoryMovementItems = inventoryMovementItems;
+          _inventoryCostItems = inventoryCostItems;
           _isLoading = false;
         });
       }
@@ -640,6 +675,16 @@ class _ReportsScreenState extends State<ReportsScreen>
         return _buildPurchasesReport(theme, isDark);
       case 'الأرباح والخسائر':
         return _buildProfitLossReport(theme, isDark);
+      case 'حسابات بدون حركة':
+        return _buildAccountsWithoutMovementsReport(theme, isDark);
+      case 'ربح الفواتير':
+        return _buildInvoiceProfitReport(theme, isDark);
+      case 'حركة المخزون':
+        return _buildInventoryMovementReport(theme, isDark);
+      case 'تكلفة المخزون':
+        return _buildInventoryCostReport(theme, isDark);
+      case 'العمليات اليومية':
+        return _buildDailyOperationsLink(theme, isDark);
       default:
         return _buildSalesReport(theme, isDark);
     }
@@ -1939,6 +1984,588 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
   }
 }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ACCOUNTS WITHOUT MOVEMENTS (حسابات بدون حركة)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildAccountsWithoutMovementsReport(ThemeData theme, bool isDark) {
+    if (_accountsWithoutMovements.isEmpty) {
+      return _buildEmptyState(theme, Icons.account_balance, 'جميع الحسابات لديها حركات');
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ملخص
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                AppColors.warning.withValues(alpha: 0.08),
+                AppColors.secondary.withValues(alpha: 0.08),
+              ]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.account_balance, size: 36, color: AppColors.warning),
+                const SizedBox(height: 8),
+                Text('حسابات بدون حركة',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('${_accountsWithoutMovements.length} حساب',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800, color: AppColors.warning)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // قائمة الحسابات
+          ..._accountsWithoutMovements.map((account) {
+            final accountType = account['account_type'] as String? ?? '';
+            String typeLabel;
+            Color typeColor;
+            switch (accountType) {
+              case 'ASSET':
+                typeLabel = 'أصول';
+                typeColor = AppColors.primary;
+                break;
+              case 'LIABILITY':
+                typeLabel = 'خصوم';
+                typeColor = AppColors.error;
+                break;
+              case 'COST':
+                typeLabel = 'تكاليف';
+                typeColor = AppColors.warning;
+                break;
+              case 'REVENUE':
+                typeLabel = 'إيرادات';
+                typeColor = AppColors.success;
+                break;
+              case 'EXPENSE':
+                typeLabel = 'مصاريف';
+                typeColor = const Color(0xFF9C27B0);
+                break;
+              default:
+                typeLabel = accountType;
+                typeColor = AppColors.textSecondary;
+            }
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                leading: Container(
+                  width: 42, height: 42,
+                  decoration: BoxDecoration(
+                    color: typeColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.account_balance, color: typeColor, size: 20),
+                ),
+                title: Text(
+                  account['name_ar'] as String? ?? '',
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${account['account_code'] ?? ''} | ${account['currency'] ?? 'YER'}',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+                ),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: typeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(typeLabel,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: typeColor,
+                        fontWeight: FontWeight.w700,
+                      )),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  INVOICE PROFIT REPORT (ربح الفواتير)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildInvoiceProfitReport(ThemeData theme, bool isDark) {
+    if (_invoiceProfitItems.isEmpty) {
+      return _buildEmptyState(theme, Icons.trending_up, 'لا توجد بيانات أرباح');
+    }
+    final totalProfit = _invoiceProfitItems.fold(0.0,
+        (s, item) => s + ((item['profit'] as num?)?.toDouble() ?? 0.0));
+    final totalCost = _invoiceProfitItems.fold(0.0,
+        (s, item) => s + ((item['cost_total'] as num?)?.toDouble() ?? 0.0));
+    final totalRevenue = _invoiceProfitItems.fold(0.0,
+        (s, item) => s + ((item['sale_total'] as num?)?.toDouble() ?? 0.0));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ملخص
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                (totalProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
+                (totalProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.03),
+              ]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Icon(totalProfit >= 0 ? Icons.trending_up : Icons.trending_down,
+                    size: 36, color: totalProfit >= 0 ? AppColors.success : AppColors.error),
+                const SizedBox(height: 8),
+                Text('إجمالي الربح',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(CurrencyFormatter.formatWithSymbol(totalProfit),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: totalProfit >= 0 ? AppColors.success : AppColors.error)),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Column(
+                      children: [
+                        Text('إجمالي المبيعات', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                        Text(CurrencyFormatter.formatCompactWithSymbol(totalRevenue),
+                            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+                      ],
+                    ),
+                    Container(width: 1, height: 30, color: AppColors.divider),
+                    Column(
+                      children: [
+                        Text('إجمالي التكلفة', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                        Text(CurrencyFormatter.formatCompactWithSymbol(totalCost),
+                            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // قائمة الفواتير
+          ..._invoiceProfitItems.map((item) {
+            final profit = (item['profit'] as num?)?.toDouble() ?? 0.0;
+            final saleTotal = (item['sale_total'] as num?)?.toDouble() ?? 0.0;
+            final costTotal = (item['cost_total'] as num?)?.toDouble() ?? 0.0;
+            final invoiceType = item['type'] as String? ?? '';
+            final isSale = invoiceType == 'sale' || invoiceType == 'pos';
+            final profitPercent = saleTotal > 0 ? (profit / saleTotal * 100) : 0.0;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: (isSale ? AppColors.success : AppColors.error).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            isSale ? Icons.receipt_long_outlined : Icons.shopping_cart_outlined,
+                            color: isSale ? AppColors.success : AppColors.error, size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['entity_name'] as String? ?? '',
+                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                '#${(item['invoice_id'] as String?)?.substring(0, (item['invoice_id'] as String).length > 10 ? 10 : (item['invoice_id'] as String).length) ?? ''}',
+                                style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              CurrencyFormatter.format(profit),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: profit >= 0 ? AppColors.success : AppColors.error,
+                              ),
+                            ),
+                            Text(
+                              '${profitPercent.toStringAsFixed(1)}%',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: profit >= 0 ? AppColors.success : AppColors.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text('المبيعات: ${CurrencyFormatter.format(saleTotal)}',
+                              style: theme.textTheme.labelSmall?.copyWith(color: AppColors.success)),
+                        ),
+                        Expanded(
+                          child: Text('التكلفة: ${CurrencyFormatter.format(costTotal)}',
+                              style: theme.textTheme.labelSmall?.copyWith(color: AppColors.error)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  INVENTORY MOVEMENT REPORT (حركة المخزون)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildInventoryMovementReport(ThemeData theme, bool isDark) {
+    if (_inventoryMovementItems.isEmpty) {
+      return _buildEmptyState(theme, Icons.inventory, 'لا توجد حركات مخزون');
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ملخص
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                AppColors.info.withValues(alpha: 0.08),
+                AppColors.primary.withValues(alpha: 0.08),
+              ]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.inventory, size: 36, color: AppColors.info),
+                const SizedBox(height: 8),
+                Text('حركة المخزون',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('${_inventoryMovementItems.length} منتج',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800, color: AppColors.info)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // قائمة المنتجات
+          ..._inventoryMovementItems.map((item) {
+            final qtyIn = (item['qty_in'] as num?)?.toDouble() ?? 0.0;
+            final qtyOut = (item['qty_out'] as num?)?.toDouble() ?? 0.0;
+            final currentStock = (item['current_stock'] as num?)?.toDouble() ?? 0.0;
+            final totalCost = (item['total_cost'] as num?)?.toDouble() ?? 0.0;
+            final totalRevenue = (item['total_revenue'] as num?)?.toDouble() ?? 0.0;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 42, height: 42,
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.inventory_2, color: AppColors.info, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['name_ar'] as String? ?? '',
+                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                '${item['item_code'] ?? ''} | المخزون: ${currentStock.toStringAsFixed(currentStock == currentStock.roundToDouble() ? 0 : 1)}',
+                                style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.south_east, color: AppColors.success, size: 16),
+                                Text('وارد',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                        color: AppColors.success, fontWeight: FontWeight.w700)),
+                                Text(qtyIn.toStringAsFixed(qtyIn == qtyIn.roundToDouble() ? 0 : 1),
+                                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800)),
+                                Text(CurrencyFormatter.formatCompactWithSymbol(totalCost),
+                                    style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.north_west, color: AppColors.error, size: 16),
+                                Text('صادر',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                        color: AppColors.error, fontWeight: FontWeight.w700)),
+                                Text(qtyOut.toStringAsFixed(qtyOut == qtyOut.roundToDouble() ? 0 : 1),
+                                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800)),
+                                Text(CurrencyFormatter.formatCompactWithSymbol(totalRevenue),
+                                    style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  INVENTORY COST REPORT (تكلفة المخزون)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildInventoryCostReport(ThemeData theme, bool isDark) {
+    if (_inventoryCostItems.isEmpty) {
+      return _buildEmptyState(theme, Icons.attach_money, 'لا توجد أصناف في المخزون');
+    }
+    final totalCostValue = _inventoryCostItems.fold(0.0,
+        (s, item) => s + ((item['stock_cost_value'] as num?)?.toDouble() ?? 0.0));
+    final totalSellValue = _inventoryCostItems.fold(0.0,
+        (s, item) => s + ((item['stock_sell_value'] as num?)?.toDouble() ?? 0.0));
+    final potentialProfit = totalSellValue - totalCostValue;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ملخص
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                AppColors.primary.withValues(alpha: 0.08),
+                AppColors.secondary.withValues(alpha: 0.08),
+              ]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.attach_money, size: 36, color: AppColors.primary),
+                const SizedBox(height: 8),
+                Text('تكلفة المخزون',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(CurrencyFormatter.formatWithSymbol(totalCostValue),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800, color: AppColors.primary)),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Column(
+                      children: [
+                        Text('قيمة البيع', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                        Text(CurrencyFormatter.formatCompactWithSymbol(totalSellValue),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700, color: AppColors.success)),
+                      ],
+                    ),
+                    Container(width: 1, height: 30, color: AppColors.divider),
+                    Column(
+                      children: [
+                        Text('ربح محتمل', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                        Text(CurrencyFormatter.formatCompactWithSymbol(potentialProfit),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: potentialProfit >= 0 ? AppColors.success : AppColors.error)),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // قائمة المنتجات
+          ..._inventoryCostItems.map((item) {
+            final stock = (item['current_stock'] as num?)?.toDouble() ?? 0.0;
+            final costPrice = (item['cost_price'] as num?)?.toDouble() ?? 0.0;
+            final sellPrice = (item['sell_price'] as num?)?.toDouble() ?? 0.0;
+            final costValue = (item['stock_cost_value'] as num?)?.toDouble() ?? 0.0;
+            final sellValue = (item['stock_sell_value'] as num?)?.toDouble() ?? 0.0;
+            final itemProfit = sellValue - costValue;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                leading: Container(
+                  width: 42, height: 42,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.inventory_2, color: AppColors.primary, size: 20),
+                ),
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item['name_ar'] as String? ?? '',
+                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: Text(
+                  'الكمية: ${stock.toStringAsFixed(stock == stock.roundToDouble() ? 0 : 1)} | تكلفة: ${CurrencyFormatter.format(costPrice)} | بيع: ${CurrencyFormatter.format(sellPrice)}',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+                ),
+                trailing: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(CurrencyFormatter.format(costValue),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    Text(
+                      'ربح: ${CurrencyFormatter.format(itemProfit)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: itemProfit >= 0 ? AppColors.success : AppColors.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  DAILY OPERATIONS LINK (العمليات اليومية)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildDailyOperationsLink(ThemeData theme, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          Icon(Icons.today, size: 80, color: AppColors.primary.withValues(alpha: 0.5)),
+          const SizedBox(height: 24),
+          Text(
+            'العمليات اليومية',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'عرض جميع الحركات المالية ليوم محدد في مكان واحد\nفواتير المبيعات والمشتريات والسندات والمصروفات والتحويلات',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed(AppConstants.dailyOperations);
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('فتح شاشة العمليات اليومية'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
 // ═══════════════════════════════════════════════════════════════════
 //  DATA CLASSES

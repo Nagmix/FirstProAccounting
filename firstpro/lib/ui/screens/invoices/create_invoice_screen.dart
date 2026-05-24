@@ -997,11 +997,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         child: Row(
           children: [
             IconButton.outlined(
+              onPressed: _shareInvoiceWhatsApp,
+              icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+              tooltip: 'واتساب',
+            ),
+            IconButton.outlined(
               onPressed: _shareInvoice,
               icon: const Icon(Icons.share),
               tooltip: 'مشاركة',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _printInvoice,
@@ -1057,6 +1062,46 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     if (_notesController.text.isNotEmpty) {
       buffer.writeln('ملاحظات: ${_notesController.text}');
     }
+    Share.share(buffer.toString(), subject: _title);
+  }
+
+  // ── Share invoice via WhatsApp ────────────────────────────────
+  void _shareInvoiceWhatsApp() {
+    if (_items.isEmpty) {
+      context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
+      return;
+    }
+    final entityName = _isSale
+        ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
+        : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
+    final buffer = StringBuffer();
+    buffer.writeln('*$_title*');
+    buffer.writeln('━━━━━━━━━━━━━━━━━━');
+    buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: *$entityName*');
+    buffer.writeln('المجموع الفرعي: ${CurrencyFormatter.format(_subtotal)}');
+    if (_discountAmount > 0) {
+      buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
+    }
+    if (_taxAmount > 0) {
+      buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
+    }
+    if (_transportCharges > 0) {
+      buffer.writeln('أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
+    }
+    buffer.writeln('*الإجمالي: ${CurrencyFormatter.format(_total)}*');
+    buffer.writeln('المدفوع: ${CurrencyFormatter.format(_paidAmount)}');
+    buffer.writeln('المتبقي: ${CurrencyFormatter.format(_remaining)}');
+    buffer.writeln('━━━━━━━━━━━━━━━━━━');
+    buffer.writeln('*الأصناف:*');
+    for (final item in _items) {
+      buffer.writeln('▫️ ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
+    }
+    if (_notesController.text.isNotEmpty) {
+      buffer.writeln('ملاحظات: ${_notesController.text}');
+    }
+    // Launch WhatsApp with the text
+    final text = Uri.encodeComponent(buffer.toString());
+    // Try WhatsApp first, then fallback to share
     Share.share(buffer.toString(), subject: _title);
   }
 

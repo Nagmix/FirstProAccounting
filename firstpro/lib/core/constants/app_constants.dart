@@ -11,7 +11,7 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 17;
+  static const int dbVersion = 19;
 
   // ── Locale & currency ─────────────────────────────────────────
   static const String currency = 'ر.ي';
@@ -127,4 +127,15 @@ class AppConstants {
   static const String debts = '/debts';
   static const String appLock = '/app-lock';
   static const String notifications = '/notifications';
+  static const String vouchers = '/vouchers';
+  static const String newVoucher = '/vouchers/new';
+  static const String dailyOperations = '/daily-operations';
+  static const String stockTransfer = '/stock-transfer';
+  static const String stocktaking = '/stocktaking';
+
+  // ── Voucher types ────────────────────────────────────────────
+  static const String voucherReceipt = 'receipt';
+  static const String voucherPayment = 'payment';
+  static const String voucherSettlement = 'settlement';
+  static const String voucherCompound = 'compound';
 }

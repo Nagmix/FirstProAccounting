@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 17;
+  static const int _databaseVersion = 19;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -599,6 +599,105 @@ class DatabaseHelper {
         timestamp TEXT NOT NULL
       )
     ''');
+
+    // Vouchers (السندات) - v18
+    await db.execute('''
+      CREATE TABLE vouchers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        voucher_number TEXT NOT NULL,
+        voucher_type TEXT NOT NULL,
+        date TEXT NOT NULL,
+        description TEXT,
+        currency TEXT NOT NULL DEFAULT 'YER',
+        total_amount REAL NOT NULL DEFAULT 0.0,
+        cash_box_id INTEGER,
+        is_posted INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+      )
+    ''');
+
+    // Voucher line items (بنود السند) - v18
+    await db.execute('''
+      CREATE TABLE voucher_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        voucher_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,
+        debit REAL NOT NULL DEFAULT 0.0,
+        credit REAL NOT NULL DEFAULT 0.0,
+        description TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (voucher_id) REFERENCES vouchers (id) ON DELETE CASCADE,
+        FOREIGN KEY (account_id) REFERENCES accounts (id)
+      )
+    ''');
+
+    // Stock Transfers (تحويل مخزني) - v19
+    await db.execute('''
+      CREATE TABLE stock_transfers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transfer_number TEXT NOT NULL,
+        from_warehouse_id INTEGER NOT NULL,
+        to_warehouse_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity REAL NOT NULL,
+        notes TEXT,
+        date TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (from_warehouse_id) REFERENCES warehouses (id),
+        FOREIGN KEY (to_warehouse_id) REFERENCES warehouses (id),
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    ''');
+
+    // Stocktaking Sessions (جرد المخازن) - v19
+    await db.execute('''
+      CREATE TABLE stocktaking_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_number TEXT NOT NULL,
+        warehouse_id INTEGER,
+        date TEXT NOT NULL,
+        total_items INTEGER NOT NULL DEFAULT 0,
+        matched_items INTEGER NOT NULL DEFAULT 0,
+        mismatched_items INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'draft',
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+      )
+    ''');
+
+    // Stocktaking Items (عناصر الجرد) - v19
+    await db.execute('''
+      CREATE TABLE stocktaking_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        system_quantity REAL NOT NULL,
+        actual_quantity REAL NOT NULL,
+        difference REAL NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES stocktaking_sessions (id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    ''');
+
+    // v18 indexes
+    await db.execute('CREATE INDEX idx_vouchers_voucher_number ON vouchers (voucher_number)');
+    await db.execute('CREATE INDEX idx_vouchers_voucher_type ON vouchers (voucher_type)');
+    await db.execute('CREATE INDEX idx_vouchers_date ON vouchers (date)');
+    await db.execute('CREATE INDEX idx_vouchers_created_at ON vouchers (created_at)');
+    await db.execute('CREATE INDEX idx_voucher_items_voucher_id ON voucher_items (voucher_id)');
+    await db.execute('CREATE INDEX idx_voucher_items_account_id ON voucher_items (account_id)');
+    // v19 indexes
+    await db.execute('CREATE INDEX idx_stock_transfers_number ON stock_transfers (transfer_number)');
+    await db.execute('CREATE INDEX idx_stock_transfers_from_wh ON stock_transfers (from_warehouse_id)');
+    await db.execute('CREATE INDEX idx_stock_transfers_to_wh ON stock_transfers (to_warehouse_id)');
+    await db.execute('CREATE INDEX idx_stock_transfers_product ON stock_transfers (product_id)');
+    await db.execute('CREATE INDEX idx_stock_transfers_date ON stock_transfers (date)');
+    await db.execute('CREATE INDEX idx_stocktaking_sessions_number ON stocktaking_sessions (session_number)');
+    await db.execute('CREATE INDEX idx_stocktaking_sessions_wh ON stocktaking_sessions (warehouse_id)');
+    await db.execute('CREATE INDEX idx_stocktaking_items_session ON stocktaking_items (session_id)');
 
     // Seed default data
     await _seedCurrencies(db);
@@ -1241,6 +1340,109 @@ class DatabaseHelper {
           timestamp TEXT NOT NULL
         )
       ''');
+    }
+
+    if (oldVersion < 18) {
+      // Vouchers (السندات) - v18
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS vouchers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          voucher_number TEXT NOT NULL,
+          voucher_type TEXT NOT NULL,
+          date TEXT NOT NULL,
+          description TEXT,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          total_amount REAL NOT NULL DEFAULT 0.0,
+          cash_box_id INTEGER,
+          is_posted INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+        )
+      ''');
+
+      // Voucher line items (بنود السند) - v18
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS voucher_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          voucher_id INTEGER NOT NULL,
+          account_id INTEGER NOT NULL,
+          debit REAL NOT NULL DEFAULT 0.0,
+          credit REAL NOT NULL DEFAULT 0.0,
+          description TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (voucher_id) REFERENCES vouchers (id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts (id)
+        )
+      ''');
+
+      // Voucher indexes
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_vouchers_voucher_number ON vouchers (voucher_number)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_vouchers_voucher_type ON vouchers (voucher_type)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_vouchers_date ON vouchers (date)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_vouchers_created_at ON vouchers (created_at)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_voucher_items_voucher_id ON voucher_items (voucher_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_voucher_items_account_id ON voucher_items (account_id)');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v19 Migration: Stock Transfers & Stocktaking
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 19) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stock_transfers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          transfer_number TEXT NOT NULL,
+          from_warehouse_id INTEGER NOT NULL,
+          to_warehouse_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          quantity REAL NOT NULL,
+          notes TEXT,
+          date TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (from_warehouse_id) REFERENCES warehouses (id),
+          FOREIGN KEY (to_warehouse_id) REFERENCES warehouses (id),
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stocktaking_sessions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_number TEXT NOT NULL,
+          warehouse_id INTEGER,
+          date TEXT NOT NULL,
+          total_items INTEGER NOT NULL DEFAULT 0,
+          matched_items INTEGER NOT NULL DEFAULT 0,
+          mismatched_items INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'draft',
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stocktaking_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          system_quantity REAL NOT NULL,
+          actual_quantity REAL NOT NULL,
+          difference REAL NOT NULL,
+          FOREIGN KEY (session_id) REFERENCES stocktaking_sessions (id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_transfers_number ON stock_transfers (transfer_number)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_transfers_from_wh ON stock_transfers (from_warehouse_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_transfers_to_wh ON stock_transfers (to_warehouse_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_transfers_product ON stock_transfers (product_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_transfers_date ON stock_transfers (date)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stocktaking_sessions_number ON stocktaking_sessions (session_number)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stocktaking_sessions_wh ON stocktaking_sessions (warehouse_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stocktaking_items_session ON stocktaking_items (session_id)');
     }
   }
 
@@ -3506,6 +3708,211 @@ class DatabaseHelper {
 
   /// Count POS invoices for a given date prefix (e.g. '2026-03-04')
   /// Used to avoid invoice-ID collisions after app restart.
+  // ══════════════════════════════════════════════════════════════
+  //  Voucher (السندات) CRUD methods - v18
+  // ══════════════════════════════════════════════════════════════
+
+  /// إدراج سند مع بنوده وإنشاء قيود يومية
+  Future<int> insertVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final journalId = DateTime.now().millisecondsSinceEpoch;
+
+    int voucherId = 0;
+    await db.transaction((txn) async {
+      // إدراج السند
+      voucherId = await txn.insert('vouchers', voucherMap);
+
+      // إدراج بنود السند وإنشاء قيود يومية
+      for (final item in items) {
+        final itemMap = Map<String, dynamic>.from(item);
+        itemMap['voucher_id'] = voucherId;
+        itemMap['created_at'] = now;
+        await txn.insert('voucher_items', itemMap);
+
+        // إنشاء قيد يومي لكل بند
+        final accountId = (item['account_id'] as num?)?.toInt();
+        final debit = (item['debit'] as num?)?.toDouble() ?? 0.0;
+        final credit = (item['credit'] as num?)?.toDouble() ?? 0.0;
+        if (accountId != null && (debit > 0 || credit > 0)) {
+          await txn.insert('transactions', {
+            'account_id': accountId,
+            'journal_id': journalId,
+            'debit': debit,
+            'credit': credit,
+            'description': item['description'] ?? voucherMap['description'] ?? 'سند ${voucherMap['voucher_number']}',
+            'date': voucherMap['date'],
+            'created_at': now,
+          });
+
+          // تحديث رصيد الحساب
+          final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+          if (account.isNotEmpty) {
+            final currentBalance = (account.first]['balance'] as num?)?.toDouble() ?? 0.0;
+            final balanceType = account.first]['balance_type'] as String? ?? 'credit';
+            double newBalance;
+            if (balanceType == 'credit') {
+              newBalance = currentBalance + credit - debit;
+            } else {
+              newBalance = currentBalance + debit - credit;
+            }
+            await txn.update('accounts', {'balance': newBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
+          }
+        }
+      }
+
+      // تحديث رصيد الصندوق إذا كان مرتبطاً بالسند
+      final cashBoxId = voucherMap['cash_box_id'];
+      if (cashBoxId != null) {
+        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+        if (cashBox.isNotEmpty) {
+          final currentBalance = (cashBox.first]['balance'] as num?)?.toDouble() ?? 0.0;
+          final totalAmount = (voucherMap['total_amount'] as num?)?.toDouble() ?? 0.0;
+          final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
+          double newCashBalance;
+          if (voucherType == 'receipt') {
+            newCashBalance = currentBalance + totalAmount;
+          } else if (voucherType == 'payment') {
+            newCashBalance = currentBalance - totalAmount;
+          } else {
+            newCashBalance = currentBalance;
+          }
+          await txn.update('cash_boxes', {'balance': newCashBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
+        }
+      }
+    });
+    return voucherId;
+  }
+
+  /// جلب جميع السندات مع فلتر اختياري حسب النوع
+  Future<List<Map<String, dynamic>>> getAllVouchers({String? type, String orderBy = 'created_at DESC'}) async {
+    final db = await database;
+    if (type != null) {
+      return await db.query('vouchers', where: 'voucher_type = ?', whereArgs: [type], orderBy: orderBy);
+    }
+    return await db.query('vouchers', orderBy: orderBy);
+  }
+
+  /// جلب بنود سند معين
+  Future<List<Map<String, dynamic>>> getVoucherItems(int voucherId) async {
+    final db = await database;
+    return await db.query('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
+  }
+
+  /// حذف سند وعكس القيود اليومية
+  Future<int> deleteVoucher(int voucherId) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    await db.transaction((txn) async {
+      // جلب بيانات السند
+      final voucher = await txn.query('vouchers', where: 'id = ?', whereArgs: [voucherId], limit: 1);
+      if (voucher.isEmpty) return;
+
+      final voucherData = voucher.first;
+      final voucherDate = voucherData['date'] as String? ?? now;
+      final voucherNumber = voucherData['voucher_number'] as String? ?? '';
+      final voucherType = voucherData['voucher_type'] as String? ?? '';
+      final totalAmount = (voucherData['total_amount'] as num?)?.toDouble() ?? 0.0;
+      final cashBoxId = voucherData['cash_box_id'];
+
+      // جلب بنود السند وعكس القيود
+      final items = await txn.query('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
+      for (final item in items) {
+        final accountId = (item['account_id'] as num?)?.toInt();
+        final debit = (item['debit'] as num?)?.toDouble() ?? 0.0;
+        final credit = (item['credit'] as num?)?.toDouble() ?? 0.0;
+        if (accountId != null && (debit > 0 || credit > 0)) {
+          // عكس القيد:debit يصبح credit والعكس
+          await txn.insert('transactions', {
+            'account_id': accountId,
+            'journal_id': DateTime.now().millisecondsSinceEpoch,
+            'debit': credit,
+            'credit': debit,
+            'description': 'عكس سند $voucherNumber',
+            'date': voucherDate,
+            'created_at': now,
+          });
+
+          // تحديث رصيد الحساب (عكس)
+          final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+          if (account.isNotEmpty) {
+            final currentBalance = (account.first]['balance'] as num?)?.toDouble() ?? 0.0;
+            final balanceType = account.first]['balance_type'] as String? ?? 'credit';
+            double newBalance;
+            if (balanceType == 'credit') {
+              newBalance = currentBalance - credit + debit;
+            } else {
+              newBalance = currentBalance - debit + credit;
+            }
+            await txn.update('accounts', {'balance': newBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
+          }
+        }
+      }
+
+      // عكس تأثير الصندوق
+      if (cashBoxId != null) {
+        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+        if (cashBox.isNotEmpty) {
+          final currentBalance = (cashBox.first]['balance'] as num?)?.toDouble() ?? 0.0;
+          double newCashBalance;
+          if (voucherType == 'receipt') {
+            newCashBalance = currentBalance - totalAmount;
+          } else if (voucherType == 'payment') {
+            newCashBalance = currentBalance + totalAmount;
+          } else {
+            newCashBalance = currentBalance;
+          }
+          await txn.update('cash_boxes', {'balance': newCashBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
+        }
+      }
+
+      // حذف بنود السند ثم السند نفسه
+      await txn.delete('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
+      await txn.delete('vouchers', where: 'id = ?', whereArgs: [voucherId]);
+    });
+    return 1;
+  }
+
+  /// جلب سند برقمه
+  Future<Map<String, dynamic>?> getVoucherByNumber(String number) async {
+    final db = await database;
+    final result = await db.query('vouchers', where: 'voucher_number = ?', whereArgs: [number], limit: 1);
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  /// توليد رقم السند التالي حسب النوع
+  Future<String> getNextVoucherNumber(String type) async {
+    final db = await database;
+    final year = DateTime.now().year.toString();
+    final prefixMap = {
+      'receipt': 'REC',
+      'payment': 'PAY',
+      'settlement': 'SET',
+      'compound': 'CMP',
+      'inventory': 'INV',
+    };
+    final prefix = prefixMap[type] ?? 'VCH';
+    final fullPrefix = '$prefix-$year-';
+
+    final result = await db.rawQuery(
+      "SELECT voucher_number FROM vouchers WHERE voucher_number LIKE ? ORDER BY id DESC LIMIT 1",
+      ['$fullPrefix%'],
+    );
+
+    if (result.isEmpty) {
+      return '$fullPrefix${1.toString().padLeft(3, '0')}';
+    }
+
+    final lastNumber = result.first['voucher_number'] as String;
+    final parts = lastNumber.split('-');
+    if (parts.length >= 3) {
+      final lastSeq = int.tryParse(parts.last) ?? 0;
+      return '$fullPrefix${(lastSeq + 1).toString().padLeft(3, '0')}';
+    }
+    return '$fullPrefix${1.toString().padLeft(3, '0')}';
+  }
+
   Future<int> getTodayPosInvoiceCount(String datePrefix) async {
     final db = await database;
     final result = await db.rawQuery(
@@ -3513,6 +3920,574 @@ class DatabaseHelper {
       ['POS-$datePrefix%'],
     );
     return (result.first['cnt'] as num?)?.toInt() ?? 0;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  العمليات اليومية والتقارير الإضافية
+  //  Daily Operations & Additional Reports
+  // ══════════════════════════════════════════════════════════════
+
+  /// جلب العمليات اليومية المجمعة لتاريخ محدد
+  /// Returns combined list of all daily transactions for a specific date.
+  Future<List<Map<String, dynamic>>> getDailyOperations(DateTime date) async {
+    final db = await database;
+    final dayStart = DateTime(date.year, date.month, date.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    final startStr = dayStart.toIso8601String();
+    final endStr = dayEnd.toIso8601String();
+
+    final List<Map<String, dynamic>> operations = [];
+
+    // فواتير المبيعات
+    final saleInvoices = await db.rawQuery(
+      "SELECT i.id, i.type, i.total, i.created_at, i.currency, "
+      "CASE WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل') "
+      "ELSE 'بدون عميل' END AS entity_name "
+      "FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id "
+      "WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 "
+      "AND i.created_at >= ? AND i.created_at < ? "
+      "ORDER BY i.created_at DESC",
+      [startStr, endStr],
+    );
+    for (final row in saleInvoices) {
+      operations.add({
+        'type': 'sale_invoice',
+        'type_label': 'فاتورة مبيعات',
+        'id': row['id'],
+        'entity_name': row['entity_name'],
+        'amount': (row['total'] as num?)?.toDouble() ?? 0.0,
+        'currency': row['currency'] ?? 'YER',
+        'time': row['created_at'] ?? '',
+      });
+    }
+
+    // فواتير المشتريات
+    final purchaseInvoices = await db.rawQuery(
+      "SELECT i.id, i.type, i.total, i.created_at, i.currency, "
+      "CASE WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد') "
+      "ELSE 'بدون مورد' END AS entity_name "
+      "FROM invoices i LEFT JOIN suppliers s ON i.supplier_id = s.id "
+      "WHERE i.type = 'purchase' AND i.is_return = 0 "
+      "AND i.created_at >= ? AND i.created_at < ? "
+      "ORDER BY i.created_at DESC",
+      [startStr, endStr],
+    );
+    for (final row in purchaseInvoices) {
+      operations.add({
+        'type': 'purchase_invoice',
+        'type_label': 'فاتورة مشتريات',
+        'id': row['id'],
+        'entity_name': row['entity_name'],
+        'amount': (row['total'] as num?)?.toDouble() ?? 0.0,
+        'currency': row['currency'] ?? 'YER',
+        'time': row['created_at'] ?? '',
+      });
+    }
+
+    // سندات القبض والصرف (باستخدام try/catch لأن الجدول قد لا يكون موجوداً)
+    try {
+      final vouchers = await db.rawQuery(
+        "SELECT id, voucher_number, voucher_type, total_amount, date, currency, description "
+        "FROM vouchers "
+        "WHERE date >= ? AND date < ? "
+        "ORDER BY date DESC",
+        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
+      );
+      for (final row in vouchers) {
+        final voucherType = row['voucher_type'] as String? ?? '';
+        final isReceipt = voucherType.contains('receipt') || voucherType.contains('قبض');
+        operations.add({
+          'type': isReceipt ? 'receipt_voucher' : 'payment_voucher',
+          'type_label': isReceipt ? 'سند قبض' : 'سند صرف',
+          'id': row['id'],
+          'entity_name': row['description'] ?? row['voucher_number'] ?? '',
+          'amount': (row['total_amount'] as num?)?.toDouble() ?? 0.0,
+          'currency': row['currency'] ?? 'YER',
+          'time': row['date'] ?? '',
+        });
+      }
+    } catch (_) {
+      // جدول السندات غير موجود بعد
+    }
+
+    // المصروفات
+    final expenses = await db.rawQuery(
+      "SELECT id, title, amount, expense_date, currency, category "
+      "FROM expenses "
+      "WHERE expense_date >= ? AND expense_date < ? "
+      "ORDER BY expense_date DESC",
+      [startStr, endStr],
+    );
+    for (final row in expenses) {
+      operations.add({
+        'type': 'expense',
+        'type_label': 'مصروف',
+        'id': row['id'],
+        'entity_name': row['title'] ?? (row['category'] ?? ''),
+        'amount': (row['amount'] as num?)?.toDouble() ?? 0.0,
+        'currency': row['currency'] ?? 'YER',
+        'time': row['expense_date'] ?? '',
+      });
+    }
+
+    // التحويلات النقدية
+    final transfers = await db.rawQuery(
+      "SELECT ct.id, ct.transfer_number, ct.amount, ct.currency, ct.created_at, "
+      "cb_from.name AS from_name, cb_to.name AS to_name "
+      "FROM cash_transfers ct "
+      "LEFT JOIN cash_boxes cb_from ON ct.from_cash_box_id = cb_from.id "
+      "LEFT JOIN cash_boxes cb_to ON ct.to_cash_box_id = cb_to.id "
+      "WHERE ct.created_at >= ? AND ct.created_at < ? "
+      "ORDER BY ct.created_at DESC",
+      [startStr, endStr],
+    );
+    for (final row in transfers) {
+      operations.add({
+        'type': 'cash_transfer',
+        'type_label': 'تحويل نقدي',
+        'id': row['id'],
+        'entity_name': '${row['from_name'] ?? ''} ← ${row['to_name'] ?? ''}',
+        'amount': (row['amount'] as num?)?.toDouble() ?? 0.0,
+        'currency': row['currency'] ?? 'YER',
+        'time': row['created_at'] ?? '',
+      });
+    }
+
+    // صرافة العملات
+    try {
+      final exchanges = await db.rawQuery(
+        "SELECT ce.id, ce.exchange_number, ce.from_amount, ce.to_amount, ce.from_currency, "
+        "ce.to_currency, ce.exchange_rate, ce.created_at, "
+        "cb_from.name AS from_box_name, cb_to.name AS to_box_name "
+        "FROM currency_exchanges ce "
+        "LEFT JOIN cash_boxes cb_from ON ce.from_cash_box_id = cb_from.id "
+        "LEFT JOIN cash_boxes cb_to ON ce.to_cash_box_id = cb_to.id "
+        "WHERE ce.created_at >= ? AND ce.created_at < ? "
+        "ORDER BY ce.created_at DESC",
+        [startStr, endStr],
+      );
+      for (final row in exchanges) {
+        operations.add({
+          'type': 'currency_exchange',
+          'type_label': 'صرافة عملات',
+          'id': row['id'],
+          'entity_name': '${row['from_currency'] ?? ''} → ${row['to_currency'] ?? ''}',
+          'amount': (row['from_amount'] as num?)?.toDouble() ?? 0.0,
+          'currency': row['from_currency'] ?? 'YER',
+          'time': row['created_at'] ?? '',
+        });
+      }
+    } catch (_) {
+      // جدول صرافة العملات غير موجود بعد
+    }
+
+    // ترتيب حسب الوقت تنازلياً
+    operations.sort((a, b) {
+      final timeA = (a['time'] as String?) ?? '';
+      final timeB = (b['time'] as String?) ?? '';
+      return timeB.compareTo(timeA);
+    });
+
+    return operations;
+  }
+
+  /// جلب ملخص العمليات اليومية لتاريخ محدد
+  /// Returns daily summary totals by category.
+  Future<Map<String, double>> getDailySummary(DateTime date) async {
+    final db = await database;
+    final dayStart = DateTime(date.year, date.month, date.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    final startStr = dayStart.toIso8601String();
+    final endStr = dayEnd.toIso8601String();
+
+    final Map<String, double> summary = {
+      'total_sales': 0.0,
+      'total_purchases': 0.0,
+      'total_receipts': 0.0,
+      'total_payments': 0.0,
+      'total_expenses': 0.0,
+      'total_transfers': 0.0,
+    };
+
+    // إجمالي المبيعات
+    final salesResult = await db.rawQuery(
+      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices "
+      "WHERE type IN ('sale', 'pos') AND is_return = 0 "
+      "AND created_at >= ? AND created_at < ?",
+      [startStr, endStr],
+    );
+    summary['total_sales'] = (salesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // إجمالي المشتريات
+    final purchasesResult = await db.rawQuery(
+      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices "
+      "WHERE type = 'purchase' AND is_return = 0 "
+      "AND created_at >= ? AND created_at < ?",
+      [startStr, endStr],
+    );
+    summary['total_purchases'] = (purchasesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // سندات القبض
+    try {
+      final receiptsResult = await db.rawQuery(
+        "SELECT COALESCE(SUM(total_amount), 0.0) AS total FROM vouchers "
+        "WHERE voucher_type LIKE '%receipt%' OR voucher_type LIKE '%قبض%' "
+        "AND date >= ? AND date < ?",
+        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
+      );
+      summary['total_receipts'] = (receiptsResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
+    // سندات الصرف
+    try {
+      final paymentsResult = await db.rawQuery(
+        "SELECT COALESCE(SUM(total_amount), 0.0) AS total FROM vouchers "
+        "WHERE (voucher_type LIKE '%payment%' OR voucher_type LIKE '%صرف%') "
+        "AND date >= ? AND date < ?",
+        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
+      );
+      summary['total_payments'] = (paymentsResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {}
+
+    // المصروفات
+    final expensesResult = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0.0) AS total FROM expenses "
+      "WHERE expense_date >= ? AND expense_date < ?",
+      [startStr, endStr],
+    );
+    summary['total_expenses'] = (expensesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // التحويلات
+    final transfersResult = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0.0) AS total FROM cash_transfers "
+      "WHERE created_at >= ? AND created_at < ?",
+      [startStr, endStr],
+    );
+    summary['total_transfers'] = (transfersResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    return summary;
+  }
+
+  /// جلب الحسابات بدون حركة
+  /// Returns accounts that have zero transactions.
+  Future<List<Map<String, dynamic>>> getAccountsWithoutMovements() async {
+    final db = await database;
+    return await db.rawQuery(
+      "SELECT a.id, a.name_ar, a.account_code, a.account_type, a.currency, a.balance "
+      "FROM accounts a "
+      "LEFT JOIN transactions t ON a.id = t.account_id "
+      "WHERE a.is_active = 1 AND t.id IS NULL "
+      "ORDER BY a.account_code",
+    );
+  }
+
+  /// جلب تقرير أرباح الفواتير
+  /// Returns profit per invoice (sale price - cost price).
+  Future<List<Map<String, dynamic>>> getInvoiceProfitReport({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    String dateFilter = '';
+    List<dynamic> args = [];
+    if (startDate != null) {
+      dateFilter += ' AND i.created_at >= ?';
+      args.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      final toDate = endDate.add(const Duration(days: 1));
+      dateFilter += ' AND i.created_at < ?';
+      args.add(toDate.toIso8601String());
+    }
+
+    return await db.rawQuery(
+      "SELECT i.id AS invoice_id, i.type, i.total AS sale_total, i.currency, i.created_at, "
+      "CASE WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل') "
+      "WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد') "
+      "ELSE 'بدون عميل' END AS entity_name, "
+      "COALESCE(SUM(ii.quantity * p.cost_price), 0.0) AS cost_total, "
+      "i.total - COALESCE(SUM(ii.quantity * p.cost_price), 0.0) AS profit "
+      "FROM invoices i "
+      "LEFT JOIN customers c ON i.customer_id = c.id "
+      "LEFT JOIN suppliers s ON i.supplier_id = s.id "
+      "LEFT JOIN invoice_items ii ON ii.invoice_id = i.id "
+      "LEFT JOIN products p ON ii.product_id = p.id "
+      "WHERE i.is_return = 0 AND i.type IN ('sale', 'pos', 'purchase') "
+      "$dateFilter "
+      "GROUP BY i.id "
+      "ORDER BY i.created_at DESC",
+      args,
+    );
+  }
+
+  /// جلب تقرير حركة المخزون
+  /// Returns stock in/out movements per product.
+  Future<List<Map<String, dynamic>>> getInventoryMovementReport({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    String dateFilter = '';
+    List<dynamic> args = [];
+    if (startDate != null) {
+      dateFilter += ' AND i.created_at >= ?';
+      args.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      final toDate = endDate.add(const Duration(days: 1));
+      dateFilter += ' AND i.created_at < ?';
+      args.add(toDate.toIso8601String());
+    }
+
+    return await db.rawQuery(
+      "SELECT p.id AS product_id, p.name_ar, p.item_code, p.current_stock, "
+      "COALESCE(sales_data.qty_out, 0.0) AS qty_out, "
+      "COALESCE(sales_data.revenue, 0.0) AS total_revenue, "
+      "COALESCE(purchase_data.qty_in, 0.0) AS qty_in, "
+      "COALESCE(purchase_data.cost, 0.0) AS total_cost "
+      "FROM products p "
+      "LEFT JOIN ("
+      "  SELECT ii.product_id, SUM(ii.quantity) AS qty_out, SUM(ii.total_price) AS revenue "
+      "  FROM invoice_items ii "
+      "  INNER JOIN invoices i ON ii.invoice_id = i.id "
+      "  WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 $dateFilter "
+      "  GROUP BY ii.product_id"
+      ") sales_data ON p.id = sales_data.product_id "
+      "LEFT JOIN ("
+      "  SELECT ii.product_id, SUM(ii.quantity) AS qty_in, SUM(ii.total_price) AS cost "
+      "  FROM invoice_items ii "
+      "  INNER JOIN invoices i ON ii.invoice_id = i.id "
+      "  WHERE i.type = 'purchase' AND i.is_return = 0 $dateFilter "
+      "  GROUP BY ii.product_id"
+      ") purchase_data ON p.id = purchase_data.product_id "
+      "WHERE p.is_active = 1 AND (sales_data.qty_out IS NOT NULL OR purchase_data.qty_in IS NOT NULL) "
+      "ORDER BY p.name_ar",
+      [...args, ...args],
+    );
+  }
+
+  /// جلب تقرير تكلفة المخزون
+  /// Returns cost value of current stock per product.
+  Future<List<Map<String, dynamic>>> getInventoryCostReport() async {
+    final db = await database;
+    return await db.rawQuery(
+      "SELECT p.id, p.name_ar, p.item_code, p.barcode, "
+      "p.current_stock, p.cost_price, p.sell_price, "
+      "(p.current_stock * p.cost_price) AS stock_cost_value, "
+      "(p.current_stock * p.sell_price) AS stock_sell_value, "
+      "c.name AS category_name, w.name AS warehouse_name "
+      "FROM products p "
+      "LEFT JOIN categories c ON p.category_id = c.id "
+      "LEFT JOIN warehouses w ON p.warehouse_id = w.id "
+      "WHERE p.is_active = 1 AND p.current_stock > 0 "
+      "ORDER BY stock_cost_value DESC",
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Stock Transfer methods (تحويل مخزني)
+  // ══════════════════════════════════════════════════════════════
+
+  /// إدراج تحويل مخزني وتحديث المخزون
+  Future<int> insertStockTransfer(Map<String, dynamic> transferMap) async {
+    final db = await database;
+    final productId = transferMap['product_id'] as int;
+    final quantity = (transferMap['quantity'] as num).toDouble();
+    final fromWarehouseId = transferMap['from_warehouse_id'] as int;
+    final toWarehouseId = transferMap['to_warehouse_id'] as int;
+
+    return await db.transaction<int>((txn) async {
+      // إدراج سجل التحويل
+      final id = await txn.insert('stock_transfers', transferMap);
+
+      // خصم الكمية من مخزن المصدر
+      final fromProducts = await txn.query(
+        'products',
+        where: 'id = ? AND warehouse_id = ?',
+        whereArgs: [productId, fromWarehouseId],
+        limit: 1,
+      );
+
+      if (fromProducts.isNotEmpty) {
+        final currentStock = (fromProducts.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+        await txn.update(
+          'products',
+          {
+            'current_stock': (currentStock - quantity).clamp(0.0, double.infinity),
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [productId],
+        );
+      }
+
+      // إضافة الكمية لمخزن الوجهة
+      final sourceProduct = await txn.query(
+        'products',
+        where: 'id = ?',
+        whereArgs: [productId],
+        limit: 1,
+      );
+
+      if (sourceProduct.isNotEmpty) {
+        final productName = sourceProduct.first['name_ar'] as String;
+        final toProduct = await txn.query(
+          'products',
+          where: 'name_ar = ? AND warehouse_id = ?',
+          whereArgs: [productName, toWarehouseId],
+          limit: 1,
+        );
+
+        if (toProduct.isNotEmpty) {
+          final currentStock = (toProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+          await txn.update(
+            'products',
+            {
+              'current_stock': currentStock + quantity,
+              'updated_at': DateTime.now().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [toProduct.first['id']],
+          );
+        } else {
+          // إنشاء نسخة من المنتج في المخزن الهدف
+          final newProduct = Map<String, dynamic>.from(sourceProduct.first);
+          newProduct.remove('id');
+          newProduct['warehouse_id'] = toWarehouseId;
+          newProduct['current_stock'] = quantity;
+          newProduct['created_at'] = DateTime.now().toIso8601String();
+          newProduct['updated_at'] = DateTime.now().toIso8601String();
+          await txn.insert('products', newProduct);
+        }
+      }
+
+      return id;
+    });
+  }
+
+  /// جلب جميع التحويلات المخزنية مع أسماء المستودعات والمنتجات
+  Future<List<Map<String, dynamic>>> getAllStockTransfers() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT st.*,
+        fw.name AS from_warehouse_name,
+        tw.name AS to_warehouse_name,
+        p.name_ar AS product_name
+      FROM stock_transfers st
+      LEFT JOIN warehouses fw ON st.from_warehouse_id = fw.id
+      LEFT JOIN warehouses tw ON st.to_warehouse_id = tw.id
+      LEFT JOIN products p ON st.product_id = p.id
+      ORDER BY st.created_at DESC
+    ''');
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Stocktaking methods (جرد المخازن)
+  // ══════════════════════════════════════════════════════════════
+
+  /// إنشاء جلسة جرد مع عناصرها
+  Future<int> createStocktakingSession(
+    Map<String, dynamic> sessionMap,
+    List<Map<String, dynamic>> items,
+  ) async {
+    final db = await database;
+    return await db.transaction<int>((txn) async {
+      final sessionId = await txn.insert('stocktaking_sessions', sessionMap);
+
+      for (final item in items) {
+        item['session_id'] = sessionId;
+        await txn.insert('stocktaking_items', item);
+      }
+
+      return sessionId;
+    });
+  }
+
+  /// إكمال جلسة الجرد وتحديث المخزون الفعلي
+  Future<void> completeStocktakingSession(int sessionId) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // جلب عناصر الجرد
+      final items = await txn.query(
+        'stocktaking_items',
+        where: 'session_id = ?',
+        whereArgs: [sessionId],
+      );
+
+      // تحديث المخزون لكل منتج بالكمية الفعلية
+      for (final item in items) {
+        final productId = item['product_id'] as int;
+        final actualQuantity = (item['actual_quantity'] as num).toDouble();
+        await txn.update(
+          'products',
+          {
+            'current_stock': actualQuantity,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [productId],
+        );
+      }
+
+      // حساب المطابق وغير المطابق
+      int matched = 0;
+      int mismatched = 0;
+      for (final item in items) {
+        final diff = (item['difference'] as num?)?.toDouble() ?? 0.0;
+        if (diff.abs() < 0.005) {
+          matched++;
+        } else {
+          mismatched++;
+        }
+      }
+
+      // تحديث حالة الجرد إلى مكتمل
+      await txn.update(
+        'stocktaking_sessions',
+        {
+          'status': 'completed',
+          'matched_items': matched,
+          'mismatched_items': mismatched,
+          'total_items': items.length,
+        },
+        where: 'id = ?',
+        whereArgs: [sessionId],
+      );
+    });
+  }
+
+  /// جلب جميع جلسات الجرد
+  Future<List<Map<String, dynamic>>> getStocktakingSessions() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT ss.*, w.name AS warehouse_name
+      FROM stocktaking_sessions ss
+      LEFT JOIN warehouses w ON ss.warehouse_id = w.id
+      ORDER BY ss.created_at DESC
+    ''');
+  }
+
+  /// جلب عناصر جلسة الجرد
+  Future<List<Map<String, dynamic>>> getStocktakingItems(int sessionId) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT si.*, p.name_ar AS product_name, p.current_stock
+      FROM stocktaking_items si
+      LEFT JOIN products p ON si.product_id = p.id
+      WHERE si.session_id = ?
+      ORDER BY p.name_ar ASC
+    ''', [sessionId]);
+  }
+
+  /// جلب جميع الحركات المحاسبية للتصدير مع اسم الحساب
+  Future<List<Map<String, dynamic>>> getAllTransactionsForExport() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT t.*, a.name_ar AS account_name
+      FROM transactions t
+      LEFT JOIN accounts a ON t.account_id = a.id
+      ORDER BY t.date DESC
+    ''');
   }
 
 }

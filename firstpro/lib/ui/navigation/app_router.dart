@@ -17,6 +17,8 @@ import '../screens/accounts/chart_of_accounts_screen.dart';
 import '../screens/accounts/account_ledger_screen.dart';
 import '../screens/suppliers/suppliers_screen.dart';
 import '../screens/warehouses/warehouses_screen.dart';
+import '../screens/warehouses/stock_transfer_screen.dart';
+import '../screens/warehouses/stocktaking_screen.dart';
 import '../screens/expenses/expenses_screen.dart';
 import '../screens/expenses/expense_account_detail_screen.dart';
 import '../screens/employees/employees_screen.dart';
@@ -31,6 +33,9 @@ import '../screens/cash_transfers/cash_transfer_screen.dart';
 import '../screens/debts/debts_screen.dart';
 import '../screens/app_lock/app_lock_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
+import '../screens/vouchers/vouchers_screen.dart';
+import '../screens/vouchers/create_voucher_screen.dart';
+import '../screens/daily_ops/daily_operations_screen.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../data/models/account_model.dart';
@@ -52,6 +57,8 @@ class AppRouter {
         AppConstants.chartOfAccounts: (_) => const ChartOfAccountsScreen(),
         AppConstants.suppliers: (_) => const SuppliersScreen(),
         AppConstants.warehouses: (_) => const WarehousesScreen(),
+        AppConstants.stockTransfer: (_) => const StockTransferScreen(),
+        AppConstants.stocktaking: (_) => const StocktakingScreen(),
         AppConstants.expenses: (_) => const ExpensesScreen(),
         AppConstants.employees: (_) => const EmployeesScreen(),
         AppConstants.newSaleInvoice: (_) => const CreateInvoiceScreen(invoiceType: 'sale'),
@@ -76,6 +83,9 @@ class AppRouter {
         AppConstants.debts: (_) => const DebtsScreen(),
         AppConstants.appLock: (_) => const AppLockScreen(),
         AppConstants.notifications: (_) => const NotificationsScreen(),
+        AppConstants.vouchers: (_) => const VouchersScreen(),
+        AppConstants.newVoucher: (_) => const CreateVoucherScreen(),
+        AppConstants.dailyOperations: (_) => const DailyOperationsScreen(),
       };
 
   static Future<T?> push<T extends Object?>(BuildContext context, String routeName, {Object? arguments}) {

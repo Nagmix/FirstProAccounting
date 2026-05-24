@@ -11,6 +11,7 @@ import 'package:sqflite/sqflite.dart' as sqflite;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../core/utils/excel_exporter.dart';
 import '../currency_exchange/currency_exchange_screen.dart';
 import '../cash_transfers/cash_transfer_screen.dart';
 import '../debts/debts_screen.dart';
@@ -1364,37 +1365,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _onExportReports() async {
+    // عرض خيارات التصدير
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تصدير التقارير'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.account_tree, color: AppColors.primary),
+              title: const Text('تصدير الحسابات'),
+              subtitle: const Text('شجرة الحسابات'),
+              onTap: () => Navigator.pop(ctx, 'accounts'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt, color: AppColors.primary),
+              title: const Text('تصدير الفواتير'),
+              subtitle: const Text('قائمة الفواتير'),
+              onTap: () => Navigator.pop(ctx, 'invoices'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory_2, color: AppColors.primary),
+              title: const Text('تصدير المخزون'),
+              subtitle: const Text('بيانات المنتجات والمخزون'),
+              onTap: () => Navigator.pop(ctx, 'inventory'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.swap_horiz, color: AppColors.primary),
+              title: const Text('تصدير الحركات'),
+              subtitle: const Text('القيود المحاسبية'),
+              onTap: () => Navigator.pop(ctx, 'transactions'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء'),
+          ),
+        ],
+      ),
+    );
+
+    if (choice == null || !mounted) return;
+
     try {
       final db = DatabaseHelper();
-      final invoices = await db.getAllInvoices();
-      final expenses = await db.getAllExpenses();
+      String filePath;
 
-      final buffer = StringBuffer();
-      // CSV header for invoices
-      buffer.writeln('نوع,التاريخ,المجموع الفرعي,الخصم,الإجمالي,المدفوع,المتبقي,الحالة');
-      for (final inv in invoices) {
-        buffer.writeln(
-          '${inv['type']},${inv['created_at']},${inv['subtotal']},${inv['discount_amount']},${inv['total']},${inv['paid_amount']},${inv['remaining']},${inv['status']}',
+      switch (choice) {
+        case 'accounts':
+          final accounts = await db.getAllAccounts();
+          filePath = await ExcelExporter.exportAccountsToExcel(accounts);
+          break;
+        case 'invoices':
+          final invoices = await db.getAllInvoices();
+          filePath = await ExcelExporter.exportInvoicesToExcel(invoices);
+          break;
+        case 'inventory':
+          final products = await db.getAllProducts();
+          filePath = await ExcelExporter.exportInventoryToExcel(products);
+          break;
+        case 'transactions':
+          final transactions = await db.getAllTransactionsForExport();
+          filePath = await ExcelExporter.exportTransactionsToExcel(transactions);
+          break;
+        default:
+          return;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم تصدير التقرير بنجاح'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
-      buffer.writeln();
-      // CSV header for expenses
-      buffer.writeln('المصروفات');
-      buffer.writeln('الوصف,المبلغ,التاريخ');
-      for (final exp in expenses) {
-        buffer.writeln(
-          '${exp['description'] ?? exp['name'] ?? ''},${exp['amount']},${exp['date'] ?? exp['created_at'] ?? ''}',
-        );
-      }
-
-      final dir = await getApplicationDocumentsDirectory();
-      final exportPath = p.join(dir.path, 'firstpro_export_${DateTime.now().millisecondsSinceEpoch}.csv');
-      await File(exportPath).writeAsString(buffer.toString());
-      await Share.shareXFiles([XFile(exportPath)], text: 'تقارير - الأول برو المحاسبي');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تصدير التقارير: $e')),
+          SnackBar(content: Text('خطأ في تصدير التقرير: $e')),
         );
       }
     }
