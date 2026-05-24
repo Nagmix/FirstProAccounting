@@ -1202,10 +1202,10 @@ class DatabaseHelper {
       final accountsToRestore = [
         {'name_ar': 'حساب المصاريف (ر.ي)', 'name_en': 'Expenses Account (YER)', 'account_code': '5000', 'account_type': 'EXPENSE', 'currency': 'YER', 'symbol': 'ر.ي'},
         {'name_ar': 'حساب المصاريف (ر.س)', 'name_en': 'Expenses Account (SAR)', 'account_code': '5001', 'account_type': 'EXPENSE', 'currency': 'SAR', 'symbol': 'ر.س'},
-        {'name_ar': 'حساب المصاريف ($)', 'name_en': 'Expenses Account (USD)', 'account_code': '5002', 'account_type': 'EXPENSE', 'currency': 'USD', 'symbol': r'$'},
+        {'name_ar': r'حساب المصاريف ($)', 'name_en': 'Expenses Account (USD)', 'account_code': '5002', 'account_type': 'EXPENSE', 'currency': 'USD', 'symbol': r'\$'},
         {'name_ar': 'اجور نقل (ر.ي)', 'name_en': 'Transport Charges (YER)', 'account_code': '5200', 'account_type': 'EXPENSE', 'currency': 'YER', 'symbol': 'ر.ي'},
         {'name_ar': 'اجور نقل (ر.س)', 'name_en': 'Transport Charges (SAR)', 'account_code': '5201', 'account_type': 'EXPENSE', 'currency': 'SAR', 'symbol': 'ر.س'},
-        {'name_ar': 'اجور نقل ($)', 'name_en': 'Transport Charges (USD)', 'account_code': '5202', 'account_type': 'EXPENSE', 'currency': 'USD', 'symbol': r'$'},
+        {'name_ar': r'اجور نقل ($)', 'name_en': 'Transport Charges (USD)', 'account_code': '5202', 'account_type': 'EXPENSE', 'currency': 'USD', 'symbol': r'\$'},
       ];
       for (final acct in accountsToRestore) {
         // Only insert if the account does not already exist

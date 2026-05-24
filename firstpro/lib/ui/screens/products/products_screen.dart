@@ -310,7 +310,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 6),
                     itemCount: _categoryChipLabels.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
                     itemBuilder: (context, index) {
                       final selected = _selectedCategoryIndex == index;
                       return FilterChip(
