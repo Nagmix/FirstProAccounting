@@ -144,8 +144,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     final savedName = await db.getSetting('user_name');
 
     // C7: Query DB for today's POS invoice count to avoid ID collisions after restart
+    // IMPORTANT: Date format must match _generateInvoiceId() — NO hyphens!
     final today = DateTime.now();
-    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final todayStr = '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
     final count = await db.getTodayPosInvoiceCount(todayStr);
 
     setState(() {
