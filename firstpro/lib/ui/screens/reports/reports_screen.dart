@@ -1983,7 +1983,6 @@ class _ReportsScreenState extends State<ReportsScreen>
       ),
     );
   }
-}
 
   // ══════════════════════════════════════════════════════════════
   //  ACCOUNTS WITHOUT MOVEMENTS (حسابات بدون حركة)
@@ -2566,6 +2565,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       ),
     );
   }
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  DATA CLASSES
