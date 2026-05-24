@@ -249,20 +249,33 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             : Stack(
                 children: [
                   // Main content: product grid
-                  Column(
-                    children: [
-                      if (_activeShift != null) _buildShiftInfoBar(),
-                      _buildSearchBar(),
-                      _buildCategoryChips(),
-                      Expanded(child: _buildProductGrid()),
-                    ],
+                  // AbsorbPointer prevents taps from leaking through
+                  // to main content when a checkout overlay is active.
+                  AbsorbPointer(
+                    absorbing: _checkoutPhase != _CheckoutPhase.idle,
+                    child: Column(
+                      children: [
+                        if (_activeShift != null) _buildShiftInfoBar(),
+                        _buildSearchBar(),
+                        _buildCategoryChips(),
+                        Expanded(child: _buildProductGrid()),
+                      ],
+                    ),
                   ),
                   // Draggable cart sheet at bottom
-                  if (_activeShift != null) _buildDraggableCartSheet(),
+                  // Also absorbed when checkout overlay is active
+                  if (_activeShift != null)
+                    AbsorbPointer(
+                      absorbing: _checkoutPhase != _CheckoutPhase.idle,
+                      child: _buildDraggableCartSheet(),
+                    ),
                   // Shift overlay when no active shift
                   if (_activeShift == null) _buildShiftOverlay(),
                   // ── Checkout overlays (replaces showDialog) ────────
-                  // State-based overlays eliminate dialog stacking bug
+                  // State-based overlays eliminate dialog stacking bug.
+                  // Each overlay uses GestureDetector to absorb ALL taps
+                  // (including on the transparent background), preventing
+                  // any tap-through to widgets below.
                   if (_checkoutPhase == _CheckoutPhase.confirming)
                     _buildCheckoutConfirmationOverlay(),
                   if (_checkoutPhase == _CheckoutPhase.completed)
@@ -271,7 +284,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               ),
         floatingActionButton: _activeShift != null
             ? FloatingActionButton(
-                onPressed: _scanBarcode,
+                onPressed: _checkoutPhase != _CheckoutPhase.idle ? null : _scanBarcode,
                 backgroundColor: AppColors.secondary,
                 foregroundColor: Colors.white,
                 tooltip: 'مسح باركود',
@@ -2855,6 +2868,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   /// Step 2: User confirmed – save invoice and show completion overlay
   Future<void> _confirmCheckout() async {
+    // GUARD: Prevent double-execution from rapid taps.
+    // setState is async (rebuild happens next frame), so a second tap
+    // could call this method again before the overlay is removed.
+    if (_checkoutPhase != _CheckoutPhase.confirming) return;
+
     final primaryMethod = _payments.isNotEmpty ? _payments.first.method : _activePaymentMethod;
 
     setState(() => _checkoutPhase = _CheckoutPhase.saving);
@@ -2946,77 +2964,84 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   // ── Checkout Confirmation Overlay ──────────────────────────────────
   Widget _buildCheckoutConfirmationOverlay() {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.55),
-      child: Center(
-        child: Card(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          elevation: 12,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.shopping_cart_checkout, color: AppColors.primary, size: 26),
-                    const SizedBox(width: 10),
-                    Text(
-                      'تأكيد عملية البيع',
-                      style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _reportRow('عدد الأصناف', '$_capturedCartLength'),
-                _reportRow('المجموع الفرعي', CurrencyFormatter.format(_capturedSubtotal)),
-                if (_capturedDiscount > 0)
-                  _reportRow('الخصم', '- ${CurrencyFormatter.format(_capturedDiscount)}', valueColor: AppColors.error),
-                if (_capturedTax > 0)
-                  _reportRow('الضريبة', CurrencyFormatter.format(_capturedTax)),
-                const Divider(height: 20),
-                _reportRow('الإجمالي', CurrencyFormatter.format(_capturedTotal),
-                    valueColor: AppColors.primary, isBold: true),
-                const SizedBox(height: 8),
-                _reportRow('طريقة الدفع', _capturedPaymentLabel),
-                if (_capturedCustomerName.isNotEmpty)
-                  _reportRow('العميل', _capturedCustomerName),
-                const SizedBox(height: 6),
-                Text(
-                  'سيتم تسجيل الفاتورة وترحيلها عند إغلاق الوردية',
-                  style: TextStyle(fontSize: 11, color: context.textSecondary),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _cancelCheckout,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('إلغاء', style: TextStyle(fontSize: 15)),
+    // GestureDetector with HitTestBehavior.opaque ensures ALL taps
+    // are absorbed (even on the transparent background), preventing
+    // tap-through to widgets below the overlay.
+    return GestureDetector(
+      onTap: () {}, // Absorb background taps – do nothing
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.55),
+        child: Center(
+          child: Card(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 12,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.shopping_cart_checkout, color: AppColors.primary, size: 26),
+                      const SizedBox(width: 10),
+                      Text(
+                        'تأكيد عملية البيع',
+                        style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _confirmCheckout,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _reportRow('عدد الأصناف', '$_capturedCartLength'),
+                  _reportRow('المجموع الفرعي', CurrencyFormatter.format(_capturedSubtotal)),
+                  if (_capturedDiscount > 0)
+                    _reportRow('الخصم', '- ${CurrencyFormatter.format(_capturedDiscount)}', valueColor: AppColors.error),
+                  if (_capturedTax > 0)
+                    _reportRow('الضريبة', CurrencyFormatter.format(_capturedTax)),
+                  const Divider(height: 20),
+                  _reportRow('الإجمالي', CurrencyFormatter.format(_capturedTotal),
+                      valueColor: AppColors.primary, isBold: true),
+                  const SizedBox(height: 8),
+                  _reportRow('طريقة الدفع', _capturedPaymentLabel),
+                  if (_capturedCustomerName.isNotEmpty)
+                    _reportRow('العميل', _capturedCustomerName),
+                  const SizedBox(height: 6),
+                  Text(
+                    'سيتم تسجيل الفاتورة وترحيلها عند إغلاق الوردية',
+                    style: TextStyle(fontSize: 11, color: context.textSecondary),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _cancelCheckout,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('إلغاء', style: TextStyle(fontSize: 15)),
                         ),
-                        child: const Text('تأكيد البيع', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _confirmCheckout,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('تأكيد البيع', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -3026,80 +3051,87 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   // ── Checkout Completed Overlay ─────────────────────────────────────
   Widget _buildCheckoutCompletedOverlay() {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.55),
-      child: Center(
-        child: Card(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          elevation: 12,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: AppColors.success, size: 28),
-                    const SizedBox(width: 10),
-                    Text(
-                      'تم إنهاء البيع',
-                      style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text('رقم الفاتورة: $_lastInvoiceId',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text('الإجمالي: ${CurrencyFormatter.format(_capturedTotal)}',
-                    style: const TextStyle(fontSize: 14)),
-                const SizedBox(height: 4),
-                Text('طريقة الدفع: $_capturedPaymentLabel',
-                    style: const TextStyle(fontSize: 14)),
-                if (_capturedCustomerName.isNotEmpty) ...[
+    // GestureDetector with HitTestBehavior.opaque ensures ALL taps
+    // are absorbed (even on the transparent background), preventing
+    // tap-through to widgets below the overlay.
+    return GestureDetector(
+      onTap: () {}, // Absorb background taps – do nothing
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.55),
+        child: Center(
+          child: Card(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 12,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: AppColors.success, size: 28),
+                      const SizedBox(width: 10),
+                      Text(
+                        'تم إنهاء البيع',
+                        style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text('رقم الفاتورة: $_lastInvoiceId',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text('العميل: $_capturedCustomerName',
+                  Text('الإجمالي: ${CurrencyFormatter.format(_capturedTotal)}',
                       style: const TextStyle(fontSize: 14)),
-                ],
-                const SizedBox(height: 10),
-                const Text(
-                  'لم يتم ترحيل الفاتورة بعد – سيتم ترحيلها عند إغلاق الوردية',
-                  style: TextStyle(fontSize: 11, color: AppColors.info),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          _showPrintOptions(_lastInvoiceId);
-                        },
-                        icon: const Icon(Icons.print, size: 18),
-                        label: const Text('طباعه'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _dismissCompletion,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('إغلاق', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                      ),
-                    ),
+                  const SizedBox(height: 4),
+                  Text('طريقة الدفع: $_capturedPaymentLabel',
+                      style: const TextStyle(fontSize: 14)),
+                  if (_capturedCustomerName.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text('العميل: $_capturedCustomerName',
+                        style: const TextStyle(fontSize: 14)),
                   ],
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  const Text(
+                    'لم يتم ترحيل الفاتورة بعد – سيتم ترحيلها عند إغلاق الوردية',
+                    style: TextStyle(fontSize: 11, color: AppColors.info),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            _showPrintOptions(_lastInvoiceId);
+                          },
+                          icon: const Icon(Icons.print, size: 18),
+                          label: const Text('طباعه'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _dismissCompletion,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('إغلاق', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
