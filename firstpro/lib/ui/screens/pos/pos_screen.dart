@@ -1590,6 +1590,53 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               ),
             ),
           ),
+          const SizedBox(height: 8),
+
+          // Clear invoice button
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: OutlinedButton.icon(
+              onPressed: (_cart.isEmpty || _isCheckingOut) ? null : () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: AlertDialog(
+                      title: const Text('مسح الفاتورة'),
+                      content: const Text('هل تريد مسح جميع الأصناف من الفاتورة الحالية؟'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('إلغاء'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.error,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('مسح'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+                if (confirmed == true) {
+                  _resetForNewInvoice();
+                }
+              },
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('مسح الفاتورة'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -2849,6 +2896,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     String paymentMechanism = primaryMethod == 'credit' ? 'credit' : 'cash';
     String paymentMethod = primaryMethod;
 
+    // Capture values before resetting cart
+    final capturedTotal = _total;
+    final capturedCustomerName = _selectedCustomerName;
+
     final invoiceMap = {
       'id': invoiceId,
       'type': 'pos',
@@ -2904,9 +2955,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     if (!mounted) return;
 
-    // Show sale complete dialog
+    // Reset the cart IMMEDIATELY after saving – before showing the dialog
+    // This ensures a fresh invoice is ready when the dialog closes
+    _resetForNewInvoice();
+
+    // Show sale complete dialog and WAIT for it to be dismissed
+    // This keeps _isCheckingOut = true until the dialog is fully dismissed
     if (context.mounted) {
-      showDialog(
+      await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (ctx) => Directionality(
@@ -2924,10 +2980,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('رقم الفاتورة: $invoiceId'),
-                Text('الإجمالي: ${CurrencyFormatter.format(_total)}'),
+                Text('الإجمالي: ${CurrencyFormatter.format(capturedTotal)}'),
                 Text('طريقة الدفع: ${_paymentLabel(primaryMethod)}'),
-                if (_selectedCustomerName.isNotEmpty)
-                  Text('العميل: $_selectedCustomerName'),
+                if (capturedCustomerName.isNotEmpty)
+                  Text('العميل: $capturedCustomerName'),
                 const SizedBox(height: 8),
                 const Text(
                   'لم يتم ترحيل الفاتورة بعد – سيتم ترحيلها عند إغلاق الوردية',
@@ -2936,33 +2992,22 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               ],
             ),
             actions: [
-              // Print button - compact icon with text, shows options on tap
-              IconButton(
+              // Print button - shows options on tap
+              TextButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
                   _showPrintOptions(invoiceId);
                 },
                 icon: const Icon(Icons.print),
-                tooltip: 'طباعه',
-                style: IconButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: 4),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('إغلاق'),
+                label: const Text('طباعه'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _resetForNewInvoice();
-                },
+                onPressed: () => Navigator.pop(ctx),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('فاتورة جديدة'),
+                child: const Text('إغلاق'),
               ),
             ],
           ),
@@ -2970,7 +3015,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       );
     }
     } finally {
-      // Always release the checkout guard
+      // Release checkout guard only after dialog is dismissed
       if (mounted) {
         setState(() => _isCheckingOut = false);
       }

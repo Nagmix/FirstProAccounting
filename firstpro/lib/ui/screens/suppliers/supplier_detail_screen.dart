@@ -983,25 +983,28 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                   ),
                 ],
               ),
-        floatingActionButton: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FloatingActionButton.small(
-              heroTag: 'receipt',
-              onPressed: () => _showAddVoucherDialog('receipt'),
-              backgroundColor: AppColors.success,
-              tooltip: 'سند قبض',
-              child: const Icon(Icons.assignment_turned_in, color: Colors.white, size: 20),
-            ),
-            const SizedBox(height: 8),
-            FloatingActionButton.small(
-              heroTag: 'payment',
-              onPressed: () => _showAddVoucherDialog('payment'),
-              backgroundColor: AppColors.error,
-              tooltip: 'سند صرف',
-              child: const Icon(Icons.assignment_return, color: Colors.white, size: 20),
-            ),
-          ],
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 72), // Lift above bottom stats bar
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.small(
+                heroTag: 'receipt',
+                onPressed: () => _showAddVoucherDialog('receipt'),
+                backgroundColor: AppColors.success,
+                tooltip: 'سند قبض',
+                child: const Icon(Icons.assignment_turned_in, color: Colors.white, size: 20),
+              ),
+              const SizedBox(height: 8),
+              FloatingActionButton.small(
+                heroTag: 'payment',
+                onPressed: () => _showAddVoucherDialog('payment'),
+                backgroundColor: AppColors.error,
+                tooltip: 'سند صرف',
+                child: const Icon(Icons.assignment_return, color: Colors.white, size: 20),
+              ),
+            ],
+          ),
         ),
       ),
     );
