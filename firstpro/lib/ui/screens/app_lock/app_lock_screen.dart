@@ -142,12 +142,20 @@ class _AppLockScreenState extends State<AppLockScreen>
     }
   }
 
+  /// Simple hash function for PIN verification.
+  /// Must match the hash function used in settings_screen.dart.
+  String _hashPin(String pin) {
+    int hash = 0;
+    for (int i = 0; i < pin.length; i++) {
+      hash = ((hash << 5) - hash) + pin.codeUnitAt(i);
+      hash = hash & 0x7fffffff; // Keep it positive
+    }
+    return 'h\$hash';
+  }
+
   Future<String?> _getStoredPin() async {
-    // Try flutter_secure_storage first, fall back to SharedPreferences via DB
+    // The stored value is a hash (prefixed with 'h'), not the plain PIN.
     try {
-      // Using DatabaseHelper's settings table as storage
-      // In production, this should use flutter_secure_storage
-      // We store in settings with a special key
       return await _db.getSetting('app_pin');
     } catch (_) {
       return null;
@@ -155,7 +163,7 @@ class _AppLockScreenState extends State<AppLockScreen>
   }
 
   Future<void> _savePin(String pin) async {
-    await _db.setSetting('app_pin', pin);
+    await _db.setSetting('app_pin', _hashPin(pin));
     await _db.setSetting('pin_enabled', '1');
   }
 
@@ -256,8 +264,8 @@ class _AppLockScreenState extends State<AppLockScreen>
         }
       }
     } else {
-      // Verifying existing PIN
-      if (_enteredPin == _storedPin) {
+      // Verifying existing PIN — compare hash of entered PIN with stored hash
+      if (_hashPin(_enteredPin) == _storedPin) {
         _onAuthSuccess();
       } else {
         _onWrongPin();

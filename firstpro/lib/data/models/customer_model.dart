@@ -11,6 +11,7 @@ class Customer {
   final double balance;
   final String balanceType; // 'debit' or 'credit'
   final String? country;
+  final String currency;
   final double creditLimit;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -28,6 +29,7 @@ class Customer {
     this.balance = 0.0,
     this.balanceType = 'credit',
     this.country,
+    this.currency = 'YER',
     this.creditLimit = 0.0,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -48,6 +50,7 @@ class Customer {
       'balance': balance,
       'balance_type': balanceType,
       'country': country,
+      'currency': currency,
       'credit_limit': creditLimit,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -68,6 +71,7 @@ class Customer {
       balance: (map['balance'] ?? 0.0).toDouble(),
       balanceType: map['balance_type'] ?? 'credit',
       country: map['country'],
+      currency: map['currency'] ?? 'YER',
       creditLimit: (map['credit_limit'] ?? 0.0).toDouble(),
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
@@ -77,8 +81,8 @@ class Customer {
   Customer copyWith({
     int? id, String? name, String? phone, String? address, String? address2,
     String? email, String? gender, String? notificationMethod, String? notes,
-    double? balance, String? balanceType, String? country, double? creditLimit,
-    DateTime? createdAt, DateTime? updatedAt,
+    double? balance, String? balanceType, String? country, String? currency,
+    double? creditLimit, DateTime? createdAt, DateTime? updatedAt,
   }) {
     return Customer(
       id: id ?? this.id, name: name ?? this.name, phone: phone ?? this.phone,
@@ -87,6 +91,7 @@ class Customer {
       notificationMethod: notificationMethod ?? this.notificationMethod,
       notes: notes ?? this.notes, balance: balance ?? this.balance,
       balanceType: balanceType ?? this.balanceType, country: country ?? this.country,
+      currency: currency ?? this.currency,
       creditLimit: creditLimit ?? this.creditLimit,
       createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
     );

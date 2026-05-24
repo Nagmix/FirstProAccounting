@@ -11,6 +11,14 @@ import 'ui/screens/app_lock/app_lock_screen.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // TODO: Implement user authentication/login system before app launch.
+  // Currently the app has no login screen — any user with the device can access all data.
+  // A proper login flow should:
+  // 1. Show a login screen on first launch to create an admin account.
+  // 2. Require username/password (or biometric) on subsequent launches.
+  // 3. Support multiple user roles (admin, cashier, etc.) with different permissions.
+  // 4. Store credentials securely (hash + salt) in the database or flutter_secure_storage.
+
   // Set preferred orientations for a typical accounting app (portrait-first).
   // SystemChrome.setPreferredOrientations can be added here if needed.
 
@@ -33,20 +41,42 @@ class _FirstProAppState extends State<FirstProApp> {
   /// null = still loading, true = PIN enabled, false = PIN disabled
   bool? _pinEnabled;
 
+  /// Theme mode loaded from settings: 0=light, 1=dark, 2=system
+  int _themeModeIndex = 2; // Default to system
+
   @override
   void initState() {
     super.initState();
-    _checkPinEnabled();
+    _initApp();
   }
 
-  Future<void> _checkPinEnabled() async {
+  Future<void> _initApp() async {
     final db = DatabaseHelper();
+
+    // Load PIN enabled state
     final pinEnabled = await db.getSetting('pin_enabled');
+
+    // Load saved theme mode
+    final themeModeStr = await db.getSetting('theme_mode_index');
 
     if (mounted) {
       setState(() {
         _pinEnabled = pinEnabled == '1';
+        if (themeModeStr != null) {
+          _themeModeIndex = int.tryParse(themeModeStr) ?? 2;
+        }
       });
+    }
+  }
+
+  ThemeMode _getThemeMode() {
+    switch (_themeModeIndex) {
+      case 0:
+        return ThemeMode.light;
+      case 1:
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
     }
   }
 
@@ -80,7 +110,7 @@ class _FirstProAppState extends State<FirstProApp> {
       // ── Theming ─────────────────────────────────────────────
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: _getThemeMode(),
 
       // ── Navigation ──────────────────────────────────────────
       // Show AppLockScreen if PIN is enabled, otherwise MainScaffold.

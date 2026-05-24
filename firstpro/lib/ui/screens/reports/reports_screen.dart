@@ -48,8 +48,11 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   bool _isLoading = true;
   double _totalRevenue = 0.0;
-  double _totalExpenses = 0.0;
+  double _totalPurchases = 0.0;
+  double _totalOperatingExpenses = 0.0;
+  double _totalExpenses = 0.0; // kept for backward compat in summary cards
   double _netProfit = 0.0;
+  double _grossProfit = 0.0;
   int _invoiceCount = 0;
   List<BarData> _dailySalesData = [];
   List<_TopProduct> _topProducts = [];
@@ -348,6 +351,44 @@ class _ReportsScreenState extends State<ReportsScreen>
             }
           }
 
+          // Get cash transfers for this cash box
+          String ctDateFilter = dateFilter;
+          final transfersInResult = await db.rawQuery(
+            "SELECT COALESCE(SUM(amount), 0.0) AS total, COUNT(*) AS cnt "
+            "FROM cash_transfers WHERE to_cash_box_id = ?"
+            "$ctDateFilter",
+            [cbId, ...dateArgs],
+          );
+          final transfersOutResult = await db.rawQuery(
+            "SELECT COALESCE(SUM(amount), 0.0) AS total, COUNT(*) AS cnt "
+            "FROM cash_transfers WHERE from_cash_box_id = ?"
+            "$ctDateFilter",
+            [cbId, ...dateArgs],
+          );
+          final transfersInTotal = (transfersInResult.first['total'] as num?)?.toDouble() ?? 0.0;
+          final transfersInCount = (transfersInResult.first['cnt'] as num?)?.toInt() ?? 0;
+          final transfersOutTotal = (transfersOutResult.first['total'] as num?)?.toDouble() ?? 0.0;
+          final transfersOutCount = (transfersOutResult.first['cnt'] as num?)?.toInt() ?? 0;
+
+          // Get currency exchanges for this cash box
+          String ceDateFilter = dateFilter;
+          final exchangesInResult = await db.rawQuery(
+            "SELECT COALESCE(SUM(to_amount), 0.0) AS total, COUNT(*) AS cnt "
+            "FROM currency_exchanges WHERE to_cash_box_id = ?"
+            "$ceDateFilter",
+            [cbId, ...dateArgs],
+          );
+          final exchangesOutResult = await db.rawQuery(
+            "SELECT COALESCE(SUM(from_amount), 0.0) AS total, COUNT(*) AS cnt "
+            "FROM currency_exchanges WHERE from_cash_box_id = ?"
+            "$ceDateFilter",
+            [cbId, ...dateArgs],
+          );
+          final exchangesInTotal = (exchangesInResult.first['total'] as num?)?.toDouble() ?? 0.0;
+          final exchangesInCount = (exchangesInResult.first['cnt'] as num?)?.toInt() ?? 0;
+          final exchangesOutTotal = (exchangesOutResult.first['total'] as num?)?.toDouble() ?? 0.0;
+          final exchangesOutCount = (exchangesOutResult.first['cnt'] as num?)?.toInt() ?? 0;
+
           cashBoxMovements.add(_CashBoxMovement(
             id: cbId,
             name: cbName,
@@ -359,6 +400,14 @@ class _ReportsScreenState extends State<ReportsScreen>
             salesCount: salesCount,
             purchaseTotal: purchaseTotal,
             purchaseCount: purchaseCount,
+            transfersInTotal: transfersInTotal,
+            transfersInCount: transfersInCount,
+            transfersOutTotal: transfersOutTotal,
+            transfersOutCount: transfersOutCount,
+            exchangesInTotal: exchangesInTotal,
+            exchangesInCount: exchangesInCount,
+            exchangesOutTotal: exchangesOutTotal,
+            exchangesOutCount: exchangesOutCount,
           ));
         }
       }
@@ -402,16 +451,19 @@ class _ReportsScreenState extends State<ReportsScreen>
       }
 
       // ── Debt items ──
+      // "ديون لنا" = owed TO us = balance_type 'debit' (they owe us)
+      // "ديون علينا" = we owe THEM = balance_type 'credit' (we owe them)
       List<_DebtItem> debtItems = [];
       if (_selectedReportType == 'ديون العملاء') {
         final customers = await dbHelper.getAllCustomers();
         for (final c in customers) {
           final balance = (c['balance'] as num?)?.toDouble() ?? 0.0;
+          final balanceType = c['balance_type'] as String? ?? 'credit';
           if (balance > 0) {
             debtItems.add(_DebtItem(
               name: c['name'] as String? ?? '',
               balance: balance,
-              balanceType: c['balance_type'] as String? ?? 'credit',
+              balanceType: balanceType,
               currency: c['currency'] as String? ?? 'YER',
               phone: c['phone'] as String?,
             ));
@@ -421,11 +473,12 @@ class _ReportsScreenState extends State<ReportsScreen>
         final suppliers = await dbHelper.getAllSuppliers();
         for (final s in suppliers) {
           final balance = (s['balance'] as num?)?.toDouble() ?? 0.0;
+          final balanceType = s['balance_type'] as String? ?? 'debit';
           if (balance > 0) {
             debtItems.add(_DebtItem(
               name: s['name'] as String? ?? '',
               balance: balance,
-              balanceType: s['balance_type'] as String? ?? 'debit',
+              balanceType: balanceType,
               currency: s['currency'] as String? ?? 'YER',
               phone: s['phone'] as String?,
             ));
@@ -433,10 +486,15 @@ class _ReportsScreenState extends State<ReportsScreen>
         }
       }
 
+      final grossProfit = totalRevenue - totalExpenses;
+
       if (mounted) {
         setState(() {
           _totalRevenue = totalRevenue;
+          _totalPurchases = totalExpenses;
+          _totalOperatingExpenses = actualExpenses;
           _totalExpenses = totalExpenses + actualExpenses;
+          _grossProfit = grossProfit;
           _netProfit = netProfit;
           _invoiceCount = invoiceCount;
           _dailySalesData = dailySales;
@@ -699,7 +757,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    'هامش الربح: ${profitPercent.toStringAsFixed(1)}%',
+                    'هامش الربح الصافي: ${profitPercent.toStringAsFixed(1)}%',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: _netProfit >= 0 ? AppColors.success : AppColors.error,
@@ -710,12 +768,14 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
           ),
           const SizedBox(height: 20),
-          // Revenue breakdown
-          _buildPLRow(theme, isDark, 'إجمالي الإيرادات', _totalRevenue, AppColors.success, Icons.arrow_outward),
+          // P&L Breakdown - clear structure
+          _buildPLRow(theme, isDark, 'إجمالي الإيرادات (المبيعات)', _totalRevenue, AppColors.success, Icons.arrow_outward),
           const SizedBox(height: 8),
-          _buildPLRow(theme, isDark, 'تكلفة المشتريات', _totalExpenses - (_totalExpenses - _totalRevenue + _netProfit).abs(), AppColors.error, Icons.south_east),
+          _buildPLRow(theme, isDark, 'تكلفة المشتريات', _totalPurchases, AppColors.error, Icons.south_east),
           const SizedBox(height: 8),
-          _buildPLRow(theme, isDark, 'المصاريف التشغيلية', (_totalExpenses - (_totalRevenue - _netProfit)).abs().clamp(0, _totalExpenses), AppColors.warning, Icons.remove),
+          _buildPLRow(theme, isDark, 'ربح إجمالي', _grossProfit, _grossProfit >= 0 ? AppColors.success : AppColors.error, _grossProfit >= 0 ? Icons.trending_up : Icons.trending_down),
+          const SizedBox(height: 8),
+          _buildPLRow(theme, isDark, 'المصاريف التشغيلية', _totalOperatingExpenses, AppColors.warning, Icons.remove),
           const SizedBox(height: 16),
           // Visual Bar
           Container(
@@ -726,7 +786,8 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
             child: LayoutBuilder(builder: (context, constraints) {
               final totalWidth = constraints.maxWidth;
-              final revenueWidth = _totalRevenue > 0 ? (_totalRevenue / (_totalRevenue + _totalExpenses.abs()) * totalWidth).clamp(0.0, totalWidth) as double : 0.0;
+              final totalCosts = _totalPurchases + _totalOperatingExpenses;
+              final revenueWidth = _totalRevenue > 0 && (_totalRevenue + totalCosts) > 0 ? (_totalRevenue / (_totalRevenue + totalCosts) * totalWidth).clamp(0.0, totalWidth) as double : 0.0;
               return Row(
                 children: [
                   Container(
@@ -745,7 +806,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                         borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
                       ),
                       alignment: Alignment.center,
-                      child: Text('مصاريف', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                      child: Text('تكاليف', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],
@@ -883,6 +944,34 @@ class _ReportsScreenState extends State<ReportsScreen>
                       ),
                     ],
                   ),
+                  if (cb.transfersInTotal > 0 || cb.transfersOutTotal > 0) ...[
+                    const Divider(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatMini(theme, 'تحويلات واردة', cb.transfersInTotal, cb.transfersInCount, AppColors.info, 'تحويل'),
+                        ),
+                        Container(width: 1, height: 40, color: AppColors.divider),
+                        Expanded(
+                          child: _buildStatMini(theme, 'تحويلات صادرة', cb.transfersOutTotal, cb.transfersOutCount, AppColors.warning, 'تحويل'),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (cb.exchangesInTotal > 0 || cb.exchangesOutTotal > 0) ...[
+                    const Divider(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatMini(theme, 'صرافة واردة', cb.exchangesInTotal, cb.exchangesInCount, AppColors.info, 'عملية'),
+                        ),
+                        Container(width: 1, height: 40, color: AppColors.divider),
+                        Expanded(
+                          child: _buildStatMini(theme, 'صرافة صادرة', cb.exchangesOutTotal, cb.exchangesOutCount, AppColors.warning, 'عملية'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -892,7 +981,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
   }
 
-  Widget _buildStatMini(ThemeData theme, String label, double total, int count, Color color) {
+  Widget _buildStatMini(ThemeData theme, String label, double total, int count, Color color, [String countLabel = 'فاتورة']) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
@@ -901,7 +990,7 @@ class _ReportsScreenState extends State<ReportsScreen>
           const SizedBox(height: 4),
           Text(CurrencyFormatter.formatCompactWithSymbol(total),
               style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
-          Text('$count فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+          Text('$count $countLabel', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
         ],
       ),
     );
@@ -1512,12 +1601,23 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildDebtReport(ThemeData theme, bool isDark) {
     final isCustomer = _selectedReportType == 'ديون العملاء';
-    final totalDebt = _debtItems.fold(0.0, (sum, item) => sum + item.balance);
+
+    // Separate debts by balance_type semantics:
+    // "ديون لنا" (owed TO us): balance_type = 'debit'
+    // "ديون علينا" (we owe them): balance_type = 'credit'
+    final debtsOwedToUs = _debtItems.where((i) => i.balanceType == 'debit').toList();
+    final debtsWeOwe = _debtItems.where((i) => i.balanceType == 'credit').toList();
+
+    final totalDebtsOwedToUs = debtsOwedToUs.fold(0.0, (sum, item) => sum + item.balance);
+    final totalDebtsWeOwe = debtsWeOwe.fold(0.0, (sum, item) => sum + item.balance);
+    final netDebt = totalDebtsOwedToUs - totalDebtsWeOwe;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Summary card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -1530,27 +1630,116 @@ class _ReportsScreenState extends State<ReportsScreen>
             ),
             child: Column(
               children: [
-                Icon(isCustomer ? Icons.people : Icons.local_shipping, size: 32, color: AppColors.error),
+                Icon(isCustomer ? Icons.people : Icons.local_shipping, size: 32, color: AppColors.primary),
                 const SizedBox(height: 8),
                 Text(
-                  'إجمالي ${isCustomer ? "ديون العملاء" : "مديونيات الموردين"}',
+                  isCustomer ? 'ملخص ديون العملاء' : 'ملخص مديونيات الموردين',
                   style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 4),
-                Text(CurrencyFormatter.formatCompactWithSymbol(totalDebt),
-                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.error)),
-                const SizedBox(height: 4),
-                Text('${_debtItems.length} ${isCustomer ? "عميل" : "مورد"}',
-                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Column(
+                      children: [
+                        Text('ديون لنا', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(CurrencyFormatter.formatCompactWithSymbol(totalDebtsOwedToUs),
+                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
+                        Text('${debtsOwedToUs.length} ${isCustomer ? "عميل" : "مورد"}',
+                            style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                      ],
+                    ),
+                    Container(width: 1, height: 50, color: AppColors.divider),
+                    Column(
+                      children: [
+                        Text('ديون علينا', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(CurrencyFormatter.formatCompactWithSymbol(totalDebtsWeOwe),
+                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.error)),
+                        Text('${debtsWeOwe.length} ${isCustomer ? "عميل" : "مورد"}',
+                            style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('صافي الرصيد: ${CurrencyFormatter.formatWithSymbol(netDebt)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: netDebt >= 0 ? AppColors.success : AppColors.error,
+                    )),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          if (_debtItems.isEmpty)
-            _buildEmptyState(theme, isCustomer ? Icons.people : Icons.local_shipping,
-                'لا توجد ${isCustomer ? "ديون عملاء" : "مديونيات موردين"}')
-          else
-            ..._debtItems.map((item) => Card(
+
+          // ── Section: Debts owed TO us (ديون لنا) ──
+          if (debtsOwedToUs.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.call_made, color: AppColors.success, size: 20),
+                  const SizedBox(width: 8),
+                  Text('ديون لنا (مبالغ مستحقة لنا)',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+                ],
+              ),
+            ),
+            ...debtsOwedToUs.map((item) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                      child: Icon(isCustomer ? Icons.person : Icons.local_shipping, color: AppColors.success, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text('${item.currency}${item.phone != null ? " | ${item.phone}" : ""}',
+                              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(CurrencyFormatter.format(item.balance),
+                            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+                        Text('لنا',
+                            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            )),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Section: Debts WE owe (ديون علينا) ──
+          if (debtsWeOwe.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.call_received, color: AppColors.error, size: 20),
+                  const SizedBox(width: 8),
+                  Text('ديون علينا (مبالغ مستحقة علينا)',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
+                ],
+              ),
+            ),
+            ...debtsWeOwe.map((item) => Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: Padding(
                 padding: const EdgeInsets.all(14),
@@ -1578,14 +1767,20 @@ class _ReportsScreenState extends State<ReportsScreen>
                       children: [
                         Text(CurrencyFormatter.format(item.balance),
                             style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
-                        Text(item.balanceType == 'credit' ? 'له' : 'عليه',
-                            style: theme.textTheme.bodySmall?.copyWith(color: item.balanceType == 'credit' ? AppColors.success : AppColors.error)),
+                        Text('علينا',
+                            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ],
                 ),
               ),
             )),
+          ],
+
+          // Empty state if no debts at all
+          if (debtsOwedToUs.isEmpty && debtsWeOwe.isEmpty)
+            _buildEmptyState(theme, isCustomer ? Icons.people : Icons.local_shipping,
+                'لا توجد ${isCustomer ? "ديون عملاء" : "مديونيات موردين"}'),
         ],
       ),
     );
@@ -1976,7 +2171,7 @@ class _DebtItem {
 }
 
 class _CashBoxMovement {
-  const _CashBoxMovement({required this.id, required this.name, required this.type, required this.balance, required this.balanceType, required this.currency, required this.salesTotal, required this.salesCount, required this.purchaseTotal, required this.purchaseCount});
+  const _CashBoxMovement({required this.id, required this.name, required this.type, required this.balance, required this.balanceType, required this.currency, required this.salesTotal, required this.salesCount, required this.purchaseTotal, required this.purchaseCount, this.transfersInTotal = 0, this.transfersInCount = 0, this.transfersOutTotal = 0, this.transfersOutCount = 0, this.exchangesInTotal = 0, this.exchangesInCount = 0, this.exchangesOutTotal = 0, this.exchangesOutCount = 0});
   final int id;
   final String name;
   final String type;
@@ -1987,6 +2182,14 @@ class _CashBoxMovement {
   final int salesCount;
   final double purchaseTotal;
   final int purchaseCount;
+  final double transfersInTotal;
+  final int transfersInCount;
+  final double transfersOutTotal;
+  final int transfersOutCount;
+  final double exchangesInTotal;
+  final int exchangesInCount;
+  final double exchangesOutTotal;
+  final int exchangesOutCount;
 }
 
 class _InventoryItem {

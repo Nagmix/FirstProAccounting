@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -995,14 +996,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         child: Row(
           children: [
             IconButton.outlined(
-              onPressed: () {},
+              onPressed: _shareInvoice,
               icon: const Icon(Icons.share),
               tooltip: 'مشاركة',
             ),
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: _printInvoice,
                 icon: const Icon(Icons.print),
                 label: const Text('طباعة'),
               ),
@@ -1017,6 +1018,60 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Share invoice details ─────────────────────────────────────
+  void _shareInvoice() {
+    if (_items.isEmpty) {
+      context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
+      return;
+    }
+    final entityName = _isSale
+        ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
+        : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
+    final buffer = StringBuffer();
+    buffer.writeln(_title);
+    buffer.writeln('──────────────────');
+    buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: $entityName');
+    buffer.writeln('المجموع الفرعي: ${CurrencyFormatter.format(_subtotal)}');
+    if (_discountAmount > 0) {
+      buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
+    }
+    if (_taxAmount > 0) {
+      buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
+    }
+    if (_transportCharges > 0) {
+      buffer.writeln('أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
+    }
+    buffer.writeln('الإجمالي: ${CurrencyFormatter.format(_total)}');
+    buffer.writeln('المدفوع: ${CurrencyFormatter.format(_paidAmount)}');
+    buffer.writeln('المتبقي: ${CurrencyFormatter.format(_remaining)}');
+    buffer.writeln('──────────────────');
+    buffer.writeln('الأصناف:');
+    for (final item in _items) {
+      buffer.writeln('  ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
+    }
+    if (_notesController.text.isNotEmpty) {
+      buffer.writeln('ملاحظات: ${_notesController.text}');
+    }
+    Share.share(buffer.toString(), subject: _title);
+  }
+
+  // ── Print invoice (placeholder) ────────────────────────────────
+  void _printInvoice() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('طباعة'),
+        content: const Text('سيتم دعم الطباعة قريباً'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('حسناً'),
+          ),
+        ],
       ),
     );
   }
@@ -1058,6 +1113,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       customerId: _isSale ? _selectedEntityId : null,
       supplierId: !_isSale ? _selectedEntityId : null,
       subtotal: _subtotal,
+      discountRate: _subtotal > 0 ? (_discountAmount / _subtotal) * 100 : 0.0,
       discountAmount: _discountAmount,
       taxAmount: _taxAmount,
       total: _total,

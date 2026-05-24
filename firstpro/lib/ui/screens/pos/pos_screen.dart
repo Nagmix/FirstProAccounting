@@ -66,6 +66,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ── Invoice counter (for readable IDs) ────────────────────────────
   int _todayInvoiceCount = 0;
 
+  // ── Currency (H3: dynamic instead of hardcoded YER) ───────────────
+  String _selectedCurrency = 'YER';
+
   @override
   void initState() {
     super.initState();
@@ -125,10 +128,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     // Load default cashier name from settings
     final savedName = await db.getSetting('user_name');
 
+    // C7: Query DB for today's POS invoice count to avoid ID collisions after restart
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final count = await db.getTodayPosInvoiceCount(todayStr);
+
     setState(() {
       _categories = catMaps;
       _products = prodMaps.map((m) => Product.fromMap(m)).toList();
       _isLoading = false;
+      _todayInvoiceCount = count;
       if (savedName != null && savedName.isNotEmpty) {
         _cashierName = savedName;
       }
@@ -148,6 +157,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           if (shift['cashier_name'] != null) {
             _cashierName = shift['cashier_name'].toString();
           }
+          // H3: Initialize currency from active shift (or cash box)
+          _selectedCurrency = (shift['currency'] ?? cb['currency'] ?? 'YER').toString();
         });
         if (!_ticker.isActive) _ticker.start();
         return;
@@ -262,6 +273,26 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         ],
       ),
       actions: [
+        // H3: Currency selector
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedCurrency,
+              icon: const Icon(Icons.arrow_drop_down, size: 18),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+              borderRadius: BorderRadius.circular(8),
+              items: const [
+                DropdownMenuItem(value: 'YER', child: Text('YER')),
+                DropdownMenuItem(value: 'SAR', child: Text('SAR')),
+                DropdownMenuItem(value: 'USD', child: Text('USD')),
+              ],
+              onChanged: (val) {
+                if (val != null) setState(() => _selectedCurrency = val);
+              },
+            ),
+          ),
+        ),
         // X-Report
         if (_activeShift != null)
           IconButton(
@@ -1752,7 +1783,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         'total_returns': 0.0,
                         'total_discounts': 0.0,
                         'transaction_count': 0,
-                        'currency': 'YER',
+                        'currency': _selectedCurrency,
                         'created_at': now.toIso8601String(),
                         'updated_at': now.toIso8601String(),
                       };
@@ -2471,7 +2502,67 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;
     }
+    // H6: Stock validation – check if enough stock before adding
     final existingIndex = _cart.indexWhere((i) => i.productId == product.id);
+    final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
+    final availableStock = product.currentStock;
+
+    if (availableStock < requestedQty) {
+      // Low stock – show warning but allow proceeding (backorder)
+      _showLowStockWarning(product, existingIndex, requestedQty, availableStock);
+      return;
+    }
+
+    _doAddToCart(existingIndex, product);
+  }
+
+  /// H6: Show low-stock warning dialog; user can proceed or cancel.
+  Future<void> _showLowStockWarning(
+    Product product,
+    int existingIndex,
+    int requestedQty,
+    double availableStock,
+  ) async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber, color: AppColors.warning),
+              const SizedBox(width: 8),
+              const Text('تحذير المخزون'),
+            ],
+          ),
+          content: Text(
+            'الكمية المتوفرة: ${availableStock.toInt()}، هل تريد المتابعة؟',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.warning,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('متابعة'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (proceed == true) {
+      _doAddToCart(existingIndex, product);
+    }
+  }
+
+  /// Internal: actually add the item to cart (called after optional stock check).
+  void _doAddToCart(int existingIndex, Product product) {
     if (existingIndex >= 0) {
       setState(() {
         _cart[existingIndex] = _cart[existingIndex].copyWith(
@@ -2696,6 +2787,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       'cash_box_id': cashBoxId,
       'customer_id': _selectedCustomerId,
       'subtotal': _subtotal,
+      'discount_rate': _discountType == DiscountType.percentage
+          ? _orderDiscount
+          : (_subtotal > 0 ? (_effectiveDiscount / _subtotal) * 100 : 0.0),
       'discount_amount': _effectiveDiscount,
       'tax_amount': _tax,
       'total': _total,
@@ -2705,7 +2799,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       'cashier_name': _cashierName,
       'shift_id': shiftId,
       'is_posted': 0, // NOT POSTED YET – deferred posting
-      'currency': 'YER',
+      'currency': _selectedCurrency,
       'created_at': now.toIso8601String(),
     };
 

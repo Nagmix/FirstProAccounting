@@ -1,6 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:sqflite/sqflite.dart' as sqflite;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -121,6 +127,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveSetting(String key, String value) async {
     final db = DatabaseHelper();
     await db.setSetting(key, value);
+  }
+
+  /// Simple hash function for PIN storage.
+  /// Instead of storing the PIN as plain text, we store a hash.
+  /// This is a basic hash — not cryptographically secure, but better than plain text.
+  String _hashPin(String pin) {
+    int hash = 0;
+    for (int i = 0; i < pin.length; i++) {
+      hash = ((hash << 5) - hash) + pin.codeUnitAt(i);
+      hash = hash & 0x7fffffff; // Keep it positive
+    }
+    return 'h\$hash';
   }
 
   @override
@@ -341,7 +359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       final pin = await _showPinDialog(isSetting: true);
                       if (pin != null && pin.length == 4) {
                         await _saveSetting('pin_enabled', '1');
-                        await _saveSetting('app_pin', pin);
+                        await _saveSetting('app_pin', _hashPin(pin));
                         setState(() => _pinEnabled = true);
                       }
                     } else {
@@ -364,7 +382,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () async {
                     final pin = await _showPinDialog(isSetting: true);
                     if (pin != null && pin.length == 4) {
-                      await _saveSetting('app_pin', pin);
+                      await _saveSetting('app_pin', _hashPin(pin));
                       if (!_pinEnabled) {
                         await _saveSetting('pin_enabled', '1');
                         setState(() => _pinEnabled = true);
@@ -722,6 +740,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
 
+    // Ensure controllers are disposed when the dialog closes, regardless of how
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -754,7 +773,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              controllers.values.forEach((c) => c.dispose());
               Navigator.pop(ctx);
             },
             child: const Text('إلغاء'),
@@ -768,7 +786,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'exchange_rate': rate,
                 });
               }
-              controllers.values.forEach((c) => c.dispose());
               Navigator.pop(ctx);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -780,7 +797,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      // Always dispose controllers when the dialog closes, even if dismissed by tapping outside
+      for (final c in controllers.values) {
+        c.dispose();
+      }
+    });
   }
 
   /// Tax rate slider.
@@ -1230,31 +1252,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _onBackup() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('جارٍ إنشاء النسخة الاحتياطية...'),
-        backgroundColor: AppColors.primary,
-      ),
-    );
+  Future<void> _onBackup() async {
+    try {
+      final dbPath = await sqflite.getDatabasesPath();
+      final dbFile = File(p.join(dbPath, 'firstpro.db'));
+      if (await dbFile.exists()) {
+        final dir = await getApplicationDocumentsDirectory();
+        final backupPath = p.join(dir.path, 'firstpro_backup_${DateTime.now().millisecondsSinceEpoch}.db');
+        await dbFile.copy(backupPath);
+        await Share.shareXFiles([XFile(backupPath)], text: 'نسخة احتياطية - الأول برو المحاسبي');
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لم يتم العثور على قاعدة البيانات')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في النسخ الاحتياطي: $e')),
+        );
+      }
+    }
   }
 
   void _onRestore() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('جارٍ استعادة البيانات...'),
-        backgroundColor: AppColors.info,
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('استعادة البيانات'),
+        content: const Text(
+          'لاستعادة النسخة الاحتياطية:\n'
+          '1. ضع ملف النسخة الاحتياطية (.db) على الجهاز\n'
+          '2. أعد تشغيل التطبيق\n\n'
+          'ملاحظة: ستتوفر ميزة الاستعادة المباشرة قريباً.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('حسناً'),
+          ),
+        ],
       ),
     );
   }
 
-  void _onExportReports() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('جارٍ تصدير التقارير...'),
-        backgroundColor: AppColors.primary,
-      ),
-    );
+  Future<void> _onExportReports() async {
+    try {
+      final db = DatabaseHelper();
+      final invoices = await db.getAllInvoices();
+      final expenses = await db.getAllExpenses();
+
+      final buffer = StringBuffer();
+      // CSV header for invoices
+      buffer.writeln('نوع,التاريخ,المجموع الفرعي,الخصم,الإجمالي,المدفوع,المتبقي,الحالة');
+      for (final inv in invoices) {
+        buffer.writeln(
+          '${inv['type']},${inv['created_at']},${inv['subtotal']},${inv['discount_amount']},${inv['total']},${inv['paid_amount']},${inv['remaining']},${inv['status']}',
+        );
+      }
+      buffer.writeln();
+      // CSV header for expenses
+      buffer.writeln('المصروفات');
+      buffer.writeln('الوصف,المبلغ,التاريخ');
+      for (final exp in expenses) {
+        buffer.writeln(
+          '${exp['description'] ?? exp['name'] ?? ''},${exp['amount']},${exp['date'] ?? exp['created_at'] ?? ''}',
+        );
+      }
+
+      final dir = await getApplicationDocumentsDirectory();
+      final exportPath = p.join(dir.path, 'firstpro_export_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await File(exportPath).writeAsString(buffer.toString());
+      await Share.shareXFiles([XFile(exportPath)], text: 'تقارير - الأول برو المحاسبي');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تصدير التقارير: $e')),
+        );
+      }
+    }
   }
 
   void _onClearAllData() {

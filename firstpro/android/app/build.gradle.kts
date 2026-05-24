@@ -29,6 +29,8 @@ android {
 
     buildTypes {
         release {
+            // TODO: Create a proper release keystore before publishing to Play Store
+            // For now, use debug signing for development/testing builds
             signingConfig = signingConfigs.getByName("debug")
         }
     }

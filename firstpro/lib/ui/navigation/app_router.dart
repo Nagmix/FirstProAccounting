@@ -30,6 +30,7 @@ import '../screens/currency_exchange/currency_exchange_screen.dart';
 import '../screens/cash_transfers/cash_transfer_screen.dart';
 import '../screens/debts/debts_screen.dart';
 import '../screens/app_lock/app_lock_screen.dart';
+import '../screens/notifications/notifications_screen.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../data/models/account_model.dart';
@@ -60,11 +61,11 @@ class AppRouter {
         AppConstants.inventory: (_) => const ProductsScreen(),
         AppConstants.statistics: (_) => const StatisticsScreen(),
         AppConstants.dailySalesReport: (_) => const ReportsScreen(),
-        AppConstants.delegates: (_) => const SettingsScreen(),
+        AppConstants.delegates: (_) => const EmployeesScreen(),
         AppConstants.customerImport: (_) => const CustomersScreen(),
         AppConstants.customerLoad: (_) => const CustomersScreen(),
         AppConstants.customerPrint: (_) => const CustomersScreen(),
-        AppConstants.financialOrders: (_) => const SettingsScreen(),
+        AppConstants.financialOrders: (_) => const InvoicesScreen(),
         AppConstants.accountingAudit: (_) => const AccountingAuditScreen(),
         AppConstants.quotations: (_) => const QuotationsScreen(),
         AppConstants.purchaseOrders: (_) => const PurchaseOrdersScreen(),
@@ -74,6 +75,7 @@ class AppRouter {
         AppConstants.cashTransfers: (_) => const CashTransferScreen(),
         AppConstants.debts: (_) => const DebtsScreen(),
         AppConstants.appLock: (_) => const AppLockScreen(),
+        AppConstants.notifications: (_) => const NotificationsScreen(),
       };
 
   static Future<T?> push<T extends Object?>(BuildContext context, String routeName, {Object? arguments}) {

@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 15;
+  static const int _databaseVersion = 17;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -588,6 +588,18 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_cash_transfers_number ON cash_transfers (transfer_number)');
     await db.execute('CREATE INDEX idx_cash_transfers_created_at ON cash_transfers (created_at)');
 
+    // Audit Log
+    await db.execute('''
+      CREATE TABLE audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        table_name TEXT NOT NULL,
+        record_id INTEGER,
+        details TEXT,
+        timestamp TEXT NOT NULL
+      )
+    ''');
+
     // Seed default data
     await _seedCurrencies(db);
     await _seedDefaultAccounts(db);
@@ -629,8 +641,9 @@ class DatabaseHelper {
     }
 
     // Account templates: [nameAr, nameEn, baseCode, accountType]
-    // Removed: حساب الإيرادات (4000), حساب التكاليف (3000), حساب المصاريف (5000), اجور النقل (5200)
+    // Removed: حساب الإيرادات (4000), حساب التكاليف (3000)
     // These duplicate the parent category name and are no longer needed
+    // Kept: حساب المصاريف (5000), اجور النقل (5200) — required for expense/transport journal entries
     final templates = [
       ['حساب الأصول', 'Assets Account', '1000', 'ASSET'],
       ['حساب الصناديق والبنوك', 'Cash & Banks Account', '1100', 'ASSET'],
@@ -639,6 +652,8 @@ class DatabaseHelper {
       ['حساب الموردين', 'Suppliers Account', '2100', 'LIABILITY'],
       ['حساب المشتريات', 'Purchases Account', '3100', 'COST'],
       ['حساب المبيعات', 'Sales Account', '4100', 'REVENUE'],
+      ['حساب المصاريف', 'Expenses Account', '5000', 'EXPENSE'],
+      ['اجور النقل', 'Transport Charges', '5200', 'EXPENSE'],
       ['حساب الموظفين', 'Employees Account', '5100', 'EXPENSE'],
     ];
 
@@ -680,7 +695,8 @@ class DatabaseHelper {
     if (existing.isNotEmpty) return;
 
     // Account templates: [nameAr, nameEn, baseCode, accountType]
-    // Removed: حساب الإيرادات (4000), حساب التكاليف (3000), حساب المصاريف (5000), اجور النقل (5200)
+    // Removed: حساب الإيرادات (4000), حساب التكاليف (3000)
+    // Kept: حساب المصاريف (5000), اجور النقل (5200) — required for expense/transport journal entries
     final templates = [
       ['حساب الأصول', 'Assets Account', 1000, 'ASSET'],
       ['حساب الصناديق والبنوك', 'Cash & Banks Account', 1100, 'ASSET'],
@@ -689,6 +705,8 @@ class DatabaseHelper {
       ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY'],
       ['حساب المشتريات', 'Purchases Account', 3100, 'COST'],
       ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE'],
+      ['حساب المصاريف', 'Expenses Account', 5000, 'EXPENSE'],
+      ['اجور النقل', 'Transport Charges', 5200, 'EXPENSE'],
       ['حساب الموظفين', 'Employees Account', 5100, 'EXPENSE'],
     ];
 
@@ -911,13 +929,11 @@ class DatabaseHelper {
       // Delete duplicate-named accounts that have the same name as their parent category:
       // - حساب الإيرادات (codes 4000, 4001, 4002) under REVENUE
       // - حساب التكاليف (codes 3000, 3001, 3002) under COST
-      // - حساب المصاريف (codes 5000, 5001, 5002) under EXPENSE
-      // - اجور النقل (codes 5200, 5201, 5202) under EXPENSE
+      // NOTE: حساب المصاريف (5000/5001/5002) and اجور النقل (5200/5201/5202) are NOT deleted
+      // because they are required for expense and transport journal entries.
       final codesToDelete = [
         '4000', '4001', '4002', // حساب الإيرادات per currency
         '3000', '3001', '3002', // حساب التكاليف per currency
-        '5000', '5001', '5002', // حساب المصاريف per currency
-        '5200', '5201', '5202', // اجور النقل per currency
       ];
       for (final code in codesToDelete) {
         try {
@@ -1165,10 +1181,66 @@ class DatabaseHelper {
     // ══════════════════════════════════════════════════════════════
     //  v15 Migration: ensure currency column exists in cash_boxes,
     //  cashier_name in shifts (fixes missing columns from fresh installs)
+    //
+    //  NOTE: This migration duplicates v13 because some users who upgraded
+    //  through v13 still had missing columns (fresh installs bypassed v13
+    //  logic since _onCreate already included them). Keeping v15 ensures
+    //  both upgrade paths and fresh-install fixes are covered.
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 15) {
       try { await db.execute("ALTER TABLE cash_boxes ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'"); } catch (_) {}
       try { await db.execute('ALTER TABLE shifts ADD COLUMN cashier_name TEXT'); } catch (_) {}
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v16 Migration: re-create expense and transport accounts that were
+    //  incorrectly deleted by v9. These accounts are required for
+    //  expense and transport charge journal entries.
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 16) {
+      final now16 = DateTime.now().toIso8601String();
+      final accountsToRestore = [
+        {'name_ar': 'حساب المصاريف (ر.ي)', 'name_en': 'Expenses Account (YER)', 'account_code': '5000', 'account_type': 'EXPENSE', 'currency': 'YER', 'symbol': 'ر.ي'},
+        {'name_ar': 'حساب المصاريف (ر.س)', 'name_en': 'Expenses Account (SAR)', 'account_code': '5001', 'account_type': 'EXPENSE', 'currency': 'SAR', 'symbol': 'ر.س'},
+        {'name_ar': 'حساب المصاريف ($)', 'name_en': 'Expenses Account (USD)', 'account_code': '5002', 'account_type': 'EXPENSE', 'currency': 'USD', 'symbol': r'$'},
+        {'name_ar': 'اجور نقل (ر.ي)', 'name_en': 'Transport Charges (YER)', 'account_code': '5200', 'account_type': 'EXPENSE', 'currency': 'YER', 'symbol': 'ر.ي'},
+        {'name_ar': 'اجور نقل (ر.س)', 'name_en': 'Transport Charges (SAR)', 'account_code': '5201', 'account_type': 'EXPENSE', 'currency': 'SAR', 'symbol': 'ر.س'},
+        {'name_ar': 'اجور نقل ($)', 'name_en': 'Transport Charges (USD)', 'account_code': '5202', 'account_type': 'EXPENSE', 'currency': 'USD', 'symbol': r'$'},
+      ];
+      for (final acct in accountsToRestore) {
+        // Only insert if the account does not already exist
+        final existing = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [acct['account_code'], acct['currency']], limit: 1);
+        if (existing.isEmpty) {
+          await db.insert('accounts', {
+            'name_ar': acct['name_ar'],
+            'name_en': acct['name_en'],
+            'account_code': acct['account_code'],
+            'account_type': acct['account_type'],
+            'balance': 0.0,
+            'currency': acct['currency'],
+            'is_active': 1,
+            'is_system': 1,
+            'debt_ceiling': 0.0,
+            'balance_type': 'credit',
+            'created_at': now16,
+            'updated_at': now16,
+          });
+        }
+      }
+    }
+
+    if (oldVersion < 17) {
+      // Add audit_log table for tracking data changes
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS audit_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          action TEXT NOT NULL,
+          table_name TEXT NOT NULL,
+          record_id INTEGER,
+          details TEXT,
+          timestamp TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -1221,6 +1293,12 @@ class DatabaseHelper {
 
   Future<int> deleteProduct(int id) async {
     final db = await database;
+    // Check if product is referenced in invoice_items
+    final refs = await db.query('invoice_items', where: 'product_id = ?', whereArgs: [id], limit: 1);
+    if (refs.isNotEmpty) {
+      // Soft-delete: product has history, cannot hard-delete
+      return await db.update('products', {'is_active': 0}, where: 'id = ?', whereArgs: [id]);
+    }
     return await db.delete('products', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -1229,6 +1307,16 @@ class DatabaseHelper {
     final now = DateTime.now().toIso8601String();
     await db.rawUpdate(
       'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
+      [quantity, now, productId],
+    );
+  }
+
+  /// Increment product stock (used for purchase invoices and sale return restocking).
+  Future<void> incrementProductStock(int productId, double quantity) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    await db.rawUpdate(
+      'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
       [quantity, now, productId],
     );
   }
@@ -1281,6 +1369,12 @@ class DatabaseHelper {
 
   Future<int> deleteCustomer(int id) async {
     final db = await database;
+    // Check if customer is referenced in invoices
+    final refs = await db.query('invoices', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+    if (refs.isNotEmpty) {
+      // Soft-delete not supported by schema — just prevent deletion
+      return 0;
+    }
     return await db.delete('customers', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -1305,7 +1399,19 @@ class DatabaseHelper {
 
   Future<int> deleteSupplier(int id) async {
     final db = await database;
+    // Check if supplier is referenced in invoices
+    final refs = await db.query('invoices', where: 'supplier_id = ?', whereArgs: [id], limit: 1);
+    if (refs.isNotEmpty) {
+      // Soft-delete not supported by schema — just prevent deletion
+      return 0;
+    }
     return await db.delete('suppliers', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> searchSuppliers(String query) async {
+    final db = await database;
+    final likeQuery = '%$query%';
+    return await db.query('suppliers', where: 'name LIKE ? OR phone LIKE ?', whereArgs: [likeQuery, likeQuery], orderBy: 'name ASC');
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1425,6 +1531,44 @@ class DatabaseHelper {
       // Insert invoice items
       for (final item in items) {
         await txn.insert('invoice_items', item);
+      }
+
+      // ── Stock management ──
+      // Sale/POS: decrement stock; Purchase: increment stock; Returns do the opposite
+      for (final item in items) {
+        final productId = (item['product_id'] as num?)?.toInt();
+        final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+        if (productId == null) continue;
+
+        if (invoiceType == 'sale' || invoiceType == 'pos') {
+          if (!isReturn) {
+            // Sale: stock leaves warehouse
+            await txn.rawUpdate(
+              'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
+              [quantity, now, productId],
+            );
+          } else {
+            // Sale return: stock returns to warehouse
+            await txn.rawUpdate(
+              'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
+              [quantity, now, productId],
+            );
+          }
+        } else if (invoiceType == 'purchase') {
+          if (!isReturn) {
+            // Purchase: stock enters warehouse
+            await txn.rawUpdate(
+              'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
+              [quantity, now, productId],
+            );
+          } else {
+            // Purchase return: stock leaves warehouse
+            await txn.rawUpdate(
+              'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
+              [quantity, now, productId],
+            );
+          }
+        }
       }
 
       // Post journal entries
@@ -1655,10 +1799,237 @@ class DatabaseHelper {
     return await db.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
   }
 
+  /// Soft-delete an invoice by setting status to 'cancelled'.
+  /// Does NOT reverse journal entries — use [cancelInvoice] for full reversal.
   Future<int> deleteInvoice(String id) async {
     final db = await database;
-    await db.delete('invoice_items', where: 'invoice_id = ?', whereArgs: [id]);
-    return await db.delete('invoices', where: 'id = ?', whereArgs: [id]);
+    return await db.update('invoices', {'status': 'cancelled'}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Cancel an invoice: soft-delete + reversal journal entries + balance reversals + stock restore.
+  Future<void> cancelInvoice(String id) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    // Fetch invoice
+    final invoiceRows = await db.query('invoices', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (invoiceRows.isEmpty) return;
+    final invoice = invoiceRows.first;
+
+    // Already cancelled — nothing to do
+    if ((invoice['status'] as String?) == 'cancelled') return;
+
+    final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+    final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
+    final invoiceType = (invoice['type'] as String?) ?? 'sale';
+    final isReturn = (invoice['is_return'] as int?) == 1;
+    final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
+    final cashBoxId = invoice['cash_box_id'] as int?;
+    final transportCharges = (invoice['transport_charges'] as num?)?.toDouble() ?? 0.0;
+
+    // Fetch items for stock reversal
+    final items = await db.query('invoice_items', where: 'invoice_id = ?', whereArgs: [id]);
+
+    await db.transaction((txn) async {
+      // 1. Set status to cancelled
+      await txn.update('invoices', {'status': 'cancelled'}, where: 'id = ?', whereArgs: [id]);
+
+      // 2. Create reversal journal entries
+      final journalId = DateTime.now().millisecondsSinceEpoch;
+      final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
+
+      final salesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(4100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+      final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+      final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), invoiceCurrency], limit: 1);
+      final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+      final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+
+      final salesAccountId = salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
+      final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
+      final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
+      final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
+      final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
+
+      // Determine original debit/credit accounts (same logic as saveInvoiceWithJournalEntries)
+      int? originalDebitAccountId;
+      int? originalCreditAccountId;
+
+      if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
+        if (isReturn) {
+          originalDebitAccountId = salesAccountId;
+          originalCreditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+        } else {
+          originalDebitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+          originalCreditAccountId = salesAccountId;
+        }
+      } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
+        if (isReturn) {
+          originalDebitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+          originalCreditAccountId = purchasesAccountId;
+        } else {
+          originalDebitAccountId = purchasesAccountId;
+          originalCreditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+        }
+      }
+
+      // Reversal: swap debit/credit
+      if (originalCreditAccountId != null && total > 0) {
+        await txn.insert('transactions', {
+          'account_id': originalCreditAccountId,
+          'journal_id': journalId,
+          'debit': total,
+          'credit': 0.0,
+          'description': 'إلغاء فاتورة - $id',
+          'date': now,
+          'created_at': now,
+        });
+        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, originalCreditAccountId]);
+      }
+      if (originalDebitAccountId != null && total > 0) {
+        await txn.insert('transactions', {
+          'account_id': originalDebitAccountId,
+          'journal_id': journalId,
+          'debit': 0.0,
+          'credit': total,
+          'description': 'إلغاء فاتورة - $id',
+          'date': now,
+          'created_at': now,
+        });
+        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, originalDebitAccountId]);
+      }
+
+      // 3. Reverse transport charge journal entries
+      if (transportCharges > 0) {
+        final transportAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5200 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final transportAccountId = transportAccount.isNotEmpty ? transportAccount.first['id'] as int : null;
+
+        if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+          // Original: Debit customer/cash, Credit transport expense
+          // Reversal: Debit transport expense, Credit customer/cash
+          final reversalDebitId = transportAccountId;
+          final reversalCreditId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+
+          if (reversalDebitId != null) {
+            await txn.insert('transactions', {
+              'account_id': reversalDebitId,
+              'journal_id': journalId,
+              'debit': transportCharges,
+              'credit': 0.0,
+              'description': 'إلغاء اجور نقل - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, reversalDebitId]);
+          }
+          if (reversalCreditId != null) {
+            await txn.insert('transactions', {
+              'account_id': reversalCreditId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': transportCharges,
+              'description': 'إلغاء اجور نقل - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, reversalCreditId]);
+          }
+        } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
+          // Original: Debit transport expense, Credit cash/supplier
+          // Reversal: Debit cash/supplier, Credit transport expense
+          final reversalDebitId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+          final reversalCreditId = transportAccountId;
+
+          if (reversalDebitId != null) {
+            await txn.insert('transactions', {
+              'account_id': reversalDebitId,
+              'journal_id': journalId,
+              'debit': transportCharges,
+              'credit': 0.0,
+              'description': 'إلغاء اجور نقل - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, reversalDebitId]);
+          }
+          if (reversalCreditId != null) {
+            await txn.insert('transactions', {
+              'account_id': reversalCreditId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': transportCharges,
+              'description': 'إلغاء اجور نقل - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, reversalCreditId]);
+          }
+        }
+      }
+
+      // 4. Reverse customer/supplier balance
+      if (invoice['customer_id'] != null) {
+        final wasDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
+        final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return') ? transportCharges : 0);
+        if (wasDebit) {
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
+        } else {
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
+        }
+      }
+
+      if (invoice['supplier_id'] != null) {
+        final wasCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
+        final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'purchase' || invoiceType == 'purchase_return') ? transportCharges : 0);
+        if (wasCreditToSupplier) {
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['supplier_id']]);
+        } else {
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['supplier_id']]);
+        }
+      }
+
+      // 5. Reverse cash box balance
+      if (cashBoxId != null) {
+        final wasCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
+        if (wasCashIn) {
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+        } else {
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+        }
+        // Reverse transport charge cash box effect
+        if (transportCharges > 0) {
+          if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, cashBoxId]);
+          } else {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, cashBoxId]);
+          }
+        }
+      }
+
+      // 6. Restore product stock
+      for (final item in items) {
+        final productId = (item['product_id'] as num?)?.toInt();
+        final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+        if (productId == null) continue;
+
+        if (invoiceType == 'sale' || invoiceType == 'pos') {
+          if (!isReturn) {
+            // Was decremented, now restore
+            await txn.rawUpdate('UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
+          } else {
+            // Was incremented (return), now decrement
+            await txn.rawUpdate('UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?', [quantity, now, productId]);
+          }
+        } else if (invoiceType == 'purchase') {
+          if (!isReturn) {
+            // Was incremented, now decrement
+            await txn.rawUpdate('UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?', [quantity, now, productId]);
+          } else {
+            // Was decremented (return), now restore
+            await txn.rawUpdate('UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
+          }
+        }
+      }
+    });
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1972,6 +2343,11 @@ class DatabaseHelper {
     return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<int> updateCategory(int id, Map<String, dynamic> categoryMap) async {
+    final db = await database;
+    return await db.update('categories', categoryMap, where: 'id = ?', whereArgs: [id]);
+  }
+
   // ══════════════════════════════════════════════════════════════
   //  Warehouse methods
   // ══════════════════════════════════════════════════════════════
@@ -2068,6 +2444,9 @@ class DatabaseHelper {
     return await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Get the next available account code for a given account type.
+  /// Uses 4-digit numeric codes where the first digit is the type prefix.
+  /// Steps by 10 to leave room for sub-accounts.
   Future<String> getNextAccountCode(String accountType) async {
     final db = await database;
     final prefixMap = {
@@ -2079,11 +2458,26 @@ class DatabaseHelper {
     };
     final prefix = prefixMap[accountType] ?? '9';
     final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(account_code, 2) AS INTEGER)), 0) + 1 AS next_code FROM accounts WHERE account_code LIKE ? AND account_type = ?",
+      'SELECT COALESCE(MAX(CAST(account_code AS INTEGER)), 0) AS max_code FROM accounts WHERE account_code LIKE ? AND account_type = ?',
       ['$prefix%', accountType],
     );
-    final nextNum = (result.first['next_code'] as num?)?.toInt() ?? int.parse('${prefix}001');
-    return nextNum.toString().padLeft(4, '0');
+    final maxCode = (result.first['max_code'] as num?)?.toInt() ?? 0;
+    // If no existing codes, start at prefix*1000 + 10 (e.g. 1010 for ASSET)
+    final nextCode = maxCode == 0 ? (int.parse(prefix) * 1000 + 10) : maxCode + 10;
+    return nextCode.toString();
+  }
+
+  /// Reconcile an account's balance column with the actual computed balance from transactions.
+  /// Computes SUM(debit) - SUM(credit) and updates the `balance` column.
+  Future<void> reconcileAccountBalance(int accountId) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final result = await db.rawQuery(
+      'SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS computed_balance FROM transactions WHERE account_id = ?',
+      [accountId],
+    );
+    final computedBalance = (result.first['computed_balance'] as num?)?.toDouble() ?? 0.0;
+    await db.update('accounts', {'balance': computedBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2135,6 +2529,22 @@ class DatabaseHelper {
   Future<void> setSetting(String key, String value) async {
     final db = await database;
     await db.insert('settings', {'key': key, 'value': value, 'updated_at': DateTime.now().toIso8601String()}, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Audit log methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// Log an audit event for tracking data changes.
+  Future<void> logAuditEvent(String action, String tableName, int? recordId, {String? details}) async {
+    final db = await database;
+    await db.insert('audit_log', {
+      'action': action,
+      'table_name': tableName,
+      'record_id': recordId,
+      'details': details,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -3083,6 +3493,17 @@ class DatabaseHelper {
     final db = await database;
     final results = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [code, currency], limit: 1);
     return results.isNotEmpty ? results.first : null;
+  }
+
+  /// Count POS invoices for a given date prefix (e.g. '2026-03-04')
+  /// Used to avoid invoice-ID collisions after app restart.
+  Future<int> getTodayPosInvoiceCount(String datePrefix) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      "SELECT COUNT(*) AS cnt FROM invoices WHERE id LIKE ?",
+      ['POS-$datePrefix%'],
+    );
+    return (result.first['cnt'] as num?)?.toInt() ?? 0;
   }
 
 }

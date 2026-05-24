@@ -48,7 +48,7 @@ class Product {
     this.wholesalePrice = 0.0,
     this.specialWholesalePrice = 0.0,
     this.minimumSalePrice = 0.0,
-    this.taxRate = 15.0,
+    this.taxRate = 0.0,
     this.salesAccountId,
     this.purchaseAccountId,
     this.inventoryAccountId,
