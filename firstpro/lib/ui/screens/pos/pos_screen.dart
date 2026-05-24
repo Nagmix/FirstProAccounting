@@ -39,8 +39,18 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   int? _selectedCustomerId;
   String _selectedCustomerName = '';
 
-  // ── Checkout guard ────────────────────────────────────────────────
-  bool _isCheckingOut = false; // Prevents concurrent checkout calls
+  // ── Checkout phase (replaces _isCheckingOut + showDialog) ──────────
+  // Using a state-based overlay instead of showDialog prevents
+  // dialog stacking which caused the multi-click bug.
+  _CheckoutPhase _checkoutPhase = _CheckoutPhase.idle;
+  String _lastInvoiceId = '';
+  double _capturedTotal = 0;
+  String _capturedCustomerName = '';
+  String _capturedPaymentLabel = '';
+  int _capturedCartLength = 0;
+  double _capturedSubtotal = 0;
+  double _capturedDiscount = 0;
+  double _capturedTax = 0;
 
   // ── Payment state ─────────────────────────────────────────────────
   final List<_PaymentEntry> _payments = [];
@@ -251,6 +261,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   if (_activeShift != null) _buildDraggableCartSheet(),
                   // Shift overlay when no active shift
                   if (_activeShift == null) _buildShiftOverlay(),
+                  // ── Checkout overlays (replaces showDialog) ────────
+                  // State-based overlays eliminate dialog stacking bug
+                  if (_checkoutPhase == _CheckoutPhase.confirming)
+                    _buildCheckoutConfirmationOverlay(),
+                  if (_checkoutPhase == _CheckoutPhase.completed)
+                    _buildCheckoutCompletedOverlay(),
                 ],
               ),
         floatingActionButton: _activeShift != null
@@ -1552,7 +1568,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: (_cart.isEmpty || _isCheckingOut) ? null : () { if (!_isCheckingOut) _checkout(); },
+              onPressed: (_cart.isEmpty || _checkoutPhase != _CheckoutPhase.idle) ? null : _startCheckout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.success,
                 foregroundColor: Colors.white,
@@ -1597,34 +1613,20 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             width: double.infinity,
             height: 42,
             child: OutlinedButton.icon(
-              onPressed: (_cart.isEmpty || _isCheckingOut) ? null : () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: AlertDialog(
-                      title: const Text('مسح الفاتورة'),
-                      content: const Text('هل تريد مسح جميع الأصناف من الفاتورة الحالية؟'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('إلغاء'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.error,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('مسح'),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-                if (confirmed == true) {
-                  _resetForNewInvoice();
-                }
+              onPressed: (_cart.isEmpty || _checkoutPhase != _CheckoutPhase.idle) ? null : () {
+                setState(() {
+                  _cart.clear();
+                  _payments.clear();
+                  _orderDiscount = 0;
+                  _discountType = DiscountType.fixed;
+                  _selectedCustomerId = null;
+                  _selectedCustomerName = '';
+                  _activePaymentMethod = 'cash';
+                  _searchController.clear();
+                  _isSearching = false;
+                });
+                _sheetController.animateTo(0.12,
+                    duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
               },
               icon: const Icon(Icons.delete_outline, size: 18),
               label: const Text('مسح الفاتورة'),
@@ -2806,233 +2808,303 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  CHECKOUT (Deferred Invoice Posting)
+  //  CHECKOUT – State-based overlay (NO showDialog)
+  //  ═══════════════════════════════════════════════════════════════════
+  //  ROOT CAUSE of multi-click bug: showDialog pushes a route onto the
+  //  Navigator. If _checkout() is called again (due to widget rebuilds,
+  //  ticker setState, or rapid taps), multiple dialog routes stack up.
+  //  Each "تأكيد البيع" click only pops ONE dialog, so N stacked
+  //  dialogs require N clicks.
+  //
+  //  FIX: Replace ALL showDialog calls with state-based overlays that
+  //  are part of the widget tree. Only ONE overlay can exist at a time
+  //  (controlled by _checkoutPhase enum), making stacking impossible.
   // ═══════════════════════════════════════════════════════════════════
-  Future<void> _checkout() async {
-    // ═══════════════════════════════════════════════════════════════
-    //  CRITICAL FIX: Set checkout guard IMMEDIATELY before any
-    //  async work to prevent multiple dialogs from stacking up.
-    //  The guard must be released on ALL exit paths.
-    // ═══════════════════════════════════════════════════════════════
-    if (_isCheckingOut) return;
-    setState(() => _isCheckingOut = true);
 
+  /// Step 1: Start checkout – capture values and show confirmation overlay
+  void _startCheckout() {
+    if (_checkoutPhase != _CheckoutPhase.idle) return;
     if (_activeShift == null) {
-      setState(() => _isCheckingOut = false);
       context.showErrorSnackBar('يجب فتح وردية أولاً قبل إتمام عملية البيع');
       return;
     }
 
-    // Determine primary payment method
     final primaryMethod = _payments.isNotEmpty ? _payments.first.method : _activePaymentMethod;
 
-    // Validate credit sale has customer
     if (primaryMethod == 'credit' && _selectedCustomerId == null) {
-      setState(() => _isCheckingOut = false);
       context.showErrorSnackBar('يجب اختيار عميل للبيع آجل');
       return;
     }
-
-    // Validate payment covers total (for non-credit)
     if (primaryMethod != 'credit' && _totalPaid < _total - 0.01 && _payments.isNotEmpty) {
-      setState(() => _isCheckingOut = false);
       context.showErrorSnackBar('المبلغ المدفوع أقل من الإجمالي');
       return;
     }
 
-    // Capture values BEFORE showing any dialog (for display after cart reset)
-    final capturedCartLength = _cart.length;
-    final capturedSubtotal = _subtotal;
-    final capturedEffectiveDiscount = _effectiveDiscount;
-    final capturedTax = _tax;
-    final capturedTotal = _total;
-    final capturedCustomerName = _selectedCustomerName;
+    // Capture all values BEFORE changing phase
+    setState(() {
+      _capturedCartLength = _cart.length;
+      _capturedSubtotal = _subtotal;
+      _capturedDiscount = _effectiveDiscount;
+      _capturedTax = _tax;
+      _capturedTotal = _total;
+      _capturedCustomerName = _selectedCustomerName;
+      _capturedPaymentLabel = _paymentLabel(primaryMethod);
+      _checkoutPhase = _CheckoutPhase.confirming;
+    });
+  }
 
-    // Confirm payment
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('تأكيد عملية البيع'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _reportRow('عدد الأصناف', '$capturedCartLength'),
-              _reportRow('المجموع الفرعي', CurrencyFormatter.format(capturedSubtotal)),
-              if (capturedEffectiveDiscount > 0)
-                _reportRow('الخصم', '- ${CurrencyFormatter.format(capturedEffectiveDiscount)}', valueColor: AppColors.error),
-              if (capturedTax > 0)
-                _reportRow('الضريبة', CurrencyFormatter.format(capturedTax)),
-              const Divider(height: 16),
-              _reportRow('الإجمالي', CurrencyFormatter.format(capturedTotal),
-                  valueColor: AppColors.primary, isBold: true),
-              const SizedBox(height: 8),
-              _reportRow('طريقة الدفع', _paymentLabel(primaryMethod)),
-              if (capturedCustomerName.isNotEmpty)
-                _reportRow('العميل', capturedCustomerName),
-              const SizedBox(height: 4),
-              Text(
-                'سيتم تسجيل الفاتورة وترحيلها عند إغلاق الوردية',
-                style: TextStyle(fontSize: 11, color: context.textSecondary),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('تأكيد البيع'),
-            ),
-          ],
-        ),
-      ),
-    );
+  /// Step 2: User confirmed – save invoice and show completion overlay
+  Future<void> _confirmCheckout() async {
+    final primaryMethod = _payments.isNotEmpty ? _payments.first.method : _activePaymentMethod;
 
-    if (confirmed != true) {
-      // Release guard – user cancelled
-      if (mounted) setState(() => _isCheckingOut = false);
-      return;
-    }
+    setState(() => _checkoutPhase = _CheckoutPhase.saving);
 
     try {
-    final invoiceId = _generateInvoiceId();
-    final cashBoxId = _activeShift!['cash_box_id'] as int;
-    final shiftId = _activeShift!['id'] as int;
-    final now = DateTime.now();
+      final invoiceId = _generateInvoiceId();
+      final cashBoxId = _activeShift!['cash_box_id'] as int;
+      final shiftId = _activeShift!['id'] as int;
+      final now = DateTime.now();
 
-    // Build payment_mechanism and payment_method
-    String paymentMechanism = primaryMethod == 'credit' ? 'credit' : 'cash';
-    String paymentMethod = primaryMethod;
+      String paymentMechanism = primaryMethod == 'credit' ? 'credit' : 'cash';
+      String paymentMethod = primaryMethod;
 
-    final invoiceMap = {
-      'id': invoiceId,
-      'type': 'pos',
-      'payment_mechanism': paymentMechanism,
-      'payment_method': paymentMethod,
-      'is_return': 0,
-      'cash_box_id': cashBoxId,
-      'customer_id': _selectedCustomerId,
-      'subtotal': _subtotal,
-      'discount_rate': _discountType == DiscountType.percentage
-          ? _orderDiscount
-          : (_subtotal > 0 ? (_effectiveDiscount / _subtotal) * 100 : 0.0),
-      'discount_amount': _effectiveDiscount,
-      'tax_amount': _tax,
-      'total': _total,
-      'paid_amount': primaryMethod == 'credit' ? 0.0 : _total,
-      'remaining': primaryMethod == 'credit' ? _total : 0.0,
-      'status': primaryMethod == 'credit' ? 'unpaid' : 'paid',
-      'cashier_name': _cashierName,
-      'shift_id': shiftId,
-      'is_posted': 0, // NOT POSTED YET – deferred posting
-      'currency': _selectedCurrency,
-      'created_at': now.toIso8601String(),
-    };
+      final invoiceMap = {
+        'id': invoiceId,
+        'type': 'pos',
+        'payment_mechanism': paymentMechanism,
+        'payment_method': paymentMethod,
+        'is_return': 0,
+        'cash_box_id': cashBoxId,
+        'customer_id': _selectedCustomerId,
+        'subtotal': _subtotal,
+        'discount_rate': _discountType == DiscountType.percentage
+            ? _orderDiscount
+            : (_subtotal > 0 ? (_effectiveDiscount / _subtotal) * 100 : 0.0),
+        'discount_amount': _effectiveDiscount,
+        'tax_amount': _tax,
+        'total': _total,
+        'paid_amount': primaryMethod == 'credit' ? 0.0 : _total,
+        'remaining': primaryMethod == 'credit' ? _total : 0.0,
+        'status': primaryMethod == 'credit' ? 'unpaid' : 'paid',
+        'cashier_name': _cashierName,
+        'shift_id': shiftId,
+        'is_posted': 0,
+        'currency': _selectedCurrency,
+        'created_at': now.toIso8601String(),
+      };
 
-    final items = _cart.map((item) => {
-      'invoice_id': invoiceId,
-      'product_id': item.productId,
-      'product_name': item.name,
-      'quantity': item.quantity,
-      'unit_price': item.unitPrice,
-      'total_price': item.total,
-    }).toList();
+      final items = _cart.map((item) => {
+        'invoice_id': invoiceId,
+        'product_id': item.productId,
+        'product_name': item.name,
+        'quantity': item.quantity,
+        'unit_price': item.unitPrice,
+        'total_price': item.total,
+      }).toList();
 
-    final db = DatabaseHelper();
-    await db.saveInvoiceWithJournalEntries(
-      invoiceMap,
-      items,
-      invoiceType: 'pos',
-      paymentMechanism: paymentMechanism,
-      isReturn: false,
-      cashBoxId: cashBoxId,
-      deferPosting: true,
-    );
+      final db = DatabaseHelper();
+      await db.saveInvoiceWithJournalEntries(
+        invoiceMap,
+        items,
+        invoiceType: 'pos',
+        paymentMechanism: paymentMechanism,
+        isReturn: false,
+        cashBoxId: cashBoxId,
+        deferPosting: true,
+      );
 
-    // Update shift totals
-    final saleAmount = _total;
-    final discountAmount = _effectiveDiscount;
-    await db.updateShiftTotals(shiftId, saleAmount, 0.0, discountAmount);
+      await db.updateShiftTotals(shiftId, _total, 0.0, _effectiveDiscount);
+      await _loadActiveShift();
 
-    // Reload shift data
-    await _loadActiveShift();
+      if (!mounted) return;
 
-    if (!mounted) return;
+      // Save invoice ID for print and display
+      _lastInvoiceId = invoiceId;
 
-    // Reset the cart IMMEDIATELY after saving – before showing the dialog
-    // This ensures a fresh invoice is ready when the dialog closes
-    _resetForNewInvoice();
+      // Reset cart for next invoice
+      _resetForNewInvoice();
 
-    // Show sale complete dialog and WAIT for it to be dismissed
-    // This keeps _isCheckingOut = true until the dialog is fully dismissed
-    if (context.mounted) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: AlertDialog(
-            title: Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppColors.success, size: 28),
-                const SizedBox(width: 8),
-                const Text('تم إنهاء البيع'),
-              ],
-            ),
-            content: Column(
+      // Show completion overlay
+      setState(() => _checkoutPhase = _CheckoutPhase.completed);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _checkoutPhase = _CheckoutPhase.idle);
+        context.showErrorSnackBar('خطأ في حفظ الفاتورة: $e');
+      }
+    }
+  }
+
+  /// Cancel checkout – go back to idle
+  void _cancelCheckout() {
+    setState(() => _checkoutPhase = _CheckoutPhase.idle);
+  }
+
+  /// Dismiss completion overlay – go back to idle
+  void _dismissCompletion() {
+    setState(() => _checkoutPhase = _CheckoutPhase.idle);
+  }
+
+  // ── Checkout Confirmation Overlay ──────────────────────────────────
+  Widget _buildCheckoutConfirmationOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.55),
+      child: Center(
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 12,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('رقم الفاتورة: $invoiceId'),
-                Text('الإجمالي: ${CurrencyFormatter.format(capturedTotal)}'),
-                Text('طريقة الدفع: ${_paymentLabel(primaryMethod)}'),
-                if (capturedCustomerName.isNotEmpty)
-                  Text('العميل: $capturedCustomerName'),
+                Row(
+                  children: [
+                    const Icon(Icons.shopping_cart_checkout, color: AppColors.primary, size: 26),
+                    const SizedBox(width: 10),
+                    Text(
+                      'تأكيد عملية البيع',
+                      style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _reportRow('عدد الأصناف', '$_capturedCartLength'),
+                _reportRow('المجموع الفرعي', CurrencyFormatter.format(_capturedSubtotal)),
+                if (_capturedDiscount > 0)
+                  _reportRow('الخصم', '- ${CurrencyFormatter.format(_capturedDiscount)}', valueColor: AppColors.error),
+                if (_capturedTax > 0)
+                  _reportRow('الضريبة', CurrencyFormatter.format(_capturedTax)),
+                const Divider(height: 20),
+                _reportRow('الإجمالي', CurrencyFormatter.format(_capturedTotal),
+                    valueColor: AppColors.primary, isBold: true),
                 const SizedBox(height: 8),
+                _reportRow('طريقة الدفع', _capturedPaymentLabel),
+                if (_capturedCustomerName.isNotEmpty)
+                  _reportRow('العميل', _capturedCustomerName),
+                const SizedBox(height: 6),
+                Text(
+                  'سيتم تسجيل الفاتورة وترحيلها عند إغلاق الوردية',
+                  style: TextStyle(fontSize: 11, color: context.textSecondary),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _cancelCheckout,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('إلغاء', style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _confirmCheckout,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('تأكيد البيع', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Checkout Completed Overlay ─────────────────────────────────────
+  Widget _buildCheckoutCompletedOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.55),
+      child: Center(
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 12,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: AppColors.success, size: 28),
+                    const SizedBox(width: 10),
+                    Text(
+                      'تم إنهاء البيع',
+                      style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text('رقم الفاتورة: $_lastInvoiceId',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('الإجمالي: ${CurrencyFormatter.format(_capturedTotal)}',
+                    style: const TextStyle(fontSize: 14)),
+                const SizedBox(height: 4),
+                Text('طريقة الدفع: $_capturedPaymentLabel',
+                    style: const TextStyle(fontSize: 14)),
+                if (_capturedCustomerName.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('العميل: $_capturedCustomerName',
+                      style: const TextStyle(fontSize: 14)),
+                ],
+                const SizedBox(height: 10),
                 const Text(
                   'لم يتم ترحيل الفاتورة بعد – سيتم ترحيلها عند إغلاق الوردية',
                   style: TextStyle(fontSize: 11, color: AppColors.info),
                 ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _showPrintOptions(_lastInvoiceId);
+                        },
+                        icon: const Icon(Icons.print, size: 18),
+                        label: const Text('طباعه'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _dismissCompletion,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('إغلاق', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-            actions: [
-              // Print button - shows options on tap
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _showPrintOptions(invoiceId);
-                },
-                icon: const Icon(Icons.print),
-                label: const Text('طباعه'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('إغلاق'),
-              ),
-            ],
           ),
         ),
-      );
-    }
-    } finally {
-      // Release checkout guard only after dialog is dismissed
-      if (mounted) {
-        setState(() => _isCheckingOut = false);
-      }
-    }
+      ),
+    );
   }
 
   /// Reset all state for a new invoice.
@@ -3327,6 +3399,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 enum DiscountType { fixed, percentage }
+
+/// Checkout phase enum – controls which overlay is shown.
+/// Using a single enum guarantees only ONE phase is active at a time,
+/// making it impossible for multiple dialogs to stack up.
+enum _CheckoutPhase {
+  idle,        // Normal state – no overlay
+  confirming,  // Showing confirmation overlay
+  saving,      // Saving invoice (no overlay, brief processing)
+  completed,   // Showing sale complete overlay
+}
 
 class _CartItem {
   final int productId;
