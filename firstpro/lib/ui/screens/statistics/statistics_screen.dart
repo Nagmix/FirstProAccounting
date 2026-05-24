@@ -6,8 +6,9 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../widgets/animated_entry.dart';
 import '../../widgets/stat_card.dart';
+import 'advanced_charts_screen.dart';
 
-/// Statistics screen showing detailed financial analytics.
+/// Statistics screen showing detailed financial analytics with tabs.
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
 
@@ -15,22 +16,29 @@ class StatisticsScreen extends StatefulWidget {
   State<StatisticsScreen> createState() => _StatisticsScreenState();
 }
 
-class _StatisticsScreenState extends State<StatisticsScreen> {
+class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerProviderStateMixin {
   double _monthSales = 0.0;
   double _monthPurchases = 0.0;
   double _monthExpenses = 0.0;
-  // int _customerCount = 0;
-  // int _supplierCount = 0;
   double _cashBalance = 0.0;
   List<Map<String, dynamic>> _topCustomers = [];
   List<Map<String, dynamic>> _recentActivity = [];
   List<Map<String, dynamic>> _currencyBreakdown = [];
   bool _isLoading = true;
 
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadStatisticsData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadStatisticsData() async {
@@ -46,10 +54,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         db.getRecentInvoices(limit: 5),
       ]);
 
-      // Get supplier count (for potential future use)
-      // final suppliers = await db.getAllSuppliers();
-
-      // Get top customers by sales
       final dbInstance = await db.database;
       final now = DateTime.now();
       final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
@@ -63,7 +67,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         LIMIT 5
       ''', [monthStart]);
 
-      // Get currency breakdown
       final currencyBreakdownResult = await dbInstance.rawQuery('''
         SELECT i.currency, COALESCE(SUM(i.total), 0.0) AS total
         FROM invoices i
@@ -77,10 +80,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           _monthSales = results[0] as double;
           _monthPurchases = results[1] as double;
           _monthExpenses = results[2] as double;
-          // _customerCount = results[3] as int;
           _cashBalance = results[4] as double;
           _recentActivity = results[5] as List<Map<String, dynamic>>;
-          // _supplierCount = suppliers.length;
           _topCustomers = topCustomersResult;
           _currencyBreakdown = currencyBreakdownResult;
           _isLoading = false;
@@ -104,110 +105,32 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      body: RefreshIndicator(
-        onRefresh: _loadStatisticsData,
-        color: AppColors.primary,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // ── Gradient Header ──────────────────────────────────
-            SliverToBoxAdapter(child: _buildHeader(context, isDark)),
+      body: Column(
+        children: [
+          // ── Gradient Header with Tabs ──────────────────────────────
+          _buildHeaderWithTabs(context, isDark),
 
-            if (_isLoading)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                ),
-              )
-            else ...[
-              // ── Summary Cards ────────────────────────────────────
-              SliverToBoxAdapter(
-                child: AnimatedEntry(
-                  delay: const Duration(milliseconds: 100),
-                  child: _buildSectionTitle(context, 'ملخص الشهر'),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: AnimatedEntry(
-                  delay: const Duration(milliseconds: 200),
-                  child: _buildSummaryCards(context, isDark),
-                ),
-              ),
-
-              // ── Sales vs Purchases ───────────────────────────────
-              SliverToBoxAdapter(
-                child: AnimatedEntry(
-                  delay: const Duration(milliseconds: 300),
-                  child: _buildSectionTitle(context, 'المبيعات مقابل المشتريات'),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: AnimatedEntry(
-                  delay: const Duration(milliseconds: 350),
-                  child: _buildSalesVsPurchases(context, isDark),
-                ),
-              ),
-
-              // ── Top Customers ────────────────────────────────────
-              SliverToBoxAdapter(
-                child: AnimatedEntry(
-                  delay: const Duration(milliseconds: 400),
-                  child: _buildSectionTitle(context, 'أفضل العملاء'),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: AnimatedEntry(
-                  delay: const Duration(milliseconds: 450),
-                  child: _buildTopCustomers(context, isDark),
-                ),
-              ),
-
-              // ── Currency Breakdown ───────────────────────────────
-              if (_currencyBreakdown.isNotEmpty) ...[
-                SliverToBoxAdapter(
-                  child: AnimatedEntry(
-                    delay: const Duration(milliseconds: 500),
-                    child: _buildSectionTitle(context, 'توزيع العملات'),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: AnimatedEntry(
-                    delay: const Duration(milliseconds: 550),
-                    child: _buildCurrencyBreakdown(context, isDark),
-                  ),
-                ),
+          // ── Tab Content ────────────────────────────────────────────
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Tab 1: Summary
+                _buildSummaryTab(context, isDark),
+                // Tab 2: Advanced Charts
+                const AdvancedChartsScreen(),
               ],
-
-              // ── Recent Activity ──────────────────────────────────
-              SliverToBoxAdapter(
-                child: AnimatedEntry(
-                  delay: const Duration(milliseconds: 600),
-                  child: _buildSectionTitle(context, 'النشاط الأخير'),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: AnimatedEntry(
-                  delay: const Duration(milliseconds: 650),
-                  child: _buildRecentActivity(context, isDark),
-                ),
-              ),
-            ],
-
-            // ── Bottom spacing ───────────────────────────────────
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  GRADIENT HEADER
+  //  GRADIENT HEADER WITH TABS
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildHeader(BuildContext context, bool isDark) {
+  Widget _buildHeaderWithTabs(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
     final now = DateTime.now();
     final dateStr =
@@ -219,7 +142,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         20,
         MediaQuery.of(context).padding.top + 16,
         20,
-        28,
+        0,
       ),
       decoration: DesignSystem.headerGradientDecoration(),
       child: Column(
@@ -264,12 +187,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Net profit card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: DesignSystem.asymmetricTopRight(large: 50, small: 14),
@@ -277,8 +200,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: _netProfit >= 0
@@ -288,24 +211,16 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       end: Alignment.bottomRight,
                     ),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_netProfit >= 0 ? AppColors.success : AppColors.error)
-                            .withValues(alpha: 0.3),
-                        offset: const Offset(0, 4),
-                        blurRadius: 12,
-                      ),
-                    ],
                   ),
                   child: Icon(
                     _netProfit >= 0
                         ? Icons.trending_up
                         : Icons.trending_down,
                     color: Colors.white,
-                    size: 24,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,10 +232,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         CurrencyFormatter.format(_netProfit.abs()),
-                        style: theme.textTheme.titleLarge?.copyWith(
+                        style: theme.textTheme.titleMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
                         ),
@@ -329,14 +244,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     _netProfit >= 0 ? 'ربح' : 'خسارة',
-                    style: theme.textTheme.labelMedium?.copyWith(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
@@ -345,6 +260,133 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Tab bar
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              labelStyle: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+              unselectedLabelStyle: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500),
+              tabs: const [
+                Tab(text: 'ملخص'),
+                Tab(text: 'رسوم بيانية'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  SUMMARY TAB (existing content)
+  // ══════════════════════════════════════════════════════════════════
+  Widget _buildSummaryTab(BuildContext context, bool isDark) {
+    return RefreshIndicator(
+      onRefresh: _loadStatisticsData,
+      color: AppColors.primary,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          if (_isLoading)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                ),
+              ),
+            )
+          else ...[
+            // ── Summary Cards ────────────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 100),
+                child: _buildSectionTitle(context, 'ملخص الشهر'),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 200),
+                child: _buildSummaryCards(context, isDark),
+              ),
+            ),
+
+            // ── Sales vs Purchases ───────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 300),
+                child: _buildSectionTitle(context, 'المبيعات مقابل المشتريات'),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 350),
+                child: _buildSalesVsPurchases(context, isDark),
+              ),
+            ),
+
+            // ── Top Customers ────────────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 400),
+                child: _buildSectionTitle(context, 'أفضل العملاء'),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 450),
+                child: _buildTopCustomers(context, isDark),
+              ),
+            ),
+
+            // ── Currency Breakdown ───────────────────────────────
+            if (_currencyBreakdown.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: AnimatedEntry(
+                  delay: const Duration(milliseconds: 500),
+                  child: _buildSectionTitle(context, 'توزيع العملات'),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: AnimatedEntry(
+                  delay: const Duration(milliseconds: 550),
+                  child: _buildCurrencyBreakdown(context, isDark),
+                ),
+              ),
+            ],
+
+            // ── Recent Activity ──────────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 600),
+                child: _buildSectionTitle(context, 'النشاط الأخير'),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 650),
+                child: _buildRecentActivity(context, isDark),
+              ),
+            ),
+          ],
+
+          // ── Bottom spacing ───────────────────────────────────
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );
@@ -454,7 +496,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Progress bar
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
@@ -464,8 +505,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     Expanded(
                       flex: (salesPercent * 100).round().clamp(1, 99),
                       child: Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
                             colors: [AppColors.accentBlue, AppColors.primaryLight],
                           ),
                         ),
@@ -486,11 +527,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Legend
             Row(
               children: [
-                // Sales
                 Expanded(
                   child: Row(
                     children: [
@@ -532,8 +570,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   ),
                 ),
                 const SizedBox(width: 16),
-
-                // Purchases
                 Expanded(
                   child: Row(
                     children: [
@@ -600,11 +636,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
           child: Column(
             children: [
-              Icon(
-                Icons.people,
-                size: 36,
-                color: AppColors.textHint,
-              ),
+              Icon(Icons.people, size: 36, color: AppColors.textHint),
               const SizedBox(height: 12),
               Text(
                 'لا توجد بيانات عملاء بعد',
@@ -651,7 +683,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  // Rank badge
                   Container(
                     width: 28,
                     height: 28,
@@ -670,8 +701,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-
-                  // Name + bar
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -828,11 +857,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
           child: Column(
             children: [
-              Icon(
-                Icons.history,
-                size: 36,
-                color: AppColors.textHint,
-              ),
+              Icon(Icons.history, size: 36, color: AppColors.textHint),
               const SizedBox(height: 12),
               Text(
                 'لا يوجد نشاط بعد',
@@ -879,9 +904,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      isSale
-                          ? Icons.arrow_outward
-                          : Icons.south_west,
+                      isSale ? Icons.arrow_outward : Icons.south_west,
                       color: iconColor,
                       size: 20,
                     ),

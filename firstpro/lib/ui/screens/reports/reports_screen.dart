@@ -39,6 +39,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     'حركة المخزون',
     'تكلفة المخزون',
     'العمليات اليومية',
+    'سند الجرد',
+    'الترحيل السنوي',
   ];
 
   static const List<String> _currencyOptions = ['الكل', 'ر.ي', 'ر.س', r'$'];
@@ -685,6 +687,10 @@ class _ReportsScreenState extends State<ReportsScreen>
         return _buildInventoryCostReport(theme, isDark);
       case 'العمليات اليومية':
         return _buildDailyOperationsLink(theme, isDark);
+      case 'سند الجرد':
+        return _buildInventoryVoucherLink(theme, isDark);
+      case 'الترحيل السنوي':
+        return _buildAnnualPostingLink(theme, isDark);
       default:
         return _buildSalesReport(theme, isDark);
     }
@@ -2553,6 +2559,98 @@ class _ReportsScreenState extends State<ReportsScreen>
               },
               icon: const Icon(Icons.open_in_new),
               label: const Text('فتح شاشة العمليات اليومية'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  INVENTORY VOUCHER LINK (سند الجرد)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildInventoryVoucherLink(ThemeData theme, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          Icon(Icons.inventory, size: 80, color: Colors.brown.withValues(alpha: 0.5)),
+          const SizedBox(height: 24),
+          Text(
+            'سند الجرد',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: Colors.brown,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'تسوية كميات المخزون عند عدم تطابق الكمية الفعلية مع الكمية النظامية\nإنشاء سندات جرد لضبط المخزون وإنشاء القيود المحاسبية تلقائياً',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed(AppConstants.inventoryVoucher);
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('فتح شاشة سندات الجرد'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.brown,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ANNUAL POSTING LINK (الترحيل السنوي)
+  // ══════════════════════════════════════════════════════════════
+  Widget _buildAnnualPostingLink(ThemeData theme, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          Icon(Icons.published_with_changes, size: 80, color: AppColors.primary.withValues(alpha: 0.5)),
+          const SizedBox(height: 24),
+          Text(
+            'الترحيل السنوي',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'إقفال السنة المالية ونقل صافي الربح/الخسارة إلى الأرباح المحتجزة\nتصفير أرصدة حسابات الإيرادات والتكاليف والمصاريف',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed(AppConstants.annualPosting);
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('فتح شاشة الترحيل السنوي'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,

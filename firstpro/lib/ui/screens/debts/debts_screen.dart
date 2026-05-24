@@ -368,7 +368,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     final phone = customer['phone'] as String? ?? '';
     final balance = (customer['balance'] as num?)?.toDouble() ?? 0.0;
     final currency = customer['currency'] as String? ?? 'YER';
-    final creditLimit = (customer['credit_limit'] as num?)?.toDouble() ?? 0.0;
+    final creditLimit = (customer['debt_ceiling'] as num?)?.toDouble() ?? (customer['credit_limit'] as num?)?.toDouble() ?? 0.0;
     final hasCreditLimit = creditLimit > 0;
     final isOverLimit = hasCreditLimit && balance > creditLimit;
 

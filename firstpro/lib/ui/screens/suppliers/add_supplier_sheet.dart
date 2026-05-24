@@ -22,9 +22,11 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
   final _emailController = TextEditingController();
   final _addressController = TextEditingController();
   final _balanceController = TextEditingController();
+  final _debtCeilingController = TextEditingController();
   final _notesController = TextEditingController();
 
-  String _balanceType = 'debit'; // 'credit' (له) or 'debit' (عليه)
+  String _balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
+  String _contactMethod = 'whatsapp'; // 'whatsapp' or 'phone'
   bool _isSaving = false;
   bool get _isEditing => widget.supplier != null;
 
@@ -39,6 +41,8 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       _addressController.text = s.address ?? '';
       _balanceController.text = s.balance > 0 ? s.balance.toStringAsFixed(2) : '';
       _balanceType = s.balanceType;
+      _debtCeilingController.text = s.debtCeiling > 0 ? s.debtCeiling.toStringAsFixed(2) : '';
+      _contactMethod = s.contactMethod ?? 'whatsapp';
       _notesController.text = s.notes ?? '';
     }
   }
@@ -50,6 +54,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
     _emailController.dispose();
     _addressController.dispose();
     _balanceController.dispose();
+    _debtCeilingController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -70,6 +75,8 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       'balance_type': _balanceType,
       'currency': 'YER',
       'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      'debt_ceiling': double.tryParse(_debtCeilingController.text) ?? 0.0,
+      'contact_method': _contactMethod,
       'updated_at': now,
     };
 
@@ -99,32 +106,45 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        title: Text(_isEditing ? 'تعديل مورد' : 'إضافة مورد جديد'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_forward),
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: _isSaving ? null : _save,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.check, size: 20),
+            label: Text(_isSaving ? 'جاري الحفظ...' : _isEditing ? 'تعديل' : 'حفظ'),
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                _isEditing ? 'تعديل مورد' : 'إضافة مورد جديد',
-                style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-
               // ── Name ──────────────────────────────────────────────
               TextFormField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  labelText: 'الاسم',
+                  labelText: 'الاسم *',
                   prefixIcon: Icon(Icons.person),
                 ),
                 validator: (v) =>
@@ -181,7 +201,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
               ),
               const SizedBox(height: 14),
 
-              // ── Opening balance + له/عليه ─────────────────────────
+              // ── Opening balance + له/عليه toggle ──────────────────
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -204,7 +224,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     flex: 2,
                     child: Column(
@@ -213,47 +233,238 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
-                            'الحالة',
+                            'اتجاه الرصيد الافتتاحي',
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: RadioListTile<String>(
-                                value: 'credit',
-                                groupValue: _balanceType,
-                                title: const Text('له',
-                                    style: TextStyle(fontSize: 13)),
-                                contentPadding: EdgeInsets.zero,
-                                dense: true,
-                                activeColor: AppColors.success,
-                                onChanged: (v) =>
-                                    setState(() => _balanceType = v!),
-                              ),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: _balanceType == 'credit'
+                                  ? AppColors.success
+                                  : AppColors.error,
                             ),
-                            Expanded(
-                              child: RadioListTile<String>(
-                                value: 'debit',
-                                groupValue: _balanceType,
-                                title: const Text('عليه',
-                                    style: TextStyle(fontSize: 13)),
-                                contentPadding: EdgeInsets.zero,
-                                dense: true,
-                                activeColor: AppColors.error,
-                                onChanged: (v) =>
-                                    setState(() => _balanceType = v!),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _balanceType = 'credit'),
+                                  child: Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: _balanceType == 'credit'
+                                          ? AppColors.success
+                                              .withValues(alpha: 0.1)
+                                          : Colors.transparent,
+                                      borderRadius: const BorderRadius.only(
+                                        topRight: Radius.circular(9),
+                                        bottomRight: Radius.circular(9),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'له',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: _balanceType == 'credit'
+                                            ? AppColors.success
+                                            : AppColors.textHint,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _balanceType = 'debit'),
+                                  child: Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: _balanceType == 'debit'
+                                          ? AppColors.error
+                                              .withValues(alpha: 0.1)
+                                          : Colors.transparent,
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(9),
+                                        bottomLeft: Radius.circular(9),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'عليه',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: _balanceType == 'debit'
+                                            ? AppColors.error
+                                            : AppColors.textHint,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Prominent note about opening balance
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.3),
                             ),
-                          ],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  size: 14, color: AppColors.warning),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'هذا الخيار خاص بالرصيد الافتتاحي فقط وليس حالة دائمة للمورد',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.warning,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 14),
+
+              // ── سقف المدينية (Debt Ceiling) ───────────────────────
+              TextFormField(
+                controller: _debtCeilingController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.next,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                ],
+                decoration: InputDecoration(
+                  labelText: 'سقف المدينية',
+                  prefixIcon: const Icon(Icons.credit_card),
+                  suffixText: AppConstants.currency,
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // ── طريقة التواصل ─────────────────────────────────────
+              _SectionLabel(label: 'طريقة التواصل'),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _contactMethod == 'whatsapp'
+                        ? const Color(0xFF25D366)
+                        : AppColors.primary,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () =>
+                            setState(() => _contactMethod = 'whatsapp'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _contactMethod == 'whatsapp'
+                                ? const Color(0xFF25D366)
+                                    .withValues(alpha: 0.1)
+                                : Colors.transparent,
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(9),
+                              bottomRight: Radius.circular(9),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.chat,
+                                size: 16,
+                                color: _contactMethod == 'whatsapp'
+                                    ? const Color(0xFF25D366)
+                                    : AppColors.textHint,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'واتساب',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: _contactMethod == 'whatsapp'
+                                      ? const Color(0xFF25D366)
+                                      : AppColors.textHint,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () =>
+                            setState(() => _contactMethod = 'phone'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _contactMethod == 'phone'
+                                ? AppColors.primary.withValues(alpha: 0.1)
+                                : Colors.transparent,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(9),
+                              bottomLeft: Radius.circular(9),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.phone_in_talk,
+                                size: 16,
+                                color: _contactMethod == 'phone'
+                                    ? AppColors.primary
+                                    : AppColors.textHint,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'اتصال',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: _contactMethod == 'phone'
+                                      ? AppColors.primary
+                                      : AppColors.textHint,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
 
@@ -268,7 +479,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                   alignLabelWithHint: true,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // ── Action buttons ────────────────────────────────────
               Row(
@@ -308,8 +519,31 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                   ),
                 ],
               ),
+
+              // Extra bottom safe area for gesture nav
+              SizedBox(height: bottomPadding),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        label,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

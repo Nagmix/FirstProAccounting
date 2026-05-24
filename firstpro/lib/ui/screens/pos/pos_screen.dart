@@ -8,6 +8,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
@@ -2869,6 +2870,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('إغلاق'),
             ),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _printBluetoothReceipt(invoiceId);
+              },
+              icon: const Icon(Icons.bluetooth, size: 18),
+              label: const Text('طباعة حرارية'),
+            ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
@@ -2889,6 +2898,67 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  /// Print receipt via Bluetooth thermal printer.
+  Future<void> _printBluetoothReceipt(String invoiceId) async {
+    final printerService = BluetoothPrinterService.instance;
+
+    if (!printerService.isConnected) {
+      final connected = await printerService.autoConnect();
+      if (!connected) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('الطابعة غير متصلة. يرجى إعدادها من الإعدادات'),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    try {
+      final currencySymbol = _selectedCurrency == 'SAR' ? 'ر.س' : _selectedCurrency == 'USD' ? r'$' : 'ر.ي';
+
+      await printerService.printReceipt({
+        'invoice_number': invoiceId,
+        'invoice_type': 'فاتورة نقاط بيع',
+        'date': DateTime.now(),
+        'customer_name': _selectedCustomerName.isEmpty ? 'بدون عميل' : _selectedCustomerName,
+        'items': _cart.map((item) => <String, dynamic>{
+          'product_name': item.name,
+          'quantity': item.quantity,
+          'unit_price': item.unitPrice,
+          'total_price': item.total,
+        }).toList(),
+        'subtotal': _subtotal,
+        'discount': _effectiveDiscount,
+        'tax': _tax,
+        'total': _total,
+        'paid': _total,
+        'remaining': 0.0,
+        'currency': currencySymbol,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إرسال الفاتورة للطابعة الحرارية'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } on PrinterException catch (e) {
+      if (mounted) {
+        context.showErrorSnackBar(e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showErrorSnackBar('خطأ في الطباعة الحرارية: $e');
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════

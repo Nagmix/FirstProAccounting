@@ -36,6 +36,8 @@ import '../screens/notifications/notifications_screen.dart';
 import '../screens/vouchers/vouchers_screen.dart';
 import '../screens/vouchers/create_voucher_screen.dart';
 import '../screens/daily_ops/daily_operations_screen.dart';
+import '../screens/vouchers/inventory_voucher_screen.dart';
+import '../screens/reports/annual_posting_screen.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../data/models/account_model.dart';
@@ -86,6 +88,8 @@ class AppRouter {
         AppConstants.vouchers: (_) => const VouchersScreen(),
         AppConstants.newVoucher: (_) => const CreateVoucherScreen(),
         AppConstants.dailyOperations: (_) => const DailyOperationsScreen(),
+        AppConstants.inventoryVoucher: (_) => const InventoryVoucherScreen(),
+        AppConstants.annualPosting: (_) => const AnnualPostingScreen(),
       };
 
   static Future<T?> push<T extends Object?>(BuildContext context, String routeName, {Object? arguments}) {

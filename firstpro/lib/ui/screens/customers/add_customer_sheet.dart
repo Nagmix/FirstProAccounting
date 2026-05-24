@@ -19,13 +19,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   final _addressController = TextEditingController();
   final _address2Controller = TextEditingController();
   final _emailController = TextEditingController();
-  final _countryController = TextEditingController();
   final _notesController = TextEditingController();
   final _balanceController = TextEditingController();
-  final _creditLimitController = TextEditingController();
+  final _debtCeilingController = TextEditingController();
 
-  String _gender = 'male';
-  String _notificationMethod = 'sms';
+  String _contactMethod = 'whatsapp';
   String _balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
   bool _isSaving = false;
 
@@ -36,10 +34,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     _addressController.dispose();
     _address2Controller.dispose();
     _emailController.dispose();
-    _countryController.dispose();
     _notesController.dispose();
     _balanceController.dispose();
-    _creditLimitController.dispose();
+    _debtCeilingController.dispose();
     super.dispose();
   }
 
@@ -53,13 +50,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
       address2: _address2Controller.text.trim().isEmpty ? null : _address2Controller.text.trim(),
       email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-      country: _countryController.text.trim().isEmpty ? null : _countryController.text.trim(),
-      gender: _gender,
-      notificationMethod: _notificationMethod,
+      contactMethod: _contactMethod,
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       balance: double.tryParse(_balanceController.text) ?? 0.0,
       balanceType: _balanceType,
-      creditLimit: double.tryParse(_creditLimitController.text) ?? 0.0,
+      debtCeiling: double.tryParse(_debtCeilingController.text) ?? 0.0,
     );
 
     final db = DatabaseHelper();
@@ -98,242 +93,216 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'الاسم *', prefixIcon: Icon(Icons.person)),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
-              ),
-              const SizedBox(height: 14),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: 'الاسم *', prefixIcon: Icon(Icons.person)),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                ),
+                const SizedBox(height: 14),
 
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(15)],
-                decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixIcon: Icon(Icons.phone)),
-              ),
-              const SizedBox(height: 14),
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(15)],
+                  decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixIcon: Icon(Icons.phone)),
+                ),
+                const SizedBox(height: 14),
 
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.email)),
-                validator: (v) {
-                  if (v != null && v.trim().isNotEmpty) {
-                    final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                    if (!regex.hasMatch(v.trim())) return 'البريد الإلكتروني غير صالح';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.email)),
+                  validator: (v) {
+                    if (v != null && v.trim().isNotEmpty) {
+                      final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                      if (!regex.hasMatch(v.trim())) return 'البريد الإلكتروني غير صالح';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
 
-              TextFormField(
-                controller: _addressController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(Icons.location_on)),
-              ),
-              const SizedBox(height: 14),
+                TextFormField(
+                  controller: _addressController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(Icons.location_on)),
+                ),
+                const SizedBox(height:  14),
 
-              TextFormField(
-                controller: _countryController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'البلد', prefixIcon: Icon(Icons.language)),
-              ),
-              const SizedBox(height: 14),
-
-              // الرصيد الافتتاحي + له/عليه
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _balanceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
-                      decoration: InputDecoration(
-                        labelText: 'الرصيد الافتتاحي',
-                        prefixIcon: const Icon(Icons.calculate),
-                        suffixText: AppConstants.currency,
+                // الرصيد الافتتاحي + اتجاه الرصيد
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextFormField(
+                        controller: _balanceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                        decoration: InputDecoration(
+                          labelText: 'الرصيد الافتتاحي',
+                          prefixIcon: const Icon(Icons.calculate),
+                          suffixText: AppConstants.currency,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text('الحالة', style: theme.textTheme.labelLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: _balanceType == 'credit' ? AppColors.success : AppColors.error),
-                            borderRadius: BorderRadius.circular(10),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text('اتجاه الرصيد الافتتاحي', style: theme.textTheme.labelLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _balanceType = 'credit'),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: _balanceType == 'credit' ? AppColors.success.withValues(alpha: 0.1) : Colors.transparent,
-                                      borderRadius: const BorderRadius.only(topRight: Radius.circular(9), bottomRight: Radius.circular(9)),
-                                    ),
-                                    child: Text(
-                                      'له',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: _balanceType == 'credit' ? AppColors.success : AppColors.textHint,
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: _balanceType == 'credit' ? AppColors.success : AppColors.error),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _balanceType = 'credit'),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: _balanceType == 'credit' ? AppColors.success.withValues(alpha: 0.1) : Colors.transparent,
+                                        borderRadius: const BorderRadius.only(topRight: Radius.circular(9), bottomRight: Radius.circular(9)),
+                                      ),
+                                      child: Text(
+                                        'له',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: _balanceType == 'credit' ? AppColors.success : AppColors.textHint,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _balanceType = 'debit'),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: _balanceType == 'debit' ? AppColors.error.withValues(alpha: 0.1) : Colors.transparent,
-                                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(9), bottomLeft: Radius.circular(9)),
-                                    ),
-                                    child: Text(
-                                      'عليه',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: _balanceType == 'debit' ? AppColors.error : AppColors.textHint,
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _balanceType = 'debit'),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: _balanceType == 'debit' ? AppColors.error.withValues(alpha: 0.1) : Colors.transparent,
+                                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(9), bottomLeft: Radius.circular(9)),
+                                      ),
+                                      child: Text(
+                                        'عليه',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: _balanceType == 'debit' ? AppColors.error : AppColors.textHint,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              TextFormField(
-                controller: _creditLimitController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                textInputAction: TextInputAction.next,
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
-                decoration: InputDecoration(
-                  labelText: 'حد الائتمان',
-                  prefixIcon: const Icon(Icons.credit_card),
-                  suffixText: AppConstants.currency,
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              TextFormField(
-                controller: _notesController,
-                maxLines: 3,
-                textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  labelText: 'الملاحظات',
-                  prefixIcon: Icon(Icons.edit_note),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              _SectionLabel(label: 'الجنس'),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<String>(
-                      value: 'male', groupValue: _gender, title: const Text('ذكر'),
-                      contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
-                      onChanged: (v) => setState(() => _gender = v!),
-                    ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<String>(
-                      value: 'female', groupValue: _gender, title: const Text('أنثى'),
-                      contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
-                      onChanged: (v) => setState(() => _gender = v!),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              _SectionLabel(label: 'طريقة التواصل'),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<String>(
-                      value: 'sms', groupValue: _notificationMethod, title: const Text('رسائل نصية'),
-                      contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
-                      onChanged: (v) => setState(() => _notificationMethod = v!),
-                    ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<String>(
-                      value: 'notification', groupValue: _notificationMethod, title: const Text('إشعارات'),
-                      contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
-                      onChanged: (v) => setState(() => _notificationMethod = v!),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton.icon(
-                      onPressed: _isSaving ? null : _save,
-                      icon: _isSaving
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.check, size: 20),
-                      label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                      child: const Text('إلغاء'),
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 14),
 
-              // Extra bottom safe area for gesture nav
-              SizedBox(height: bottomPadding),
-            ],
+                TextFormField(
+                  controller: _debtCeilingController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                  decoration: InputDecoration(
+                    labelText: 'سقف المدينية',
+                    prefixIcon: const Icon(Icons.credit_card),
+                    suffixText: AppConstants.currency,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                TextFormField(
+                  controller: _notesController,
+                  maxLines: 3,
+                  textInputAction: TextInputAction.newline,
+                  decoration: const InputDecoration(
+                    labelText: 'الملاحظات',
+                    prefixIcon: Icon(Icons.edit_note),
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                _SectionLabel(label: 'واتساب'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<String>(
+                        value: 'whatsapp', groupValue: _contactMethod, title: const Text('واتساب'),
+                        contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
+                        onChanged: (v) => setState(() => _contactMethod = v!),
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<String>(
+                        value: 'phone', groupValue: _contactMethod, title: const Text('اتصال'),
+                        contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
+                        onChanged: (v) => setState(() => _contactMethod = v!),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSaving ? null : _save,
+                        icon: _isSaving
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.check, size: 20),
+                        label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                        child: const Text('إلغاء'),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Extra bottom safe area for gesture nav
+                SizedBox(height: bottomPadding),
+              ],
+            ),
           ),
         ),
       ),

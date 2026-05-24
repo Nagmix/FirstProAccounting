@@ -13,6 +13,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../data/models/invoice_item_model.dart';
 import '../../../data/models/invoice_model.dart';
 import '../../widgets/invoice_item_card.dart';
@@ -1014,6 +1015,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 label: const Text('طباعة'),
               ),
             ),
+            const SizedBox(width: 4),
+            IconButton.outlined(
+              onPressed: _printBluetooth,
+              icon: const Icon(Icons.bluetooth, color: AppColors.primary),
+              tooltip: 'طباعة حرارية',
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: ElevatedButton.icon(
@@ -1156,6 +1163,88 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
   }
 
+  /// Print via Bluetooth thermal printer.
+  Future<void> _printBluetooth() async {
+    if (_items.isEmpty) {
+      context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
+      return;
+    }
+
+    final printerService = BluetoothPrinterService.instance;
+
+    if (!printerService.isConnected) {
+      // Try auto-connect first
+      final connected = await printerService.autoConnect();
+      if (!connected) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
+              backgroundColor: AppColors.warning,
+              action: SnackBarAction(
+                label: 'الإعدادات',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const _BluetoothSettingsWrapper()),
+                  );
+                },
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    try {
+      final entityName = _isSale
+          ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
+          : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
+
+      final currencySymbol = _selectedCurrency == 'SAR' ? 'ر.س' : _selectedCurrency == 'USD' ? r'$' : 'ر.ي';
+
+      await printerService.printReceipt({
+        'invoice_number': '—',
+        'invoice_type': _isSale ? 'فاتورة مبيعات' : 'فاتورة مشتريات',
+        'date': DateTime.now(),
+        'customer_name': entityName,
+        'items': _items.map((item) => <String, dynamic>{
+          'product_name': item.productName,
+          'quantity': item.quantity,
+          'unit_price': item.unitPrice,
+          'total_price': item.totalPrice,
+        }).toList(),
+        'subtotal': _subtotal,
+        'discount': _discountAmount,
+        'tax': _taxAmount,
+        'total': _total,
+        'paid': _paidAmount,
+        'remaining': _remaining,
+        'currency': currencySymbol,
+        'notes': _notesController.text,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إرسال الفاتورة للطابعة الحرارية'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } on PrinterException catch (e) {
+      if (mounted) {
+        context.showErrorSnackBar(e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showErrorSnackBar('خطأ في الطباعة الحرارية: $e');
+      }
+    }
+  }
+
   // ── Add item ─────────────────────────────────────────────────
   Future<void> _addItem() async {
     final result = await showModalBottomSheet<InvoiceItem>(
@@ -1239,6 +1328,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       context.showSuccessSnackBar('تم حفظ الفاتورة بنجاح');
       Navigator.pop(context);
     }
+  }
+}
+
+/// Wrapper to navigate to Bluetooth printer settings from invoice screen.
+class _BluetoothSettingsWrapper extends StatelessWidget {
+  const _BluetoothSettingsWrapper();
+
+  @override
+  Widget build(BuildContext context) {
+    return const BluetoothPrinterSettingsScreen();
   }
 }
 

@@ -11,7 +11,7 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 19;
+  static const int dbVersion = 23;
 
   // ── Locale & currency ─────────────────────────────────────────
   static const String currency = 'ر.ي';
@@ -103,6 +103,7 @@ class AppConstants {
   static const String newSaleInvoice = '/invoices/new-sale';
   static const String newPurchaseInvoice = '/invoices/new-purchase';
   static const String addCustomer = '/customers/add';
+  static const String customerDetail = '/customers/detail';
   static const String addProduct = '/products/add';
   static const String inventory = '/products/inventory';
   static const String statistics = '/statistics';
@@ -113,6 +114,7 @@ class AppConstants {
   static const String customerPrint = '/customers/print';
   static const String financialOrders = '/financial-orders';
   static const String suppliers = '/suppliers';
+  static const String supplierDetail = '/suppliers/detail';
   static const String warehouses = '/warehouses';
   static const String accountLedger = '/accounts/ledger';
   static const String expenses = '/expenses';
@@ -132,6 +134,8 @@ class AppConstants {
   static const String dailyOperations = '/daily-operations';
   static const String stockTransfer = '/stock-transfer';
   static const String stocktaking = '/stocktaking';
+  static const String inventoryVoucher = '/vouchers/inventory';
+  static const String annualPosting = '/reports/annual-posting';
 
   // ── Voucher types ────────────────────────────────────────────
   static const String voucherReceipt = 'receipt';

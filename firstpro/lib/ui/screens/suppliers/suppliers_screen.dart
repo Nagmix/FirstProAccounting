@@ -5,6 +5,7 @@ import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/supplier_model.dart';
 import '../../widgets/empty_state.dart';
 import 'add_supplier_sheet.dart';
+import 'supplier_detail_screen.dart';
 
 /// Professional suppliers management screen for the FirstPro accounting app.
 ///
@@ -12,7 +13,9 @@ import 'add_supplier_sheet.dart';
 /// - Search bar for filtering by name or phone.
 /// - Supplier list with avatar, name, phone, and balance.
 /// - FAB for adding a new supplier via [AddSupplierSheet].
-/// - Tap to edit, long press to delete with confirmation.
+/// - Tap to navigate to detail/ledger screen.
+/// - Long press for Edit/Delete options.
+/// - Dynamic balance display based on actual financial position.
 /// - Empty state when no suppliers exist.
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
@@ -78,6 +81,60 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       builder: (context) => AddSupplierSheet(supplier: supplier),
     );
     _loadSuppliers();
+  }
+
+  // ── Navigate to supplier detail/ledger ────────────────────────
+  Future<void> _navigateToDetail(Supplier supplier) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SupplierDetailScreen(supplier: supplier),
+      ),
+    );
+    _loadSuppliers();
+  }
+
+  // ── Show long-press menu (Edit / Delete) ──────────────────────
+  void _showContextMenu(Supplier supplier) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                supplier.name,
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.edit, color: AppColors.primary),
+              title: const Text('تعديل'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showAddSupplierSheet(supplier: supplier);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: AppColors.error),
+              title: const Text('حذف',
+                  style: TextStyle(color: AppColors.error)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _deleteSupplier(supplier);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Delete supplier ───────────────────────────────────────────
@@ -197,9 +254,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                             return _SupplierCard(
                               supplier: supplier,
                               avatarColor: _avatarColor(supplier.name),
-                              onTap: () => _showAddSupplierSheet(
-                                  supplier: supplier),
-                              onDelete: () => _deleteSupplier(supplier),
+                              onTap: () => _navigateToDetail(supplier),
+                              onLongPress: () => _showContextMenu(supplier),
                             );
                           },
                         ),
@@ -225,36 +281,43 @@ class _SupplierCard extends StatelessWidget {
     required this.supplier,
     required this.avatarColor,
     this.onTap,
-    this.onDelete,
+    this.onLongPress,
   });
 
   final Supplier supplier;
   final Color avatarColor;
   final VoidCallback? onTap;
-  final VoidCallback? onDelete;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    // For suppliers: 'debit' (عليه) means we owe them → positive liability
-    // 'credit' (له) means they owe us
-    final isDebit = supplier.balanceType == 'debit' && supplier.balance > 0;
-    final isCredit = supplier.balanceType == 'credit' && supplier.balance > 0;
-    final balanceColor = isDebit
-        ? AppColors.error
-        : isCredit
+
+    // Dynamic balance: compute the label based on actual financial position
+    // For the card, we use the stored balance as the net position
+    // since we don't have movement data here.
+    // balance is always positive; balanceType tells us the direction.
+    // When balance is 0, show "متساوي" regardless of balanceType.
+    final balanceLabel = supplier.balance.abs() < 0.005
+        ? 'متساوي'
+        : Supplier.getDynamicBalanceLabel(
+            supplier.balance,
+            supplier.balanceType,
+          );
+
+    final balanceColor = balanceLabel == 'متساوي'
+        ? (isLight ? AppColors.textSecondary : AppColors.darkTextSecondary)
+        : balanceLabel == 'له'
             ? AppColors.success
-            : isLight
-                ? AppColors.textSecondary
-                : AppColors.darkTextSecondary;
+            : AppColors.error;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(16),
-        onLongPress: onDelete,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -290,7 +353,9 @@ class _SupplierCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          Icons.phone,
+                          supplier.contactMethod == 'whatsapp'
+                              ? Icons.chat
+                              : Icons.phone_in_talk,
                           size: 14,
                           color: isLight
                               ? AppColors.textHint
@@ -324,7 +389,7 @@ class _SupplierCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    supplier.balanceType == 'debit' ? 'عليه' : 'له',
+                    balanceLabel,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: balanceColor,
                     ),

@@ -5,14 +5,12 @@ class Customer {
   final String? address;
   final String? address2;
   final String? email;
-  final String? gender;
-  final String? notificationMethod;
+  final String? contactMethod; // was notificationMethod
   final String? notes;
   final double balance;
   final String balanceType; // 'debit' or 'credit'
-  final String? country;
   final String currency;
-  final double creditLimit;
+  final double debtCeiling; // was creditLimit (سقف المدينية)
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -23,14 +21,12 @@ class Customer {
     this.address,
     this.address2,
     this.email,
-    this.gender,
-    this.notificationMethod,
+    this.contactMethod,
     this.notes,
     this.balance = 0.0,
     this.balanceType = 'credit',
-    this.country,
     this.currency = 'YER',
-    this.creditLimit = 0.0,
+    this.debtCeiling = 0.0,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : createdAt = createdAt ?? DateTime.now(),
@@ -44,14 +40,12 @@ class Customer {
       'address': address,
       'address2': address2,
       'email': email,
-      'gender': gender,
-      'notification_method': notificationMethod,
+      'contact_method': contactMethod,
       'notes': notes,
       'balance': balance,
       'balance_type': balanceType,
-      'country': country,
       'currency': currency,
-      'credit_limit': creditLimit,
+      'debt_ceiling': debtCeiling,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -65,14 +59,12 @@ class Customer {
       address: map['address'],
       address2: map['address2'],
       email: map['email'],
-      gender: map['gender'],
-      notificationMethod: map['notification_method'],
+      contactMethod: map['contact_method'] ?? map['notification_method'],
       notes: map['notes'],
       balance: (map['balance'] ?? 0.0).toDouble(),
       balanceType: map['balance_type'] ?? 'credit',
-      country: map['country'],
       currency: map['currency'] ?? 'YER',
-      creditLimit: (map['credit_limit'] ?? 0.0).toDouble(),
+      debtCeiling: (map['debt_ceiling'] ?? map['credit_limit'] ?? 0.0).toDouble(),
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
     );
@@ -80,19 +72,19 @@ class Customer {
 
   Customer copyWith({
     int? id, String? name, String? phone, String? address, String? address2,
-    String? email, String? gender, String? notificationMethod, String? notes,
-    double? balance, String? balanceType, String? country, String? currency,
-    double? creditLimit, DateTime? createdAt, DateTime? updatedAt,
+    String? email, String? contactMethod, String? notes,
+    double? balance, String? balanceType, String? currency,
+    double? debtCeiling, DateTime? createdAt, DateTime? updatedAt,
   }) {
     return Customer(
       id: id ?? this.id, name: name ?? this.name, phone: phone ?? this.phone,
       address: address ?? this.address, address2: address2 ?? this.address2,
-      email: email ?? this.email, gender: gender ?? this.gender,
-      notificationMethod: notificationMethod ?? this.notificationMethod,
+      email: email ?? this.email,
+      contactMethod: contactMethod ?? this.contactMethod,
       notes: notes ?? this.notes, balance: balance ?? this.balance,
-      balanceType: balanceType ?? this.balanceType, country: country ?? this.country,
+      balanceType: balanceType ?? this.balanceType,
       currency: currency ?? this.currency,
-      creditLimit: creditLimit ?? this.creditLimit,
+      debtCeiling: debtCeiling ?? this.debtCeiling,
       createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
     );
   }

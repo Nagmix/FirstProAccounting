@@ -7,8 +7,9 @@ import '../../../data/datasources/database_helper.dart';
 
 class CreateVoucherScreen extends StatefulWidget {
   final String? initialType;
+  final int? initialSupplierId;
 
-  const CreateVoucherScreen({super.key, this.initialType});
+  const CreateVoucherScreen({super.key, this.initialType, this.initialSupplierId});
 
   @override
   State<CreateVoucherScreen> createState() => _CreateVoucherScreenState();
@@ -189,6 +190,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
         'currency': _selectedCurrency,
         'total_amount': totalAmount,
         'cash_box_id': _selectedCashBoxId,
+        'supplier_id': widget.initialSupplierId,
         'is_posted': 1,
         'created_at': now,
         'updated_at': now,

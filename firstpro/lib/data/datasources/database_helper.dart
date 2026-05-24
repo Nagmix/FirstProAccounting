@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 19;
+  static const int _databaseVersion = 23;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -104,14 +104,12 @@ class DatabaseHelper {
         address TEXT,
         address2 TEXT,
         email TEXT,
-        gender TEXT,
-        notification_method TEXT,
+        contact_method TEXT DEFAULT 'whatsapp',
         notes TEXT,
         balance REAL NOT NULL DEFAULT 0.0,
         balance_type TEXT NOT NULL DEFAULT 'credit',
-        country TEXT,
-        credit_limit REAL NOT NULL DEFAULT 0.0,
         currency TEXT NOT NULL DEFAULT 'YER',
+        debt_ceiling REAL NOT NULL DEFAULT 0.0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -230,9 +228,11 @@ class DatabaseHelper {
         email TEXT,
         address TEXT,
         balance REAL NOT NULL DEFAULT 0.0,
-        balance_type TEXT NOT NULL DEFAULT 'debit',
+        balance_type TEXT NOT NULL DEFAULT 'credit',
         currency TEXT NOT NULL DEFAULT 'YER',
         notes TEXT,
+        debt_ceiling REAL NOT NULL DEFAULT 0.0,
+        contact_method TEXT DEFAULT 'whatsapp',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -611,10 +611,14 @@ class DatabaseHelper {
         currency TEXT NOT NULL DEFAULT 'YER',
         total_amount REAL NOT NULL DEFAULT 0.0,
         cash_box_id INTEGER,
+        customer_id INTEGER,
+        supplier_id INTEGER,
         is_posted INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+        FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id),
+        FOREIGN KEY (customer_id) REFERENCES customers (id),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers (id)
       )
     ''');
 
@@ -699,6 +703,67 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_stocktaking_sessions_wh ON stocktaking_sessions (warehouse_id)');
     await db.execute('CREATE INDEX idx_stocktaking_items_session ON stocktaking_items (session_id)');
 
+    // Inventory Vouchers (سندات الجرد) - v22
+    await db.execute('''
+      CREATE TABLE inventory_vouchers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        voucher_number TEXT NOT NULL,
+        date TEXT NOT NULL,
+        warehouse_id INTEGER,
+        description TEXT,
+        currency TEXT NOT NULL DEFAULT 'YER',
+        total_value REAL NOT NULL DEFAULT 0.0,
+        status TEXT NOT NULL DEFAULT 'approved',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+      )
+    ''');
+
+    // Inventory Voucher Items (بنود سند الجرد) - v22
+    await db.execute('''
+      CREATE TABLE inventory_voucher_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        voucher_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        system_quantity REAL NOT NULL,
+        actual_quantity REAL NOT NULL,
+        difference REAL NOT NULL,
+        unit_cost REAL NOT NULL DEFAULT 0.0,
+        total_value REAL NOT NULL DEFAULT 0.0,
+        notes TEXT,
+        FOREIGN KEY (voucher_id) REFERENCES inventory_vouchers (id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    ''');
+
+    // Fiscal Years (السنوات المالية) - v22
+    await db.execute('''
+      CREATE TABLE fiscal_years (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        year INTEGER NOT NULL UNIQUE,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open',
+        net_profit REAL NOT NULL DEFAULT 0.0,
+        closed_at TEXT,
+        closed_by TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // v22 indexes
+    await db.execute('CREATE INDEX idx_inventory_vouchers_number ON inventory_vouchers (voucher_number)');
+    await db.execute('CREATE INDEX idx_inventory_vouchers_date ON inventory_vouchers (date)');
+    await db.execute('CREATE INDEX idx_inventory_vouchers_warehouse ON inventory_vouchers (warehouse_id)');
+    await db.execute('CREATE INDEX idx_inventory_vouchers_status ON inventory_vouchers (status)');
+    await db.execute('CREATE INDEX idx_inventory_voucher_items_voucher ON inventory_voucher_items (voucher_id)');
+    await db.execute('CREATE INDEX idx_inventory_voucher_items_product ON inventory_voucher_items (product_id)');
+    await db.execute('CREATE INDEX idx_fiscal_years_year ON fiscal_years (year)');
+    await db.execute('CREATE INDEX idx_fiscal_years_status ON fiscal_years (status)');
+
     // Seed default data
     await _seedCurrencies(db);
     await _seedDefaultAccounts(db);
@@ -747,8 +812,12 @@ class DatabaseHelper {
       ['حساب الأصول', 'Assets Account', '1000', 'ASSET'],
       ['حساب الصناديق والبنوك', 'Cash & Banks Account', '1100', 'ASSET'],
       ['حساب العملاء', 'Customers Account', '1200', 'ASSET'],
+      ['المخزون', 'Inventory Account', '1300', 'ASSET'],
       ['حساب الخصوم', 'Liabilities Account', '2000', 'LIABILITY'],
       ['حساب الموردين', 'Suppliers Account', '2100', 'LIABILITY'],
+      ['رصيد افتتاحي', 'Opening Balance Equity', '2200', 'LIABILITY'],
+      ['الأرباح المحتجزة', 'Retained Earnings', '2900', 'LIABILITY'],
+      ['تكلفة البضاعة المباعة', 'COGS Account', '3200', 'COST'],
       ['حساب المشتريات', 'Purchases Account', '3100', 'COST'],
       ['حساب المبيعات', 'Sales Account', '4100', 'REVENUE'],
       ['حساب المصاريف', 'Expenses Account', '5000', 'EXPENSE'],
@@ -800,8 +869,12 @@ class DatabaseHelper {
       ['حساب الأصول', 'Assets Account', 1000, 'ASSET'],
       ['حساب الصناديق والبنوك', 'Cash & Banks Account', 1100, 'ASSET'],
       ['حساب العملاء', 'Customers Account', 1200, 'ASSET'],
+      ['المخزون', 'Inventory Account', 1300, 'ASSET'],
       ['حساب الخصوم', 'Liabilities Account', 2000, 'LIABILITY'],
       ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY'],
+      ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'LIABILITY'],
+      ['الأرباح المحتجزة', 'Retained Earnings', 2900, 'LIABILITY'],
+      ['تكلفة البضاعة المباعة', 'COGS Account', 3200, 'COST'],
       ['حساب المشتريات', 'Purchases Account', 3100, 'COST'],
       ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE'],
       ['حساب المصاريف', 'Expenses Account', 5000, 'EXPENSE'],
@@ -871,8 +944,8 @@ class DatabaseHelper {
       // Add balance_type to customers
       try { await db.execute('ALTER TABLE customers ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (_) {}
 
-      // Add balance_type to suppliers
-      try { await db.execute('ALTER TABLE suppliers ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'debit\''); } catch (_) {}
+      // Add balance_type to suppliers (default 'credit' because we typically owe the supplier)
+      try { await db.execute('ALTER TABLE suppliers ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (_) {}
 
       // Add linked_cash_box_id to accounts
       try { await db.execute('ALTER TABLE accounts ADD COLUMN linked_cash_box_id INTEGER'); } catch (_) {}
@@ -1444,6 +1517,200 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_stocktaking_sessions_wh ON stocktaking_sessions (warehouse_id)');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_stocktaking_items_session ON stocktaking_items (session_id)');
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v20 Migration: Fix supplier balance_type default, add debt_ceiling
+    //  to suppliers, add customer_id/supplier_id to vouchers, seed new
+    //  accounts (COGS, Inventory, Retained Earnings, Opening Balance Equity)
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 20) {
+      // Add debt_ceiling column to suppliers
+      try { await db.execute('ALTER TABLE suppliers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+
+      // Add contact_method column to suppliers
+      try { await db.execute("ALTER TABLE suppliers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (_) {}
+
+      // Fix supplier balance_type default to 'credit' (we typically owe the supplier)
+      try { await db.execute("UPDATE suppliers SET balance_type = 'credit' WHERE balance_type = 'debit' AND balance >= 0"); } catch (_) {}
+
+      // Add customer_id and supplier_id columns to vouchers
+      try { await db.execute('ALTER TABLE vouchers ADD COLUMN customer_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE vouchers ADD COLUMN supplier_id INTEGER'); } catch (_) {}
+
+      // Seed new accounts for each currency if they don't exist
+      final now20 = DateTime.now().toIso8601String();
+      final newAccountTemplates = [
+        // Inventory account (ASSET, code 1300+offset)
+        {'baseCode': 1300, 'nameAr': 'المخزون', 'nameEn': 'Inventory Account', 'type': 'ASSET'},
+        // Opening Balance Equity (LIABILITY, code 2200+offset)
+        {'baseCode': 2200, 'nameAr': 'رصيد افتتاحي', 'nameEn': 'Opening Balance Equity', 'type': 'LIABILITY'},
+        // Retained Earnings (LIABILITY, code 2900+offset)
+        {'baseCode': 2900, 'nameAr': 'الأرباح المحتجزة', 'nameEn': 'Retained Earnings', 'type': 'LIABILITY'},
+        // COGS account (COST, code 3200+offset)
+        {'baseCode': 3200, 'nameAr': 'تكلفة البضاعة المباعة', 'nameEn': 'COGS Account', 'type': 'COST'},
+      ];
+      final currencyConfigs20 = [
+        {'code': 'YER', 'symbol': 'ر.ي', 'offset': 0},
+        {'code': 'SAR', 'symbol': 'ر.س', 'offset': 1},
+        {'code': 'USD', 'symbol': r'$', 'offset': 2},
+      ];
+      for (final currency in currencyConfigs20) {
+        final currencyCode = currency['code'] as String;
+        final currencySymbol = currency['symbol'] as String;
+        final codeOffset = currency['offset'] as int;
+        for (final template in newAccountTemplates) {
+          final actualCode = ((template['baseCode'] as int) + codeOffset).toString();
+          final existing = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [actualCode, currencyCode], limit: 1);
+          if (existing.isEmpty) {
+            await db.insert('accounts', {
+              'name_ar': '${template['nameAr']} ($currencySymbol)',
+              'name_en': '${template['nameEn']} ($currencyCode)',
+              'account_code': actualCode,
+              'account_type': template['type'],
+              'balance': 0.0,
+              'currency': currencyCode,
+              'is_active': 1,
+              'is_system': 1,
+              'debt_ceiling': 0.0,
+              'balance_type': 'credit',
+              'created_at': now20,
+              'updated_at': now20,
+            });
+          }
+        }
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v21 Migration: Add contact_method and debt_ceiling to customers
+    //  (replacing notification_method and credit_limit fields)
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 21) {
+      // Add contact_method column to customers (replacing notification_method)
+      try { await db.execute("ALTER TABLE customers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (_) {}
+
+      // Add debt_ceiling column to customers (replacing credit_limit)
+      try { await db.execute('ALTER TABLE customers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+
+      // Copy data from old columns to new columns
+      try { await db.execute("UPDATE customers SET contact_method = COALESCE(notification_method, 'whatsapp') WHERE contact_method IS NULL OR contact_method = 'whatsapp'"); } catch (_) {}
+      try { await db.execute('UPDATE customers SET debt_ceiling = COALESCE(credit_limit, 0.0) WHERE debt_ceiling = 0.0'); } catch (_) {}
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v23 Migration: Add UNIQUE constraint on fiscal_years.year
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 23) {
+      // Recreate fiscal_years table with UNIQUE constraint on year
+      // SQLite doesn't support adding UNIQUE via ALTER TABLE, so we:
+      // 1. Create a temp table with the correct schema
+      // 2. Copy data
+      // 3. Drop old table
+      // 4. Rename temp to original
+      await db.execute('CREATE TABLE fiscal_years_v23 (id INTEGER PRIMARY KEY AUTOINCREMENT, year INTEGER NOT NULL UNIQUE, start_date TEXT NOT NULL, end_date TEXT NOT NULL, status TEXT NOT NULL DEFAULT \'open\', net_profit REAL NOT NULL DEFAULT 0.0, closed_at TEXT, closed_by TEXT, notes TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)');
+      await db.execute('INSERT INTO fiscal_years_v23 SELECT id, year, start_date, end_date, status, net_profit, closed_at, closed_by, notes, created_at, updated_at FROM fiscal_years');
+      await db.execute('DROP TABLE fiscal_years');
+      await db.execute('ALTER TABLE fiscal_years_v23 RENAME TO fiscal_years');
+      // Recreate indexes
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_fiscal_years_year ON fiscal_years (year)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_fiscal_years_status ON fiscal_years (status)');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v22 Migration: Inventory Vouchers & Fiscal Years
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 22) {
+      // Inventory Vouchers (سندات الجرد)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_vouchers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          voucher_number TEXT NOT NULL,
+          date TEXT NOT NULL,
+          warehouse_id INTEGER,
+          description TEXT,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          total_value REAL NOT NULL DEFAULT 0.0,
+          status TEXT NOT NULL DEFAULT 'approved',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+        )
+      ''');
+
+      // Inventory Voucher Items (بنود سند الجرد)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_voucher_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          voucher_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          system_quantity REAL NOT NULL,
+          actual_quantity REAL NOT NULL,
+          difference REAL NOT NULL,
+          unit_cost REAL NOT NULL DEFAULT 0.0,
+          total_value REAL NOT NULL DEFAULT 0.0,
+          notes TEXT,
+          FOREIGN KEY (voucher_id) REFERENCES inventory_vouchers (id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+
+      // Fiscal Years (السنوات المالية)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS fiscal_years (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          year INTEGER NOT NULL,
+          start_date TEXT NOT NULL,
+          end_date TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'open',
+          net_profit REAL NOT NULL DEFAULT 0.0,
+          closed_at TEXT,
+          closed_by TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      // v22 indexes
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_vouchers_number ON inventory_vouchers (voucher_number)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_vouchers_date ON inventory_vouchers (date)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_vouchers_warehouse ON inventory_vouchers (warehouse_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_vouchers_status ON inventory_vouchers (status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_voucher_items_voucher ON inventory_voucher_items (voucher_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_voucher_items_product ON inventory_voucher_items (product_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_fiscal_years_year ON fiscal_years (year)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_fiscal_years_status ON fiscal_years (status)');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Helper: Update account balance considering balance_type
+  // ══════════════════════════════════════════════════════════════
+
+  /// Update an account's balance considering its balance_type.
+  /// For credit-balance accounts (LIABILITY, REVENUE, most EXPENSE):
+  ///   balance = balance + credit - debit
+  /// For debit-balance accounts (ASSET, COST):
+  ///   balance = balance + debit - credit
+  Future<void> _updateAccountBalanceWithJournal(
+    Transaction txn,
+    int accountId,
+    double debit,
+    double credit,
+    String now,
+  ) async {
+    final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+    if (account.isNotEmpty) {
+      final currentBalance = (account.first['balance'] as num?)?.toDouble() ?? 0.0;
+      final balanceType = account.first['balance_type'] as String? ?? 'credit';
+      double newBalance;
+      if (balanceType == 'credit') {
+        newBalance = currentBalance + credit - debit;
+      } else {
+        newBalance = currentBalance + debit - credit;
+      }
+      await txn.update('accounts', {'balance': newBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1544,7 +1811,76 @@ class DatabaseHelper {
 
   Future<int> insertCustomer(Map<String, dynamic> customerMap) async {
     final db = await database;
-    return await db.insert('customers', customerMap);
+    final now = DateTime.now().toIso8601String();
+    final openingBalance = (customerMap['balance'] as num?)?.toDouble() ?? 0.0;
+    final balanceType = customerMap['balance_type'] as String? ?? 'credit';
+    final customerCurrency = customerMap['currency'] as String? ?? 'YER';
+
+    int customerId;
+    await db.transaction((txn) async {
+      customerId = await txn.insert('customers', customerMap);
+
+      // ── Opening Balance Journal Entry ──
+      if (openingBalance > 0) {
+        final journalId = DateTime.now().millisecondsSinceEpoch;
+        final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+
+        final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), customerCurrency], limit: 1);
+        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2200 + codeOffset).toString(), customerCurrency], limit: 1);
+
+        final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
+        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
+
+        if (customersAccountId != null && openingBalanceAccountId != null) {
+          if (balanceType == 'debit') {
+            // Customer has debit (عليه) opening balance: Debit Customers, Credit Opening Balance Equity
+            await txn.insert('transactions', {
+              'account_id': customersAccountId,
+              'journal_id': journalId,
+              'debit': openingBalance,
+              'credit': 0.0,
+              'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': openingBalanceAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': openingBalance,
+              'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, customersAccountId, openingBalance, 0.0, now);
+            await _updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
+          } else {
+            // Customer has credit (له) opening balance: Credit Customers, Debit Opening Balance Equity
+            await txn.insert('transactions', {
+              'account_id': customersAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': openingBalance,
+              'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': openingBalanceAccountId,
+              'journal_id': journalId,
+              'debit': openingBalance,
+              'credit': 0.0,
+              'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, openingBalance, now);
+            await _updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
+          }
+        }
+      }
+    });
+    return customerId!;
   }
 
   Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'created_at DESC'}) async {
@@ -1591,7 +1927,76 @@ class DatabaseHelper {
 
   Future<int> insertSupplier(Map<String, dynamic> supplierMap) async {
     final db = await database;
-    return await db.insert('suppliers', supplierMap);
+    final now = DateTime.now().toIso8601String();
+    final openingBalance = (supplierMap['balance'] as num?)?.toDouble() ?? 0.0;
+    final balanceType = supplierMap['balance_type'] as String? ?? 'credit';
+    final supplierCurrency = supplierMap['currency'] as String? ?? 'YER';
+
+    int supplierId;
+    await db.transaction((txn) async {
+      supplierId = await txn.insert('suppliers', supplierMap);
+
+      // ── Opening Balance Journal Entry ──
+      if (openingBalance > 0) {
+        final journalId = DateTime.now().millisecondsSinceEpoch;
+        final codeOffset = supplierCurrency == 'SAR' ? 1 : (supplierCurrency == 'USD' ? 2 : 0);
+
+        final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), supplierCurrency], limit: 1);
+        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2200 + codeOffset).toString(), supplierCurrency], limit: 1);
+
+        final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
+        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
+
+        if (suppliersAccountId != null && openingBalanceAccountId != null) {
+          if (balanceType == 'credit') {
+            // Supplier has credit (له) opening balance: Credit Suppliers, Debit Opening Balance Equity
+            await txn.insert('transactions', {
+              'account_id': suppliersAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': openingBalance,
+              'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': openingBalanceAccountId,
+              'journal_id': journalId,
+              'debit': openingBalance,
+              'credit': 0.0,
+              'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, openingBalance, now);
+            await _updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
+          } else {
+            // Supplier has debit (عليه) opening balance: Debit Suppliers, Credit Opening Balance Equity
+            await txn.insert('transactions', {
+              'account_id': suppliersAccountId,
+              'journal_id': journalId,
+              'debit': openingBalance,
+              'credit': 0.0,
+              'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': openingBalanceAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': openingBalance,
+              'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, suppliersAccountId, openingBalance, 0.0, now);
+            await _updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
+          }
+        }
+      }
+    });
+    return supplierId!;
   }
 
   Future<int> updateSupplier(int id, Map<String, dynamic> supplierMap) async {
@@ -1614,6 +2019,75 @@ class DatabaseHelper {
     final db = await database;
     final likeQuery = '%$query%';
     return await db.query('suppliers', where: 'name LIKE ? OR phone LIKE ?', whereArgs: [likeQuery, likeQuery], orderBy: 'name ASC');
+  }
+
+  /// Get all invoices for a specific supplier.
+  Future<List<Map<String, dynamic>>> getSupplierInvoices(int supplierId) async {
+    final db = await database;
+    return await db.query(
+      'invoices',
+      where: 'supplier_id = ?',
+      whereArgs: [supplierId],
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  /// Get all vouchers for a specific supplier.
+  Future<List<Map<String, dynamic>>> getSupplierVouchers(int supplierId) async {
+    final db = await database;
+    return await db.query(
+      'vouchers',
+      where: 'supplier_id = ?',
+      whereArgs: [supplierId],
+      orderBy: 'date DESC',
+    );
+  }
+
+  /// Get all financial movements for a supplier (invoices + vouchers) sorted by date.
+  Future<List<Map<String, dynamic>>> getSupplierMovements(int supplierId) async {
+    final db = await database;
+
+    // Get invoices for this supplier
+    final invoices = await db.query(
+      'invoices',
+      where: 'supplier_id = ?',
+      whereArgs: [supplierId],
+      orderBy: 'created_at DESC',
+    );
+
+    // Get vouchers for this supplier
+    final vouchers = await db.query(
+      'vouchers',
+      where: 'supplier_id = ?',
+      whereArgs: [supplierId],
+      orderBy: 'date DESC',
+    );
+
+    // Tag each entry with its source
+    final movements = <Map<String, dynamic>>[];
+    for (final inv in invoices) {
+      movements.add({
+        ...inv,
+        '_source': 'invoice',
+        '_sort_date': inv['created_at'] ?? '',
+      });
+    }
+    for (final v in vouchers) {
+      movements.add({
+        ...v,
+        '_source': 'voucher',
+        '_sort_date': v['date'] ?? v['created_at'] ?? '',
+      });
+    }
+
+    // Sort by date descending
+    movements.sort((a, b) {
+      final dateA = a['_sort_date'] as String? ?? '';
+      final dateB = b['_sort_date'] as String? ?? '';
+      return dateB.compareTo(dateA);
+    });
+
+    return movements;
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1851,12 +2325,87 @@ class DatabaseHelper {
         });
       }
 
-      // Update account balances
-      if (debitAccountId != null) {
-        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, debitAccountId]);
+      // Update account balances using balance_type-aware logic
+      if (debitAccountId != null && total > 0) {
+        await _updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
       }
-      if (creditAccountId != null) {
-        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, creditAccountId]);
+      if (creditAccountId != null && total > 0) {
+        await _updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+      }
+
+      // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
+      // For sale invoices (not return): Debit COGS, Credit Inventory for cost_price * quantity
+      // For sale returns: Debit Inventory, Credit COGS
+      if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
+        final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final cogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
+        final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
+
+        if (cogsAccountId != null && inventoryAccountId != null) {
+          double totalCogs = 0.0;
+          for (final item in items) {
+            final productId = (item['product_id'] as num?)?.toInt();
+            final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            if (productId == null) continue;
+
+            // Look up product cost price
+            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+            if (productRow.isEmpty) continue;
+            final costPrice = (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+            totalCogs += costPrice * quantity;
+          }
+
+          if (totalCogs > 0) {
+            if (!isReturn) {
+              // Sale: Debit COGS, Credit Inventory
+              await txn.insert('transactions', {
+                'account_id': cogsAccountId,
+                'journal_id': journalId,
+                'debit': totalCogs,
+                'credit': 0.0,
+                'description': 'تكلفة بضاعة مباعة - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': inventoryAccountId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': totalCogs,
+                'description': 'تخفيض مخزون - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              // Update account balances
+              await _updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
+              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
+            } else {
+              // Sale return: Debit Inventory, Credit COGS (reverse)
+              await txn.insert('transactions', {
+                'account_id': inventoryAccountId,
+                'journal_id': journalId,
+                'debit': totalCogs,
+                'credit': 0.0,
+                'description': 'إعادة مخزون مرتجع - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': cogsAccountId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': totalCogs,
+                'description': 'عكس تكلفة بضاعة مرتجعة - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              // Update account balances
+              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
+              await _updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
+            }
+          }
+        }
       }
 
       // ── Transport Charges Journal Entries ──
@@ -1879,7 +2428,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportDebitId]);
+            await _updateAccountBalanceWithJournal(txn, transportDebitId, transportCharges, 0.0, now);
           }
           if (transportCreditId != null) {
             await txn.insert('transactions', {
@@ -1891,7 +2440,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportCreditId]);
+            await _updateAccountBalanceWithJournal(txn, transportCreditId, 0.0, transportCharges, now);
           }
         } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
           // Purchases with transport: Debit transport expense, Credit cash/supplier
@@ -1908,7 +2457,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportDebitId]);
+            await _updateAccountBalanceWithJournal(txn, transportDebitId, transportCharges, 0.0, now);
           }
           if (transportCreditId != null) {
             await txn.insert('transactions', {
@@ -1920,7 +2469,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportCreditId]);
+            await _updateAccountBalanceWithJournal(txn, transportCreditId, 0.0, transportCharges, now);
           }
         }
 
@@ -2094,7 +2643,7 @@ class DatabaseHelper {
           'date': now,
           'created_at': now,
         });
-        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, originalCreditAccountId]);
+        await _updateAccountBalanceWithJournal(txn, originalCreditAccountId, total, 0.0, now);
       }
       if (originalDebitAccountId != null && total > 0) {
         await txn.insert('transactions', {
@@ -2106,7 +2655,77 @@ class DatabaseHelper {
           'date': now,
           'created_at': now,
         });
-        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, originalDebitAccountId]);
+        await _updateAccountBalanceWithJournal(txn, originalDebitAccountId, 0.0, total, now);
+      }
+
+      // 2b. Reverse COGS journal entries (for sale invoices)
+      if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
+        final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final cogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
+        final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
+
+        if (cogsAccountId != null && inventoryAccountId != null) {
+          double totalCogs = 0.0;
+          for (final item in items) {
+            final productId = (item['product_id'] as num?)?.toInt();
+            final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            if (productId == null) continue;
+
+            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+            if (productRow.isEmpty) continue;
+            final costPrice = (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+            totalCogs += costPrice * quantity;
+          }
+
+          if (totalCogs > 0) {
+            if (!isReturn) {
+              // Original: Debit COGS, Credit Inventory → Reverse: Debit Inventory, Credit COGS
+              await txn.insert('transactions', {
+                'account_id': inventoryAccountId,
+                'journal_id': journalId,
+                'debit': totalCogs,
+                'credit': 0.0,
+                'description': 'إلغاء تكلفة بضاعة مباعة - $id',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': cogsAccountId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': totalCogs,
+                'description': 'إلغاء تخفيض مخزون - $id',
+                'date': now,
+                'created_at': now,
+              });
+              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
+              await _updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
+            } else {
+              // Original return: Debit Inventory, Credit COGS → Reverse: Debit COGS, Credit Inventory
+              await txn.insert('transactions', {
+                'account_id': cogsAccountId,
+                'journal_id': journalId,
+                'debit': totalCogs,
+                'credit': 0.0,
+                'description': 'إلغاء إعادة مخزون مرتجع - $id',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': inventoryAccountId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': totalCogs,
+                'description': 'إلغاء عكس تكلفة بضاعة مرتجعة - $id',
+                'date': now,
+                'created_at': now,
+              });
+              await _updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
+              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
+            }
+          }
+        }
       }
 
       // 3. Reverse transport charge journal entries
@@ -2130,7 +2749,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, reversalDebitId]);
+            await _updateAccountBalanceWithJournal(txn, reversalDebitId, transportCharges, 0.0, now);
           }
           if (reversalCreditId != null) {
             await txn.insert('transactions', {
@@ -2142,7 +2761,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, reversalCreditId]);
+            await _updateAccountBalanceWithJournal(txn, reversalCreditId, 0.0, transportCharges, now);
           }
         } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
           // Original: Debit transport expense, Credit cash/supplier
@@ -2160,7 +2779,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, reversalDebitId]);
+            await _updateAccountBalanceWithJournal(txn, reversalDebitId, transportCharges, 0.0, now);
           }
           if (reversalCreditId != null) {
             await txn.insert('transactions', {
@@ -2172,7 +2791,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, reversalCreditId]);
+            await _updateAccountBalanceWithJournal(txn, reversalCreditId, 0.0, transportCharges, now);
           }
         }
       }
@@ -2364,7 +2983,7 @@ class DatabaseHelper {
             'date': now,
             'created_at': now,
           });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, expenseAccId]);
+          await _updateAccountBalanceWithJournal(txn, expenseAccId, amountBase, 0.0, now);
         }
         if (cashAccountId != null && amountBase > 0) {
           await txn.insert('transactions', {
@@ -2376,7 +2995,7 @@ class DatabaseHelper {
             'date': now,
             'created_at': now,
           });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, cashAccountId]);
+          await _updateAccountBalanceWithJournal(txn, cashAccountId, 0.0, amountBase, now);
         }
       } else {
         // قبض (receive): Debit cash/bank, Credit expense account
@@ -2390,7 +3009,7 @@ class DatabaseHelper {
             'date': now,
             'created_at': now,
           });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, cashAccountId]);
+          await _updateAccountBalanceWithJournal(txn, cashAccountId, amountBase, 0.0, now);
         }
         if (expenseAccId != null && amountBase > 0) {
           await txn.insert('transactions', {
@@ -2402,7 +3021,7 @@ class DatabaseHelper {
             'date': now,
             'created_at': now,
           });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, expenseAccId]);
+          await _updateAccountBalanceWithJournal(txn, expenseAccId, 0.0, amountBase, now);
         }
       }
 
@@ -3208,7 +3827,7 @@ class DatabaseHelper {
           'date': now,
           'created_at': now,
         });
-        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [toAmount, now, toCashBanksAccountId]);
+        await _updateAccountBalanceWithJournal(txn, toCashBanksAccountId, toAmount, 0.0, now);
       }
 
       // دائن: حساب الصناديق والبنوك للعملة المرسلة
@@ -3222,7 +3841,7 @@ class DatabaseHelper {
           'date': now,
           'created_at': now,
         });
-        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [fromAmount, now, fromCashBanksAccountId]);
+        await _updateAccountBalanceWithJournal(txn, fromCashBanksAccountId, 0.0, fromAmount, now);
       }
 
       // معالجة أرباح/خسائر الصرافة
@@ -3249,7 +3868,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [gainLoss, now, gainAccountId]);
+            await _updateAccountBalanceWithJournal(txn, gainAccountId, 0.0, gainLoss, now);
           }
         } else if (gainLossType == 'loss') {
           // خسائر صرافة: مدين حساب خسائر الصرافة
@@ -3272,7 +3891,7 @@ class DatabaseHelper {
               'date': now,
               'created_at': now,
             });
-            await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [gainLoss, now, lossAccountId]);
+            await _updateAccountBalanceWithJournal(txn, lossAccountId, gainLoss, 0.0, now);
           }
         }
       }
@@ -3397,7 +4016,7 @@ class DatabaseHelper {
           'date': now,
           'created_at': now,
         });
-        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amount, now, toAccountId]);
+        await _updateAccountBalanceWithJournal(txn, toAccountId, amount, 0.0, now);
       }
 
       // دائن: حساب الصناديق والبنوك للمصدر
@@ -3411,7 +4030,7 @@ class DatabaseHelper {
           'date': now,
           'created_at': now,
         });
-        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amount, now, fromAccountId]);
+        await _updateAccountBalanceWithJournal(txn, fromAccountId, 0.0, amount, now);
       }
 
       // تحديث أرصدة الصناديق
@@ -3558,7 +4177,7 @@ class DatabaseHelper {
             'date': now,
             'created_at': now,
           });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, debitAccountId]);
+          await _updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
         }
 
         if (creditAccountId != null && total > 0) {
@@ -3571,7 +4190,77 @@ class DatabaseHelper {
             'date': now,
             'created_at': now,
           });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, creditAccountId]);
+          await _updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+        }
+
+        // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
+        if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
+          final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), invoiceCurrency], limit: 1);
+          final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
+          final cogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
+          final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
+
+          if (cogsAccountId != null && inventoryAccountId != null) {
+            // Fetch invoice items to calculate COGS
+            final invoiceItems = await txn.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
+            double totalCogs = 0.0;
+            for (final item in invoiceItems) {
+              final productId = (item['product_id'] as num?)?.toInt();
+              final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+              if (productId == null) continue;
+
+              final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+              if (productRow.isEmpty) continue;
+              final costPrice = (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+              totalCogs += costPrice * quantity;
+            }
+
+            if (totalCogs > 0) {
+              if (!isReturn) {
+                await txn.insert('transactions', {
+                  'account_id': cogsAccountId,
+                  'journal_id': journalId,
+                  'debit': totalCogs,
+                  'credit': 0.0,
+                  'description': 'تكلفة بضاعة مباعة - $invoiceId',
+                  'date': now,
+                  'created_at': now,
+                });
+                await txn.insert('transactions', {
+                  'account_id': inventoryAccountId,
+                  'journal_id': journalId,
+                  'debit': 0.0,
+                  'credit': totalCogs,
+                  'description': 'تخفيض مخزون - $invoiceId',
+                  'date': now,
+                  'created_at': now,
+                });
+                await _updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
+                await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
+              } else {
+                await txn.insert('transactions', {
+                  'account_id': inventoryAccountId,
+                  'journal_id': journalId,
+                  'debit': totalCogs,
+                  'credit': 0.0,
+                  'description': 'إعادة مخزون مرتجع - $invoiceId',
+                  'date': now,
+                  'created_at': now,
+                });
+                await txn.insert('transactions', {
+                  'account_id': cogsAccountId,
+                  'journal_id': journalId,
+                  'debit': 0.0,
+                  'credit': totalCogs,
+                  'description': 'عكس تكلفة بضاعة مرتجعة - $invoiceId',
+                  'date': now,
+                  'created_at': now,
+                });
+                await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
+                await _updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
+              }
+            }
+          }
         }
 
         // ── قيود أجور النقل ──
@@ -3593,7 +4282,7 @@ class DatabaseHelper {
                 'date': now,
                 'created_at': now,
               });
-              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportDebitId]);
+              await _updateAccountBalanceWithJournal(txn, transportDebitId, transportCharges, 0.0, now);
             }
             if (transportCreditId != null) {
               await txn.insert('transactions', {
@@ -3605,7 +4294,7 @@ class DatabaseHelper {
                 'date': now,
                 'created_at': now,
               });
-              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportCreditId]);
+              await _updateAccountBalanceWithJournal(txn, transportCreditId, 0.0, transportCharges, now);
             }
           } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
             final transportDebitId = transportAccountId;
@@ -3621,7 +4310,7 @@ class DatabaseHelper {
                 'date': now,
                 'created_at': now,
               });
-              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportDebitId]);
+              await _updateAccountBalanceWithJournal(txn, transportDebitId, transportCharges, 0.0, now);
             }
             if (transportCreditId != null) {
               await txn.insert('transactions', {
@@ -3633,7 +4322,7 @@ class DatabaseHelper {
                 'date': now,
                 'created_at': now,
               });
-              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, transportCreditId]);
+              await _updateAccountBalanceWithJournal(txn, transportCreditId, 0.0, transportCharges, now);
             }
           }
         }
@@ -3745,19 +4434,8 @@ class DatabaseHelper {
             'created_at': now,
           });
 
-          // تحديث رصيد الحساب
-          final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
-          if (account.isNotEmpty) {
-            final currentBalance = (account.first['balance'] as num?)?.toDouble() ?? 0.0;
-            final balanceType = account.first['balance_type'] as String? ?? 'credit';
-            double newBalance;
-            if (balanceType == 'credit') {
-              newBalance = currentBalance + credit - debit;
-            } else {
-              newBalance = currentBalance + debit - credit;
-            }
-            await txn.update('accounts', {'balance': newBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
-          }
+          // تحديث رصيد الحساب باستخدام منطق balance_type
+          await _updateAccountBalanceWithJournal(txn, accountId, debit, credit, now);
         }
       }
 
@@ -3778,6 +4456,32 @@ class DatabaseHelper {
             newCashBalance = currentBalance;
           }
           await txn.update('cash_boxes', {'balance': newCashBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
+        }
+      }
+
+      // تحديث رصيد العميل/المورد إذا كان مرتبطاً بالسند
+      final customerId = voucherMap['customer_id'];
+      final supplierId = voucherMap['supplier_id'];
+      final totalAmount = (voucherMap['total_amount'] as num?)?.toDouble() ?? 0.0;
+      final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
+
+      if (customerId != null && totalAmount > 0) {
+        // Receipt voucher for customer: customer pays us → decrease customer balance
+        // Payment voucher to customer: we pay customer → increase customer balance
+        if (voucherType == 'receipt') {
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalAmount, now, customerId]);
+        } else if (voucherType == 'payment') {
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalAmount, now, customerId]);
+        }
+      }
+
+      if (supplierId != null && totalAmount > 0) {
+        // Payment voucher for supplier: we pay supplier → decrease supplier balance
+        // Receipt voucher from supplier: supplier pays us → increase supplier balance
+        if (voucherType == 'payment') {
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalAmount, now, supplierId]);
+        } else if (voucherType == 'receipt') {
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalAmount, now, supplierId]);
         }
       }
     });
@@ -3834,19 +4538,8 @@ class DatabaseHelper {
             'created_at': now,
           });
 
-          // تحديث رصيد الحساب (عكس)
-          final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
-          if (account.isNotEmpty) {
-            final currentBalance = (account.first['balance'] as num?)?.toDouble() ?? 0.0;
-            final balanceType = account.first['balance_type'] as String? ?? 'credit';
-            double newBalance;
-            if (balanceType == 'credit') {
-              newBalance = currentBalance - credit + debit;
-            } else {
-              newBalance = currentBalance - debit + credit;
-            }
-            await txn.update('accounts', {'balance': newBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
-          }
+          // تحديث رصيد الحساب (عكس) باستخدام منطق balance_type
+          await _updateAccountBalanceWithJournal(txn, accountId, credit, debit, now);
         }
       }
 
@@ -3864,6 +4557,28 @@ class DatabaseHelper {
             newCashBalance = currentBalance;
           }
           await txn.update('cash_boxes', {'balance': newCashBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
+        }
+      }
+
+      // عكس تأثير رصيد العميل/المورد
+      final customerId = voucherData['customer_id'];
+      final supplierId = voucherData['supplier_id'];
+      if (customerId != null && totalAmount > 0) {
+        if (voucherType == 'receipt') {
+          // Original receipt decreased customer balance, so reverse increases it
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalAmount, now, customerId]);
+        } else if (voucherType == 'payment') {
+          // Original payment increased customer balance, so reverse decreases it
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalAmount, now, customerId]);
+        }
+      }
+      if (supplierId != null && totalAmount > 0) {
+        if (voucherType == 'payment') {
+          // Original payment decreased supplier balance, so reverse increases it
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalAmount, now, supplierId]);
+        } else if (voucherType == 'receipt') {
+          // Original receipt increased supplier balance, so reverse decreases it
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalAmount, now, supplierId]);
         }
       }
 
@@ -4490,4 +5205,637 @@ class DatabaseHelper {
     ''');
   }
 
+  // ══════════════════════════════════════════════════════════════
+  //  Advanced Statistics / Charts query methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// Monthly sales vs purchases for a given [year].
+  /// Returns 12 rows (one per month) with `month`, `sales`, `purchases` columns.
+  Future<List<Map<String, dynamic>>> getMonthlySalesVsPurchases(int year, {String? currency}) async {
+    final db = await database;
+    final currencyFilter = currency != null && currency.isNotEmpty ? " AND i.currency = '$currency'" : '';
+    return await db.rawQuery('''
+      SELECT m.month,
+        COALESCE(s.total, 0.0) AS sales,
+        COALESCE(p.total, 0.0) AS purchases
+      FROM (
+        SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+        SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+        SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+      ) m
+      LEFT JOIN (
+        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
+               SUM(total) AS total
+        FROM invoices
+        WHERE type = 'sale' AND is_return = 0
+          AND strftime('%Y', created_at) = '$year'
+          $currencyFilter
+        GROUP BY month
+      ) s ON m.month = s.month
+      LEFT JOIN (
+        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
+               SUM(total) AS total
+        FROM invoices
+        WHERE type = 'purchase' AND is_return = 0
+          AND strftime('%Y', created_at) = '$year'
+          $currencyFilter
+        GROUP BY month
+      ) p ON m.month = p.month
+      ORDER BY m.month
+    ''');
+  }
+
+  /// Revenue vs Expense breakdown for a given [year].
+  /// Returns rows with `category`, `total`, `type` columns.
+  Future<List<Map<String, dynamic>>> getRevenueExpenseBreakdown(int year, {String? currency}) async {
+    final db = await database;
+    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
+    final yearStr = year.toString();
+
+    final results = <Map<String, dynamic>>[];
+
+    // Revenue by invoice type
+    final revenueData = await db.rawQuery('''
+      SELECT
+        CASE
+          WHEN type = 'sale' AND is_return = 0 THEN 'مبيعات'
+          WHEN type = 'purchase' AND is_return = 1 THEN 'مرتجع مشتريات'
+          ELSE 'أخرى'
+        END AS category,
+        SUM(total) AS total,
+        'إيرادات' AS type
+      FROM invoices
+      WHERE (type = 'sale' AND is_return = 0 OR type = 'purchase' AND is_return = 1)
+        AND strftime('%Y', created_at) = ?
+        $currencyFilter
+      GROUP BY category
+    ''', [yearStr]);
+    results.addAll(revenueData);
+
+    // Expenses by category
+    final expenseData = await db.rawQuery('''
+      SELECT
+        COALESCE(category, 'مصاريف عامة') AS category,
+        SUM(amount) AS total,
+        'مصروفات' AS type
+      FROM expenses
+      WHERE strftime('%Y', expense_date) = ?
+        $currencyFilter
+      GROUP BY category
+    ''', [yearStr]);
+    results.addAll(expenseData);
+
+    // Purchases as expense category
+    final purchaseData = await db.rawQuery('''
+      SELECT 'مشتريات' AS category,
+        SUM(total) AS total,
+        'مصروفات' AS type
+      FROM invoices
+      WHERE type = 'purchase' AND is_return = 0
+        AND strftime('%Y', created_at) = ?
+        $currencyFilter
+    ''', [yearStr]);
+    results.addAll(purchaseData);
+
+    return results;
+  }
+
+  /// Daily sales trend for the last [days] days.
+  /// Returns rows with `date`, `total` columns.
+  Future<List<Map<String, dynamic>>> getDailySalesTrend(int days, {String? currency}) async {
+    final db = await database;
+    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
+    final now = DateTime.now();
+    final startDate = now.subtract(Duration(days: days - 1));
+    final startDateStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+
+    return await db.rawQuery('''
+      SELECT date(created_at) AS date, COALESCE(SUM(total), 0.0) AS total
+      FROM invoices
+      WHERE type = 'sale' AND is_return = 0
+        AND date(created_at) >= ?
+        $currencyFilter
+      GROUP BY date(created_at)
+      ORDER BY date(created_at) ASC
+    ''', [startDateStr]);
+  }
+
+  /// Top products by sales amount.
+  /// Returns rows with `product_name`, `total_quantity`, `total_amount` columns.
+  Future<List<Map<String, dynamic>>> getTopProducts(int limit, {String? currency}) async {
+    final db = await database;
+    final currencyFilter = currency != null && currency.isNotEmpty ? " AND i.currency = '$currency'" : '';
+    return await db.rawQuery('''
+      SELECT ii.product_name,
+        SUM(ii.quantity) AS total_quantity,
+        SUM(ii.total_price) AS total_amount
+      FROM invoice_items ii
+      JOIN invoices i ON ii.invoice_id = i.id
+      WHERE i.type = 'sale' AND i.is_return = 0
+        $currencyFilter
+      GROUP BY ii.product_name
+      ORDER BY total_amount DESC
+      LIMIT ?
+    ''', [limit]);
+  }
+
+  /// Top customer balances.
+  /// Returns rows with `name`, `balance`, `balance_type`, `currency` columns.
+  Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT name, balance, balance_type, currency
+      FROM customers
+      WHERE balance > 0
+      ORDER BY balance DESC
+      LIMIT ?
+    ''', [limit]);
+  }
+
+  /// Monthly cash flow (inflow vs outflow) for a given [year].
+  /// Returns 12 rows with `month`, `inflow`, `outflow` columns.
+  Future<List<Map<String, dynamic>>> getMonthlyCashFlow(int year, {String? currency}) async {
+    final db = await database;
+    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
+    return await db.rawQuery('''
+      SELECT m.month,
+        COALESCE(i.inflow, 0.0) AS inflow,
+        COALESCE(o.outflow, 0.0) AS outflow
+      FROM (
+        SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+        SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+        SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+      ) m
+      LEFT JOIN (
+        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
+               SUM(paid_amount) AS inflow
+        FROM invoices
+        WHERE type = 'sale' AND is_return = 0 AND paid_amount > 0
+          AND strftime('%Y', created_at) = '$year'
+          $currencyFilter
+        GROUP BY month
+      ) i ON m.month = i.month
+      LEFT JOIN (
+        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
+               SUM(total) AS outflow
+        FROM expenses
+        WHERE strftime('%Y', expense_date) = '$year'
+          $currencyFilter
+        GROUP BY month
+      ) o ON m.month = o.month
+      ORDER BY m.month
+    ''');
+  }
+
+}
+
+  // ══════════════════════════════════════════════════════════════
+  //  Inventory Voucher Methods (سندات الجرد) - v22
+  // ══════════════════════════════════════════════════════════════
+
+  Future<String> getNextInventoryVoucherNumber() async {
+    final db = await database;
+    final now = DateTime.now();
+    final prefix = 'IV-${now.year}${now.month.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery(
+      "SELECT COUNT(*) as cnt FROM inventory_vouchers WHERE voucher_number LIKE ?",
+      ['$prefix%'],
+    );
+    final count = (result.first['cnt'] as num?)?.toInt() ?? 0;
+    return '$prefix-${(count + 1).toString().padLeft(4, '0')}';
+  }
+
+  Future<int> insertInventoryVoucher(
+    Map<String, dynamic> voucherMap,
+    List<Map<String, dynamic>> items,
+  ) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final journalId = DateTime.now().millisecondsSinceEpoch;
+
+    int voucherId = 0;
+    await db.transaction((txn) async {
+      // Insert voucher header
+      voucherId = await txn.insert('inventory_vouchers', {
+        ...voucherMap,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      double totalIncreaseValue = 0.0;
+      double totalDecreaseValue = 0.0;
+
+      for (final item in items) {
+        final productId = item['product_id'] as int;
+        final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
+        final unitCost = (item['unit_cost'] as num?)?.toDouble() ?? 0.0;
+        final totalValue = difference.abs() * unitCost;
+
+        // Insert voucher item
+        await txn.insert('inventory_voucher_items', {
+          'voucher_id': voucherId,
+          'product_id': productId,
+          'system_quantity': (item['system_quantity'] as num?)?.toDouble() ?? 0.0,
+          'actual_quantity': (item['actual_quantity'] as num?)?.toDouble() ?? 0.0,
+          'difference': difference,
+          'unit_cost': unitCost,
+          'total_value': totalValue,
+          'notes': item['notes'] as String?,
+        });
+
+        // Update product stock
+        final product = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+        if (product.isNotEmpty) {
+          final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+          await txn.update('products', {
+            'current_stock': currentStock + difference,
+            'updated_at': now,
+          }, where: 'id = ?', whereArgs: [productId]);
+        }
+
+        if (difference > 0) {
+          totalIncreaseValue += totalValue;
+        } else if (difference < 0) {
+          totalDecreaseValue += totalValue;
+        }
+      }
+
+      // Update voucher total value
+      await txn.update('inventory_vouchers', {
+        'total_value': totalIncreaseValue + totalDecreaseValue,
+        'updated_at': now,
+      }, where: 'id = ?', whereArgs: [voucherId]);
+
+      // Get currency for this voucher
+      final currency = voucherMap['currency'] as String? ?? 'YER';
+
+      // Find accounts by code and currency
+      // Inventory account code = 1300 + offset
+      final inventoryAccount = await _findAccountByCodeAndCurrency(txn, '1300', currency);
+      // COGS account code = 3200 + offset
+      final cogsAccount = await _findAccountByCodeAndCurrency(txn, '3200', currency);
+
+      // Journal entries for inventory increase (difference > 0)
+      if (totalIncreaseValue > 0) {
+        if (inventoryAccount != null) {
+          final invAccId = inventoryAccount['id'] as int;
+          // Debit Inventory (asset increase)
+          await txn.insert('transactions', {
+            'account_id': invAccId,
+            'journal_id': journalId,
+            'debit': totalIncreaseValue,
+            'credit': 0.0,
+            'description': 'سند جرد - زيادة مخزون',
+            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
+        }
+        if (cogsAccount != null) {
+          final cogsAccId = cogsAccount['id'] as int;
+          // Credit COGS (reducing cost of goods sold)
+          await txn.insert('transactions', {
+            'account_id': cogsAccId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': totalIncreaseValue,
+            'description': 'سند جرد - زيادة مخزون',
+            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, cogsAccId, 0.0, totalIncreaseValue, now);
+        }
+      }
+
+      // Journal entries for inventory decrease (difference < 0)
+      if (totalDecreaseValue > 0) {
+        if (cogsAccount != null) {
+          final cogsAccId = cogsAccount['id'] as int;
+          // Debit COGS (increasing cost)
+          await txn.insert('transactions', {
+            'account_id': cogsAccId,
+            'journal_id': journalId,
+            'debit': totalDecreaseValue,
+            'credit': 0.0,
+            'description': 'سند جرد - نقص مخزون',
+            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, cogsAccId, totalDecreaseValue, 0.0, now);
+        }
+        if (inventoryAccount != null) {
+          final invAccId = inventoryAccount['id'] as int;
+          // Credit Inventory (asset decrease)
+          await txn.insert('transactions', {
+            'account_id': invAccId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': totalDecreaseValue,
+            'description': 'سند جرد - نقص مخزون',
+            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
+        }
+      }
+    });
+
+    return voucherId;
+  }
+
+  /// Helper: find account by base code and currency
+  Future<Map<String, dynamic>?> _findAccountByCodeAndCurrency(Transaction txn, String baseCode, String currency) async {
+    // Determine code offset based on currency
+    String codeOffset = '0';
+    if (currency == 'SAR') {
+      codeOffset = '1';
+    } else if (currency == 'USD') {
+      codeOffset = '2';
+    }
+    final actualCode = (int.parse(baseCode) + int.parse(codeOffset)).toString();
+    final result = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [actualCode, currency], limit: 1);
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getInventoryVouchers({String? searchQuery}) async {
+    final db = await database;
+    String query = '''
+      SELECT iv.*, w.name as warehouse_name
+      FROM inventory_vouchers iv
+      LEFT JOIN warehouses w ON iv.warehouse_id = w.id
+    ''';
+    List<dynamic> args = [];
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query += ' WHERE iv.voucher_number LIKE ? OR iv.description LIKE ? OR w.name LIKE ?';
+      final likeQuery = '%$searchQuery%';
+      args = [likeQuery, likeQuery, likeQuery];
+    }
+    query += ' ORDER BY iv.created_at DESC';
+    return await db.rawQuery(query, args);
+  }
+
+  Future<Map<String, dynamic>?> getInventoryVoucherDetails(int voucherId) async {
+    final db = await database;
+    final voucherResult = await db.rawQuery('''
+      SELECT iv.*, w.name as warehouse_name
+      FROM inventory_vouchers iv
+      LEFT JOIN warehouses w ON iv.warehouse_id = w.id
+      WHERE iv.id = ?
+    ''', [voucherId]);
+    if (voucherResult.isEmpty) return null;
+
+    final items = await db.rawQuery('''
+      SELECT ivi.*, p.name_ar as product_name, p.barcode, p.item_code
+      FROM inventory_voucher_items ivi
+      LEFT JOIN products p ON ivi.product_id = p.id
+      WHERE ivi.voucher_id = ?
+      ORDER BY ivi.id
+    ''', [voucherId]);
+
+    return {
+      ...voucherResult.first,
+      'items': items,
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Annual Posting Methods (الترحيل السنوي) - v22
+  // ══════════════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> getFiscalYears() async {
+    final db = await database;
+    return await db.query('fiscal_years', orderBy: 'year DESC');
+  }
+
+  Future<bool> isFiscalYearClosed(int year) async {
+    final db = await database;
+    final result = await db.query('fiscal_years', where: 'year = ? AND status = ?', whereArgs: [year, 'closed'], limit: 1);
+    return result.isNotEmpty;
+  }
+
+  Future<Map<String, double>> getYearProfitLoss(int year) async {
+    final db = await database;
+    final yearStart = '$year-01-01';
+    final yearEnd = '$year-12-31';
+
+    // Sum revenue accounts balance
+    final revenueResult = await db.rawQuery('''
+      SELECT COALESCE(SUM(balance), 0.0) as total
+      FROM accounts
+      WHERE account_type = 'REVENUE' AND is_active = 1
+    ''');
+    final totalRevenue = (revenueResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // Sum cost accounts balance
+    final costResult = await db.rawQuery('''
+      SELECT COALESCE(SUM(balance), 0.0) as total
+      FROM accounts
+      WHERE account_type = 'COST' AND is_active = 1
+    ''');
+    final totalCosts = (costResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // Sum expense accounts balance
+    final expenseResult = await db.rawQuery('''
+      SELECT COALESCE(SUM(balance), 0.0) as total
+      FROM accounts
+      WHERE account_type = 'EXPENSE' AND is_active = 1
+    ''');
+    final totalExpenses = (expenseResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    final netProfit = totalRevenue - totalCosts - totalExpenses;
+
+    return {
+      'revenue': totalRevenue,
+      'costs': totalCosts,
+      'expenses': totalExpenses,
+      'netProfit': netProfit,
+    };
+  }
+
+  Future<void> performAnnualPosting(int year) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final journalId = DateTime.now().millisecondsSinceEpoch;
+
+    await db.transaction((txn) async {
+      // Check if already closed
+      final existing = await txn.query('fiscal_years', where: 'year = ? AND status = ?', whereArgs: [year, 'closed'], limit: 1);
+      if (existing.isNotEmpty) {
+        throw Exception('السنة المالية $year مغلقة بالفعل');
+      }
+
+      // Get all revenue accounts
+      final revenueAccounts = await txn.query('accounts', where: 'account_type = ? AND is_active = 1', whereArgs: ['REVENUE']);
+
+      // Get all cost accounts
+      final costAccounts = await txn.query('accounts', where: 'account_type = ? AND is_active = 1', whereArgs: ['COST']);
+
+      // Get all expense accounts
+      final expenseAccounts = await txn.query('accounts', where: 'account_type = ? AND is_active = 1', whereArgs: ['EXPENSE']);
+
+      // Get retained earnings accounts (one per currency)
+      final retainedEarningsAccounts = await txn.query('accounts', where: 'account_code LIKE ? AND is_active = 1', whereArgs: ['290%']);
+
+      // Calculate net profit per currency
+      final Map<String, double> revenuePerCurrency = {};
+      final Map<String, double> costPerCurrency = {};
+      final Map<String, double> expensePerCurrency = {};
+
+      for (final acc in revenueAccounts) {
+        final currency = acc['currency'] as String? ?? 'YER';
+        final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+        revenuePerCurrency[currency] = (revenuePerCurrency[currency] ?? 0.0) + balance;
+      }
+
+      for (final acc in costAccounts) {
+        final currency = acc['currency'] as String? ?? 'YER';
+        final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+        costPerCurrency[currency] = (costPerCurrency[currency] ?? 0.0) + balance;
+      }
+
+      for (final acc in expenseAccounts) {
+        final currency = acc['currency'] as String? ?? 'YER';
+        final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+        expensePerCurrency[currency] = (expensePerCurrency[currency] ?? 0.0) + balance;
+      }
+
+      // All currencies that have activity
+      final allCurrencies = {...revenuePerCurrency.keys, ...costPerCurrency.keys, ...expensePerCurrency.keys};
+
+      double totalNetProfitYER = 0.0;
+
+      for (final currency in allCurrencies) {
+        final rev = revenuePerCurrency[currency] ?? 0.0;
+        final cost = costPerCurrency[currency] ?? 0.0;
+        final exp = expensePerCurrency[currency] ?? 0.0;
+        final netForCurrency = rev - cost - exp;
+
+        // Find retained earnings account for this currency
+        final reAccount = retainedEarningsAccounts.where((a) => a['currency'] == currency).firstOrNull;
+        if (reAccount == null) continue;
+        final reAccId = reAccount['id'] as int;
+
+        // Close revenue accounts: Debit Revenue, Credit Retained Earnings
+        for (final acc in revenueAccounts.where((a) => a['currency'] == currency)) {
+          final accId = acc['id'] as int;
+          final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+          if (balance == 0.0) continue;
+
+          // Revenue accounts have credit balance, to close we debit them
+          await txn.insert('transactions', {
+            'account_id': accId,
+            'journal_id': journalId,
+            'debit': balance,
+            'credit': 0.0,
+            'description': 'إقفال إيرادات السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, accId, balance, 0.0, now);
+
+          // Credit Retained Earnings
+          await txn.insert('transactions', {
+            'account_id': reAccId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': balance,
+            'description': 'ترحيل أرباح السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, reAccId, 0.0, balance, now);
+        }
+
+        // Close cost accounts: Debit Retained Earnings, Credit Cost
+        for (final acc in costAccounts.where((a) => a['currency'] == currency)) {
+          final accId = acc['id'] as int;
+          final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+          if (balance == 0.0) continue;
+
+          // Cost accounts have debit balance, to close we credit them
+          await txn.insert('transactions', {
+            'account_id': accId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': balance,
+            'description': 'إقفال تكاليف السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, accId, 0.0, balance, now);
+
+          // Debit Retained Earnings
+          await txn.insert('transactions', {
+            'account_id': reAccId,
+            'journal_id': journalId,
+            'debit': balance,
+            'credit': 0.0,
+            'description': 'ترحيل تكاليف السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, reAccId, balance, 0.0, now);
+        }
+
+        // Close expense accounts: Debit Retained Earnings, Credit Expense
+        for (final acc in expenseAccounts.where((a) => a['currency'] == currency)) {
+          final accId = acc['id'] as int;
+          final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+          if (balance == 0.0) continue;
+
+          // Expense accounts have debit balance, to close we credit them
+          await txn.insert('transactions', {
+            'account_id': accId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': balance,
+            'description': 'إقفال مصاريف السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, accId, 0.0, balance, now);
+
+          // Debit Retained Earnings
+          await txn.insert('transactions', {
+            'account_id': reAccId,
+            'journal_id': journalId,
+            'debit': balance,
+            'credit': 0.0,
+            'description': 'ترحيل مصاريف السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, reAccId, balance, 0.0, now);
+        }
+
+        // Accumulate for total (using YER as base)
+        if (currency == 'YER') {
+          totalNetProfitYER += netForCurrency;
+        }
+      }
+
+      // Create or update fiscal year record
+      final existingFY = await txn.query('fiscal_years', where: 'year = ?', whereArgs: [year], limit: 1);
+      if (existingFY.isNotEmpty) {
+        await txn.update('fiscal_years', {
+          'status': 'closed',
+          'net_profit': totalNetProfitYER,
+          'closed_at': now,
+          'updated_at': now,
+        }, where: 'year = ?', whereArgs: [year]);
+      } else {
+        await txn.insert('fiscal_years', {
+          'year': year,
+          'start_date': '$year-01-01',
+          'end_date': '$year-12-31',
+          'status': 'closed',
+          'net_profit': totalNetProfitYER,
+          'closed_at': now,
+          'notes': 'ترحيل سنوي تلقائي',
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+    });
+  }
 }

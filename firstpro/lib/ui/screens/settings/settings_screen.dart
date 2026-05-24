@@ -12,9 +12,11 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../core/utils/excel_exporter.dart';
+import '../../../core/services/bluetooth_printer_service.dart';
 import '../currency_exchange/currency_exchange_screen.dart';
 import '../cash_transfers/cash_transfer_screen.dart';
 import '../debts/debts_screen.dart';
+import 'bluetooth_printer_settings_screen.dart';
 
 /// Professional settings screen for the FirstPro accounting app.
 ///
@@ -256,6 +258,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _saveSetting('show_tax_in_invoice', v ? '1' : '0');
                   },
                 ),
+                _buildActionTile(
+                  icon: Icons.bluetooth,
+                  title: 'إعدادات الطابعة البلوتوث',
+                  subtitle: 'إعداد طابعة حرارية 80مم عبر البلوتوث',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BluetoothPrinterSettingsScreen()),
+                  ),
+                  isDark: isDark,
+                ),
               ],
             ),
 
@@ -293,6 +305,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     setState(() => _trackExpiryDate = v);
                     _saveSetting('track_expiry_date', v ? '1' : '0');
                   },
+                ),
+                _buildActionTile(
+                  icon: Icons.inventory,
+                  title: 'سندات الجرد',
+                  subtitle: 'تسوية كميات المخزون وضبط القيود المحاسبية',
+                  onTap: () => Navigator.pushNamed(context, AppConstants.inventoryVoucher),
+                  isDark: isDark,
                 ),
               ],
             ),
@@ -462,6 +481,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'التدقيق المحاسبي',
                   subtitle: 'التحقق من توازن القيود وربط العمليات بدليل الحسابات',
                   onTap: () => Navigator.pushNamed(context, AppConstants.accountingAudit),
+                  isDark: isDark,
+                ),
+                _buildActionTile(
+                  icon: Icons.published_with_changes,
+                  title: 'الترحيل السنوي',
+                  subtitle: 'إقفال السنة المالية ونقل الأرباح إلى الأرباح المحتجزة',
+                  onTap: () => Navigator.pushNamed(context, AppConstants.annualPosting),
                   isDark: isDark,
                 ),
               ],

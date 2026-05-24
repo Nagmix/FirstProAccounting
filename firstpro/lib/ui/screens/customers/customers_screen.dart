@@ -5,6 +5,7 @@ import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/customer_model.dart';
 import '../../widgets/empty_state.dart';
 import 'add_customer_sheet.dart';
+import 'customer_detail_screen.dart';
 
 /// Professional customers management screen for the FirstPro accounting app.
 ///
@@ -69,13 +70,22 @@ class _CustomersScreenState extends State<CustomersScreen>
       }).toList();
     }
 
-    // Apply tab filter
+    // Apply tab filter based on balance and balance_type
     switch (tabIndex) {
-      case 1: // مدينون (debtors – negative balance)
-        filtered = filtered.where((c) => c.balance < 0).toList();
+      case 1: // مدينون – customers whose net position is debit (they owe us)
+        filtered = filtered.where((c) {
+          // A customer is a debtor if balanceType is 'debit' with positive balance,
+          // or if balanceType is 'credit' but they have switched to debit position
+          if (c.balanceType == 'debit' && c.balance > 0) return true;
+          return false;
+        }).toList();
         break;
-      case 2: // دائنون (creditors – positive balance)
-        filtered = filtered.where((c) => c.balance > 0).toList();
+      case 2: // دائنون – customers whose net position is credit (we owe them)
+        filtered = filtered.where((c) {
+          // A customer is a creditor if balanceType is 'credit' with positive balance
+          if (c.balanceType == 'credit' && c.balance > 0) return true;
+          return false;
+        }).toList();
         break;
       // case 0: الكل – no additional filter
     }
@@ -235,7 +245,11 @@ class _CustomersScreenState extends State<CustomersScreen>
                             customer: customer,
                             avatarColor: _avatarColor(customer.name),
                             onTap: () {
-                              // TODO: Navigate to customer detail screen
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => CustomerDetailScreen(customer: customer),
+                                ),
+                              ).then((_) => _loadCustomers());
                             },
                             onDelete: () => _deleteCustomer(customer),
                           );
@@ -277,11 +291,12 @@ class _CustomerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final isDebtor = customer.balance < 0;
-    final isCreditor = customer.balance > 0;
-    final balanceColor = isDebtor
+    // Determine balance display based on balance + balanceType
+    final isDebit = customer.balanceType == 'debit' && customer.balance > 0;
+    final isCredit = customer.balanceType == 'credit' && customer.balance > 0;
+    final balanceColor = isDebit
         ? AppColors.error
-        : isCreditor
+        : isCredit
             ? AppColors.success
             : isLight
                 ? AppColors.textSecondary
@@ -362,7 +377,7 @@ class _CustomerCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    isDebtor ? 'مدين' : isCreditor ? 'دائن' : 'متساوي',
+                    isDebit ? 'مدين' : isCredit ? 'دائن' : 'متساوي',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: balanceColor,
                     ),
