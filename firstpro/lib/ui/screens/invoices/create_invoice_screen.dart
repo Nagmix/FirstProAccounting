@@ -14,6 +14,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
+import '../settings/bluetooth_printer_settings_screen.dart';
 import '../../../data/models/invoice_item_model.dart';
 import '../../../data/models/invoice_model.dart';
 import '../../widgets/invoice_item_card.dart';

@@ -263,8 +263,8 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
     }
 
     // Reverse to match original order
-    runningBalances = runningBalances.reversed.toList();
-    return runningBalances;
+    final result = runningBalances.reversed.toList();
+    return result;
   }
 
   // ── Totals for bottom statistics ──────────────────────────────
