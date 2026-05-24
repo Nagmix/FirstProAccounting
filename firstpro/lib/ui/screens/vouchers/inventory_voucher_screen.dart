@@ -117,7 +117,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
               _buildDetailRow(theme, 'التاريخ', details['date'] as String? ?? ''),
               _buildDetailRow(theme, 'المخزن', details['warehouse_name'] as String? ?? 'غير محدد'),
               _buildDetailRow(theme, 'الوصف', details['description'] as String? ?? ''),
-              _buildDetailRow(theme, 'القيمة الإجمالية', CurrencyFormatter.format(details['total_value'] as num? ?? 0.0, symbol: currencySymbol)),
+              _buildDetailRow(theme, 'القيمة الإجمالية', CurrencyFormatter.format((details['total_value'] as num?)?.toDouble() ?? 0.0, symbol: currencySymbol)),
               const Divider(height: 24),
               Text('البنود', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
@@ -160,7 +160,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                                 const SizedBox(width: 16),
                                 Text('القيمة: ', style: theme.textTheme.bodySmall),
                                 Text(
-                                  CurrencyFormatter.format(item['total_value'] as num? ?? 0.0, symbol: currencySymbol),
+                                  CurrencyFormatter.format((item['total_value'] as num?)?.toDouble() ?? 0.0, symbol: currencySymbol),
                                   style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                                 ),
                               ],

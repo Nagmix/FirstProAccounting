@@ -1816,7 +1816,7 @@ class DatabaseHelper {
     final balanceType = customerMap['balance_type'] as String? ?? 'credit';
     final customerCurrency = customerMap['currency'] as String? ?? 'YER';
 
-    int customerId;
+    int? customerId;
     await db.transaction((txn) async {
       customerId = await txn.insert('customers', customerMap);
 
@@ -1932,7 +1932,7 @@ class DatabaseHelper {
     final balanceType = supplierMap['balance_type'] as String? ?? 'credit';
     final supplierCurrency = supplierMap['currency'] as String? ?? 'YER';
 
-    int supplierId;
+    int? supplierId;
     await db.transaction((txn) async {
       supplierId = await txn.insert('suppliers', supplierMap);
 
@@ -5386,8 +5386,6 @@ class DatabaseHelper {
       ORDER BY m.month
     ''');
   }
-
-}
 
   // ══════════════════════════════════════════════════════════════
   //  Inventory Voucher Methods (سندات الجرد) - v22

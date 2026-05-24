@@ -290,9 +290,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     // Apply tab filter
     final filterKey = _filterTabs[_selectedFilterIndex].key;
     if (filterKey == 'debit') {
-      filtered = filtered.where((m) => (m['debit'] as num?)?.toDouble() ?? 0.0 > 0).toList();
+      filtered = filtered.where((m) => ((m['debit'] as num?)?.toDouble() ?? 0.0) > 0).toList();
     } else if (filterKey == 'credit') {
-      filtered = filtered.where((m) => (m['credit'] as num?)?.toDouble() ?? 0.0 > 0).toList();
+      filtered = filtered.where((m) => ((m['credit'] as num?)?.toDouble() ?? 0.0) > 0).toList();
     } else if (filterKey != 'all') {
       filtered = filtered.where((m) => m['filter_key'] == filterKey).toList();
     }

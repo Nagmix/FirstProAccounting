@@ -1337,7 +1337,7 @@ class _BluetoothSettingsWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const BluetoothPrinterSettingsScreen();
+    return BluetoothPrinterSettingsScreen();
   }
 }
 
