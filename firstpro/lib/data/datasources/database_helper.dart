@@ -1510,6 +1510,7 @@ class DatabaseHelper {
 
   /// Save invoice and post journal entries to the chart of accounts.
   /// [transportCharges] - optional transport charges that generate additional journal entries.
+  /// [deferPosting] - if true, skip journal entries (for POS deferred posting until shift close).
   Future<void> saveInvoiceWithJournalEntries(
     Map<String, dynamic> invoiceMap,
     List<Map<String, dynamic>> items, {
@@ -1518,6 +1519,7 @@ class DatabaseHelper {
     required bool isReturn,
     int? cashBoxId,
     double transportCharges = 0.0,
+    bool deferPosting = false,
   }) async {
     final db = await database;
     final total = (invoiceMap['total'] as num?)?.toDouble() ?? 0.0;
@@ -1569,6 +1571,13 @@ class DatabaseHelper {
             );
           }
         }
+      }
+
+      // ── Deferred posting: skip journal entries for POS invoices ──
+      // Journal entries will be created by postShiftInvoices() when the shift is closed.
+      // This prevents double-posting (once at sale time and again at shift close).
+      if (deferPosting) {
+        return; // Stock already updated above; journal entries deferred to shift close.
       }
 
       // Post journal entries
@@ -3343,7 +3352,7 @@ class DatabaseHelper {
             'journal_id': journalId,
             'debit': total,
             'credit': 0.0,
-            'description': '${invoiceType == 'sale' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
+            'description': '${(invoiceType == 'sale' || invoiceType == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
             'date': now,
             'created_at': now,
           });
@@ -3356,7 +3365,7 @@ class DatabaseHelper {
             'journal_id': journalId,
             'debit': 0.0,
             'credit': total,
-            'description': '${invoiceType == 'sale' ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
+            'description': '${(invoiceType == 'sale' || invoiceType == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
             'date': now,
             'created_at': now,
           });
@@ -3368,7 +3377,7 @@ class DatabaseHelper {
           final transportAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5200 + codeOffset).toString(), invoiceCurrency], limit: 1);
           final transportAccountId = transportAccount.isNotEmpty ? transportAccount.first['id'] as int : null;
 
-          if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+          if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
             final transportDebitId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
             final transportCreditId = transportAccountId;
 
@@ -3429,8 +3438,8 @@ class DatabaseHelper {
 
         // تحديث رصيد العميل/المورد
         if (invoice['customer_id'] != null) {
-          final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-          final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return') ? transportCharges : 0);
+          final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'pos' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
+          final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') ? transportCharges : 0);
           if (isDebit) {
             await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
           } else {

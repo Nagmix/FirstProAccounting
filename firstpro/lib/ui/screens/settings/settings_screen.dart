@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -39,6 +40,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _businessNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _addressController = TextEditingController();
+  String? _businessLogoPath;
 
   // ── General settings state ───────────────────────────────────────
   final _userNameController = TextEditingController();
@@ -77,6 +80,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final businessName = await db.getSetting('business_name');
     final phone = await db.getSetting('business_phone');
     final email = await db.getSetting('business_email');
+    final address = await db.getSetting('business_address');
+    final logoPath = await db.getSetting('business_logo_path');
     final userName = await db.getSetting('user_name');
     final taxRate = await db.getSetting('tax_rate');
     final autoInvoice = await db.getSetting('auto_invoice_number');
@@ -105,6 +110,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (businessName != null) _businessNameController.text = businessName;
         if (phone != null) _phoneController.text = phone;
         if (email != null) _emailController.text = email;
+        if (address != null) _addressController.text = address;
+        _businessLogoPath = (logoPath != null && logoPath.isNotEmpty) ? logoPath : null;
         if (userName != null) _userNameController.text = userName;
         if (taxRate != null) _taxRate = double.tryParse(taxRate) ?? 15.0;
         if (autoInvoice != null) _autoInvoiceNumber = autoInvoice == '1';
@@ -146,6 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _businessNameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _addressController.dispose();
     _userNameController.dispose();
     _invoicePrefixController.dispose();
     super.dispose();
@@ -566,19 +574,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Column(
         children: [
-          // ── Logo placeholder ─────────────────────────────────
+          // ── Logo ─────────────────────────────────
           Container(
             width: 72,
             height: 72,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
+              image: _businessLogoPath != null
+                  ? DecorationImage(image: FileImage(File(_businessLogoPath!)), fit: BoxFit.cover)
+                  : null,
             ),
-            child: const Icon(
-              Icons.business,
-              size: 36,
-              color: Colors.white,
-            ),
+            child: _businessLogoPath == null
+                ? const Icon(
+                    Icons.business,
+                    size: 36,
+                    color: Colors.white,
+                  )
+                : null,
           ),
           const SizedBox(height: 14),
 
@@ -1202,35 +1215,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('تعديل بيانات النشاط'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _businessNameController,
-              decoration: const InputDecoration(
-                labelText: 'اسم النشاط التجاري',
-                border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Logo picker ──
+              GestureDetector(
+                onTap: () async {
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512);
+                  if (picked != null) {
+                    // Save to app documents directory
+                    final dir = await getApplicationDocumentsDirectory();
+                    final logoDir = p.join(dir.path, 'business_logo${p.extension(picked.path)}');
+                    await File(picked.path).copy(logoDir);
+                    setState(() => _businessLogoPath = logoDir);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    _showEditProfileDialog(); // Reopen to reflect new logo
+                  }
+                },
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  backgroundImage: _businessLogoPath != null ? FileImage(File(_businessLogoPath!)) : null,
+                  child: _businessLogoPath == null
+                      ? const Icon(Icons.add_a_photo, size: 32, color: AppColors.primary)
+                      : null,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'رقم الهاتف',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 4),
+              Text('اضغط لتغيير الشعار', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+              if (_businessLogoPath != null)
+                TextButton(
+                  onPressed: () async {
+                    setState(() => _businessLogoPath = null);
+                    await _saveSetting('business_logo_path', '');
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    _showEditProfileDialog();
+                  },
+                  child: const Text('إزالة الشعار', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _businessNameController,
+                decoration: const InputDecoration(
+                  labelText: 'اسم النشاط التجاري',
+                  border: OutlineInputBorder(),
+                ),
               ),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'البريد الإلكتروني',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'رقم الهاتف',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
               ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'البريد الإلكتروني',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: 'العنوان',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -1242,6 +1303,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await _saveSetting('business_name', _businessNameController.text);
               await _saveSetting('business_phone', _phoneController.text);
               await _saveSetting('business_email', _emailController.text);
+              await _saveSetting('business_address', _addressController.text);
+              if (_businessLogoPath != null) {
+                await _saveSetting('business_logo_path', _businessLogoPath!);
+              }
               setState(() {});
               if (mounted) Navigator.pop(ctx);
             },

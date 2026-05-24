@@ -2820,6 +2820,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       paymentMechanism: paymentMechanism,
       isReturn: false,
       cashBoxId: cashBoxId,
+      deferPosting: true, // Deferred: journal entries created on shift close via postShiftInvoices()
     );
 
     // Update shift totals (sales, discounts, transaction count)
@@ -2827,14 +2828,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     final discountAmount = _effectiveDiscount;
     await db.updateShiftTotals(shiftId, saleAmount, 0.0, discountAmount);
 
-    // Update product stock
-    for (final item in _cart) {
-      try {
-        await db.decrementProductStock(item.productId, item.quantity.toDouble());
-      } catch (_) {
-        // Best effort stock update
-      }
-    }
+    // NOTE: Stock is already decremented inside saveInvoiceWithJournalEntries().
+    // No need to call decrementProductStock again (was causing double stock deduction).
 
     // Reload shift data
     await _loadActiveShift();

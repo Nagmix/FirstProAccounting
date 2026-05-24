@@ -11,6 +11,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/invoice_item_model.dart';
 import '../../../data/models/invoice_model.dart';
@@ -1059,21 +1060,55 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     Share.share(buffer.toString(), subject: _title);
   }
 
-  // ── Print invoice (placeholder) ────────────────────────────────
-  void _printInvoice() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('طباعة'),
-        content: const Text('سيتم دعم الطباعة قريباً'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('حسناً'),
-          ),
-        ],
-      ),
-    );
+  // ── Print invoice ──────────────────────────────────────────────
+  Future<void> _printInvoice() async {
+    if (_items.isEmpty) {
+      context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
+      return;
+    }
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
+      );
+
+      // Build invoice map for PDF generation
+      final entityName = _isSale
+          ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
+          : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
+
+      final invoiceMap = <String, dynamic>{
+        'id': '—',
+        'type': widget.invoiceType,
+        'is_return': 0,
+        'customer_id': _selectedEntityId,
+        'subtotal': _subtotal,
+        'discount_amount': _discountAmount,
+        'tax_amount': _taxAmount,
+        'transport_charges': _transportCharges,
+        'total': _total,
+        'paid_amount': _paidAmount,
+        'remaining': _remaining,
+        'status': _remaining <= 0 ? 'paid' : 'unpaid',
+        'payment_method': _paymentMethod,
+        'currency': _selectedCurrency,
+        'notes': _notesController.text,
+        'entity_name': entityName,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      final itemsMap = _items.map((item) => <String, dynamic>{
+        'product_name': item.productName,
+        'quantity': item.quantity,
+        'unit_price': item.unitPrice,
+        'total_price': item.totalPrice,
+      }).toList();
+
+      await InvoicePdfGenerator.printInvoice(invoiceMap, itemsMap);
+    } catch (e) {
+      if (mounted) {
+        context.showErrorSnackBar('خطأ في الطباعة: $e');
+      }
+    }
   }
 
   // ── Add item ─────────────────────────────────────────────────
