@@ -1552,7 +1552,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: (_cart.isEmpty || _isCheckingOut) ? null : _checkout,
+              onPressed: (_cart.isEmpty || _isCheckingOut) ? null : () { if (!_isCheckingOut) _checkout(); },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.success,
                 foregroundColor: Colors.white,
@@ -2809,10 +2809,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  CHECKOUT (Deferred Invoice Posting)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _checkout() async {
-    // Guard: prevent concurrent checkout calls (fixes multi-click bug)
+    // ═══════════════════════════════════════════════════════════════
+    //  CRITICAL FIX: Set checkout guard IMMEDIATELY before any
+    //  async work to prevent multiple dialogs from stacking up.
+    //  The guard must be released on ALL exit paths.
+    // ═══════════════════════════════════════════════════════════════
     if (_isCheckingOut) return;
+    setState(() => _isCheckingOut = true);
 
     if (_activeShift == null) {
+      setState(() => _isCheckingOut = false);
       context.showErrorSnackBar('يجب فتح وردية أولاً قبل إتمام عملية البيع');
       return;
     }
@@ -2822,15 +2828,25 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // Validate credit sale has customer
     if (primaryMethod == 'credit' && _selectedCustomerId == null) {
+      setState(() => _isCheckingOut = false);
       context.showErrorSnackBar('يجب اختيار عميل للبيع آجل');
       return;
     }
 
     // Validate payment covers total (for non-credit)
     if (primaryMethod != 'credit' && _totalPaid < _total - 0.01 && _payments.isNotEmpty) {
+      setState(() => _isCheckingOut = false);
       context.showErrorSnackBar('المبلغ المدفوع أقل من الإجمالي');
       return;
     }
+
+    // Capture values BEFORE showing any dialog (for display after cart reset)
+    final capturedCartLength = _cart.length;
+    final capturedSubtotal = _subtotal;
+    final capturedEffectiveDiscount = _effectiveDiscount;
+    final capturedTax = _tax;
+    final capturedTotal = _total;
+    final capturedCustomerName = _selectedCustomerName;
 
     // Confirm payment
     final confirmed = await showDialog<bool>(
@@ -2843,19 +2859,19 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _reportRow('عدد الأصناف', '${_cart.length}'),
-              _reportRow('المجموع الفرعي', CurrencyFormatter.format(_subtotal)),
-              if (_effectiveDiscount > 0)
-                _reportRow('الخصم', '- ${CurrencyFormatter.format(_effectiveDiscount)}', valueColor: AppColors.error),
-              if (_tax > 0)
-                _reportRow('الضريبة', CurrencyFormatter.format(_tax)),
+              _reportRow('عدد الأصناف', '$capturedCartLength'),
+              _reportRow('المجموع الفرعي', CurrencyFormatter.format(capturedSubtotal)),
+              if (capturedEffectiveDiscount > 0)
+                _reportRow('الخصم', '- ${CurrencyFormatter.format(capturedEffectiveDiscount)}', valueColor: AppColors.error),
+              if (capturedTax > 0)
+                _reportRow('الضريبة', CurrencyFormatter.format(capturedTax)),
               const Divider(height: 16),
-              _reportRow('الإجمالي', CurrencyFormatter.format(_total),
+              _reportRow('الإجمالي', CurrencyFormatter.format(capturedTotal),
                   valueColor: AppColors.primary, isBold: true),
               const SizedBox(height: 8),
               _reportRow('طريقة الدفع', _paymentLabel(primaryMethod)),
-              if (_selectedCustomerName.isNotEmpty)
-                _reportRow('العميل', _selectedCustomerName),
+              if (capturedCustomerName.isNotEmpty)
+                _reportRow('العميل', capturedCustomerName),
               const SizedBox(height: 4),
               Text(
                 'سيتم تسجيل الفاتورة وترحيلها عند إغلاق الوردية',
@@ -2881,10 +2897,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       ),
     );
 
-    if (confirmed != true) return;
-
-    // Set checkout guard
-    setState(() => _isCheckingOut = true);
+    if (confirmed != true) {
+      // Release guard – user cancelled
+      if (mounted) setState(() => _isCheckingOut = false);
+      return;
+    }
 
     try {
     final invoiceId = _generateInvoiceId();
@@ -2895,10 +2912,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     // Build payment_mechanism and payment_method
     String paymentMechanism = primaryMethod == 'credit' ? 'credit' : 'cash';
     String paymentMethod = primaryMethod;
-
-    // Capture values before resetting cart
-    final capturedTotal = _total;
-    final capturedCustomerName = _selectedCustomerName;
 
     final invoiceMap = {
       'id': invoiceId,
