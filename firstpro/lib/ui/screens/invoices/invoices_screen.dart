@@ -8,11 +8,9 @@ import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
-import 'sales_invoices_screen.dart';
-import 'purchase_invoices_screen.dart';
 
 /// Invoices list screen – displays all invoices with tab-based filtering,
-/// search, date-range filtering, payment-status filtering, and invoice-type filtering.
+/// search, date-range filtering, payment-status filtering.
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
 
@@ -24,17 +22,14 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
-  // ── Filter state ────────────────────────────────────────────────
   String _paymentStatusFilter = 'الكل';
-  String _paymentMethodFilter = 'الكل';
-  String _invoiceTypeFilter = 'الكل'; // all, sale, purchase, pos
+  String _paymentMechanismFilter = 'الكل';
+  String _invoiceTypeFilter = 'الكل';
   DateTimeRange? _dateRange;
 
-  // ── Search ──────────────────────────────────────────────────────
   final _searchController = TextEditingController();
   bool _isSearching = false;
 
-  // ── Data from DB ────────────────────────────────────────────────
   List<Map<String, dynamic>> _invoices = [];
   bool _isLoading = true;
 
@@ -65,7 +60,6 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     });
   }
 
-  // ── Statistics ──────────────────────────────────────────────────
   double get _totalSales => _invoices
       .where((i) => i['type'] == 'sale' || i['type'] == 'sale_return')
       .fold(0.0, (sum, i) => sum + ((i['total'] as num?)?.toDouble() ?? 0.0));
@@ -75,10 +69,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   double get _totalPOS => _invoices
       .where((i) => i['type'] == 'pos')
       .fold(0.0, (sum, i) => sum + ((i['total'] as num?)?.toDouble() ?? 0.0));
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  HELPERS
-  // ═══════════════════════════════════════════════════════════════════
+  int get _totalCount => _invoices.length;
 
   String _displayInvoiceId(String? id, String? type) {
     if (type == 'pos') return 'فاتورة نقطة بيع';
@@ -99,13 +90,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     };
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  FILTERING
-  // ═══════════════════════════════════════════════════════════════════
   List<Map<String, dynamic>> get _filteredInvoices {
     var result = _invoices;
 
-    // Tab filter (5 tabs: all, sale, purchase, pos, returns)
     switch (_tabController.index) {
       case 1:
         result = result.where((i) => i['type'] == AppConstants.saleInvoice || i['type'] == 'sale_return').toList();
@@ -117,28 +104,24 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         result = result.where((i) => (i['is_return'] ?? 0) == 1).toList();
     }
 
-    // Invoice type filter
     if (_invoiceTypeFilter != 'الكل') {
       final typeMap = {'مبيعات': 'sale', 'مشتريات': 'purchase', 'نقطة بيع': 'pos'};
       final typeVal = typeMap[_invoiceTypeFilter];
       if (typeVal != null) result = result.where((i) => i['type'] == typeVal).toList();
     }
 
-    // Payment status filter (now includes 'partial')
     if (_paymentStatusFilter != 'الكل') {
       final statusMap = {'مدفوع': 'paid', 'غير مدفوع': 'unpaid', 'مدفوع جزئياً': 'partial', 'معلق': 'pending'};
       final status = statusMap[_paymentStatusFilter];
       if (status != null) result = result.where((i) => i['status'] == status).toList();
     }
 
-    // Payment mechanism filter
-    if (_paymentMethodFilter != 'الكل') {
+    if (_paymentMechanismFilter != 'الكل') {
       final methodMap = {'نقداً': 'cash', 'آجل': 'credit'};
-      final method = methodMap[_paymentMethodFilter];
+      final method = methodMap[_paymentMechanismFilter];
       if (method != null) result = result.where((i) => i['payment_mechanism'] == method).toList();
     }
 
-    // Date range filter
     if (_dateRange != null) {
       result = result.where((i) {
         final createdAt = DateTime.tryParse(i['created_at'] as String? ?? '');
@@ -147,7 +130,6 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       }).toList();
     }
 
-    // Search
     if (_searchController.text.isNotEmpty) {
       final query = _searchController.text.toLowerCase();
       result = result.where((i) {
@@ -161,9 +143,6 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     return result;
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  BUILD
-  // ═══════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -174,30 +153,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  // Statistics summary
                   _buildStatisticsSummary(),
-                  // Tab bar
-                  Container(
-                    color: AppColors.primary,
-                    child: TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: Colors.white70,
-                      indicatorColor: AppColors.secondary,
-                      indicatorWeight: 3,
-                      tabs: const [
-                        Tab(text: 'الكل'),
-                        Tab(text: 'مبيعات'),
-                        Tab(text: 'مشتريات'),
-                        Tab(text: 'نقطة بيع'),
-                        Tab(text: 'مرتجعات'),
-                      ],
-                    ),
-                  ),
-                  // Filter bar
+                  _buildTabBar(),
                   _buildFilterBar(),
-                  // Invoice list
                   Expanded(
                     child: _filteredInvoices.isEmpty
                         ? _buildEmptyState()
@@ -207,8 +165,10 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                               padding: const EdgeInsets.only(bottom: 80),
                               itemCount: _filteredInvoices.length,
                               itemBuilder: (context, index) {
-                                return _ImprovedInvoiceCard(
+                                return _InvoiceCard(
                                   invoiceData: _filteredInvoices[index],
+                                  displayInvoiceId: _displayInvoiceId,
+                                  invoiceTypeAr: _invoiceTypeAr,
                                   onTap: () => _navigateToDetail(_filteredInvoices[index]),
                                 );
                               },
@@ -217,47 +177,60 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                   ),
                 ],
               ),
-        floatingActionButton: FloatingActionButton.extended(
+        floatingActionButton: FloatingActionButton(
           onPressed: _showAddInvoiceMenu,
-          icon: const Icon(Icons.add),
-          label: const Text('فاتورة جديدة'),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
+          child: const Icon(Icons.add),
         ),
       ),
     );
   }
 
-  // ── Statistics summary ───────────────────────────────────────────
   Widget _buildStatisticsSummary() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+      ),
       child: Row(
         children: [
           Expanded(
-            child: _MiniStatCard(
+            child: _MiniStatItem(
               label: 'المبيعات',
               value: CurrencyFormatter.formatCompactWithSymbol(_totalSales),
               color: AppColors.success,
               icon: Icons.trending_up,
             ),
           ),
-          const SizedBox(width: 8),
+          Container(width: 1, height: 30, color: AppColors.divider),
           Expanded(
-            child: _MiniStatCard(
+            child: _MiniStatItem(
               label: 'المشتريات',
               value: CurrencyFormatter.formatCompactWithSymbol(_totalPurchases),
               color: AppColors.info,
               icon: Icons.shopping_cart,
             ),
           ),
-          const SizedBox(width: 8),
+          Container(width: 1, height: 30, color: AppColors.divider),
           Expanded(
-            child: _MiniStatCard(
+            child: _MiniStatItem(
               label: 'نقطة البيع',
               value: CurrencyFormatter.formatCompactWithSymbol(_totalPOS),
               color: AppColors.primary,
               icon: Icons.storefront,
+            ),
+          ),
+          Container(width: 1, height: 30, color: AppColors.divider),
+          Expanded(
+            child: _MiniStatItem(
+              label: 'الإجمالي',
+              value: '$_totalCount',
+              color: AppColors.accentOrange,
+              icon: Icons.receipt,
             ),
           ),
         ],
@@ -265,7 +238,39 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     );
   }
 
-  // ── AppBar ───────────────────────────────────────────────────────
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        isScrollable: true,
+        labelColor: Colors.white,
+        unselectedLabelColor: AppColors.textSecondary,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        padding: const EdgeInsets.all(4),
+        labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+        tabs: const [
+          Tab(text: 'الكل'),
+          Tab(text: 'مبيعات'),
+          Tab(text: 'مشتريات'),
+          Tab(text: 'نقطة بيع'),
+          Tab(text: 'مرتجعات'),
+        ],
+      ),
+    );
+  }
+
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       title: _isSearching
@@ -299,56 +304,69 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     );
   }
 
-  // ── Filter bar ───────────────────────────────────────────────────
   Widget _buildFilterBar() {
+    final hasActiveFilters = _paymentStatusFilter != 'الكل' || _paymentMechanismFilter != 'الكل' || _invoiceTypeFilter != 'الكل' || _dateRange != null;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      color: context.surfaceColor,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
             _buildFilterChip(
-              label: 'النوع: $_invoiceTypeFilter',
+              label: _invoiceTypeFilter == 'الكل' ? 'النوع' : _invoiceTypeFilter,
               icon: Icons.receipt,
               items: const ['الكل', 'مبيعات', 'مشتريات', 'نقطة بيع'],
               selected: _invoiceTypeFilter,
               onChanged: (v) => setState(() => _invoiceTypeFilter = v),
+              isActive: _invoiceTypeFilter != 'الكل',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             _buildFilterChip(
-              label: 'حالة الدفع: $_paymentStatusFilter',
+              label: _paymentStatusFilter == 'الكل' ? 'حالة الدفع' : _paymentStatusFilter,
               icon: Icons.payments,
               items: const ['الكل', 'مدفوع', 'غير مدفوع', 'مدفوع جزئياً', 'معلق'],
               selected: _paymentStatusFilter,
               onChanged: (v) => setState(() => _paymentStatusFilter = v),
+              isActive: _paymentStatusFilter != 'الكل',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             _buildFilterChip(
-              label: 'آلية الدفع: $_paymentMethodFilter',
+              label: _paymentMechanismFilter == 'الكل' ? 'آلية الدفع' : _paymentMechanismFilter,
               icon: Icons.credit_card,
               items: const ['الكل', 'نقداً', 'آجل'],
-              selected: _paymentMethodFilter,
-              onChanged: (v) => setState(() => _paymentMethodFilter = v),
+              selected: _paymentMechanismFilter,
+              onChanged: (v) => setState(() => _paymentMechanismFilter = v),
+              isActive: _paymentMechanismFilter != 'الكل',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             ActionChip(
-              avatar: const Icon(Icons.calendar_month, size: 18),
+              avatar: Icon(Icons.calendar_month, size: 16, color: _dateRange != null ? AppColors.primary : null),
               label: Text(
                 _dateRange != null
                     ? '${DateFormatter.formatDate(_dateRange!.start)} – ${DateFormatter.formatDate(_dateRange!.end)}'
-                    : 'من تاريخ - إلى تاريخ',
-                style: Theme.of(context).textTheme.bodySmall,
+                    : 'الفترة',
+                style: TextStyle(fontSize: 12, color: _dateRange != null ? AppColors.primary : null),
               ),
+              side: _dateRange != null ? BorderSide(color: AppColors.primary) : null,
               onPressed: _pickDateRange,
             ),
             if (_dateRange != null) ...[
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.close, size: 18),
-                onPressed: () => setState(() => _dateRange = null),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              const SizedBox(width: 2),
+              GestureDetector(
+                onTap: () => setState(() => _dateRange = null),
+                child: const Icon(Icons.close, size: 16, color: AppColors.textHint),
+              ),
+            ],
+            if (hasActiveFilters) ...[
+              const SizedBox(width: 6),
+              ActionChip(
+                label: const Text('مسح الكل', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                onPressed: () => setState(() {
+                  _paymentStatusFilter = 'الكل';
+                  _paymentMechanismFilter = 'الكل';
+                  _invoiceTypeFilter = 'الكل';
+                  _dateRange = null;
+                }),
               ),
             ],
           ],
@@ -363,51 +381,54 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     required List<String> items,
     required String selected,
     required ValueChanged<String> onChanged,
+    bool isActive = false,
   }) {
     return ActionChip(
-      avatar: Icon(icon, size: 18),
-      label: Text(label, style: Theme.of(context).textTheme.bodySmall),
+      avatar: Icon(icon, size: 16, color: isActive ? AppColors.primary : null),
+      label: Text(label, style: TextStyle(fontSize: 12, color: isActive ? AppColors.primary : null, fontWeight: isActive ? FontWeight.w600 : null)),
+      side: isActive ? BorderSide(color: AppColors.primary) : null,
       onPressed: () {
-        showDialog(
+        showModalBottomSheet(
           context: context,
-          builder: (ctx) => SimpleDialog(
-            title: Text(label.split(':').first),
-            children: items.map((item) => SimpleDialogOption(
-              onPressed: () {
-                onChanged(item);
-                Navigator.pop(ctx);
-              },
-              child: Row(
-                children: [
-                  if (item == selected) const Icon(Icons.check, size: 18, color: AppColors.primary),
-                  if (item == selected) const SizedBox(width: 8),
-                  Text(item),
-                ],
-              ),
-            )).toList(),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          builder: (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 12),
+                ...items.map((item) => ListTile(
+                  title: Text(item, style: TextStyle(fontWeight: item == selected ? FontWeight.w700 : FontWeight.w400)),
+                  trailing: item == selected ? const Icon(Icons.check, color: AppColors.primary, size: 20) : null,
+                  onTap: () {
+                    onChanged(item);
+                    Navigator.pop(ctx);
+                  },
+                )),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  // ── Empty state ──────────────────────────────────────────────────
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt, size: 72, color: AppColors.textHint),
-          const SizedBox(height: 16),
-          Text('لا توجد فواتير', style: context.textTheme.titleMedium),
+          Icon(Icons.receipt_long_outlined, size: 64, color: AppColors.textHint),
+          const SizedBox(height: 12),
+          Text('لا توجد فواتير', style: context.textTheme.titleMedium?.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 4),
-          Text('أضف فاتورة جديدة بالضغط على الزر أدناه', style: context.textTheme.bodySmall),
+          Text('أضف فاتورة جديدة بالضغط على الزر +', style: context.textTheme.bodySmall),
         ],
       ),
     );
   }
 
-  // ── Navigate to detail ───────────────────────────────────────────
   void _navigateToDetail(Map<String, dynamic> invoice) {
     Navigator.push(
       context,
@@ -417,51 +438,111 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     ).then((_) => _loadInvoices());
   }
 
-  // ── Add invoice popup menu ───────────────────────────────────────
+  // ── Add invoice menu – only 2 options: sales or purchase ────────
   void _showAddInvoiceMenu() {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.receipt, color: AppColors.success),
-              title: const Text('فاتورة بيع جديدة'),
-              subtitle: const Text('إنشاء فاتورة مبيعات'),
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SalesInvoicesScreen()),
-                ).then((_) => _loadInvoices());
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.shopping_cart, color: AppColors.info),
-              title: const Text('فاتورة شراء جديدة'),
-              subtitle: const Text('إنشاء فاتورة مشتريات'),
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PurchaseInvoicesScreen()),
-                ).then((_) => _loadInvoices());
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.add_circle, color: AppColors.primary),
-              title: const Text('فاتورة مبيعات مباشرة'),
-              subtitle: const Text('إنشاء فاتورة مبيعات مباشرة'),
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CreateInvoiceScreen(invoiceType: AppConstants.saleInvoice)),
-                ).then((_) => _loadInvoices());
-              },
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 16),
+              Text('إنشاء فاتورة جديدة', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              // Sales invoice option
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CreateInvoiceScreen(invoiceType: AppConstants.saleInvoice)),
+                  ).then((_) => _loadInvoices());
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.receipt_long, color: AppColors.success, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('فاتورة مبيعات', style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+                            const SizedBox(height: 2),
+                            Text('إنشاء فاتورة مبيعات جديدة', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.success),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Purchase invoice option
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CreateInvoiceScreen(invoiceType: AppConstants.purchaseInvoice)),
+                  ).then((_) => _loadInvoices());
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.shopping_cart, color: AppColors.info, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('فاتورة مشتريات', style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.info)),
+                            const SizedBox(height: 2),
+                            Text('إنشاء فاتورة مشتريات جديدة', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.info),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -472,13 +553,16 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('تصفية الفواتير', style: context.textTheme.titleLarge),
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('تصفية الفواتير', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 20),
             Text('نوع الفاتورة', style: context.textTheme.titleSmall),
             const SizedBox(height: 8),
@@ -513,8 +597,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               children: ['الكل', 'نقداً', 'آجل'].map((s) {
                 return ChoiceChip(
                   label: Text(s),
-                  selected: _paymentMethodFilter == s,
-                  onSelected: (_) => setState(() => _paymentMethodFilter = s),
+                  selected: _paymentMechanismFilter == s,
+                  onSelected: (_) => setState(() => _paymentMechanismFilter = s),
                 );
               }).toList(),
             ),
@@ -525,7 +609,6 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     );
   }
 
-  // ── Date range picker ────────────────────────────────────────────
   Future<void> _pickDateRange() async {
     final range = await showDateRangePicker(
       context: context,
@@ -545,10 +628,10 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  MINI STAT CARD
+//  MINI STAT ITEM
 // ═══════════════════════════════════════════════════════════════════════════
-class _MiniStatCard extends StatelessWidget {
-  const _MiniStatCard({
+class _MiniStatItem extends StatelessWidget {
+  const _MiniStatItem({
     required this.label,
     required this.value,
     required this.color,
@@ -562,33 +645,32 @@ class _MiniStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: color), textAlign: TextAlign.center),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.7)), textAlign: TextAlign.center),
-        ],
-      ),
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 16),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: color), textAlign: TextAlign.center),
+        const SizedBox(height: 2),
+        Text(label, style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.7)), textAlign: TextAlign.center),
+      ],
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  IMPROVED INVOICE CARD
+//  INVOICE CARD
 // ═══════════════════════════════════════════════════════════════════════════
-class _ImprovedInvoiceCard extends StatelessWidget {
-  const _ImprovedInvoiceCard({required this.invoiceData, this.onTap});
+class _InvoiceCard extends StatelessWidget {
+  const _InvoiceCard({
+    required this.invoiceData,
+    required this.displayInvoiceId,
+    required this.invoiceTypeAr,
+    this.onTap,
+  });
 
   final Map<String, dynamic> invoiceData;
+  final String Function(String?, String?) displayInvoiceId;
+  final String Function(String?) invoiceTypeAr;
   final VoidCallback? onTap;
 
   Future<void> _printInvoice(BuildContext context) async {
@@ -608,132 +690,128 @@ class _ImprovedInvoiceCard extends StatelessWidget {
     }
   }
 
-  String _displayId(String? id, String? type) {
-    if (type == 'pos') return 'فاتورة نقطة بيع';
-    if (id == null || id.isEmpty) return '—';
-    if (id.length > 12) return '...${id.substring(id.length - 8)}';
-    return id;
-  }
-
-  String _typeAr(String? type) {
-    return switch (type) {
-      'sale' => 'فاتورة مبيعات',
-      'purchase' => 'فاتورة مشتريات',
-      'pos' => 'فاتورة نقطة بيع',
-      'sale_return' => 'فاتورة مرتجع مبيعات',
-      'purchase_return' => 'فاتورة مرتجع مشتريات',
-      'return' => 'فاتورة مرتجع',
-      _ => 'فاتورة',
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDarkMode;
     final type = invoiceData['type'] as String? ?? '';
-    final isPosted = (invoiceData['is_posted'] as int?) == 1;
-    final cashierName = invoiceData['cashier_name'] as String?;
+    final isReturn = (invoiceData['is_return'] as int?) == 1;
     final status = invoiceData['status'] as String? ?? 'pending';
     final remaining = (invoiceData['remaining'] as num?)?.toDouble() ?? 0.0;
     final total = (invoiceData['total'] as num?)?.toDouble() ?? 0.0;
+    final paidAmount = (invoiceData['paid_amount'] as num?)?.toDouble() ?? 0.0;
     final paymentMechanism = invoiceData['payment_mechanism'] as String? ?? 'cash';
+    final currency = invoiceData['currency'] as String? ?? 'YER';
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 1,
+    // Type-specific colors
+    final typeColor = switch (type) {
+      'sale' || 'sale_return' => AppColors.success,
+      'purchase' || 'purchase_return' => AppColors.info,
+      'pos' => AppColors.primary,
+      _ => AppColors.textSecondary,
+    };
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isReturn ? AppColors.warning.withValues(alpha: 0.3) : AppColors.border.withValues(alpha: 0.5),
+          width: isReturn ? 1.5 : 0.5,
+        ),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+          padding: const EdgeInsets.all(12),
+          child: Column(
             children: [
-              // Type icon
-              _buildTypeIcon(),
-              const SizedBox(width: 14),
-
-              // Info column
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                children: [
+                  _buildTypeIcon(typeColor, type, isReturn),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            _displayId(invoiceData['id'] as String?, type),
-                            style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                displayInvoiceId(invoiceData['id'] as String?, type),
+                                style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            _buildTypeBadge(typeColor, type),
+                            const SizedBox(width: 4),
+                            _buildPaymentBadge(isDark, paymentMechanism),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        _buildTypeBadge(isDark),
-                        const SizedBox(width: 4),
-                        _buildPaymentMethodBadge(isDark),
-                        if (!isPosted) ...[
-                          const SizedBox(width: 4),
-                          _buildPendingBadge(),
-                        ],
+                        const SizedBox(height: 2),
+                        Text(
+                          invoiceData['entity_name'] as String? ?? '—',
+                          style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      invoiceData['entity_name'] as String? ?? 'بدون عميل',
-                      style: context.textTheme.bodyMedium,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                    if (cashierName != null && cashierName.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.person, size: 14, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
-                          const SizedBox(width: 4),
-                          Text(
-                            cashierName,
-                            style: context.textTheme.bodySmall?.copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        CurrencyFormatter.format(total),
+                        style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: typeColor),
+                      ),
+                      if (currency != 'YER')
+                        Text(currency, style: context.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontSize: 9)),
+                      GestureDetector(
+                        onTap: () => _printInvoice(context),
+                        child: Icon(Icons.print, size: 16, color: AppColors.textHint),
                       ),
                     ],
-                    const SizedBox(height: 2),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time, size: 12, color: AppColors.textHint),
+                    const SizedBox(width: 4),
                     Text(
                       DateFormatter.formatDateTime(DateTime.tryParse(invoiceData['created_at'] as String? ?? '') ?? DateTime.now()),
-                      style: context.textTheme.bodySmall?.copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
+                      style: context.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontSize: 10),
                     ),
-                    // Show remaining amount for partial/unpaid
+                    const Spacer(),
+                    _buildStatusChip(status),
                     if (remaining > 0.005) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'المتبقي: ${CurrencyFormatter.format(remaining)}',
-                        style: context.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'متبقي ${CurrencyFormatter.format(remaining)}',
+                          style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.w600),
+                        ),
                       ),
+                    ] else if (status == 'paid' && paidAmount > 0) ...[
+                      const SizedBox(width: 6),
+                      Icon(Icons.check_circle, size: 12, color: AppColors.success),
                     ],
                   ],
                 ),
-              ),
-
-              // Amount + status + print
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    CurrencyFormatter.format(total),
-                    style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
-                  ),
-                  const SizedBox(height: 6),
-                  _buildStatusChip(),
-                  const SizedBox(height: 4),
-                  IconButton(
-                    icon: const Icon(Icons.print, size: 18, color: AppColors.textSecondary),
-                    onPressed: () => _printInvoice(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  ),
-                ],
               ),
             ],
           ),
@@ -742,76 +820,48 @@ class _ImprovedInvoiceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeIcon() {
-    final type = invoiceData['type'] as String? ?? '';
-    final isReturn = (invoiceData['is_return'] as int?) == 1;
-    final (icon, color) = switch (type) {
-      'sale' => isReturn ? (Icons.refresh, AppColors.warning) : (Icons.receipt, AppColors.success),
-      'purchase' => isReturn ? (Icons.refresh, AppColors.warning) : (Icons.shopping_cart, AppColors.info),
-      'pos' => (Icons.storefront, AppColors.primary),
-      'sale_return' => (Icons.refresh, AppColors.warning),
-      'purchase_return' => (Icons.refresh, AppColors.warning),
-      'return' => (Icons.refresh, AppColors.warning),
-      _ => (Icons.receipt, AppColors.textSecondary),
+  Widget _buildTypeIcon(Color color, String type, bool isReturn) {
+    final icon = switch (type) {
+      'sale' => isReturn ? Icons.undo : Icons.receipt_long,
+      'purchase' => isReturn ? Icons.undo : Icons.shopping_cart,
+      'pos' => Icons.storefront,
+      'sale_return' => Icons.undo,
+      'purchase_return' => Icons.undo,
+      _ => Icons.receipt,
     };
-
     return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-      child: Icon(icon, color: color, size: 22),
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+      child: Icon(icon, color: color, size: 20),
     );
   }
 
-  Widget _buildTypeBadge(bool isDark) {
-    final type = invoiceData['type'] as String? ?? '';
-    final label = _typeAr(type);
-    final bgColor = switch (type) {
-      'sale' => AppColors.successLight,
-      'purchase' => AppColors.infoLight,
-      'pos' => AppColors.primary.withValues(alpha: 0.1),
-      _ => AppColors.surfaceVariant,
-    };
-    final fgColor = switch (type) {
-      'sale' => AppColors.success,
-      'purchase' => AppColors.info,
-      'pos' => AppColors.primary,
-      _ => AppColors.textSecondary,
-    };
+  Widget _buildTypeBadge(Color color, String type) {
+    final label = invoiceTypeAr(type);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: fgColor), overflow: TextOverflow.ellipsis),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
+      child: Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color), overflow: TextOverflow.ellipsis),
     );
   }
 
-  Widget _buildPaymentMethodBadge(bool isDark) {
-    final paymentMechanism = invoiceData['payment_mechanism'] as String? ?? 'cash';
-    final methodAr = paymentMechanism == 'cash' ? 'نقداً' : 'آجل';
+  Widget _buildPaymentBadge(bool isDark, String paymentMechanism) {
+    final isCash = paymentMechanism == 'cash';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(6),
+        color: (isCash ? AppColors.success : AppColors.accentOrange).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(methodAr, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+      child: Text(
+        isCash ? 'نقداً' : 'آجل',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: isCash ? AppColors.success : AppColors.accentOrange),
+      ),
     );
   }
 
-  Widget _buildPendingBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.orange, width: 0.5),
-      ),
-      child: const Text('معلق', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.orange)),
-    );
-  }
-
-  Widget _buildStatusChip() {
-    final status = invoiceData['status'] as String? ?? 'pending';
+  Widget _buildStatusChip(String status) {
     final (label, bgColor, fgColor) = switch (status) {
       'paid' => ('مدفوع', AppColors.successLight, AppColors.success),
       'unpaid' => ('غير مدفوع', AppColors.errorLight, AppColors.error),
@@ -820,9 +870,9 @@ class _ImprovedInvoiceCard extends StatelessWidget {
       _ => (status, AppColors.surfaceVariant, AppColors.textSecondary),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(20)),
-      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fgColor)),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(10)),
+      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fgColor)),
     );
   }
 }

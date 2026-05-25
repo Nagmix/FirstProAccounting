@@ -18,16 +18,13 @@ class PurchaseInvoicesScreen extends StatefulWidget {
 }
 
 class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
-  // ── Filter state ────────────────────────────────────────────────
   String _paymentStatusFilter = 'الكل';
   String _paymentMechanismFilter = 'الكل';
   DateTimeRange? _dateRange;
 
-  // ── Search ──────────────────────────────────────────────────────
   final _searchController = TextEditingController();
   bool _isSearching = false;
 
-  // ── Data from DB ────────────────────────────────────────────────
   List<Map<String, dynamic>> _invoices = [];
   bool _isLoading = true;
 
@@ -56,36 +53,25 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     });
   }
 
-  // ── Statistics ──────────────────────────────────────────────────
   double get _totalPurchases => _invoices.fold(0.0, (sum, i) => sum + ((i['total'] as num?)?.toDouble() ?? 0.0));
   double get _totalPaid => _invoices.fold(0.0, (sum, i) => sum + ((i['paid_amount'] as num?)?.toDouble() ?? 0.0));
   double get _totalRemaining => _invoices.fold(0.0, (sum, i) => sum + ((i['remaining'] as num?)?.toDouble() ?? 0.0));
+  int get _paidCount => _invoices.where((i) => i['status'] == 'paid').length;
+  int get _unpaidCount => _invoices.where((i) => i['status'] == 'unpaid' || i['status'] == 'partial').length;
 
-  // ── Filtered invoices ──────────────────────────────────────────
   List<Map<String, dynamic>> get _filteredInvoices {
     var result = _invoices;
 
     if (_paymentStatusFilter != 'الكل') {
-      final statusMap = {
-        'مدفوع': 'paid',
-        'غير مدفوع': 'unpaid',
-        'مدفوع جزئياً': 'partial',
-      };
+      final statusMap = {'مدفوع': 'paid', 'غير مدفوع': 'unpaid', 'مدفوع جزئياً': 'partial'};
       final status = statusMap[_paymentStatusFilter];
-      if (status != null) {
-        result = result.where((i) => i['status'] == status).toList();
-      }
+      if (status != null) result = result.where((i) => i['status'] == status).toList();
     }
 
     if (_paymentMechanismFilter != 'الكل') {
-      final methodMap = {
-        'نقداً': 'cash',
-        'آجل': 'credit',
-      };
+      final methodMap = {'نقداً': 'cash', 'آجل': 'credit'};
       final method = methodMap[_paymentMechanismFilter];
-      if (method != null) {
-        result = result.where((i) => i['payment_mechanism'] == method).toList();
-      }
+      if (method != null) result = result.where((i) => i['payment_mechanism'] == method).toList();
     }
 
     if (_dateRange != null) {
@@ -205,44 +191,66 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
   Widget _buildStatisticsHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.accentOrange, const Color(0xFFFF8F00)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: AppColors.accentOrange.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _PurchaseStatCard(
-              label: 'إجمالي المشتريات',
-              value: CurrencyFormatter.formatCompactWithSymbol(_totalPurchases),
-              icon: Icons.shopping_cart,
-              color: Colors.white,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  label: 'إجمالي المشتريات',
+                  value: CurrencyFormatter.formatCompactWithSymbol(_totalPurchases),
+                  icon: Icons.shopping_cart,
+                ),
+              ),
+              Container(width: 1, height: 36, color: Colors.white24),
+              Expanded(
+                child: _buildStatItem(
+                  label: 'المدفوع',
+                  value: CurrencyFormatter.formatCompactWithSymbol(_totalPaid),
+                  icon: Icons.check_circle,
+                ),
+              ),
+              Container(width: 1, height: 36, color: Colors.white24),
+              Expanded(
+                child: _buildStatItem(
+                  label: 'المتبقي',
+                  value: CurrencyFormatter.formatCompactWithSymbol(_totalRemaining),
+                  icon: Icons.pending_actions,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _PurchaseStatCard(
-              label: 'المدفوع',
-              value: CurrencyFormatter.formatCompactWithSymbol(_totalPaid),
-              icon: Icons.check_circle,
-              color: Colors.white70,
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _PurchaseStatCard(
-              label: 'المتبقي',
-              value: CurrencyFormatter.formatCompactWithSymbol(_totalRemaining),
-              icon: Icons.pending,
-              color: Colors.white70,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_long, color: Colors.white70, size: 14),
+                const SizedBox(width: 4),
+                Text('$_paidCount مدفوعة', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                const SizedBox(width: 12),
+                Icon(Icons.warning_amber, color: Colors.white70, size: 14),
+                const SizedBox(width: 4),
+                Text('$_unpaidCount معلقة', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+              ],
             ),
           ),
         ],
@@ -250,46 +258,59 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     );
   }
 
+  Widget _buildStatItem({required String label, required String value, required IconData icon}) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white70, size: 18),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Colors.white), textAlign: TextAlign.center),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70), textAlign: TextAlign.center),
+      ],
+    );
+  }
+
   Widget _buildFilterChips() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
             _buildFilterChip(
-              label: 'حالة الدفع: $_paymentStatusFilter',
+              label: _paymentStatusFilter == 'الكل' ? 'حالة الدفع' : _paymentStatusFilter,
               icon: Icons.payments,
               items: const ['الكل', 'مدفوع', 'غير مدفوع', 'مدفوع جزئياً'],
               selected: _paymentStatusFilter,
               onChanged: (v) => setState(() => _paymentStatusFilter = v),
+              isActive: _paymentStatusFilter != 'الكل',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             _buildFilterChip(
-              label: 'آلية الدفع: $_paymentMechanismFilter',
+              label: _paymentMechanismFilter == 'الكل' ? 'آلية الدفع' : _paymentMechanismFilter,
               icon: Icons.credit_card,
               items: const ['الكل', 'نقداً', 'آجل'],
               selected: _paymentMechanismFilter,
               onChanged: (v) => setState(() => _paymentMechanismFilter = v),
+              isActive: _paymentMechanismFilter != 'الكل',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             ActionChip(
-              avatar: const Icon(Icons.calendar_month, size: 18),
+              avatar: Icon(Icons.calendar_month, size: 16, color: _dateRange != null ? AppColors.accentOrange : null),
               label: Text(
                 _dateRange != null
                     ? '${DateFormatter.formatDate(_dateRange!.start)} – ${DateFormatter.formatDate(_dateRange!.end)}'
                     : 'الفترة',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: TextStyle(fontSize: 12, color: _dateRange != null ? AppColors.accentOrange : null),
               ),
+              side: _dateRange != null ? BorderSide(color: AppColors.accentOrange) : null,
               onPressed: _pickDateRange,
             ),
             if (_dateRange != null) ...[
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.close, size: 18),
-                onPressed: () => setState(() => _dateRange = null),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              const SizedBox(width: 2),
+              GestureDetector(
+                onTap: () => setState(() => _dateRange = null),
+                child: const Icon(Icons.close, size: 16, color: AppColors.textHint),
               ),
             ],
           ],
@@ -304,28 +325,33 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     required List<String> items,
     required String selected,
     required ValueChanged<String> onChanged,
+    bool isActive = false,
   }) {
     return ActionChip(
-      avatar: Icon(icon, size: 18),
-      label: Text(label, style: Theme.of(context).textTheme.bodySmall),
+      avatar: Icon(icon, size: 16, color: isActive ? AppColors.accentOrange : null),
+      label: Text(label, style: TextStyle(fontSize: 12, color: isActive ? AppColors.accentOrange : null, fontWeight: isActive ? FontWeight.w600 : null)),
+      side: isActive ? BorderSide(color: AppColors.accentOrange) : null,
       onPressed: () {
-        showDialog(
+        showModalBottomSheet(
           context: context,
-          builder: (ctx) => SimpleDialog(
-            title: Text(label.split(':').first),
-            children: items.map((item) => SimpleDialogOption(
-              onPressed: () {
-                onChanged(item);
-                Navigator.pop(ctx);
-              },
-              child: Row(
-                children: [
-                  if (item == selected) const Icon(Icons.check, size: 18, color: AppColors.accentOrange),
-                  if (item == selected) const SizedBox(width: 8),
-                  Text(item),
-                ],
-              ),
-            )).toList(),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          builder: (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 12),
+                ...items.map((item) => ListTile(
+                  title: Text(item, style: TextStyle(fontWeight: item == selected ? FontWeight.w700 : FontWeight.w400)),
+                  trailing: item == selected ? const Icon(Icons.check, color: AppColors.accentOrange, size: 20) : null,
+                  onTap: () {
+                    onChanged(item);
+                    Navigator.pop(ctx);
+                  },
+                )),
+              ],
+            ),
           ),
         );
       },
@@ -337,14 +363,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_cart_outlined, size: 72, color: AppColors.textHint),
-          const SizedBox(height: 16),
-          Text('لا توجد فواتير مشتريات', style: context.textTheme.titleMedium),
+          Icon(Icons.shopping_cart_outlined, size: 64, color: AppColors.textHint),
+          const SizedBox(height: 12),
+          Text('لا توجد فواتير مشتريات', style: context.textTheme.titleMedium?.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 4),
-          Text(
-            'أضف فاتورة مشتريات جديدة بالضغط على الزر أدناه',
-            style: context.textTheme.bodySmall,
-          ),
+          Text('أضف فاتورة مشتريات جديدة بالضغط على الزر أدناه', style: context.textTheme.bodySmall),
         ],
       ),
     );
@@ -359,7 +382,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     ).then((_) => _loadInvoices());
   }
 
-  // ── Print invoice ────────────────────────────────────────────────
   Future<void> _printInvoice(BuildContext context, Map<String, dynamic> invoiceData) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -396,51 +418,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  PURCHASE STAT CARD
-// ═══════════════════════════════════════════════════════════════════════════
-class _PurchaseStatCard extends StatelessWidget {
-  const _PurchaseStatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: color),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.8)),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
 //  PURCHASE INVOICE CARD
 // ═══════════════════════════════════════════════════════════════════════════
 class _PurchaseInvoiceCard extends StatelessWidget {
@@ -466,102 +443,133 @@ class _PurchaseInvoiceCard extends StatelessWidget {
     final status = invoiceData['status'] as String? ?? 'pending';
     final remaining = (invoiceData['remaining'] as num?)?.toDouble() ?? 0.0;
     final total = (invoiceData['total'] as num?)?.toDouble() ?? 0.0;
+    final paidAmount = (invoiceData['paid_amount'] as num?)?.toDouble() ?? 0.0;
     final paymentMechanism = invoiceData['payment_mechanism'] as String? ?? 'cash';
+    final currency = invoiceData['currency'] as String? ?? 'YER';
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 1,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isReturn ? AppColors.warning.withValues(alpha: 0.3) : AppColors.border.withValues(alpha: 0.5),
+          width: isReturn ? 1.5 : 0.5,
+        ),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+          padding: const EdgeInsets.all(12),
+          child: Column(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: (isReturn ? AppColors.warning : AppColors.info).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  isReturn ? Icons.refresh : Icons.shopping_cart,
-                  color: isReturn ? AppColors.warning : AppColors.info,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: (isReturn ? AppColors.warning : AppColors.info).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isReturn ? Icons.undo : Icons.shopping_cart,
+                      color: isReturn ? AppColors.warning : AppColors.info,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            displayInvoiceId(invoiceData['id'] as String?),
-                            style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                displayInvoiceId(invoiceData['id'] as String?),
+                                style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            _buildTypeBadge(type),
+                            const SizedBox(width: 4),
+                            _buildPaymentBadge(isDark, paymentMechanism),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        _buildTypeBadge(isDark, type),
-                        const SizedBox(width: 4),
-                        _buildPaymentBadge(isDark, paymentMechanism),
+                        const SizedBox(height: 2),
+                        Text(
+                          invoiceData['entity_name'] as String? ?? 'بدون مورد',
+                          style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      invoiceData['entity_name'] as String? ?? 'بدون مورد',
-                      style: context.textTheme.bodyMedium,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                    const SizedBox(height: 2),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        CurrencyFormatter.format(total),
+                        style: context.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.accentOrange,
+                        ),
+                      ),
+                      if (currency != 'YER')
+                        Text(currency, style: context.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontSize: 9)),
+                      GestureDetector(
+                        onTap: onPrint,
+                        child: Icon(Icons.print, size: 16, color: AppColors.textHint),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time, size: 12, color: AppColors.textHint),
+                    const SizedBox(width: 4),
                     Text(
                       DateFormatter.formatDateTime(
                         DateTime.tryParse(invoiceData['created_at'] as String? ?? '') ?? DateTime.now(),
                       ),
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                      ),
+                      style: context.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontSize: 10),
                     ),
+                    const Spacer(),
+                    _buildStatusChip(status),
                     if (remaining > 0.005) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'المتبقي: ${CurrencyFormatter.format(remaining)}',
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: AppColors.error,
-                          fontWeight: FontWeight.w600,
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'متبقي ${CurrencyFormatter.format(remaining)}',
+                          style: context.textTheme.labelSmall?.copyWith(
+                            color: AppColors.error,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
+                    ] else if (status == 'paid' && paidAmount > 0) ...[
+                      const SizedBox(width: 6),
+                      Icon(Icons.check_circle, size: 12, color: AppColors.success),
                     ],
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    CurrencyFormatter.format(total),
-                    style: context.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.accentOrange,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  _buildStatusChip(status),
-                  const SizedBox(height: 4),
-                  IconButton(
-                    icon: const Icon(Icons.print, size: 18, color: AppColors.textSecondary),
-                    onPressed: onPrint,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  ),
-                ],
               ),
             ],
           ),
@@ -570,31 +578,30 @@ class _PurchaseInvoiceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeBadge(bool isDark, String type) {
+  Widget _buildTypeBadge(String type) {
     final label = invoiceTypeAr(type);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: AppColors.infoLight,
-        borderRadius: BorderRadius.circular(6),
+        color: AppColors.info.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.info),
-        overflow: TextOverflow.ellipsis,
-      ),
+      child: Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.info)),
     );
   }
 
   Widget _buildPaymentBadge(bool isDark, String paymentMechanism) {
-    final methodAr = paymentMechanism == 'cash' ? 'نقداً' : 'آجل';
+    final isCash = paymentMechanism == 'cash';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(6),
+        color: (isCash ? AppColors.success : AppColors.accentOrange).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(methodAr, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+      child: Text(
+        isCash ? 'نقداً' : 'آجل',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: isCash ? AppColors.success : AppColors.accentOrange),
+      ),
     );
   }
 
@@ -607,9 +614,9 @@ class _PurchaseInvoiceCard extends StatelessWidget {
       _ => (status, AppColors.surfaceVariant, AppColors.textSecondary),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(20)),
-      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fgColor)),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(10)),
+      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fgColor)),
     );
   }
 }
