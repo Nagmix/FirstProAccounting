@@ -18,6 +18,8 @@ import '../settings/bluetooth_printer_settings_screen.dart';
 import '../../../data/models/invoice_item_model.dart';
 import '../../../data/models/invoice_model.dart';
 import '../../widgets/invoice_item_card.dart';
+import '../customers/add_customer_sheet.dart';
+import '../suppliers/add_supplier_sheet.dart';
 import 'add_invoice_item_sheet.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
@@ -37,6 +39,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _paidController = TextEditingController();
   final _transportChargesController = TextEditingController();
   final _transferNumberController = TextEditingController();
+  final _entitySearchController = TextEditingController();
 
   // Payment mechanism: cash or credit
   String _paymentMechanism = 'cash';
@@ -44,10 +47,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   String _paymentMethod = 'cash';
   // Is return invoice
   bool _isReturn = false;
-  // Auto-pay toggle
+  // Auto-pay checkbox
   bool _autoPay = true;
 
-  int? _selectedEntityId; // customer or supplier
+  // Entity selection — unified: customers + suppliers
+  int? _selectedEntityId;
+  String? _selectedEntityType; // 'customer' or 'supplier'
   int? _selectedWarehouseId;
   int? _selectedCashBoxId;
   final List<InvoiceItem> _items = [];
@@ -59,22 +64,18 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // Attachment image
   String? _attachmentPath;
 
-  // Accordion section state
-  bool _section1Expanded = true; // Currency & Return
-  bool _section2Expanded = true; // Payment Info
-  bool _section3Expanded = true; // Entity
-  bool _section4Expanded = true; // Items
-  bool _section5Expanded = true; // Summary
-
   // Data from DB
   List<Map<String, dynamic>> _customers = [];
   List<Map<String, dynamic>> _suppliers = [];
+  List<Map<String, dynamic>> _combinedEntities = [];
+  List<Map<String, dynamic>> _filteredEntities = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _cashBoxes = [];
   List<Map<String, dynamic>> _currencies = [];
   String _selectedCurrency = 'YER';
   double _selectedExchangeRate = 1.0;
   bool _isLoading = true;
+  bool _showEntityDropdown = false;
 
   // E-wallet providers list
   static const List<String> _ewalletProviders = [
@@ -105,6 +106,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _paidController.text = '0.00';
   }
 
   Future<void> _loadData() async {
@@ -122,8 +124,45 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       _warehouses = results[2];
       _cashBoxes = results[3];
       _currencies = results[4];
+      _buildCombinedEntities();
       _isLoading = false;
     });
+  }
+
+  void _buildCombinedEntities() {
+    _combinedEntities = [];
+    for (final c in _customers) {
+      _combinedEntities.add({
+        'id': c['id'],
+        'name': c['name'],
+        'type': 'customer',
+        'balance': (c['balance'] as num?)?.toDouble() ?? 0.0,
+        'balance_type': c['balance_type'] ?? 'credit',
+      });
+    }
+    for (final s in _suppliers) {
+      _combinedEntities.add({
+        'id': s['id'],
+        'name': s['name'],
+        'type': 'supplier',
+        'balance': (s['balance'] as num?)?.toDouble() ?? 0.0,
+        'balance_type': s['balance_type'] ?? 'credit',
+      });
+    }
+    _filteredEntities = List.from(_combinedEntities);
+  }
+
+  void _filterEntities(String query) {
+    if (query.isEmpty) {
+      _filteredEntities = List.from(_combinedEntities);
+    } else {
+      final q = query.toLowerCase();
+      _filteredEntities = _combinedEntities.where((e) {
+        final name = (e['name'] as String? ?? '').toLowerCase();
+        return name.contains(q);
+      }).toList();
+    }
+    setState(() {});
   }
 
   @override
@@ -133,6 +172,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     _paidController.dispose();
     _transportChargesController.dispose();
     _transferNumberController.dispose();
+    _entitySearchController.dispose();
     super.dispose();
   }
 
@@ -148,6 +188,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     if (_autoPay && _total > 0) {
       _paidController.text = _total.toStringAsFixed(2);
     }
+  }
+
+  String? get _selectedEntityName {
+    if (_selectedEntityId == null) return null;
+    final entity = _combinedEntities.where((e) => e['id'] == _selectedEntityId && e['type'] == _selectedEntityType).firstOrNull;
+    return entity?['name'] as String?;
   }
 
   // ── Image picker helpers ─────────────────────────────────────
@@ -200,10 +246,46 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         appBar: AppBar(
           title: Text(_title),
           actions: [
-            IconButton(
-              onPressed: _saveInvoice,
-              icon: const Icon(Icons.save),
-              tooltip: 'حفظ',
+            // Actions menu (print, share, bluetooth)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'إجراءات',
+              onSelected: (value) {
+                switch (value) {
+                  case 'print':
+                    _printInvoice();
+                    break;
+                  case 'bluetooth':
+                    _printBluetooth();
+                    break;
+                  case 'share':
+                    _shareInvoice();
+                    break;
+                  case 'whatsapp':
+                    _shareInvoiceWhatsApp();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'print', child: ListTile(leading: Icon(Icons.print), title: Text('طباعة PDF'), dense: true)),
+                const PopupMenuItem(value: 'bluetooth', child: ListTile(leading: Icon(Icons.bluetooth), title: Text('طباعة حرارية'), dense: true)),
+                const PopupMenuItem(value: 'share', child: ListTile(leading: Icon(Icons.share), title: Text('مشاركة'), dense: true)),
+                const PopupMenuItem(value: 'whatsapp', child: ListTile(leading: Icon(Icons.chat, color: Color(0xFF25D366)), title: Text('واتساب'), dense: true)),
+              ],
+            ),
+            // Save button
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: ElevatedButton.icon(
+                onPressed: _saveInvoice,
+                icon: const Icon(Icons.save, size: 18),
+                label: const Text('حفظ'),
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
             ),
           ],
         ),
@@ -211,28 +293,28 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             ? const Center(child: CircularProgressIndicator())
             : Form(
                 key: _formKey,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Partial payment warning banner
-                            if (!_autoPay && _paymentMechanism == 'cash' && _paidAmount > 0 && _remaining > 0.005)
-                              _buildPartialPaymentWarning(),
-                            _buildSection1CurrencyAndReturn(),
-                            _buildSection2PaymentInfo(),
-                            _buildSection3Entity(),
-                            _buildSection4Items(),
-                            _buildSection5SummaryAndNotes(),
-                          ],
-                        ),
-                      ),
-                    ),
-                    _buildBottomBar(),
-                  ],
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Partial payment warning
+                      if (!_autoPay && _paymentMechanism == 'cash' && _paidAmount > 0 && _remaining > 0.005)
+                        _buildPartialPaymentWarning(),
+                      // Row 1: Currency + Return + Payment Mechanism
+                      _buildTopRow(),
+                      const SizedBox(height: 16),
+                      // Account name (unified dropdown)
+                      _buildEntitySection(),
+                      const SizedBox(height: 16),
+                      // Items section
+                      _buildItemsSection(),
+                      const SizedBox(height: 16),
+                      // Summary & Notes
+                      _buildSummarySection(),
+                      const SizedBox(height: 80), // Bottom padding for scroll
+                    ],
+                  ),
                 ),
               ),
       ),
@@ -242,17 +324,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // ── Partial payment warning ──────────────────────────────────────
   Widget _buildPartialPaymentWarning() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+        color: AppColors.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber, color: AppColors.warning, size: 22),
-          const SizedBox(width: 10),
+          const Icon(Icons.warning_amber, color: AppColors.warning, size: 20),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'المبلغ المدفوع أقل من المستحق. المتبقي سيتم تسجيله كرصد آجل',
@@ -267,177 +349,209 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Section 1: Currency & Return ─────────────────────────────────
-  Widget _buildSection1CurrencyAndReturn() {
-    return _AccordionSection(
-      title: 'نوع الفاتورة والعملة',
-      icon: Icons.monetization_on,
-      color: AppColors.primary,
-      isExpanded: _section1Expanded,
-      onToggle: () => setState(() => _section1Expanded = !_section1Expanded),
-      child: Column(
-        children: [
-          DropdownButtonFormField<String>(
-            value: _selectedCurrency,
-            decoration: const InputDecoration(
-              labelText: 'العملة',
-              prefixIcon: Icon(Icons.monetization_on),
+  // ── Top Row: Currency, Return, Payment Mechanism ─────────────────
+  Widget _buildTopRow() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Currency + Return in one row
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: DropdownButtonFormField<String>(
+                value: _selectedCurrency,
+                isDense: true,
+                decoration: InputDecoration(
+                  labelText: 'العملة',
+                  prefixIcon: const Icon(Icons.monetization_on, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                items: _currencies.map((c) => DropdownMenuItem<String>(
+                  value: c['code'] as String,
+                  child: Text('${c['code']}', style: const TextStyle(fontSize: 13)),
+                )).toList(),
+                onChanged: (val) {
+                  if (val == null) return;
+                  setState(() {
+                    _selectedCurrency = val;
+                    final currency = _currencies.where((c) => c['code'] == val).firstOrNull;
+                    if (currency != null) {
+                      _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+                    }
+                  });
+                },
+              ),
             ),
-            items: _currencies.map((c) => DropdownMenuItem<String>(
-              value: c['code'] as String,
-              child: Text('${c['code']} (${c['symbol']}) - سعر الصرف: ${(c['exchange_rate'] as num?)?.toDouble() ?? 1.0}', style: const TextStyle(fontSize: 13)),
-            )).toList(),
-            onChanged: (val) {
-              if (val == null) return;
-              setState(() {
-                _selectedCurrency = val;
-                final currency = _currencies.where((c) => c['code'] == val).firstOrNull;
-                if (currency != null) {
-                  _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-                }
-              });
-            },
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'سعر الصرف: $_selectedExchangeRate',
-            style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          CheckboxListTile(
-            value: _isReturn,
-            onChanged: (v) => setState(() => _isReturn = v ?? false),
-            title: Text('فاتورة مرتجع', style: context.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: _isReturn ? AppColors.error : null,
-            )),
-            subtitle: _isReturn ? Text('سيتم تحويل الفاتورة إلى فاتورة مرتجع', style: context.textTheme.bodySmall?.copyWith(color: AppColors.error)) : null,
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            activeColor: AppColors.error,
-            dense: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Section 2: Payment Info (always expanded) ────────────────────
-  Widget _buildSection2PaymentInfo() {
-    return _AccordionSection(
-      title: 'معلومات الدفع',
-      icon: Icons.account_balance_wallet,
-      color: AppColors.success,
-      isExpanded: _section2Expanded,
-      onToggle: () => setState(() => _section2Expanded = !_section2Expanded),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Payment mechanism cards
-          Row(
-            children: [
-              Expanded(
-                child: _PaymentOptionCard(
-                  icon: Icons.payments,
-                  label: 'نقداً',
-                  subtitle: 'دفع فوري',
-                  isSelected: _paymentMechanism == 'cash',
-                  color: AppColors.success,
-                  onTap: () => setState(() => _paymentMechanism = 'cash'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _PaymentOptionCard(
-                  icon: Icons.access_time,
-                  label: 'أجل',
-                  subtitle: 'دفع لاحق',
-                  isSelected: _paymentMechanism == 'credit',
-                  color: AppColors.accentOrange,
-                  onTap: () => setState(() {
-                    _paymentMechanism = 'credit';
-                    _selectedCashBoxId = null;
-                    _autoPay = false;
-                    _paidController.text = '0';
-                  }),
-                ),
-              ),
-            ],
-          ),
-          // If credit, show info banner
-          if (_paymentMechanism == 'credit') ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.accentOrange.withValues(alpha: 0.08),
+            const SizedBox(width: 10),
+            Expanded(
+              child: InkWell(
+                onTap: () => setState(() => _isReturn = !_isReturn),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.accentOrange.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: AppColors.accentOrange, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'الفاتورة الآجلة: سيتم تسجيل المبلغ كرصيد على ${_isSale ? "العميل" : "المورد"}',
-                      style: context.textTheme.bodySmall?.copyWith(color: AppColors.accentOrange, fontWeight: FontWeight.w600),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: _isReturn ? AppColors.error.withValues(alpha: 0.06) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _isReturn ? AppColors.error : AppColors.border,
                     ),
                   ),
-                ],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.undo, size: 16, color: _isReturn ? AppColors.error : AppColors.textHint),
+                      const SizedBox(width: 4),
+                      Text('مرتجع', style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _isReturn ? AppColors.error : AppColors.textHint,
+                      )),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
-          // Payment method (only when cash)
-          if (_paymentMechanism == 'cash') ...[
-            const SizedBox(height: 16),
-            Text('طريقة الدفع', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            _buildPaymentMethodGrid(),
+        ),
+        if (_selectedCurrency != 'YER')
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'سعر الصرف: $_selectedExchangeRate',
+              style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+        const SizedBox(height: 14),
+        // Payment mechanism toggle
+        Row(
+          children: [
+            Expanded(
+              child: _buildMechanismChip(
+                icon: Icons.payments,
+                label: 'نقداً',
+                isSelected: _paymentMechanism == 'cash',
+                color: AppColors.success,
+                onTap: () => setState(() => _paymentMechanism = 'cash'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildMechanismChip(
+                icon: Icons.access_time,
+                label: 'أجل',
+                isSelected: _paymentMechanism == 'credit',
+                color: AppColors.accentOrange,
+                onTap: () => setState(() {
+                  _paymentMechanism = 'credit';
+                  _selectedCashBoxId = null;
+                  _autoPay = false;
+                  _paidController.text = '0';
+                }),
+              ),
+            ),
           ],
-          // E-wallet / bank transfer sections
-          if (_paymentMechanism == 'cash' && _paymentMethod == 'ewallet')
-            _buildEwalletSection(),
-          if (_paymentMechanism == 'cash' && _paymentMethod == 'bank_transfer')
-            _buildBankTransferSection(),
-          // Cash box
-          const SizedBox(height: 16),
-          _buildCashBoxDropdown(),
-          // Auto-pay toggle + paid amount
-          if (_paymentMechanism == 'cash') ...[
-            const SizedBox(height: 16),
-            _buildAutoPayAndPaidAmount(),
-          ],
+        ),
+        // Credit info
+        if (_paymentMechanism == 'credit') ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.accentOrange.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.accentOrange, size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'سيتم تسجيل المبلغ كرصيد على الحساب',
+                    style: context.textTheme.bodySmall?.copyWith(color: AppColors.accentOrange, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
+        // Payment method chips (only when cash)
+        if (_paymentMechanism == 'cash') ...[
+          const SizedBox(height: 12),
+          _buildPaymentMethodRow(),
+        ],
+        // E-wallet / bank transfer sections
+        if (_paymentMechanism == 'cash' && _paymentMethod == 'ewallet')
+          _buildEwalletSection(),
+        if (_paymentMechanism == 'cash' && _paymentMethod == 'bank_transfer')
+          _buildBankTransferSection(),
+        // Cash box + paid amount
+        if (_paymentMechanism == 'cash') ...[
+          const SizedBox(height: 14),
+          _buildCashBoxAndPaidRow(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMechanismChip({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.08) : context.surfaceColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isSelected ? color : AppColors.border, width: isSelected ? 1.5 : 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: isSelected ? color : AppColors.textHint),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? color : AppColors.textPrimary,
+                fontSize: 14,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.check_circle, size: 14, color: color),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  // ── Payment method grid ──────────────────────────────────────────
-  Widget _buildPaymentMethodGrid() {
+  // ── Payment method row (compact) ─────────────────────────────────
+  Widget _buildPaymentMethodRow() {
     const methods = [
       ('cash', 'نقدي', Icons.payments, AppColors.success),
       ('check', 'شيك', Icons.sticky_note_2, AppColors.accentBlue),
       ('transfer', 'حوالة', Icons.swap_horiz, AppColors.accentOrange),
       ('bank', 'بنك', Icons.account_balance, AppColors.primary),
-      ('ewallet', 'محفظة إلكترونية', Icons.account_balance_wallet, AppColors.accentGreen),
+      ('ewallet', 'محفظة', Icons.account_balance_wallet, AppColors.accentGreen),
       ('bank_transfer', 'حوالة مصرفية', Icons.business, Color(0xFF6A1B9A)),
     ];
 
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.1,
-      crossAxisSpacing: 8,
-      mainAxisSpacing: 8,
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
       children: methods.map((m) {
         final selected = _paymentMethod == m.$1;
-        return _PaymentMethodChip(
-          icon: m.$3,
-          label: m.$2,
-          color: m.$4,
-          isSelected: selected,
+        return GestureDetector(
           onTap: () => setState(() {
             _paymentMethod = m.$1;
             if (m.$1 != 'ewallet') _selectedEwalletProvider = null;
@@ -449,6 +563,33 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               _attachmentPath = null;
             }
           }),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: selected ? m.$4.withValues(alpha: 0.08) : context.surfaceColor,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected ? m.$4 : AppColors.border,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(m.$3, size: 14, color: selected ? m.$4 : AppColors.textHint),
+                const SizedBox(width: 4),
+                Text(
+                  m.$2,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                    color: selected ? m.$4 : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       }).toList(),
     );
@@ -457,37 +598,29 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // ── E-wallet section ─────────────────────────────────────────────
   Widget _buildEwalletSection() {
     return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.accentGreen.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.accentGreen.withValues(alpha: 0.3)),
+        color: AppColors.accentGreen.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.accentGreen.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.account_balance_wallet, size: 20, color: AppColors.accentGreen),
-              const SizedBox(width: 8),
-              Text('محافظ إلكترونية', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.accentGreen)),
-            ],
-          ),
-          const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _selectedEwalletProvider,
+            isDense: true,
             decoration: InputDecoration(
               labelText: 'اختر المحفظة الإلكترونية',
-              prefixIcon: const Icon(Icons.account_balance_wallet, color: AppColors.accentGreen),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(Icons.account_balance_wallet, color: AppColors.accentGreen, size: 18),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            items: _ewalletProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 14)))).toList(),
+            items: _ewalletProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 13)))).toList(),
             onChanged: (val) => setState(() => _selectedEwalletProvider = val),
           ),
-          const SizedBox(height: 16),
-          Text('إرفاق صورة إيصال الدفع (اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _buildAttachmentButtons(),
         ],
       ),
@@ -498,48 +631,42 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   Widget _buildBankTransferSection() {
     const purpleColor = Color(0xFF6A1B9A);
     return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: purpleColor.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: purpleColor.withValues(alpha: 0.3)),
+        color: purpleColor.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: purpleColor.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.business, size: 20, color: purpleColor),
-              const SizedBox(width: 8),
-              Text('حوالات مصرفية', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: purpleColor)),
-            ],
-          ),
-          const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _selectedBankTransferProvider,
+            isDense: true,
             decoration: InputDecoration(
               labelText: 'اختر شركة الحوالة',
-              prefixIcon: const Icon(Icons.business, color: purpleColor),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(Icons.business, color: purpleColor, size: 18),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            items: _bankTransferProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 14)))).toList(),
+            items: _bankTransferProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 13)))).toList(),
             onChanged: (val) => setState(() => _selectedBankTransferProvider = val),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _transferNumberController,
             keyboardType: TextInputType.text,
             textInputAction: TextInputAction.next,
+            isDense: true,
             decoration: InputDecoration(
               labelText: 'رقم الحوالة (اختياري)',
-              prefixIcon: const Icon(Icons.tag, color: purpleColor),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(Icons.tag, color: purpleColor, size: 18),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
-          const SizedBox(height: 16),
-          Text('إرفاق صورة إشعار الحوالة (اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _buildAttachmentButtons(isBankTransfer: true),
         ],
       ),
@@ -552,16 +679,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       children: [
         if (_attachmentPath != null) ...[
           Container(
-            height: 120,
+            height: 100,
             width: double.infinity,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppColors.divider),
             ),
             clipBehavior: Clip.antiAlias,
             child: Stack(
               children: [
-                Image.file(File(_attachmentPath!), width: double.infinity, height: 120, fit: BoxFit.cover),
+                Image.file(File(_attachmentPath!), width: double.infinity, height: 100, fit: BoxFit.cover),
                 Positioned(
                   top: 4, left: 4,
                   child: GestureDetector(
@@ -569,32 +696,38 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(16)),
-                      child: const Icon(Icons.close, size: 18, color: Colors.white),
+                      child: const Icon(Icons.close, size: 16, color: Colors.white),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
         ],
         Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _pickImageFromGallery,
-                icon: const Icon(Icons.image, size: 18),
-                label: Text(isBankTransfer ? 'رفق صورة الإشعار' : 'رفق صورة', style: const TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
+                icon: const Icon(Icons.image, size: 16),
+                label: Text(isBankTransfer ? 'رفق إشعار' : 'رفق صورة', style: const TextStyle(fontSize: 11)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  minimumSize: Size.zero,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _pickImageFromCamera,
-                icon: const Icon(Icons.camera_alt, size: 18),
-                label: const Text('تصوير', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
+                icon: const Icon(Icons.camera_alt, size: 16),
+                label: const Text('تصوير', style: TextStyle(fontSize: 11)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  minimumSize: Size.zero,
+                ),
               ),
             ),
           ],
@@ -603,286 +736,484 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Cash box dropdown ────────────────────────────────────────────
-  Widget _buildCashBoxDropdown() {
-    final isCash = _paymentMechanism == 'cash';
+  // ── Cash box + Paid amount row ───────────────────────────────────
+  Widget _buildCashBoxAndPaidRow() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Cash box dropdown
+        DropdownButtonFormField<int>(
+          value: _selectedCashBoxId,
+          isDense: true,
+          decoration: InputDecoration(
+            labelText: 'الصندوق *',
+            prefixIcon: const Icon(Icons.account_balance_wallet, size: 18),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+          items: _cashBoxes.map((cb) {
+            final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+            final bt = cb['balance_type'] as String? ?? 'credit';
+            return DropdownMenuItem<int>(
+              value: cb['id'] as int,
+              child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})', style: const TextStyle(fontSize: 12)),
+            );
+          }).toList(),
+          onChanged: (val) => setState(() => _selectedCashBoxId = val),
+          validator: (v) => v == null ? 'يجب اختيار الصندوق' : null,
+        ),
+        const SizedBox(height: 12),
+        // Paid amount + Auto-pay checkbox
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _paidController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.left,
+                enabled: !_autoPay,
+                isDense: true,
+                decoration: InputDecoration(
+                  labelText: 'المدفوع',
+                  prefixIcon: const Icon(Icons.payments, size: 18),
+                  suffixText: _selectedCurrency,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  filled: _autoPay,
+                  fillColor: _autoPay ? AppColors.surfaceVariant.withValues(alpha: 0.5) : null,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Auto-pay checkbox
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: Checkbox(
+                    value: _autoPay,
+                    onChanged: (val) {
+                      setState(() {
+                        _autoPay = val ?? false;
+                        if (_autoPay) {
+                          _paidController.text = _total.toStringAsFixed(2);
+                        }
+                      });
+                    },
+                    activeColor: AppColors.primary,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text('مدفوع', style: context.textTheme.labelSmall?.copyWith(
+                  fontSize: 9,
+                  color: _autoPay ? AppColors.primary : AppColors.textHint,
+                  fontWeight: _autoPay ? FontWeight.w700 : FontWeight.w400,
+                )),
+              ],
+            ),
+          ],
+        ),
+        // Remaining amount
+        if (!_autoPay && _remaining.abs() > 0.005) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _remaining > 0.005 ? AppColors.error.withValues(alpha: 0.06) : AppColors.success.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('المتبقي', style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  CurrencyFormatter.format(_remaining),
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: _remaining > 0.005 ? AppColors.error : AppColors.success,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ── Entity Section (unified dropdown with search) ────────────────
+  Widget _buildEntitySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label
+        Row(
+          children: [
+            Text('اسم الحساب', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            if (_isEntityRequired) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
+                child: Text('مطلوب', style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 9)),
+              ),
+            ] else ...[
+              const SizedBox(width: 6),
+              Text('(اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint, fontSize: 11)),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Entity selection field
+        GestureDetector(
+          onTap: () => setState(() => _showEntityDropdown = !_showEntityDropdown),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: context.surfaceColor,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _showEntityDropdown ? AppColors.primary : AppColors.border,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _selectedEntityType == 'customer' ? Icons.person :
+                  _selectedEntityType == 'supplier' ? Icons.business :
+                  Icons.person_outline,
+                  size: 20,
+                  color: _selectedEntityId != null ? AppColors.primary : AppColors.textHint,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _selectedEntityName ?? 'اختر حساب...',
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      color: _selectedEntityId != null ? AppColors.textPrimary : AppColors.textHint,
+                    ),
+                  ),
+                ),
+                if (_selectedEntityId != null)
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _selectedEntityId = null;
+                      _selectedEntityType = null;
+                    }),
+                    child: const Icon(Icons.close, size: 18, color: AppColors.textHint),
+                  )
+                else
+                  const Icon(Icons.arrow_drop_down, size: 20),
+              ],
+            ),
+          ),
+        ),
+        // Dropdown with search
+        if (_showEntityDropdown) ...[
+          const SizedBox(height: 4),
+          Container(
+            decoration: BoxDecoration(
+              color: context.surfaceColor,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Search field
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TextField(
+                    controller: _entitySearchController,
+                    autofocus: true,
+                    isDense: true,
+                    decoration: InputDecoration(
+                      hintText: 'بحث عن حساب...',
+                      prefixIcon: const Icon(Icons.search, size: 18),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    onChanged: _filterEntities,
+                  ),
+                ),
+                // Add new button
+                InkWell(
+                  onTap: () => _addNewEntity(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: AppColors.divider)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(Icons.add, size: 16, color: AppColors.primary),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isSale ? 'إضافة عميل جديد' : 'إضافة مورد جديد',
+                          style: context.textTheme.bodyMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Entity list
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: 200),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: _filteredEntities.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.divider),
+                    itemBuilder: (context, index) {
+                      final entity = _filteredEntities[index];
+                      final isSelected = _selectedEntityId == entity['id'] && _selectedEntityType == entity['type'];
+                      final isCustomer = entity['type'] == 'customer';
+                      final balance = (entity['balance'] as num?)?.toDouble() ?? 0.0;
+                      final bt = entity['balance_type'] as String? ?? 'credit';
+
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedEntityId = entity['id'] as int;
+                            _selectedEntityType = entity['type'] as String;
+                            _showEntityDropdown = false;
+                            _entitySearchController.clear();
+                            _filteredEntities = List.from(_combinedEntities);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          color: isSelected ? AppColors.primary.withValues(alpha: 0.06) : null,
+                          child: Row(
+                            children: [
+                              Icon(
+                                isCustomer ? Icons.person : Icons.business,
+                                size: 18,
+                                color: isCustomer ? AppColors.success : AppColors.info,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  entity['name'] ?? '',
+                                  style: context.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                              if (balance != 0)
+                                Text(
+                                  '${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'}',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: bt == 'credit' ? AppColors.success : AppColors.error,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              // Type badge
+                              Container(
+                                margin: const EdgeInsets.only(right: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: (isCustomer ? AppColors.success : AppColors.info).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  isCustomer ? 'عميل' : 'مورد',
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: isCustomer ? AppColors.success : AppColors.info,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (_isEntityRequired && _selectedEntityId == null && _paymentMechanism == 'credit')
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('الحساب مطلوب للفاتورة الآجلة', style: context.textTheme.bodySmall?.copyWith(color: AppColors.error, fontSize: 11)),
+          ),
+      ],
+    );
+  }
+
+  // ── Add new entity ───────────────────────────────────────────────
+  Future<void> _addNewEntity() async {
+    _showEntityDropdown = false;
+    _entitySearchController.clear();
+
+    if (_isSale) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AddCustomerSheet()),
+      );
+    } else {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AddSupplierSheet()),
+      );
+    }
+
+    // Reload entities after adding
+    final db = DatabaseHelper();
+    final results = await Future.wait([
+      db.getAllCustomers(),
+      db.getAllSuppliers(),
+    ]);
+    setState(() {
+      _customers = results[0];
+      _suppliers = results[1];
+      _buildCombinedEntities();
+    });
+  }
+
+  // ── Items Section ────────────────────────────────────────────────
+  Widget _buildItemsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.account_balance_wallet, size: 20, color: isCash ? AppColors.primary : AppColors.textHint),
+            Text('الأصناف', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(width: 8),
-            Text('حساب الصندوق', style: context.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: isCash ? null : AppColors.textHint,
-            )),
-            if (!isCash) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                child: Text('معطل - فاتورة آجلة', style: context.textTheme.labelSmall?.copyWith(color: AppColors.warning, fontSize: 10)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
               ),
-            ],
+              child: Text('${_items.length}', style: context.textTheme.labelSmall?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              )),
+            ),
           ],
         ),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<int>(
-          value: isCash ? _selectedCashBoxId : null,
-          decoration: InputDecoration(
-            hintText: isCash ? 'اختر الصندوق *' : 'غير متاح',
-            prefixIcon: Icon(Icons.account_balance_wallet, color: isCash ? null : AppColors.textHint),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.3)),
+        const SizedBox(height: 8),
+        if (_items.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.border, style: BorderStyle.solid),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.shopping_cart_outlined, size: 40, color: AppColors.textHint),
+                  const SizedBox(height: 6),
+                  Text('لم يتم إضافة أصناف بعد', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                ],
+              ),
+            ),
+          )
+        else
+          ..._items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return InvoiceItemCard(
+              item: item,
+              onQuantityChanged: (qty) {
+                setState(() {
+                  _items[index] = item.copyWith(quantity: qty, totalPrice: qty * item.unitPrice);
+                  _updateAutoPay();
+                });
+              },
+              onDelete: () {
+                setState(() {
+                  _items.removeAt(index);
+                  _updateAutoPay();
+                });
+              },
+            );
+          }),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _addItem,
+            icon: const Icon(Icons.add_circle_outline, size: 18),
+            label: const Text('إضافة صنف'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
-          items: isCash ? _cashBoxes.map((cb) {
-            final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
-            final bt = cb['balance_type'] as String? ?? 'credit';
-            return DropdownMenuItem<int>(
-              value: cb['id'] as int,
-              child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})'),
-            );
-          }).toList() : [],
-          onChanged: isCash ? (val) => setState(() => _selectedCashBoxId = val) : null,
-          validator: isCash ? (v) => v == null ? 'يجب اختيار الصندوق' : null : null,
         ),
       ],
     );
   }
 
-  // ── Auto-pay toggle + paid amount ────────────────────────────────
-  Widget _buildAutoPayAndPaidAmount() {
+  // ── Summary Section ──────────────────────────────────────────────
+  Widget _buildSummarySection() {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Auto-pay toggle
+          // Header
           Row(
             children: [
-              const Icon(Icons.auto_fix_high, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('دفع تلقائي', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-              ),
-              Switch(
-                value: _autoPay,
-                onChanged: (val) {
-                  setState(() {
-                    _autoPay = val;
-                    if (_autoPay) {
-                      _paidController.text = _total.toStringAsFixed(2);
-                    }
-                  });
-                },
-                activeColor: AppColors.primary,
-              ),
+              const Icon(Icons.summarize, size: 18, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text('الملخص', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             ],
-          ),
-          Text(
-            _autoPay ? 'سيتم تسجيل المبلغ بالكامل كمدفوع' : 'يمكنك إدخال مبلغ جزئي',
-            style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 12),
-          // Paid amount field
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('المدفوع', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              SizedBox(
-                width: 150,
-                child: TextField(
-                  controller: _paidController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.left,
-                  enabled: !_autoPay,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    suffixText: AppConstants.currency,
-                    hintText: '0.00',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    filled: !_autoPay,
-                    fillColor: _autoPay ? AppColors.surfaceVariant.withValues(alpha: 0.5) : null,
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Remaining
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('المتبقي', style: context.textTheme.bodyMedium),
-              Text(
-                CurrencyFormatter.format(_remaining),
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: _remaining > 0.005 ? AppColors.error : AppColors.success,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Section 3: Entity ────────────────────────────────────────────
-  Widget _buildSection3Entity() {
-    final entities = _isSale ? _customers : _suppliers;
-    final label = _isSale ? 'العميل' : 'المورد';
-
-    return _AccordionSection(
-      title: '$label${_isEntityRequired ? ' *' : ''}',
-      icon: _isSale ? Icons.person : Icons.business,
-      color: _isSale ? AppColors.success : AppColors.info,
-      isExpanded: _section3Expanded,
-      onToggle: () => setState(() => _section3Expanded = !_section3Expanded),
-      trailing: !_isEntityRequired
-          ? Text('(اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint))
-          : Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-              child: Text('مطلوب', style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10)),
-            ),
-      child: Column(
-        children: [
-          DropdownButtonFormField<int>(
-            value: _selectedEntityId,
-            decoration: InputDecoration(
-              hintText: 'اختر $label',
-              prefixIcon: Icon(_isSale ? Icons.person : Icons.business),
-            ),
-            items: entities.map((e) {
-              final balance = (e['balance'] as num?)?.toDouble() ?? 0.0;
-              final bt = e['balance_type'] as String? ?? 'credit';
-              String balanceStr = '';
-              if (balance != 0) {
-                balanceStr = ' (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})';
-              }
-              return DropdownMenuItem<int>(
-                value: e['id'] as int,
-                child: Text('${e['name']}$balanceStr', overflow: TextOverflow.ellipsis),
-              );
-            }).toList(),
-            onChanged: (val) => setState(() => _selectedEntityId = val),
-            validator: _isEntityRequired ? (v) => v == null ? _isEntityRequiredMsg : null : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  String get _isEntityRequiredMsg {
-    final label = _isSale ? 'العميل' : 'المورد';
-    if (_paymentMechanism == 'credit') return '$label مطلوب للفاتورة الآجلة';
-    return '$label مطلوب عند وجود مبلغ متبقي';
-  }
-
-  // ── Section 4: Items ─────────────────────────────────────────────
-  Widget _buildSection4Items() {
-    return _AccordionSection(
-      title: 'الأصناف',
-      icon: Icons.inventory_2,
-      color: AppColors.primary,
-      isExpanded: _section4Expanded,
-      onToggle: () => setState(() => _section4Expanded = !_section4Expanded),
-      trailing: Text('${_items.length} صنف', style: context.textTheme.bodySmall),
-      child: Column(
-        children: [
-          if (_items.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: context.surfaceColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: context.dividerColor, style: BorderStyle.solid),
-              ),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.shopping_cart, size: 48, color: AppColors.textHint),
-                    const SizedBox(height: 8),
-                    Text('لم يتم إضافة أصناف بعد', style: context.textTheme.bodyMedium),
-                  ],
-                ),
-              ),
-            )
-          else
-            ..._items.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              return InvoiceItemCard(
-                item: item,
-                onQuantityChanged: (qty) {
-                  setState(() {
-                    _items[index] = item.copyWith(quantity: qty, totalPrice: qty * item.unitPrice);
-                    _updateAutoPay();
-                  });
-                },
-                onDelete: () {
-                  setState(() {
-                    _items.removeAt(index);
-                    _updateAutoPay();
-                  });
-                },
-              );
-            }),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _addItem,
-              icon: const Icon(Icons.add_circle),
-              label: const Text('إضافة صنف'),
-              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Section 5: Summary & Notes ───────────────────────────────────
-  Widget _buildSection5SummaryAndNotes() {
-    return _AccordionSection(
-      title: 'الملخص والملاحظات',
-      icon: Icons.summarize,
-      color: AppColors.accentOrange,
-      isExpanded: _section5Expanded,
-      onToggle: () => setState(() => _section5Expanded = !_section5Expanded),
-      child: Column(
-        children: [
           _summaryRow('المجموع الفرعي', CurrencyFormatter.format(_subtotal)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
+          // Discount
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('الخصم', style: context.textTheme.bodyMedium),
+              Text('الخصم', style: context.textTheme.bodySmall),
               SizedBox(
-                width: 140,
+                width: 120,
                 child: TextField(
                   controller: _discountController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.left,
+                  isDense: true,
                   decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    suffixText: AppConstants.currency,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    suffixText: _selectedCurrency,
                     hintText: '0.00',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                    filled: true,
+                    fillColor: AppColors.surfaceVariant.withValues(alpha: 0.3),
                   ),
+                  style: const TextStyle(fontSize: 12),
                   onChanged: (_) {
                     setState(() {});
                     _updateAutoPay();
@@ -892,28 +1223,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             ],
           ),
           if (AppConstants.defaultVatRate > 0) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             _summaryRow('الضريبة (${AppConstants.defaultVatRate.toStringAsFixed(0)}%)', CurrencyFormatter.format(_taxAmount)),
           ],
           // Transport
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('أجور النقل', style: context.textTheme.bodyMedium),
+              Text('أجور النقل', style: context.textTheme.bodySmall),
               SizedBox(
-                width: 140,
+                width: 120,
                 child: TextField(
                   controller: _transportChargesController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textAlign: TextAlign.left,
+                  isDense: true,
                   decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    suffixText: AppConstants.currency,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    suffixText: _selectedCurrency,
                     hintText: '0.00',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                    filled: true,
+                    fillColor: AppColors.surfaceVariant.withValues(alpha: 0.3),
                   ),
+                  style: const TextStyle(fontSize: 12),
                   onChanged: (_) {
                     setState(() {});
                     _updateAutoPay();
@@ -922,30 +1256,26 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               ),
             ],
           ),
-          const Divider(height: 24),
+          const Divider(height: 20),
           _summaryRow('الإجمالي', CurrencyFormatter.format(_total),
-              valueStyle: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+              valueStyle: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
           if (_selectedCurrency != 'YER') ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             _summaryRow('بالعملة الأساسية', CurrencyFormatter.format(_total * _selectedExchangeRate),
-                valueStyle: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                valueStyle: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           ],
           const SizedBox(height: 8),
-          _summaryRow('المدفوع', CurrencyFormatter.format(_paidAmount), valueColor: AppColors.success),
-          const SizedBox(height: 4),
-          _summaryRow('المتبقي', CurrencyFormatter.format(_remaining),
-              valueStyle: context.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: _remaining > 0.005 ? AppColors.error : AppColors.success,
-              )),
-          const SizedBox(height: 12),
+          // Notes
           TextFormField(
             controller: _notesController,
             maxLines: 2,
-            decoration: const InputDecoration(
+            isDense: true,
+            decoration: InputDecoration(
               labelText: 'ملاحظات',
-              prefixIcon: Icon(Icons.edit_note),
+              prefixIcon: const Icon(Icons.edit_note, size: 18),
               alignLabelWithHint: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
         ],
@@ -957,59 +1287,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: context.textTheme.bodyMedium),
-        Text(value, style: valueStyle ?? context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: valueColor)),
+        Text(label, style: context.textTheme.bodySmall),
+        Text(value, style: valueStyle ?? context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: valueColor)),
       ],
-    );
-  }
-
-  // ── Bottom action bar ────────────────────────────────────────────
-  Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            IconButton.outlined(
-              onPressed: _shareInvoiceWhatsApp,
-              icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
-              tooltip: 'واتساب',
-            ),
-            IconButton.outlined(
-              onPressed: _shareInvoice,
-              icon: const Icon(Icons.share),
-              tooltip: 'مشاركة',
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _printInvoice,
-                icon: const Icon(Icons.print),
-                label: const Text('طباعة'),
-              ),
-            ),
-            const SizedBox(width: 4),
-            IconButton.outlined(
-              onPressed: _printBluetooth,
-              icon: const Icon(Icons.bluetooth, color: AppColors.primary),
-              tooltip: 'طباعة حرارية',
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _saveInvoice,
-                icon: const Icon(Icons.save),
-                label: const Text('حفظ'),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1036,11 +1316,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       return;
     }
     if (_isEntityRequired && _selectedEntityId == null) {
-      context.showErrorSnackBar(_isEntityRequiredMsg);
+      context.showErrorSnackBar('الحساب مطلوب');
       return;
     }
     if (_paymentMechanism == 'cash' && _selectedCashBoxId == null) {
-      context.showErrorSnackBar('الرجاء اختيار حساب الصندوق');
+      context.showErrorSnackBar('الرجاء اختيار الصندوق');
       return;
     }
     if (_paidAmount > _total + 0.005) {
@@ -1049,7 +1329,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
 
     // Determine effective payment mechanism for journal entries
-    // If cash mechanism but paid < total, this is a split: some cash, some credit
     final effectivePaymentMechanism = _paymentMechanism;
     final effectivePaidAmount = _paymentMechanism == 'credit' ? 0.0 : _paidAmount;
 
@@ -1061,8 +1340,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       paymentMethod: _paymentMethod,
       isReturn: _isReturn,
       cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
-      customerId: _isSale ? _selectedEntityId : null,
-      supplierId: !_isSale ? _selectedEntityId : null,
+      customerId: _selectedEntityType == 'customer' ? _selectedEntityId : null,
+      supplierId: _selectedEntityType == 'supplier' ? _selectedEntityId : null,
       subtotal: _subtotal,
       discountRate: _subtotal > 0 ? (_discountAmount / _subtotal) * 100 : 0.0,
       discountAmount: _discountAmount,
@@ -1097,9 +1376,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
     final db = DatabaseHelper();
 
-    // For partial payments at creation time (cash + remaining on credit),
-    // we need to pass the paid amount as the effective amount for cash journal entries.
-    // The saveInvoiceWithJournalEntries method needs to be told the split.
     await db.saveInvoiceWithJournalEntries(
       invoice.toMap(),
       itemsMaps,
@@ -1123,13 +1399,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
       return;
     }
-    final entityName = _isSale
-        ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
-        : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
+    final entityName = _selectedEntityName ?? '—';
     final buffer = StringBuffer();
     buffer.writeln(_title);
     buffer.writeln('──────────────────');
-    buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: $entityName');
+    buffer.writeln('الحساب: $entityName');
     buffer.writeln('المجموع الفرعي: ${CurrencyFormatter.format(_subtotal)}');
     if (_discountAmount > 0) buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
     if (_taxAmount > 0) buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
@@ -1152,13 +1426,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
       return;
     }
-    final entityName = _isSale
-        ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
-        : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
+    final entityName = _selectedEntityName ?? '—';
     final buffer = StringBuffer();
     buffer.writeln('*$_title*');
     buffer.writeln('━━━━━━━━━━━━━━━━━━');
-    buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: *$entityName*');
+    buffer.writeln('الحساب: *$entityName*');
     buffer.writeln('المجموع الفرعي: ${CurrencyFormatter.format(_subtotal)}');
     if (_discountAmount > 0) buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
     if (_taxAmount > 0) buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
@@ -1185,9 +1457,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
       );
-      final entityName = _isSale
-          ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
-          : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
+      final entityName = _selectedEntityName ?? '—';
 
       final invoiceMap = <String, dynamic>{
         'id': '—',
@@ -1243,7 +1513,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 label: 'الإعدادات',
                 textColor: Colors.white,
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const _BluetoothSettingsWrapper()));
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const BluetoothPrinterSettingsScreen()));
                 },
               ),
             ),
@@ -1254,10 +1524,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
 
     try {
-      final entityName = _isSale
-          ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
-          : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
-
+      final entityName = _selectedEntityName ?? '—';
       final currencySymbol = _selectedCurrency == 'SAR' ? 'ر.س' : _selectedCurrency == 'USD' ? r'$' : 'ر.ي';
 
       await printerService.printReceipt({
@@ -1291,228 +1558,5 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     } catch (e) {
       if (mounted) context.showErrorSnackBar('خطأ في الطباعة الحرارية: $e');
     }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  ACCORDION SECTION WIDGET
-// ═══════════════════════════════════════════════════════════════════════════
-class _AccordionSection extends StatelessWidget {
-  const _AccordionSection({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.isExpanded,
-    required this.onToggle,
-    required this.child,
-    this.trailing,
-  });
-
-  final String title;
-  final IconData icon;
-  final Color color;
-  final bool isExpanded;
-  final VoidCallback onToggle;
-  final Widget child;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isExpanded ? color.withValues(alpha: 0.3) : context.dividerColor),
-        boxShadow: isExpanded
-            ? [BoxShadow(color: color.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))]
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, size: 18, color: color),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(title, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  ),
-                  if (trailing != null) trailing!,
-                  const SizedBox(width: 8),
-                  AnimatedRotation(
-                    turns: isExpanded ? -0.25 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.chevron_left, color: color, size: 22),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (isExpanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: child,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  BLUETOOTH SETTINGS WRAPPER
-// ═══════════════════════════════════════════════════════════════════════════
-class _BluetoothSettingsWrapper extends StatelessWidget {
-  const _BluetoothSettingsWrapper();
-
-  @override
-  Widget build(BuildContext context) {
-    return BluetoothPrinterSettingsScreen();
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  PAYMENT OPTION CARD
-// ═══════════════════════════════════════════════════════════════════════════
-class _PaymentOptionCard extends StatelessWidget {
-  const _PaymentOptionCard({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.isSelected,
-    required this.color,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final bool isSelected;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.08) : context.surfaceColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isSelected ? color : context.dividerColor, width: isSelected ? 2 : 1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: isSelected ? color.withValues(alpha: 0.15) : AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: isSelected ? color : AppColors.textHint),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? color : AppColors.textPrimary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isSelected ? color.withValues(alpha: 0.7) : AppColors.textHint,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Icon(Icons.check_circle, size: 18, color: color),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  PAYMENT METHOD CHIP
-// ═══════════════════════════════════════════════════════════════════════════
-class _PaymentMethodChip extends StatelessWidget {
-  const _PaymentMethodChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.08) : context.surfaceColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? color : context.dividerColor, width: isSelected ? 2 : 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20, color: isSelected ? color : AppColors.textHint),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? color : AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
