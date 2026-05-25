@@ -5,6 +5,7 @@ import '../screens/customers/customers_screen.dart';
 import '../screens/customers/add_customer_sheet.dart';
 import '../screens/products/products_screen.dart';
 import '../screens/products/add_product_sheet.dart';
+import '../screens/products/units_screen.dart';
 import '../screens/invoices/invoices_screen.dart';
 import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/invoices/sales_invoices_screen.dart';
@@ -94,6 +95,7 @@ class AppRouter {
         AppConstants.newVoucher: (_) => const CreateVoucherScreen(),
         AppConstants.dailyOperations: (_) => const DailyOperationsScreen(),
         AppConstants.inventoryVoucher: (_) => const InventoryVoucherScreen(),
+        '/units': (_) => const UnitsScreen(),
         AppConstants.annualPosting: (_) => const AnnualPostingScreen(),
       };
 

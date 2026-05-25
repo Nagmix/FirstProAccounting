@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 24;
+  static const int _databaseVersion = 25;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -154,7 +154,29 @@ class DatabaseHelper {
       )
     ''');
 
-    // Invoice Items
+    // Units Master
+    await db.execute('''
+      CREATE TABLE units (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name_ar TEXT NOT NULL,
+        name_en TEXT NOT NULL DEFAULT '',
+        abbreviation TEXT NOT NULL DEFAULT '',
+        unit_type TEXT NOT NULL DEFAULT 'count',
+        description TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        is_sellable INTEGER NOT NULL DEFAULT 1,
+        is_purchasable INTEGER NOT NULL DEFAULT 1,
+        is_packaging INTEGER NOT NULL DEFAULT 0,
+        is_base_unit INTEGER NOT NULL DEFAULT 0,
+        display_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_units_type ON units (unit_type)');
+    await db.execute('CREATE INDEX idx_units_active ON units (is_active)');
+
+    // Invoice Items (v25: added unit_name, conversion_factor, base_quantity)
     await db.execute('''
       CREATE TABLE invoice_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,6 +186,9 @@ class DatabaseHelper {
         quantity REAL NOT NULL DEFAULT 1.0,
         unit_price REAL NOT NULL DEFAULT 0.0,
         total_price REAL NOT NULL DEFAULT 0.0,
+        unit_name TEXT,
+        conversion_factor REAL NOT NULL DEFAULT 1.0,
+        base_quantity REAL NOT NULL DEFAULT 1.0,
         notes TEXT,
         FOREIGN KEY (invoice_id) REFERENCES invoices (id),
         FOREIGN KEY (product_id) REFERENCES products (id)
@@ -582,6 +607,9 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_sales_orders_customer_id ON sales_orders (customer_id)');
     await db.execute('CREATE INDEX idx_sales_orders_status ON sales_orders (status)');
     await db.execute('CREATE INDEX idx_sales_order_items_so_id ON sales_order_items (sales_order_id)');
+
+    // Seed default units
+    await _seedDefaultUnits(db);
     // v12 indexes
     await db.execute('CREATE INDEX idx_currency_exchanges_number ON currency_exchanges (exchange_number)');
     await db.execute('CREATE INDEX idx_currency_exchanges_created_at ON currency_exchanges (created_at)');
@@ -1767,6 +1795,119 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_fiscal_years_year ON fiscal_years (year)');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_fiscal_years_status ON fiscal_years (status)');
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v25 Migration: Units Master + Product Unit Fields + Invoice Item Unit Fields
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 25) {
+      // ── Create units table ──
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS units (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name_ar TEXT NOT NULL,
+          name_en TEXT NOT NULL DEFAULT '',
+          abbreviation TEXT NOT NULL DEFAULT '',
+          unit_type TEXT NOT NULL DEFAULT 'count',
+          description TEXT,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          is_sellable INTEGER NOT NULL DEFAULT 1,
+          is_purchasable INTEGER NOT NULL DEFAULT 1,
+          is_packaging INTEGER NOT NULL DEFAULT 0,
+          is_base_unit INTEGER NOT NULL DEFAULT 0,
+          display_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_units_type ON units (unit_type)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_units_active ON units (is_active)');
+
+      // ── Seed default units ──
+      await _seedDefaultUnits(db);
+
+      // ── Add new product columns for unit management ──
+      try { await db.execute('ALTER TABLE products ADD COLUMN base_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN purchase_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN sale_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN tax_inclusive INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN track_stock INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN is_sellable INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN is_purchasable INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN allow_negative INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN sell_retail INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN show_in_pos INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN supplier_code TEXT'); } catch (_) {}
+
+      // Migrate existing unit_id → base_unit_id
+      await db.execute('UPDATE products SET base_unit_id = unit_id WHERE base_unit_id IS NULL AND unit_id IS NOT NULL');
+      await db.execute('UPDATE products SET sale_unit_id = unit_id WHERE sale_unit_id IS NULL AND unit_id IS NOT NULL');
+      await db.execute('UPDATE products SET purchase_unit_id = unit_id WHERE purchase_unit_id IS NULL AND unit_id IS NOT NULL');
+
+      // ── Add unit fields to invoice_items ──
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_name TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN conversion_factor REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN base_quantity REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
+
+      // Backfill base_quantity from quantity for existing invoice items
+      await db.execute('UPDATE invoice_items SET base_quantity = quantity WHERE base_quantity = 1.0 AND quantity != 1.0');
+
+      // ── Update unit_conversions to use unit IDs ──
+      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN from_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN to_unit_id INTEGER'); } catch (_) {}
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Seed Default Units
+  // ══════════════════════════════════════════════════════════════
+
+  /// Seed the units table with a comprehensive default set organized by type.
+  Future<void> _seedDefaultUnits(Database db) async {
+    final now = DateTime.now().toIso8601String();
+    // Only seed if units table is empty
+    final count = (await db.query('units')).length;
+    if (count > 0) return;
+
+    final defaultUnits = [
+      // ── العد (Count) ──
+      {'name_ar': 'حبة', 'name_en': 'Piece', 'abbreviation': 'حبة', 'unit_type': 'count', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 1},
+      {'name_ar': 'قطعة', 'name_en': 'Item', 'abbreviation': 'ق', 'unit_type': 'count', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 2},
+      {'name_ar': 'كرتون', 'name_en': 'Carton', 'abbreviation': 'كرت', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 3},
+      {'name_ar': 'باكيت', 'name_en': 'Packet', 'abbreviation': 'باك', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 4},
+      {'name_ar': 'علبة', 'name_en': 'Box', 'abbreviation': 'علب', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 5},
+      {'name_ar': 'ظرف', 'name_en': 'Envelope', 'abbreviation': 'ظرف', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 6},
+      {'name_ar': 'طبق', 'name_en': 'Tray', 'abbreviation': 'طبق', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 7},
+      {'name_ar': 'طقم', 'name_en': 'Set', 'abbreviation': 'طقم', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 8},
+      {'name_ar': 'منصة', 'name_en': 'Pallet', 'abbreviation': 'منص', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 0, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 9},
+      {'name_ar': 'درزن', 'name_en': 'Dozen', 'abbreviation': 'درز', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 10},
+
+      // ── الوزن (Weight) ──
+      {'name_ar': 'جرام', 'name_en': 'Gram', 'abbreviation': 'جم', 'unit_type': 'weight', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 11},
+      {'name_ar': 'كيلو', 'name_en': 'Kilogram', 'abbreviation': 'كجم', 'unit_type': 'weight', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 12},
+      {'name_ar': 'طن', 'name_en': 'Ton', 'abbreviation': 'طن', 'unit_type': 'weight', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 13},
+
+      // ── السوائل (Liquid) ──
+      {'name_ar': 'مل', 'name_en': 'Milliliter', 'abbreviation': 'مل', 'unit_type': 'liquid', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 14},
+      {'name_ar': 'لتر', 'name_en': 'Liter', 'abbreviation': 'ل', 'unit_type': 'liquid', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 15},
+      {'name_ar': 'جالون', 'name_en': 'Gallon', 'abbreviation': 'جال', 'unit_type': 'liquid', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 16},
+
+      // ── الصيدلية (Pharmacy) ──
+      {'name_ar': 'شريط', 'name_en': 'Strip', 'abbreviation': 'شر', 'unit_type': 'pharmacy', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 17},
+      {'name_ar': 'كبسولة', 'name_en': 'Capsule', 'abbreviation': 'كبس', 'unit_type': 'pharmacy', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 18},
+
+      // ── القياس (Measurement) ──
+      {'name_ar': 'متر', 'name_en': 'Meter', 'abbreviation': 'م', 'unit_type': 'count', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 19},
+    ];
+
+    for (final unit in defaultUnits) {
+      await db.insert('units', {
+        ...unit,
+        'is_active': 1,
+        'description': '',
+        'created_at': now,
+        'updated_at': now,
+      });
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2254,6 +2395,68 @@ class DatabaseHelper {
   }
 
   // ══════════════════════════════════════════════════════════════
+  //  Units Master (CRUD)
+  // ══════════════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> getAllUnits({String? unitType, bool activeOnly = false}) async {
+    final db = await database;
+    String? where;
+    List<Object>? whereArgs;
+    if (unitType != null && activeOnly) {
+      where = 'unit_type = ? AND is_active = 1';
+      whereArgs = [unitType];
+    } else if (unitType != null) {
+      where = 'unit_type = ?';
+      whereArgs = [unitType];
+    } else if (activeOnly) {
+      where = 'is_active = 1';
+    }
+    return await db.query('units', where: where, whereArgs: whereArgs, orderBy: 'display_order ASC, id ASC');
+  }
+
+  Future<Map<String, dynamic>?> getUnitById(int id) async {
+    final db = await database;
+    final results = await db.query('units', where: 'id = ?', whereArgs: [id], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<int> insertUnit(Map<String, dynamic> unitMap) async {
+    final db = await database;
+    return await db.insert('units', unitMap);
+  }
+
+  Future<int> updateUnit(int id, Map<String, dynamic> unitMap) async {
+    final db = await database;
+    return await db.update('units', unitMap, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteUnit(int id) async {
+    final db = await database;
+    // Check if unit is used by any product
+    final productsWithUnit = await db.query(
+      'products',
+      where: 'base_unit_id = ? OR purchase_unit_id = ? OR sale_unit_id = ? OR unit_id = ?',
+      whereArgs: [id, id, id, id],
+      limit: 1,
+    );
+    if (productsWithUnit.isNotEmpty) {
+      throw Exception('لا يمكن حذف الوحدة لأنها مستخدمة في أصناف موجودة');
+    }
+    return await db.delete('units', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Get unit name by ID from the units table
+  Future<String> getUnitNameById(int unitId) async {
+    final db = await database;
+    final results = await db.query('units', where: 'id = ?', whereArgs: [unitId], limit: 1);
+    if (results.isNotEmpty) {
+      return results.first['name_ar'] as String? ?? '';
+    }
+    // Fallback to old static mapping for backward compat
+    return _getUnitName(unitId);
+  }
+
+  // ══════════════════════════════════════════════════════════════
   //  Unit Conversions (Multi-Unit support)
   // ══════════════════════════════════════════════════════════════
 
@@ -2299,24 +2502,33 @@ class DatabaseHelper {
   }
 
   /// Get all available units for a product (base unit + conversions)
-  /// Returns a list of maps with: {unit_name, conversion_factor, sell_price, barcode}
+  /// Returns a list of maps with: {unit_name, conversion_factor, sell_price, barcode, unit_id, is_base}
   Future<List<Map<String, dynamic>>> getAvailableUnitsForProduct(int productId) async {
     final db = await database;
     // Get base product info
     final product = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
     if (product.isEmpty) return [];
 
-    final baseUnit = _getUnitName(product.first['unit_id'] as int? ?? 1);
+    // Resolve base unit name from units table (fallback to static mapping)
+    final baseUnitId = product.first['base_unit_id'] as int? ?? product.first['unit_id'] as int? ?? 1;
+    String baseUnitName;
+    final unitRow = await db.query('units', where: 'id = ?', whereArgs: [baseUnitId], limit: 1);
+    if (unitRow.isNotEmpty) {
+      baseUnitName = unitRow.first['name_ar'] as String? ?? '';
+    } else {
+      baseUnitName = _getUnitName(baseUnitId);
+    }
     final baseSellPrice = (product.first['sell_price'] as num?)?.toDouble() ?? 0.0;
 
     // Start with base unit (factor = 1.0)
     final units = <Map<String, dynamic>>[
       {
-        'unit_name': baseUnit,
+        'unit_name': baseUnitName,
         'conversion_factor': 1.0,
         'sell_price': baseSellPrice,
         'barcode': product.first['barcode'] as String? ?? '',
         'is_base': 1,
+        'unit_id': baseUnitId,
       },
     ];
 
@@ -2330,6 +2542,8 @@ class DatabaseHelper {
       final fromUnit = conv['from_unit'] as String? ?? '';
       final factor = (conv['conversion_factor'] as num?)?.toDouble() ?? 1.0;
       final convSellPrice = (conv['sell_price'] as num?)?.toDouble() ?? (baseSellPrice * factor);
+      // Resolve unit_id from the conversion if available
+      final fromUnitId = conv['from_unit_id'] as int?;
       units.add({
         'unit_name': fromUnit,
         'conversion_factor': factor,
@@ -2337,6 +2551,7 @@ class DatabaseHelper {
         'barcode': conv['barcode'] as String? ?? '',
         'is_base': 0,
         'conversion_id': conv['id'],
+        if (fromUnitId != null) 'unit_id': fromUnitId,
       });
     }
     return units;
@@ -2496,37 +2711,40 @@ class DatabaseHelper {
       for (final item in items) {
         final productId = (item['product_id'] as num?)?.toInt();
         final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+        // Use base_quantity for stock deduction (always in base unit)
+        // Falls back to quantity for backward compat with old invoice items
+        final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
         final unitPrice = (item['unit_price'] as num?)?.toDouble() ?? 0.0;
         final invoiceIdStr = invoiceMap['id'] as String? ?? '';
         if (productId == null) continue;
 
         if (invoiceType == 'sale' || invoiceType == 'pos') {
           if (!isReturn) {
-            // Sale: stock leaves warehouse
+            // Sale: stock leaves warehouse (always in base units)
             await txn.rawUpdate(
               'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-              [quantity, now, productId],
+              [baseQuantity, now, productId],
             );
             // Log stock movement
             await txn.insert('stock_movements', {
               'product_id': productId,
               'movement_type': 'sale',
-              'quantity': -quantity,
+              'quantity': -baseQuantity,
               'reference_type': invoiceType,
               'reference_id': invoiceIdStr,
               'unit_cost': unitPrice,
               'created_at': now,
             });
           } else {
-            // Sale return: stock returns to warehouse
+            // Sale return: stock returns to warehouse (always in base units)
             await txn.rawUpdate(
               'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
-              [quantity, now, productId],
+              [baseQuantity, now, productId],
             );
             await txn.insert('stock_movements', {
               'product_id': productId,
               'movement_type': 'return',
-              'quantity': quantity,
+              'quantity': baseQuantity,
               'reference_type': 'sale_return',
               'reference_id': invoiceIdStr,
               'unit_cost': unitPrice,
@@ -2535,10 +2753,10 @@ class DatabaseHelper {
           }
         } else if (invoiceType == 'purchase') {
           if (!isReturn) {
-            // Purchase: stock enters warehouse
+            // Purchase: stock enters warehouse (always in base units)
             await txn.rawUpdate(
               'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
-              [quantity, now, productId],
+              [baseQuantity, now, productId],
             );
             // Update weighted average cost on purchase
             final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
@@ -2546,8 +2764,8 @@ class DatabaseHelper {
               final currentStock = (productRow.first['current_stock'] as num?)?.toDouble() ?? 0.0;
               final currentAvgCost = (productRow.first['average_cost'] as num?)?.toDouble() ?? 0.0;
               // current_stock already updated above, so subtract the new qty to get the old stock
-              final oldStock = currentStock - quantity;
-              final newTotalValue = (oldStock * currentAvgCost) + (quantity * unitPrice);
+              final oldStock = currentStock - baseQuantity;
+              final newTotalValue = (oldStock * currentAvgCost) + (baseQuantity * unitPrice);
               final newTotalStock = currentStock; // already includes new qty
               final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : unitPrice;
               await txn.update(
@@ -2564,22 +2782,22 @@ class DatabaseHelper {
             await txn.insert('stock_movements', {
               'product_id': productId,
               'movement_type': 'purchase',
-              'quantity': quantity,
+              'quantity': baseQuantity,
               'reference_type': 'purchase',
               'reference_id': invoiceIdStr,
               'unit_cost': unitPrice,
               'created_at': now,
             });
           } else {
-            // Purchase return: stock leaves warehouse
+            // Purchase return: stock leaves warehouse (always in base units)
             await txn.rawUpdate(
               'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-              [quantity, now, productId],
+              [baseQuantity, now, productId],
             );
             await txn.insert('stock_movements', {
               'product_id': productId,
               'movement_type': 'return',
-              'quantity': -quantity,
+              'quantity': -baseQuantity,
               'reference_type': 'purchase_return',
               'reference_id': invoiceIdStr,
               'unit_cost': unitPrice,

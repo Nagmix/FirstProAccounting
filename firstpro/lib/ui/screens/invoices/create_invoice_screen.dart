@@ -1371,6 +1371,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       'quantity': item.quantity,
       'unit_price': item.unitPrice,
       'total_price': item.totalPrice,
+      'unit_name': item.unitName,
+      'conversion_factor': item.conversionFactor,
+      'base_quantity': item.baseQuantity,
       'notes': item.notes,
     }).toList();
 
@@ -1484,6 +1487,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'quantity': item.quantity,
         'unit_price': item.unitPrice,
         'total_price': item.totalPrice,
+        'unit_name': item.unitName,
+        'base_quantity': item.baseQuantity,
       }).toList();
 
       await InvoicePdfGenerator.printInvoice(invoiceMap, itemsMap);
@@ -1537,6 +1542,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           'quantity': item.quantity,
           'unit_price': item.unitPrice,
           'total_price': item.totalPrice,
+          'unit_name': item.unitName,
+          'base_quantity': item.baseQuantity,
         }).toList(),
         'subtotal': _subtotal,
         'discount': _discountAmount,

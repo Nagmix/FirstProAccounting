@@ -6,6 +6,9 @@ class InvoiceItem {
   final double quantity;
   final double unitPrice;
   final double totalPrice;
+  final String? unitName; // Name of the unit used in this line (e.g., 'كرتون')
+  final double conversionFactor; // How many base units = 1 of this unit (e.g., 24 for carton)
+  final double baseQuantity; // quantity * conversionFactor (always in base unit for stock deduction)
   final String? notes;
 
   InvoiceItem({
@@ -16,6 +19,9 @@ class InvoiceItem {
     this.quantity = 1.0,
     this.unitPrice = 0.0,
     this.totalPrice = 0.0,
+    this.unitName,
+    this.conversionFactor = 1.0,
+    this.baseQuantity = 1.0,
     this.notes,
   });
 
@@ -28,6 +34,9 @@ class InvoiceItem {
       'quantity': quantity,
       'unit_price': unitPrice,
       'total_price': totalPrice,
+      'unit_name': unitName,
+      'conversion_factor': conversionFactor,
+      'base_quantity': baseQuantity,
       'notes': notes,
     };
   }
@@ -41,6 +50,9 @@ class InvoiceItem {
       quantity: (map['quantity'] ?? 1.0).toDouble(),
       unitPrice: (map['unit_price'] ?? 0.0).toDouble(),
       totalPrice: (map['total_price'] ?? 0.0).toDouble(),
+      unitName: map['unit_name'],
+      conversionFactor: (map['conversion_factor'] ?? 1.0).toDouble(),
+      baseQuantity: (map['base_quantity'] ?? map['quantity'] ?? 1.0).toDouble(),
       notes: map['notes'],
     );
   }
@@ -53,6 +65,9 @@ class InvoiceItem {
     double? quantity,
     double? unitPrice,
     double? totalPrice,
+    String? unitName,
+    double? conversionFactor,
+    double? baseQuantity,
     String? notes,
   }) {
     return InvoiceItem(
@@ -63,6 +78,9 @@ class InvoiceItem {
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
       totalPrice: totalPrice ?? this.totalPrice,
+      unitName: unitName ?? this.unitName,
+      conversionFactor: conversionFactor ?? this.conversionFactor,
+      baseQuantity: baseQuantity ?? this.baseQuantity,
       notes: notes ?? this.notes,
     );
   }

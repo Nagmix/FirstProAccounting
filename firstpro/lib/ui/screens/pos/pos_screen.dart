@@ -3172,10 +3172,13 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       final items = _cart.map((item) => {
         'invoice_id': invoiceId,
         'product_id': item.productId,
-        'product_name': '${item.name} (${item.unitName})',
-        'quantity': item.baseQuantity, // Base quantity for stock deduction
+        'product_name': item.name,
+        'quantity': item.quantity, // Quantity in the selected unit
         'unit_price': item.unitPrice,
         'total_price': item.total,
+        'unit_name': item.unitName,
+        'conversion_factor': item.conversionFactor,
+        'base_quantity': item.baseQuantity, // Always in base unit for stock
       }).toList();
 
       final db = DatabaseHelper();
@@ -3521,7 +3524,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         'date': DateTime.now(),
         'customer_name': _selectedCustomerName.isEmpty ? 'بدون عميل' : _selectedCustomerName,
         'items': _cart.map((item) => <String, dynamic>{
-          'product_name': '${item.name} (${item.unitName})',
+          'product_name': item.name,
+          'unit_name': item.unitName,
           'quantity': item.quantity,
           'unit_price': item.unitPrice,
           'total_price': item.total,

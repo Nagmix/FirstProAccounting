@@ -10,7 +10,49 @@ import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
 
-/// Full-screen form for adding a new product with complete accounting fields.
+// ═══════════════════════════════════════════════════════════════════
+//  Step definitions
+// ═══════════════════════════════════════════════════════════════════
+
+class _StepDef {
+  final String title;
+  final IconData icon;
+  const _StepDef(this.title, this.icon);
+}
+
+const _steps = [
+  _StepDef('البيانات الأساسية', Icons.article),
+  _StepDef('الوحدات', Icons.straighten),
+  _StepDef('الأسعار', Icons.label),
+  _StepDef('المخزون', Icons.inventory),
+  _StepDef('الموردين', Icons.local_shipping),
+  _StepDef('الباركود', Icons.qr_code),
+  _StepDef('إعدادات البيع', Icons.storefront),
+  _StepDef('المحاسبة', Icons.account_balance),
+];
+
+// ═══════════════════════════════════════════════════════════════════
+//  Unit conversion row model
+// ═══════════════════════════════════════════════════════════════════
+
+class _UnitConversionRow {
+  int? unitId;
+  double factor;
+  String barcode;
+  double sellPrice;
+
+  _UnitConversionRow({
+    this.unitId,
+    this.factor = 1.0,
+    this.barcode = '',
+    this.sellPrice = 0.0,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  AddProductSheet – multi-step wizard
+// ═══════════════════════════════════════════════════════════════════
+
 class AddProductSheet extends StatefulWidget {
   final Product? existing;
   const AddProductSheet({super.key, this.existing});
@@ -20,113 +62,120 @@ class AddProductSheet extends StatefulWidget {
 }
 
 class _AddProductSheetState extends State<AddProductSheet> {
+  // ── Step state ────────────────────────────────────────────────
+  int _currentStep = 0;
+  final PageController _pageController = PageController();
+
+  // ── Form key ──────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
-  final _scrollController = ScrollController();
 
   // ── Controllers ───────────────────────────────────────────────
-  final _itemCodeController = TextEditingController();
-  final _barcodeController = TextEditingController();
   final _nameArController = TextEditingController();
   final _nameEnController = TextEditingController();
-  final _groupIdController = TextEditingController();
+  final _itemCodeController = TextEditingController();
+  final _barcodeController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _notesController = TextEditingController();
   final _costPriceController = TextEditingController();
   final _sellPriceController = TextEditingController();
   final _wholesalePriceController = TextEditingController();
   final _specialWholesalePriceController = TextEditingController();
   final _minimumSalePriceController = TextEditingController();
   final _taxRateController = TextEditingController();
-  final _currentStockController = TextEditingController();
+  final _openingStockController = TextEditingController();
   final _minStockController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _notesController = TextEditingController();
+  final _maxStockController = TextEditingController();
+  final _supplierCodeController = TextEditingController();
 
-  // ── Dropdown state ────────────────────────────────────────────
+  // ── Dropdown / switch state ───────────────────────────────────
   int? _selectedCategoryId;
-  int? _selectedUnitId;
-  int? _selectedSupplierId;
+  int? _selectedBaseUnitId;
+  int? _selectedPurchaseUnitId;
+  int? _selectedSaleUnitId;
   int? _selectedWarehouseId;
+  int? _selectedSupplierId;
   int? _selectedSalesAccountId;
   int? _selectedPurchaseAccountId;
   int? _selectedInventoryAccountId;
 
-  // ── Checkbox / date state ─────────────────────────────────────
-  DateTime? _expiryDate;
-  bool _expiryTracking = false;
-  bool _includeInReports = true;
   bool _isActive = true;
-  bool _isSaving = false;
+  bool _trackStock = true;
+  bool _expiryTracking = false;
+  bool _taxInclusive = false;
+  bool _isSellable = true;
+  bool _isPurchasable = true;
+  bool _allowNegative = false;
+  bool _sellRetail = true;
+  bool _showInPos = true;
 
+  DateTime? _expiryDate;
   String? _imagePath;
-  bool _isEdit = false;
-  bool _unitConversionsExpanded = false;
+  bool _isSaving = false;
 
   bool get _isEditMode => widget.existing != null;
 
-  // ── Unit Conversions ─────────────────────────────────────────
-  List<_UnitConversionEntry> _unitConversions = [];
+  // ── Unit conversions ──────────────────────────────────────────
+  List<_UnitConversionRow> _unitConversions = [];
 
   // ── Dropdown data from DB ─────────────────────────────────────
   List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _units = [];
   List<Map<String, dynamic>> _suppliers = [];
   List<Map<String, dynamic>> _warehouses = [];
-  List<Map<String, dynamic>> _salesAccounts = [];
-  List<Map<String, dynamic>> _purchaseAccounts = [];
-  List<Map<String, dynamic>> _inventoryAccounts = [];
+  List<Map<String, dynamic>> _revenueAccounts = [];
+  List<Map<String, dynamic>> _expenseAccounts = [];
+  List<Map<String, dynamic>> _assetAccounts = [];
 
-  // ── Units (static) ────────────────────────────────────────────
-  static const _units = [
-    {'id': 1, 'name': 'قطعة'},
-    {'id': 2, 'name': 'كيلو'},
-    {'id': 3, 'name': 'لتر'},
-    {'id': 4, 'name': 'متر'},
-    {'id': 5, 'name': 'علبة'},
-    {'id': 6, 'name': 'كرتون'},
-    {'id': 7, 'name': 'طن'},
-    {'id': 8, 'name': 'جرام'},
-  ];
+  // ── Helper: get unit name by id ───────────────────────────────
+  String _unitNameById(int? id) {
+    if (id == null) return '';
+    final match = _units.where((u) => u['id'] == id);
+    if (match.isNotEmpty) return match.first['name_ar'] as String? ?? '';
+    return '';
+  }
 
   @override
   void initState() {
     super.initState();
     _loadDropdownData();
-    _isEdit = widget.existing != null;
-    if (_isEdit) {
+    if (_isEditMode) {
       _populateFromExisting();
       _loadUnitConversions();
     } else {
       _generateItemCode();
-      _taxRateController.text =
-          AppConstants.defaultVatRate.toStringAsFixed(0);
+      _taxRateController.text = AppConstants.defaultVatRate.toStringAsFixed(0);
     }
   }
 
   @override
   void dispose() {
-    _itemCodeController.dispose();
-    _barcodeController.dispose();
     _nameArController.dispose();
     _nameEnController.dispose();
-    _groupIdController.dispose();
+    _itemCodeController.dispose();
+    _barcodeController.dispose();
     _descriptionController.dispose();
+    _notesController.dispose();
     _costPriceController.dispose();
     _sellPriceController.dispose();
     _wholesalePriceController.dispose();
     _specialWholesalePriceController.dispose();
     _minimumSalePriceController.dispose();
     _taxRateController.dispose();
-    _currentStockController.dispose();
+    _openingStockController.dispose();
     _minStockController.dispose();
-    _weightController.dispose();
-    _notesController.dispose();
-    _scrollController.dispose();
+    _maxStockController.dispose();
+    _supplierCodeController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
+
+  // ── Load reference data ───────────────────────────────────────
 
   Future<void> _loadDropdownData() async {
     final db = DatabaseHelper();
     final results = await Future.wait([
       db.getAllCategories(),
+      db.getAllUnits(),
       db.getAllSuppliers(),
       db.getAllWarehouses(),
       db.getAccountsByType('REVENUE'),
@@ -137,11 +186,12 @@ class _AddProductSheetState extends State<AddProductSheet> {
     if (!mounted) return;
     setState(() {
       _categories = results[0];
-      _suppliers = results[1];
-      _warehouses = results[2];
-      _salesAccounts = results[3];
-      _purchaseAccounts = results[4];
-      _inventoryAccounts = results[5];
+      _units = results[1];
+      _suppliers = results[2];
+      _warehouses = results[3];
+      _revenueAccounts = results[4];
+      _expenseAccounts = results[5];
+      _assetAccounts = results[6];
     });
   }
 
@@ -158,7 +208,6 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _barcodeController.text = p.barcode ?? '';
     _nameArController.text = p.nameAr;
     _nameEnController.text = p.nameEn;
-    _groupIdController.text = p.groupId ?? '';
     _descriptionController.text = p.description ?? '';
     _costPriceController.text = p.costPrice.toStringAsFixed(2);
     _sellPriceController.text = p.sellPrice.toStringAsFixed(2);
@@ -166,21 +215,31 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _specialWholesalePriceController.text = p.specialWholesalePrice.toStringAsFixed(2);
     _minimumSalePriceController.text = p.minimumSalePrice.toStringAsFixed(2);
     _taxRateController.text = p.taxRate.toStringAsFixed(2);
-    _currentStockController.text = p.currentStock.toStringAsFixed(0);
     _minStockController.text = p.minStock.toStringAsFixed(0);
-    _weightController.text = p.weight.toStringAsFixed(2);
+    _supplierCodeController.text = p.supplierCode ?? '';
     _notesController.text = p.notes ?? '';
+
     _selectedCategoryId = p.categoryId;
-    _selectedUnitId = p.unitId;
-    _selectedSupplierId = p.supplierId;
+    _selectedBaseUnitId = p.effectiveBaseUnitId;
+    _selectedPurchaseUnitId = p.purchaseUnitId;
+    _selectedSaleUnitId = p.saleUnitId;
     _selectedWarehouseId = p.warehouseId;
+    _selectedSupplierId = p.supplierId;
     _selectedSalesAccountId = p.salesAccountId;
     _selectedPurchaseAccountId = p.purchaseAccountId;
     _selectedInventoryAccountId = p.inventoryAccountId;
-    _expiryDate = p.expiryDate;
-    _expiryTracking = p.expiryTracking;
-    _includeInReports = p.includeInReports;
+
     _isActive = p.isActive;
+    _trackStock = p.trackStock;
+    _expiryTracking = p.expiryTracking;
+    _taxInclusive = p.taxInclusive;
+    _isSellable = p.isSellable;
+    _isPurchasable = p.isPurchasable;
+    _allowNegative = p.allowNegative;
+    _sellRetail = p.sellRetail;
+    _showInPos = p.showInPos;
+
+    _expiryDate = p.expiryDate;
     _imagePath = p.imagePath;
   }
 
@@ -190,204 +249,19 @@ class _AddProductSheetState extends State<AddProductSheet> {
     final conversions = await db.getUnitConversions(widget.existing!.id!);
     if (!mounted) return;
     setState(() {
-      _unitConversions = conversions.map((c) => _UnitConversionEntry(
-        fromUnit: c['from_unit'] as String? ?? '',
-        toUnit: c['to_unit'] as String? ?? '',
-        conversionFactor: (c['conversion_factor'] as num?)?.toDouble() ?? 1.0,
-        barcode: c['barcode'] as String?,
-        sellPrice: (c['sell_price'] as num?)?.toDouble() ?? 0.0,
-      )).toList();
-      if (_unitConversions.isNotEmpty) {
-        _unitConversionsExpanded = true;
-      }
+      _unitConversions = conversions.map((c) {
+        final fromUnitId = c['from_unit_id'] as int?;
+        return _UnitConversionRow(
+          unitId: fromUnitId,
+          factor: (c['conversion_factor'] as num?)?.toDouble() ?? 1.0,
+          barcode: (c['barcode'] as String?) ?? '',
+          sellPrice: (c['sell_price'] as num?)?.toDouble() ?? 0.0,
+        );
+      }).toList();
     });
   }
 
-  Future<void> _showAddUnitConversionDialog() async {
-    int? fromUnitId;
-    int? toUnitId;
-    final factorController = TextEditingController();
-    final barcodeController = TextEditingController();
-    final sellPriceController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Row(
-                children: [
-                  Icon(Icons.swap_horiz, color: AppColors.primary, size: 22),
-                  const SizedBox(width: 8),
-                  const Text('إضافة وحدة تحويل', style: TextStyle(fontSize: 18)),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // From Unit
-                      DropdownButtonFormField<int>(
-                        value: fromUnitId,
-                        decoration: const InputDecoration(
-                          labelText: 'من وحدة',
-                          prefixIcon: Icon(Icons.arrow_forward),
-                        ),
-                        items: _units
-                            .map((u) => DropdownMenuItem<int>(
-                                  value: u['id'] as int,
-                                  child: Text(u['name'] as String),
-                                ))
-                            .toList(),
-                        onChanged: (v) => setDialogState(() => fromUnitId = v),
-                        validator: (v) => v == null ? 'اختر الوحدة المصدر' : null,
-                      ),
-                      const SizedBox(height: 14),
-
-                      // To Unit
-                      DropdownButtonFormField<int>(
-                        value: toUnitId,
-                        decoration: const InputDecoration(
-                          labelText: 'إلى وحدة',
-                          prefixIcon: Icon(Icons.arrow_back),
-                        ),
-                        items: _units
-                            .map((u) => DropdownMenuItem<int>(
-                                  value: u['id'] as int,
-                                  child: Text(u['name'] as String),
-                                ))
-                            .toList(),
-                        onChanged: (v) => setDialogState(() => toUnitId = v),
-                        validator: (v) => v == null ? 'اختر الوحدة الهدف' : null,
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Conversion Factor
-                      TextFormField(
-                        controller: factorController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,4}')),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'معامل التحويل *',
-                          hintText: 'مثال: 24 (1 كرتون = 24 قطعة)',
-                          prefixIcon: Icon(Icons.functions),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'معامل التحويل مطلوب';
-                          final val = double.tryParse(v);
-                          if (val == null || val <= 0) return 'أدخل قيمة أكبر من صفر';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Barcode (optional)
-                      TextFormField(
-                        controller: barcodeController,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'باركود (اختياري)',
-                          prefixIcon: Icon(Icons.qr_code),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Sell Price
-                      TextFormField(
-                        controller: sellPriceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        textInputAction: TextInputAction.done,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                        ],
-                        decoration: InputDecoration(
-                          labelText: 'سعر البيع بهذه الوحدة',
-                          prefixIcon: const Icon(Icons.sell),
-                          suffixText: AppConstants.currency,
-                        ),
-                      ),
-
-                      // Validation: from != to
-                      if (fromUnitId != null && toUnitId != null && fromUnitId == toUnitId) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.error.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.warning, size: 16, color: AppColors.error),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'لا يمكن أن تكون الوحدة المصدر والهدف متطابقتين',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('إلغاء'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: (fromUnitId != null && toUnitId != null && fromUnitId == toUnitId)
-                      ? null
-                      : () {
-                          if (!formKey.currentState!.validate()) return;
-                          Navigator.of(context).pop(true);
-                        },
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text('إضافة'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (result == true && fromUnitId != null && toUnitId != null) {
-      final fromUnitName = _units.firstWhere((u) => u['id'] == fromUnitId)['name'] as String;
-      final toUnitName = _units.firstWhere((u) => u['id'] == toUnitId)['name'] as String;
-      setState(() {
-        _unitConversions.add(_UnitConversionEntry(
-          fromUnit: fromUnitName,
-          toUnit: toUnitName,
-          conversionFactor: double.tryParse(factorController.text) ?? 1.0,
-          barcode: barcodeController.text.trim().isNotEmpty ? barcodeController.text.trim() : null,
-          sellPrice: double.tryParse(sellPriceController.text) ?? 0.0,
-        ));
-        _unitConversionsExpanded = true;
-      });
-    }
-
-    factorController.dispose();
-    barcodeController.dispose();
-    sellPriceController.dispose();
-  }
+  // ── Image picker ──────────────────────────────────────────────
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -398,37 +272,33 @@ class _AddProductSheetState extends State<AddProductSheet> {
       imageQuality: 80,
     );
     if (picked != null) {
-      // Copy to app documents directory for persistence
       final dir = await getApplicationDocumentsDirectory();
       final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.${picked.name.split('.').last}';
       final savedPath = '${dir.path}/$fileName';
       await File(picked.path).copy(savedPath);
-      setState(() {
-        _imagePath = savedPath;
-      });
+      setState(() => _imagePath = savedPath);
     }
   }
 
-  /// Opens the barcode scanner screen and populates the barcode
-  /// field with the result.
+  // ── Barcode scanner ──────────────────────────────────────────
+
   Future<void> _scanBarcode() async {
     final result = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
-        builder: (_) => const BarcodeScannerScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
     );
     if (result != null && result.isNotEmpty) {
       _barcodeController.text = result;
     }
   }
 
-  Future<void> _pickDate() async {
+  // ── Date picker ──────────────────────────────────────────────
+
+  Future<void> _pickExpiryDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate:
-          _expiryDate ?? now.add(const Duration(days: 365)),
+      initialDate: _expiryDate ?? now.add(const Duration(days: 365)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 3650)),
       locale: const Locale(AppConstants.defaultLanguage),
@@ -448,12 +318,89 @@ class _AddProductSheetState extends State<AddProductSheet> {
     }
   }
 
+  // ── Navigation ───────────────────────────────────────────────
+
+  void _goToStep(int step) {
+    if (step < 0 || step >= _steps.length) return;
+    setState(() => _currentStep = step);
+    _pageController.animateToPage(
+      step,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  bool _validateCurrentStep() {
+    switch (_currentStep) {
+      case 0: // البيانات الأساسية
+        if (_nameArController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('اسم الصنف بالعربي مطلوب'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return false;
+        }
+        return true;
+      case 1: // الوحدات
+        if (_selectedBaseUnitId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('الوحدة الأساسية مطلوبة'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return false;
+        }
+        return true;
+      case 2: // الأسعار
+        if (_costPriceController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('سعر التكلفة مطلوب'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return false;
+        }
+        if (_sellPriceController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('سعر البيع مطلوب'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return false;
+        }
+        return true;
+      default:
+        return true;
+    }
+  }
+
+  void _nextStep() {
+    if (!_validateCurrentStep()) return;
+    if (_currentStep < _steps.length - 1) {
+      _goToStep(_currentStep + 1);
+    }
+  }
+
+  void _prevStep() {
+    if (_currentStep > 0) {
+      _goToStep(_currentStep - 1);
+    }
+  }
+
+  // ── Save ─────────────────────────────────────────────────────
+
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_validateCurrentStep()) return;
 
     setState(() => _isSaving = true);
 
     final now = DateTime.now();
+    final costPrice = double.tryParse(_costPriceController.text) ?? 0.0;
     final product = Product(
       itemCode: _itemCodeController.text.trim().isNotEmpty
           ? _itemCodeController.text.trim()
@@ -464,106 +411,125 @@ class _AddProductSheetState extends State<AddProductSheet> {
           ? _barcodeController.text.trim()
           : null,
       categoryId: _selectedCategoryId,
-      unitId: _selectedUnitId,
+      unitId: _selectedBaseUnitId,
+      baseUnitId: _selectedBaseUnitId,
+      purchaseUnitId: _selectedPurchaseUnitId,
+      saleUnitId: _selectedSaleUnitId,
       supplierId: _selectedSupplierId,
-      groupId: _groupIdController.text.trim().isNotEmpty
-          ? _groupIdController.text.trim()
-          : null,
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
           : null,
-      costPrice:
-          double.tryParse(_costPriceController.text) ?? 0.0,
-      sellPrice:
-          double.tryParse(_sellPriceController.text) ?? 0.0,
-      wholesalePrice:
-          double.tryParse(_wholesalePriceController.text) ?? 0.0,
+      costPrice: costPrice,
+      averageCost: costPrice,
+      sellPrice: double.tryParse(_sellPriceController.text) ?? 0.0,
+      wholesalePrice: double.tryParse(_wholesalePriceController.text) ?? 0.0,
       specialWholesalePrice:
-          double.tryParse(_specialWholesalePriceController.text) ??
-              0.0,
+          double.tryParse(_specialWholesalePriceController.text) ?? 0.0,
       minimumSalePrice:
-          double.tryParse(_minimumSalePriceController.text) ??
-              0.0,
+          double.tryParse(_minimumSalePriceController.text) ?? 0.0,
       taxRate: double.tryParse(_taxRateController.text) ?? 0.0,
+      taxInclusive: _taxInclusive,
       salesAccountId: _selectedSalesAccountId,
       purchaseAccountId: _selectedPurchaseAccountId,
       inventoryAccountId: _selectedInventoryAccountId,
-      currentStock:
-          double.tryParse(_currentStockController.text) ?? 0.0,
-      minStock:
-          double.tryParse(_minStockController.text) ?? 0.0,
-      warehouseId: _selectedWarehouseId,
+      currentStock: _isEditMode
+          ? widget.existing!.currentStock
+          : (double.tryParse(_openingStockController.text) ?? 0.0),
+      minStock: double.tryParse(_minStockController.text) ?? 0.0,
+      warehouseId: _isEditMode ? widget.existing!.warehouseId : _selectedWarehouseId,
       expiryDate: _expiryDate,
       expiryTracking: _expiryTracking,
-      weight: double.tryParse(_weightController.text) ?? 0.0,
+      trackStock: _trackStock,
       notes: _notesController.text.trim().isNotEmpty
           ? _notesController.text.trim()
           : null,
-      includeInReports: _includeInReports,
       isActive: _isActive,
+      isSellable: _isSellable,
+      isPurchasable: _isPurchasable,
+      allowNegative: _allowNegative,
+      sellRetail: _sellRetail,
+      showInPos: _showInPos,
+      imagePath: _imagePath,
+      supplierCode: _supplierCodeController.text.trim().isNotEmpty
+          ? _supplierCodeController.text.trim()
+          : null,
       createdAt: now,
       updatedAt: now,
     );
 
     try {
       final db = DatabaseHelper();
-      if (_isEdit) {
+
+      if (_isEditMode) {
         final updateMap = product.toMap();
-        // When editing, lock accounting-critical fields: keep original stock and warehouse
-        // Stock is managed by the system (decrement on sale, increment on purchase)
-        if (widget.existing != null) {
-          updateMap['current_stock'] = widget.existing!.currentStock;
-          updateMap['warehouse_id'] = widget.existing!.warehouseId;
-          updateMap['sales_account_id'] = widget.existing!.salesAccountId;
-          updateMap['purchase_account_id'] = widget.existing!.purchaseAccountId;
-          updateMap['inventory_account_id'] = widget.existing!.inventoryAccountId;
-        }
+        // Lock system-managed fields
+        updateMap['current_stock'] = widget.existing!.currentStock;
+        updateMap['warehouse_id'] = widget.existing!.warehouseId;
+        updateMap['sales_account_id'] = widget.existing!.salesAccountId;
+        updateMap['purchase_account_id'] = widget.existing!.purchaseAccountId;
+        updateMap['inventory_account_id'] = widget.existing!.inventoryAccountId;
         updateMap['image_path'] = _imagePath;
         await db.updateProduct(widget.existing!.id!, updateMap);
+
+        // Replace unit conversions
+        final productId = widget.existing!.id!;
+        final existingConvs = await db.getUnitConversions(productId);
+        for (final ec in existingConvs) {
+          await db.deleteUnitConversion(ec['id'] as int);
+        }
+        for (final uc in _unitConversions) {
+          if (uc.unitId == null) continue;
+          final unitName = _unitNameById(uc.unitId);
+          await db.insertUnitConversion({
+            'product_id': productId,
+            'from_unit': unitName,
+            'to_unit': _unitNameById(_selectedBaseUnitId),
+            'from_unit_id': uc.unitId,
+            'to_unit_id': _selectedBaseUnitId,
+            'conversion_factor': uc.factor,
+            'barcode': uc.barcode,
+            'sell_price': uc.sellPrice,
+            'is_active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        }
       } else {
         final map = product.toMap();
         map['image_path'] = _imagePath;
         final savedId = await db.insertProduct(map);
 
-        // Save unit conversions for new product
+        // Save unit conversions
         if (savedId > 0) {
           for (final uc in _unitConversions) {
+            if (uc.unitId == null) continue;
+            final unitName = _unitNameById(uc.unitId);
             await db.insertUnitConversion({
               'product_id': savedId,
-              'from_unit': uc.fromUnit,
-              'to_unit': uc.toUnit,
-              'conversion_factor': uc.conversionFactor,
-              'barcode': uc.barcode ?? '',
+              'from_unit': unitName,
+              'to_unit': _unitNameById(_selectedBaseUnitId),
+              'from_unit_id': uc.unitId,
+              'to_unit_id': _selectedBaseUnitId,
+              'conversion_factor': uc.factor,
+              'barcode': uc.barcode,
               'sell_price': uc.sellPrice,
               'is_active': 1,
               'created_at': DateTime.now().toIso8601String(),
               'updated_at': DateTime.now().toIso8601String(),
             });
           }
-        }
-      }
 
-      // Save unit conversions for edit mode
-      if (_isEdit && widget.existing != null) {
-        final productId = widget.existing!.id!;
-        // Delete existing conversions
-        final existingConvs = await db.getUnitConversions(productId);
-        for (final ec in existingConvs) {
-          await db.deleteUnitConversion(ec['id'] as int);
-        }
-        // Insert new conversions
-        for (final uc in _unitConversions) {
-          await db.insertUnitConversion({
-            'product_id': productId,
-            'from_unit': uc.fromUnit,
-            'to_unit': uc.toUnit,
-            'conversion_factor': uc.conversionFactor,
-            'barcode': uc.barcode ?? '',
-            'sell_price': uc.sellPrice,
-            'is_active': 1,
-            'created_at': DateTime.now().toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
-          });
+          // Opening stock movement
+          final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
+          if (openingQty > 0 && _trackStock) {
+            await db.logStockMovement(
+              productId: savedId,
+              movementType: 'opening',
+              quantity: openingQty,
+              notes: 'رصيد افتتاحي',
+              unitCost: costPrice,
+            );
+          }
         }
       }
     } catch (e) {
@@ -584,7 +550,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            _isEdit ? 'تم تعديل الصنف "${_nameArController.text}" بنجاح' : 'تم إضافة الصنف "${_nameArController.text}" بنجاح'),
+          _isEditMode
+              ? 'تم تعديل الصنف "${_nameArController.text}" بنجاح'
+              : 'تم إضافة الصنف "${_nameArController.text}" بنجاح',
+        ),
         backgroundColor: AppColors.success,
       ),
     );
@@ -592,20 +561,1241 @@ class _AddProductSheetState extends State<AddProductSheet> {
     Navigator.of(context).pop(true);
   }
 
-  Widget _sectionHeader(String title, IconData icon) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 12),
+  // ═══════════════════════════════════════════════════════════════
+  //  Build
+  // ═══════════════════════════════════════════════════════════════
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_isEditMode ? 'تعديل صنف' : 'إضافة صنف جديد'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_forward),
+            onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
+          ),
+        ),
+        body: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // ── Step indicator ──────────────────────────────────
+              _buildStepIndicator(),
+              const Divider(height: 1),
+
+              // ── Page content ───────────────────────────────────
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _steps.length,
+                  itemBuilder: (context, index) => _buildStepContent(index),
+                ),
+              ),
+
+              // ── Navigation bar ─────────────────────────────────
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
+                child: Row(
+                  children: [
+                    // السابق
+                    if (_currentStep > 0)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _prevStep,
+                          icon: const Icon(Icons.arrow_forward, size: 18),
+                          label: const Text('السابق'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                    if (_currentStep > 0) const SizedBox(width: 12),
+
+                    // التالي / حفظ
+                    Expanded(
+                      child: _currentStep == _steps.length - 1
+                          ? ElevatedButton.icon(
+                              onPressed: _isSaving ? null : _save,
+                              icon: _isSaving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.check, size: 20),
+                              label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: _nextStep,
+                              icon: const Icon(Icons.arrow_back, size: 18),
+                              label: const Text('التالي'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Step indicator ────────────────────────────────────────────
+
+  Widget _buildStepIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: List.generate(_steps.length, (i) {
+          final isActive = i == _currentStep;
+          final isCompleted = i < _currentStep;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (i <= _currentStep || isCompleted) {
+                  _goToStep(i);
+                }
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Dot / circle
+                  Container(
+                    width: isActive ? 32 : 24,
+                    height: isActive ? 32 : 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCompleted
+                          ? AppColors.success
+                          : isActive
+                              ? AppColors.primary
+                              : AppColors.border,
+                      border: isActive
+                          ? Border.all(color: AppColors.primary, width: 2.5)
+                          : null,
+                    ),
+                    child: Center(
+                      child: isCompleted
+                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                          : Text(
+                              '${i + 1}',
+                              style: TextStyle(
+                                fontSize: isActive ? 13 : 11,
+                                fontWeight: FontWeight.w700,
+                                color: isActive ? Colors.white : AppColors.textTertiary,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Label (only show for active/completed or on wider screens)
+                  if (isActive || isCompleted)
+                    Text(
+                      _steps[i].title,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                        color: isActive
+                            ? AppColors.primary
+                            : isCompleted
+                                ? AppColors.success
+                                : AppColors.textTertiary,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ── Step content router ───────────────────────────────────────
+
+  Widget _buildStepContent(int step) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: switch (step) {
+        0 => _buildBasicDataStep(),
+        1 => _buildUnitsStep(),
+        2 => _buildPricesStep(),
+        3 => _buildInventoryStep(),
+        4 => _buildSuppliersStep(),
+        5 => _buildBarcodesStep(),
+        6 => _buildSalesSettingsStep(),
+        7 => _buildAccountingStep(),
+        _ => const SizedBox.shrink(),
+      },
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  STEP 1 – البيانات الأساسية
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildBasicDataStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _stepTitle(_steps[0].title, _steps[0].icon),
+
+        // ── Image ─────────────────────────────────────────────
+        Center(
+          child: GestureDetector(
+            onTap: _pickImage,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  style: BorderStyle.solid,
+                ),
+              ),
+              child: _imagePath != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.file(
+                        File(_imagePath!),
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.image,
+                          size: 40,
+                          color: AppColors.primary.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.camera_alt,
+                            size: 32,
+                            color: AppColors.primary.withValues(alpha: 0.5)),
+                        const SizedBox(height: 6),
+                        Text('صورة الصنف',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.primary.withValues(alpha: 0.7))),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+        if (_imagePath != null) ...[
+          const SizedBox(height: 4),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => setState(() => _imagePath = null),
+              icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
+              label: const Text('إزالة الصورة',
+                  style: TextStyle(color: AppColors.error, fontSize: 12)),
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+
+        // ── اسم الصنف بالعربي * ─────────────────────────────
+        TextFormField(
+          controller: _nameArController,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+            isDense: true,
+            labelText: 'اسم الصنف بالعربي *',
+            prefixIcon: Icon(Icons.text_fields),
+          ),
+          validator: (v) =>
+              (v == null || v.trim().isEmpty) ? 'اسم الصنف بالعربي مطلوب' : null,
+        ),
+        const SizedBox(height: 14),
+
+        // ── اسم الصنف بالإنجليزي ────────────────────────────
+        TextFormField(
+          controller: _nameEnController,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+            isDense: true,
+            labelText: 'اسم الصنف بالإنجليزي',
+            prefixIcon: Icon(Icons.text_fields),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // ── SKU / رمز الصنف ─────────────────────────────────
+        TextFormField(
+          controller: _itemCodeController,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(
+            isDense: true,
+            labelText: 'SKU / رمز الصنف',
+            prefixIcon: const Icon(Icons.tag),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.refresh, size: 18),
+              tooltip: 'توليد رمز جديد',
+              onPressed: _generateItemCode,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // ── باركود ──────────────────────────────────────────
+        TextFormField(
+          controller: _barcodeController,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(
+            isDense: true,
+            labelText: 'باركود',
+            prefixIcon: const Icon(Icons.qr_code),
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_barcodeController.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: () {
+                      _barcodeController.clear();
+                      setState(() {});
+                    },
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.camera_alt, size: 20),
+                  tooltip: 'مسح الباركود بالكاميرا',
+                  onPressed: _scanBarcode,
+                ),
+              ],
+            ),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 14),
+
+        // ── التصنيف ─────────────────────────────────────────
+        DropdownButtonFormField<int>(
+          value: _selectedCategoryId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'التصنيف',
+            prefixIcon: Icon(Icons.folder),
+          ),
+          items: _categories
+              .map((c) => DropdownMenuItem<int>(
+                    value: c['id'] as int,
+                    child: Text(c['name'] as String,
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
+          onChanged: (v) => setState(() => _selectedCategoryId = v),
+        ),
+        const SizedBox(height: 14),
+
+        // ── وصف الصنف ───────────────────────────────────────
+        TextFormField(
+          controller: _descriptionController,
+          textInputAction: TextInputAction.next,
+          maxLines: 2,
+          minLines: 1,
+          decoration: const InputDecoration(
+            isDense: true,
+            labelText: 'وصف الصنف',
+            prefixIcon: Icon(Icons.edit_note),
+            alignLabelWithHint: true,
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // ── حالة الصنف ─────────────────────────────────────
+        _switchTile(
+          title: 'حالة الصنف',
+          subtitle: _isActive ? 'نشط' : 'غير نشط',
+          value: _isActive,
+          onChanged: (v) => setState(() => _isActive = v),
+        ),
+        const SizedBox(height: 14),
+
+        // ── ملاحظات ─────────────────────────────────────────
+        TextFormField(
+          controller: _notesController,
+          textInputAction: TextInputAction.done,
+          maxLines: 2,
+          minLines: 1,
+          decoration: const InputDecoration(
+            isDense: true,
+            labelText: 'ملاحظات',
+            prefixIcon: Icon(Icons.note),
+            alignLabelWithHint: true,
+          ),
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  STEP 2 – الوحدات
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildUnitsStep() {
+    final baseUnits = _units.where((u) => (u['is_base_unit'] as int? ?? 0) == 1).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _stepTitle(_steps[1].title, _steps[1].icon),
+
+        // ── الوحدة الأساسية * ────────────────────────────────
+        DropdownButtonFormField<int>(
+          value: _selectedBaseUnitId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'الوحدة الأساسية *',
+            prefixIcon: Icon(Icons.straighten),
+          ),
+          items: baseUnits
+              .map((u) => DropdownMenuItem<int>(
+                    value: u['id'] as int,
+                    child: Text(u['name_ar'] as String,
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
+          onChanged: (v) => setState(() => _selectedBaseUnitId = v),
+          validator: (v) => v == null ? 'الوحدة الأساسية مطلوبة' : null,
+        ),
+        const SizedBox(height: 14),
+
+        // ── وحدة الشراء الافتراضية ──────────────────────────
+        DropdownButtonFormField<int>(
+          value: _selectedPurchaseUnitId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'وحدة الشراء الافتراضية',
+            prefixIcon: Icon(Icons.shopping_cart),
+          ),
+          items: _units
+              .map((u) => DropdownMenuItem<int>(
+                    value: u['id'] as int,
+                    child: Text(u['name_ar'] as String,
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
+          onChanged: (v) => setState(() => _selectedPurchaseUnitId = v),
+        ),
+        const SizedBox(height: 14),
+
+        // ── وحدة البيع الافتراضية ────────────────────────────
+        DropdownButtonFormField<int>(
+          value: _selectedSaleUnitId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'وحدة البيع الافتراضية',
+            prefixIcon: Icon(Icons.sell),
+          ),
+          items: _units
+              .map((u) => DropdownMenuItem<int>(
+                    value: u['id'] as int,
+                    child: Text(u['name_ar'] as String,
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
+          onChanged: (v) => setState(() => _selectedSaleUnitId = v),
+        ),
+        const SizedBox(height: 20),
+
+        // ── جدول التحويلات ──────────────────────────────────
+        Row(
+          children: [
+            Icon(Icons.swap_horiz, size: 20, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Text(
+              'جدول التحويلات',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: _addConversionRow,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('إضافة تحويل'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Info card
+        if (_selectedBaseUnitId != null)
+          Container(
+            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.infoLight.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 18, color: AppColors.info),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'الوحدة الأساسية: ${_unitNameById(_selectedBaseUnitId)}. حدد كم تساوي الوحدة الأكبر بالوحدة الأساسية.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.info,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Conversion rows
+        if (_unitConversions.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.add_circle_outline,
+                      size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
+                  const SizedBox(height: 8),
+                  Text('لا توجد تحويلات',
+                      style: TextStyle(
+                          color: AppColors.textTertiary.withValues(alpha: 0.6))),
+                  const SizedBox(height: 4),
+                  Text('اضغط "إضافة تحويل" لإضافة وحدة أكبر',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary,
+                          )),
+                ],
+              ),
+            ),
+          )
+        else ...[
+          // Header row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Expanded(flex: 3, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                Expanded(flex: 3, child: Text('كم تساوي بالوحدة الأساسية؟', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                const Expanded(flex: 2, child: Text('سعر البيع', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                const SizedBox(width: 40),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...List.generate(_unitConversions.length, (i) {
+            final row = _unitConversions[i];
+            return _buildConversionRow(row, i);
+          }),
+        ],
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  Widget _buildConversionRow(_UnitConversionRow row, int index) {
+    final baseUnitName = _unitNameById(_selectedBaseUnitId);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.primary),
-          const SizedBox(width: 8),
+          // Unit dropdown
+          Expanded(
+            flex: 3,
+            child: DropdownButtonFormField<int>(
+              value: row.unitId,
+              isDense: true,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'الوحدة',
+                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              ),
+              items: _units
+                  .where((u) => u['id'] != _selectedBaseUnitId)
+                  .map((u) => DropdownMenuItem<int>(
+                        value: u['id'] as int,
+                        child: Text(u['name_ar'] as String,
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis),
+                      ))
+                  .toList(),
+              onChanged: (v) => setState(() => row.unitId = v),
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Factor field – smart label
+          Expanded(
+            flex: 3,
+            child: TextFormField(
+              initialValue: row.factor == 1.0 ? '' : row.factor.toStringAsFixed(0),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,4}')),
+              ],
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: row.unitId != null
+                    ? '${_unitNameById(row.unitId)} كم $baseUnitName؟'
+                    : 'الكمية',
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              ),
+              onChanged: (v) => row.factor = double.tryParse(v) ?? 1.0,
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Sell price
+          Expanded(
+            flex: 2,
+            child: TextFormField(
+              initialValue: row.sellPrice > 0 ? row.sellPrice.toStringAsFixed(2) : '',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: 'سعر البيع',
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              ),
+              onChanged: (v) => row.sellPrice = double.tryParse(v) ?? 0.0,
+            ),
+          ),
+
+          // Delete
+          IconButton(
+            icon: Icon(Icons.delete_outline,
+                size: 20, color: AppColors.error.withValues(alpha: 0.7)),
+            onPressed: () =>
+                setState(() => _unitConversions.removeAt(index)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addConversionRow() {
+    setState(() {
+      _unitConversions.add(_UnitConversionRow());
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  STEP 3 – الأسعار
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildPricesStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _stepTitle(_steps[2].title, _steps[2].icon),
+
+        // سعر التكلفة + سعر البيع
+        Row(
+          children: [
+            Expanded(
+              child: _priceField(
+                controller: _costPriceController,
+                label: 'سعر التكلفة *',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _priceField(
+                controller: _sellPriceController,
+                label: 'سعر البيع *',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // سعر الجملة + سعر الجملة الخاصة
+        Row(
+          children: [
+            Expanded(
+              child: _priceField(
+                controller: _wholesalePriceController,
+                label: 'سعر الجملة',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _priceField(
+                controller: _specialWholesalePriceController,
+                label: 'سعر الجملة الخاصة',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // أقل سعر بيع
+        _priceField(
+          controller: _minimumSalePriceController,
+          label: 'أقل سعر بيع',
+        ),
+        const SizedBox(height: 14),
+
+        // الضريبة
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _taxRateController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.next,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                ],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'الضريبة %',
+                  suffixText: '%',
+                  prefixIcon: Icon(Icons.receipt),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _switchTile(
+                title: 'السعر شامل الضريبة',
+                subtitle: _taxInclusive ? 'نعم' : 'لا',
+                value: _taxInclusive,
+                onChanged: (v) => setState(() => _taxInclusive = v),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  STEP 4 – المخزون
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildInventoryStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _stepTitle(_steps[3].title, _steps[3].icon),
+
+        // تتبع المخزون
+        _switchTile(
+          title: 'تتبع المخزون',
+          subtitle: _trackStock ? 'مفعّل' : 'معطّل',
+          value: _trackStock,
+          onChanged: (v) => setState(() => _trackStock = v),
+        ),
+        const SizedBox(height: 14),
+
+        // كمية افتتاحية (new products only)
+        if (!_isEditMode) ...[
+          TextFormField(
+            controller: _openingStockController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
+            ],
+            decoration: InputDecoration(
+              isDense: true,
+              labelText: 'كمية افتتاحية',
+              prefixIcon: const Icon(Icons.inventory),
+              suffixText: _unitNameById(_selectedBaseUnitId),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ] else ...[
+          // Show current stock (locked)
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.lock, size: 18, color: AppColors.textTertiary),
+                const SizedBox(width: 8),
+                Text(
+                  'الرصيد الحالي: ${widget.existing?.currentStock.toStringAsFixed(0) ?? '0'} ${_unitNameById(_selectedBaseUnitId)}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // مستودع افتراضي
+        DropdownButtonFormField<int>(
+          value: _selectedWarehouseId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'مستودع افتراضي',
+            prefixIcon: Icon(Icons.warehouse),
+          ),
+          items: _warehouses
+              .map((w) => DropdownMenuItem<int>(
+                    value: w['id'] as int,
+                    child: Text(w['name'] as String,
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
+          onChanged: _isEditMode
+              ? null // locked in edit mode
+              : (v) => setState(() => _selectedWarehouseId = v),
+        ),
+        const SizedBox(height: 14),
+
+        // الحد الأدنى + الحد الأعلى
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _minStockController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.next,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
+                ],
+                decoration: InputDecoration(
+                  isDense: true,
+                  labelText: 'الحد الأدنى',
+                  prefixIcon: const Icon(Icons.vertical_align_bottom),
+                  suffixText: _unitNameById(_selectedBaseUnitId),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _maxStockController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.next,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
+                ],
+                decoration: InputDecoration(
+                  isDense: true,
+                  labelText: 'الحد الأعلى',
+                  prefixIcon: const Icon(Icons.vertical_align_top),
+                  suffixText: _unitNameById(_selectedBaseUnitId),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // تتبع الصلاحية
+        _switchTile(
+          title: 'تتبع الصلاحية',
+          subtitle: _expiryTracking ? 'مفعّل' : 'معطّل',
+          value: _expiryTracking,
+          onChanged: (v) => setState(() => _expiryTracking = v),
+        ),
+        if (_expiryTracking) ...[
+          const SizedBox(height: 10),
+          ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+            leading: const Icon(Icons.calendar_today, size: 20),
+            title: Text(
+              _expiryDate != null
+                  ? 'تاريخ الانتهاء: ${_expiryDate!.day}/${_expiryDate!.month}/${_expiryDate!.year}'
+                  : 'تحديد تاريخ الانتهاء',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            trailing: const Icon(Icons.chevron_left),
+            onTap: _pickExpiryDate,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ],
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  STEP 5 – الموردين
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildSuppliersStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _stepTitle(_steps[4].title, _steps[4].icon),
+
+        // المورد الافتراضي
+        DropdownButtonFormField<int>(
+          value: _selectedSupplierId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'المورد الافتراضي',
+            prefixIcon: Icon(Icons.local_shipping),
+          ),
+          items: _suppliers
+              .map((s) => DropdownMenuItem<int>(
+                    value: s['id'] as int,
+                    child: Text(s['name'] as String,
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
+          onChanged: (v) => setState(() => _selectedSupplierId = v),
+        ),
+        const SizedBox(height: 14),
+
+        // كود المورد للصنف
+        TextFormField(
+          controller: _supplierCodeController,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            isDense: true,
+            labelText: 'كود المورد للصنف',
+            prefixIcon: Icon(Icons.code),
+          ),
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  STEP 6 – الباركود
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildBarcodesStep() {
+    // Build barcode list: base unit + conversion units
+    final List<_BarcodeEntry> barcodes = [];
+
+    // Base unit barcode
+    barcodes.add(_BarcodeEntry(
+      unitName: _unitNameById(_selectedBaseUnitId) ?? 'الوحدة الأساسية',
+      barcode: _barcodeController.text,
+    ));
+
+    // Conversion unit barcodes
+    for (final uc in _unitConversions) {
+      barcodes.add(_BarcodeEntry(
+        unitName: _unitNameById(uc.unitId),
+        barcode: uc.barcode,
+        conversionRow: uc,
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _stepTitle(_steps[5].title, _steps[5].icon),
+
+        if (barcodes.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text('حدد الوحدة الأساسية أولاً في خطوة الوحدات')),
+          )
+        else ...[
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
+              children: [
+                Expanded(flex: 2, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
+                Expanded(flex: 3, child: Text('باركود', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          ...List.generate(barcodes.length, (i) {
+            final entry = barcodes[i];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  // Unit name
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      entry.unitName,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Barcode field
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      initialValue: entry.barcode,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        hintText: 'أدخل الباركود',
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      ),
+                      onChanged: (v) {
+                        if (i == 0) {
+                          // Base unit barcode
+                          _barcodeController.text = v;
+                        } else if (entry.conversionRow != null) {
+                          entry.conversionRow!.barcode = v;
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  STEP 7 – إعدادات البيع
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildSalesSettingsStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _stepTitle(_steps[6].title, _steps[6].icon),
+
+        _switchTile(
+          title: 'يباع؟',
+          subtitle: _isSellable ? 'نعم' : 'لا',
+          value: _isSellable,
+          onChanged: (v) => setState(() => _isSellable = v),
+        ),
+        const Divider(height: 1),
+
+        _switchTile(
+          title: 'يشترى؟',
+          subtitle: _isPurchasable ? 'نعم' : 'لا',
+          value: _isPurchasable,
+          onChanged: (v) => setState(() => _isPurchasable = v),
+        ),
+        const Divider(height: 1),
+
+        _switchTile(
+          title: 'يسمح بالسالب؟',
+          subtitle: _allowNegative ? 'نعم' : 'لا',
+          value: _allowNegative,
+          onChanged: (v) => setState(() => _allowNegative = v),
+        ),
+        const Divider(height: 1),
+
+        _switchTile(
+          title: 'يباع بالتجزئة؟',
+          subtitle: _sellRetail ? 'نعم' : 'لا',
+          value: _sellRetail,
+          onChanged: (v) => setState(() => _sellRetail = v),
+        ),
+        const Divider(height: 1),
+
+        _switchTile(
+          title: 'يظهر في الكاشير؟',
+          subtitle: _showInPos ? 'نعم' : 'لا',
+          value: _showInPos,
+          onChanged: (v) => setState(() => _showInPos = v),
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  STEP 8 – المحاسبة
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildAccountingStep() {
+    final isLocked = _isEditMode;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _stepTitle(_steps[7].title, _steps[7].icon),
+
+        if (isLocked)
+          Container(
+            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.warningLight.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.lock, size: 18, color: AppColors.warning),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'الحسابات المحاسبية مقفلة في وضع التعديل - يديرها النظام',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.warning,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // حساب المبيعات
+        DropdownButtonFormField<int>(
+          value: _selectedSalesAccountId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'حساب المبيعات',
+            prefixIcon: Icon(Icons.trending_up),
+          ),
+          items: _revenueAccounts
+              .map((a) => DropdownMenuItem<int>(
+                    value: a['id'] as int,
+                    child: Text(
+                      '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          onChanged: isLocked ? null : (v) => setState(() => _selectedSalesAccountId = v),
+        ),
+        const SizedBox(height: 14),
+
+        // حساب المشتريات
+        DropdownButtonFormField<int>(
+          value: _selectedPurchaseAccountId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'حساب المشتريات',
+            prefixIcon: Icon(Icons.trending_down),
+          ),
+          items: _expenseAccounts
+              .map((a) => DropdownMenuItem<int>(
+                    value: a['id'] as int,
+                    child: Text(
+                      '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          onChanged: isLocked ? null : (v) => setState(() => _selectedPurchaseAccountId = v),
+        ),
+        const SizedBox(height: 14),
+
+        // حساب المخزون
+        DropdownButtonFormField<int>(
+          value: _selectedInventoryAccountId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'حساب المخزون',
+            prefixIcon: Icon(Icons.warehouse),
+          ),
+          items: _assetAccounts
+              .map((a) => DropdownMenuItem<int>(
+                    value: a['id'] as int,
+                    child: Text(
+                      '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          onChanged: isLocked ? null : (v) => setState(() => _selectedInventoryAccountId = v),
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Shared widgets
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _stepTitle(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Icon(icon, size: 22, color: AppColors.primary),
+          const SizedBox(width: 10),
           Text(
             title,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
-            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
           ),
         ],
       ),
@@ -615,890 +1805,56 @@ class _AddProductSheetState extends State<AddProductSheet> {
   Widget _priceField({
     required TextEditingController controller,
     required String label,
-    bool required_ = false,
     TextInputAction textInputAction = TextInputAction.next,
   }) {
     return TextFormField(
       controller: controller,
-      keyboardType:
-          const TextInputType.numberWithOptions(decimal: true),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textInputAction: textInputAction,
       inputFormatters: [
-        FilteringTextInputFormatter.allow(
-            RegExp(r'^\d*\.?\d{0,2}')),
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
       ],
       decoration: InputDecoration(
+        isDense: true,
         labelText: label,
         suffixText: AppConstants.currency,
       ),
-      validator: required_
-          ? (v) => (v == null || v.trim().isEmpty)
-              ? '$label مطلوب'
-              : null
-          : null,
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final bottomPadding =
-        MediaQuery.of(context).viewPadding.bottom;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'تعديل صنف' : 'إضافة صنف جديد'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_forward),
-          onPressed:
-              _isSaving ? null : () => Navigator.of(context).pop(false),
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: _isSaving ? null : _save,
-            icon: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.check, size: 20),
-            label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
-            style: TextButton.styleFrom(
-                foregroundColor: Colors.white),
-          ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding:
-              EdgeInsets.fromLTRB(16, 8, 16, bottomPadding + 80),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ══════════════════════════════════════════════════════
-              //  Section 1: بيانات أساسية
-              // ══════════════════════════════════════════════════════
-              _sectionHeader(
-                  'بيانات أساسية', Icons.article),
-
-              // ── Product Image ─────────────────────────────────────
-              Center(
-                child: GestureDetector(
-                  onTap: _pickImage,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.2),
-                        style: BorderStyle.solid,
-                      ),
-                    ),
-                    child: _imagePath != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.file(
-                              File(_imagePath!),
-                              width: 120,
-                              height: 120,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.image,
-                                size: 40,
-                                color: AppColors.primary.withValues(alpha: 0.4),
-                              ),
-                            ),
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.camera_alt, size: 32, color: AppColors.primary.withValues(alpha: 0.5)),
-                              const SizedBox(height: 6),
-                              Text('إضافة صورة', style: TextStyle(fontSize: 12, color: AppColors.primary.withValues(alpha: 0.7))),
-                            ],
-                          ),
-                  ),
-                ),
-              ),
-              if (_imagePath != null) ...[
-                const SizedBox(height: 8),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () => setState(() => _imagePath = null),
-                    icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
-                    label: const Text('إزالة الصورة', style: TextStyle(color: AppColors.error, fontSize: 12)),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 14),
-
-              // رمز الصنف
-              TextFormField(
-                controller: _itemCodeController,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: 'رمز الصنف',
-                  prefixIcon:
-                      const Icon(Icons.qr_code),
-                  suffixIcon: IconButton(
-                    icon: const Icon(
-                        Icons.refresh,
-                        size: 18),
-                    tooltip: 'توليد رمز جديد',
-                    onPressed: _generateItemCode,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // باركود – with scan button + manual entry
-              TextFormField(
-                controller: _barcodeController,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: 'باركود',
-                  prefixIcon:
-                      const Icon(Icons.qr_code),
-                  suffixIcon: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Clear button
-                      if (_barcodeController.text.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(
-                              Icons.close,
-                              size: 18),
-                          tooltip: 'مسح',
-                          onPressed: () {
-                            _barcodeController.clear();
-                            setState(() {});
-                          },
-                        ),
-                      // Scan button
-                      IconButton(
-                        icon: const Icon(
-                            Icons.camera_alt,
-                            size: 20),
-                        tooltip: 'مسح الباركود بالكاميرا',
-                        onPressed: _scanBarcode,
-                      ),
-                    ],
-                  ),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 14),
-
-              // اسم الصنف بالعربي
-              TextFormField(
-                controller: _nameArController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'اسم الصنف بالعربي *',
-                  prefixIcon: Icon(Icons.text_fields),
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'اسم الصنف بالعربي مطلوب'
-                    : null,
-              ),
-              const SizedBox(height: 14),
-
-              // اسم الصنف بالإنجليزي
-              TextFormField(
-                controller: _nameEnController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'اسم الصنف بالإنجليزي',
-                  prefixIcon: Icon(Icons.text_fields),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // الوحدة + التصنيف
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      value: _selectedUnitId,
-                      decoration: const InputDecoration(
-                        labelText: 'الوحدة',
-                        prefixIcon:
-                            Icon(Icons.straighten),
-                      ),
-                      items: _units
-                          .map((u) => DropdownMenuItem<int>(
-                                value: u['id'] as int,
-                                child: Text(u['name'] as String,
-                                    overflow:
-                                        TextOverflow.ellipsis),
-                              ))
-                          .toList(),
-                      onChanged: (v) =>
-                          setState(() => _selectedUnitId = v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      value: _selectedCategoryId,
-                      decoration: const InputDecoration(
-                        labelText: 'التصنيف',
-                        prefixIcon:
-                            Icon(Icons.folder),
-                      ),
-                      items: _categories
-                          .map((c) => DropdownMenuItem<int>(
-                                value: c['id'] as int,
-                                child: Text(c['name'] as String,
-                                    overflow:
-                                        TextOverflow.ellipsis),
-                              ))
-                          .toList(),
-                      onChanged: (v) => setState(
-                          () => _selectedCategoryId = v),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // المجموعة + المورد الافتراضي
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _groupIdController,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'المجموعة',
-                        prefixIcon:
-                            Icon(Icons.inventory_2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      value: _selectedSupplierId,
-                      decoration: const InputDecoration(
-                        labelText: 'المورد',
-                        prefixIcon:
-                            Icon(Icons.local_shipping),
-                      ),
-                      items: _suppliers
-                          .map((s) => DropdownMenuItem<int>(
-                                value: s['id'] as int,
-                                child: Text(s['name'] as String,
-                                    overflow:
-                                        TextOverflow.ellipsis),
-                              ))
-                          .toList(),
-                      onChanged: (v) => setState(
-                          () => _selectedSupplierId = v),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // وصف الصنف
-              TextFormField(
-                controller: _descriptionController,
-                textInputAction: TextInputAction.next,
-                maxLines: 2,
-                minLines: 1,
-                decoration: const InputDecoration(
-                  labelText: 'وصف الصنف',
-                  prefixIcon:
-                      Icon(Icons.edit_note),
-                  alignLabelWithHint: true,
-                ),
-              ),
-
-              // ══════════════════════════════════════════════════════
-              //  Section 2: الأسعار
-              // ══════════════════════════════════════════════════════
-              _sectionHeader(
-                  'الأسعار', Icons.label),
-
-              // سعر التكلفة + سعر البيع
-              Row(
-                children: [
-                  Expanded(
-                    child: _priceField(
-                      controller: _costPriceController,
-                      label: 'سعر التكلفة *',
-                      required_: true,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _priceField(
-                      controller: _sellPriceController,
-                      label: 'سعر البيع *',
-                      required_: true,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // الحد الأدنى للبيع + نسبة الضريبة
-              Row(
-                children: [
-                  Expanded(
-                    child: _priceField(
-                      controller: _minimumSalePriceController,
-                      label: 'الحد الأدنى للبيع',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _taxRateController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
-                              decimal: true),
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'نسبة الضريبة %',
-                        suffixText: '%',
-                        prefixIcon:
-                            Icon(Icons.receipt),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // ══════════════════════════════════════════════════════
-              //  Section 3: تحويل الوحدات
-              // ══════════════════════════════════════════════════════
-              _sectionHeader('تحويل الوحدات', Icons.swap_horiz),
-
-              // Collapsible section
-              GestureDetector(
-                onTap: () => setState(() => _unitConversionsExpanded = !_unitConversionsExpanded),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.04),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _unitConversionsExpanded ? Icons.expand_less : Icons.expand_more,
-                        size: 20,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _unitConversions.isEmpty
-                              ? 'لا توجد تحويلات - اضغط لإضافة'
-                              : '${_unitConversions.length} تحويل${_unitConversions.length > 1 ? 'ات' : ''}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.primary.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              if (_unitConversionsExpanded) ...[
-                const SizedBox(height: 10),
-
-                // List of conversion entries
-                if (_unitConversions.isNotEmpty)
-                  ...List.generate(_unitConversions.length, (index) {
-                    final uc = _unitConversions[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade200),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Conversion line
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '1 ${uc.fromUnit}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_forward, size: 16, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${uc.conversionFactor.toStringAsFixed(uc.conversionFactor == uc.conversionFactor.roundToDouble() ? 0 : 2)} ${uc.toUnit}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              // Delete button
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
-                                tooltip: 'حذف التحويل',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                onPressed: () {
-                                  setState(() {
-                                    _unitConversions.removeAt(index);
-                                    if (_unitConversions.isEmpty) {
-                                      _unitConversionsExpanded = false;
-                                    }
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          // Barcode and price info
-                          if (uc.barcode != null && uc.barcode!.isNotEmpty || uc.sellPrice > 0) ...[
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 4,
-                              children: [
-                                if (uc.barcode != null && uc.barcode!.isNotEmpty)
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.qr_code, size: 14, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        uc.barcode!,
-                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                                      ),
-                                    ],
-                                  ),
-                                if (uc.sellPrice > 0)
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.sell, size: 14, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${uc.sellPrice.toStringAsFixed(2)} ${AppConstants.currency}',
-                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  }),
-
-                // Add conversion button
-                OutlinedButton.icon(
-                  onPressed: _showAddUnitConversionDialog,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('إضافة وحدة تحويل'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                ),
-              ],
-
-              // ══════════════════════════════════════════════════════
-              //  Section 4: المخزون
-              // ══════════════════════════════════════════════════════
-              _sectionHeader(
-                  'المخزون', Icons.warehouse),
-
-              // الكمية الحالية + الحد الأدنى
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _currentStockController,
-                      readOnly: _isEdit,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
-                              decimal: true),
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,3}')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'الكمية الحالية',
-                        prefixIcon:
-                            Icon(Icons.layers),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _minStockController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
-                              decimal: true),
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,3}')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'الحد الأدنى',
-                        prefixIcon:
-                            Icon(Icons.warning),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // المخزن
-              DropdownButtonFormField<int>(
-                value: _selectedWarehouseId,
-                decoration: const InputDecoration(
-                  labelText: 'المخزن',
-                  prefixIcon:
-                      Icon(Icons.warehouse),
-                ),
-                items: _warehouses
-                    .map((w) => DropdownMenuItem<int>(
-                          value: w['id'] as int,
-                          child: Text(w['name'] as String,
-                              overflow: TextOverflow.ellipsis),
-                        ))
-                    .toList(),
-                onChanged: _isEdit ? null : (v) =>
-                    setState(() => _selectedWarehouseId = v),
-              ),
-              if (_isEdit) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.lock, size: 16, color: AppColors.warning),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'الكمية والمستودع والحقول المحاسبية مقفلة لتجنب تخريب العمليات المحاسبية',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.warning),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 14),
-
-              // تاريخ الصلاحية
-              TextFormField(
-                readOnly: true,
-                controller: TextEditingController(
-                  text: _expiryDate != null
-                      ? '${_expiryDate!.day.toString().padLeft(2, '0')}/${_expiryDate!.month.toString().padLeft(2, '0')}/${_expiryDate!.year}'
-                      : '',
-                ),
-                decoration: InputDecoration(
-                  labelText: 'تاريخ الصلاحية',
-                  prefixIcon:
-                      const Icon(Icons.calendar_month),
-                  hintText: 'اختر التاريخ',
-                  suffixIcon: IconButton(
-                    icon: const Icon(
-                        Icons.event,
-                        size: 20),
-                    onPressed: _pickDate,
-                  ),
-                ),
-                onTap: _pickDate,
-              ),
-              const SizedBox(height: 10),
-
-              // تتبع الصلاحية + الوزن
-              Row(
-                children: [
-                  Expanded(
-                    child: CheckboxListTile(
-                      value: _expiryTracking,
-                      onChanged: (v) => setState(
-                          () => _expiryTracking = v ?? false),
-                      title: const Text('تتبع الصلاحية'),
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity:
-                          ListTileControlAffinity.leading,
-                      activeColor: AppColors.primary,
-                      dense: true,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _weightController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
-                              decimal: true),
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,3}')),
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'الوزن',
-                        suffixText: 'كجم',
-                        prefixIcon:
-                            Icon(Icons.balance),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // ══════════════════════════════════════════════════════
-              //  Section 5: الحسابات
-              // ══════════════════════════════════════════════════════
-              _sectionHeader(
-                  'الحسابات', Icons.pie_chart),
-
-              // حساب المبيعات
-              DropdownButtonFormField<int>(
-                value: _selectedSalesAccountId,
-                decoration: const InputDecoration(
-                  labelText: 'حساب المبيعات',
-                  prefixIcon:
-                      Icon(Icons.arrow_outward),
-                ),
-                items: _salesAccounts
-                    .map((a) => DropdownMenuItem<int>(
-                          value: a['id'] as int,
-                          child: Text(
-                            '${a['account_code']} - ${a['name_ar']}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (v) =>
-                    setState(() => _selectedSalesAccountId = v),
-              ),
-              const SizedBox(height: 14),
-
-              // حساب المشتريات
-              DropdownButtonFormField<int>(
-                value: _selectedPurchaseAccountId,
-                decoration: const InputDecoration(
-                  labelText: 'حساب المشتريات',
-                  prefixIcon:
-                      Icon(Icons.south_west),
-                ),
-                items: _purchaseAccounts
-                    .map((a) => DropdownMenuItem<int>(
-                          value: a['id'] as int,
-                          child: Text(
-                            '${a['account_code']} - ${a['name_ar']}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(
-                    () => _selectedPurchaseAccountId = v),
-              ),
-              const SizedBox(height: 14),
-
-              // حساب المخزون
-              DropdownButtonFormField<int>(
-                value: _selectedInventoryAccountId,
-                decoration: const InputDecoration(
-                  labelText: 'حساب المخزون',
-                  prefixIcon:
-                      Icon(Icons.archive),
-                ),
-                items: _inventoryAccounts
-                    .map((a) => DropdownMenuItem<int>(
-                          value: a['id'] as int,
-                          child: Text(
-                            '${a['account_code']} - ${a['name_ar']}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(
-                    () => _selectedInventoryAccountId = v),
-              ),
-
-              // ══════════════════════════════════════════════════════
-              //  Section 6: إعدادات أخرى
-              // ══════════════════════════════════════════════════════
-              _sectionHeader(
-                  'إعدادات أخرى', Icons.settings),
-
-              TextFormField(
-                controller: _notesController,
-                textInputAction: TextInputAction.newline,
-                maxLines: 3,
-                minLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'ملاحظات',
-                  prefixIcon:
-                      Icon(Icons.edit_note),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: CheckboxListTile(
-                      value: _includeInReports,
-                      onChanged: (v) => setState(
-                          () => _includeInReports = v ?? true),
-                      title: const Text('تضمين في التقارير'),
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity:
-                          ListTileControlAffinity.leading,
-                      activeColor: AppColors.primary,
-                      dense: true,
-                    ),
-                  ),
-                  Expanded(
-                    child: CheckboxListTile(
-                      value: _isActive,
-                      onChanged: (v) => setState(
-                          () => _isActive = v ?? true),
-                      title: const Text('الصنف نشط'),
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity:
-                          ListTileControlAffinity.leading,
-                      activeColor: AppColors.primary,
-                      dense: true,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // ── Action buttons ─────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton.icon(
-                      onPressed: _isSaving ? null : _save,
-                      icon: _isSaving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.check,
-                              size: 20),
-                      label: Text(_isSaving
-                          ? 'جاري الحفظ...'
-                          : 'حفظ الصنف'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 14),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () =>
-                              Navigator.of(context).pop(false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 14),
-                      ),
-                      child: const Text('إلغاء'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+  Widget _switchTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return ListTile(
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle,
+          style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: AppColors.primary,
       ),
     );
   }
 }
 
-class _UnitConversionEntry {
-  final String fromUnit;
-  final String toUnit;
-  final double conversionFactor;
-  final String? barcode;
-  final double sellPrice;
+// ═══════════════════════════════════════════════════════════════════
+//  Barcode entry helper for step 6
+// ═══════════════════════════════════════════════════════════════════
 
-  _UnitConversionEntry({
-    required this.fromUnit,
-    required this.toUnit,
-    required this.conversionFactor,
-    this.barcode,
-    this.sellPrice = 0.0,
+class _BarcodeEntry {
+  final String unitName;
+  String barcode;
+  final _UnitConversionRow? conversionRow;
+
+  _BarcodeEntry({
+    required this.unitName,
+    required this.barcode,
+    this.conversionRow,
   });
 }

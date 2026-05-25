@@ -263,6 +263,11 @@ class _ProductsScreenState extends State<ProductsScreen>
         title: const Text('قائمة الأصناف'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.straighten),
+            tooltip: 'إدارة الوحدات',
+            onPressed: () => Navigator.pushNamed(context, '/units'),
+          ),
+          IconButton(
             icon: const Icon(Icons.create_new_folder),
             tooltip: 'إدارة التصنيفات',
             onPressed: _showCategoryManagement,
