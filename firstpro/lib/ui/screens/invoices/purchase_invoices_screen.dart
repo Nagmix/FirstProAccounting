@@ -148,6 +148,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                   displayInvoiceId: _displayInvoiceId,
                                   invoiceTypeAr: _invoiceTypeAr,
                                   onTap: () => _navigateToDetail(_filteredInvoices[index]),
+                                  onPrint: () => _printInvoice(context, _filteredInvoices[index]),
                                 );
                               },
                             ),
@@ -448,12 +449,14 @@ class _PurchaseInvoiceCard extends StatelessWidget {
     required this.displayInvoiceId,
     required this.invoiceTypeAr,
     this.onTap,
+    this.onPrint,
   });
 
   final Map<String, dynamic> invoiceData;
   final String Function(String?) displayInvoiceId;
   final String Function(String?) invoiceTypeAr;
   final VoidCallback? onTap;
+  final VoidCallback? onPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -554,7 +557,7 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   IconButton(
                     icon: const Icon(Icons.print, size: 18, color: AppColors.textSecondary),
-                    onPressed: () => _printInvoice(context, invoiceData),
+                    onPressed: onPrint,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                   ),

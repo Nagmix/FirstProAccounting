@@ -658,8 +658,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             controller: _transferNumberController,
             keyboardType: TextInputType.text,
             textInputAction: TextInputAction.next,
-            isDense: true,
             decoration: InputDecoration(
+              isDense: true,
               labelText: 'رقم الحوالة (اختياري)',
               prefixIcon: const Icon(Icons.tag, color: purpleColor, size: 18),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -773,8 +773,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.left,
                 enabled: !_autoPay,
-                isDense: true,
                 decoration: InputDecoration(
+                  isDense: true,
                   labelText: 'المدفوع',
                   prefixIcon: const Icon(Icons.payments, size: 18),
                   suffixText: _selectedCurrency,
@@ -933,8 +933,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   child: TextField(
                     controller: _entitySearchController,
                     autofocus: true,
-                    isDense: true,
                     decoration: InputDecoration(
+                      isDense: true,
                       hintText: 'بحث عن حساب...',
                       prefixIcon: const Icon(Icons.search, size: 18),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -1204,8 +1204,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   controller: _discountController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.left,
-                  isDense: true,
                   decoration: InputDecoration(
+                    isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     suffixText: _selectedCurrency,
                     hintText: '0.00',
@@ -1238,8 +1238,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   controller: _transportChargesController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textAlign: TextAlign.left,
-                  isDense: true,
                   decoration: InputDecoration(
+                    isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     suffixText: _selectedCurrency,
                     hintText: '0.00',
@@ -1269,8 +1269,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           TextFormField(
             controller: _notesController,
             maxLines: 2,
-            isDense: true,
             decoration: InputDecoration(
+              isDense: true,
               labelText: 'ملاحظات',
               prefixIcon: const Icon(Icons.edit_note, size: 18),
               alignLabelWithHint: true,
