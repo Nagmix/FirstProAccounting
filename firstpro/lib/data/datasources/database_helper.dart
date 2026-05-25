@@ -2470,6 +2470,7 @@ class DatabaseHelper {
     int? cashBoxId,
     double transportCharges = 0.0,
     bool deferPosting = false,
+    double? paidAmount,
   }) async {
     final db = await database;
     final total = (invoiceMap['total'] as num?)?.toDouble() ?? 0.0;
@@ -2615,61 +2616,204 @@ class DatabaseHelper {
       final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
 
       // Use specific cash box account if available
-      int? debitAccountId;
-      int? creditAccountId;
+      // ── Partial payment handling ──
+      // When paidAmount is provided and < total with cash mechanism, create split journal entries:
+      // Sale: Debit cash (paid) + Debit customer (remaining) = Credit sales (total)
+      // Purchase: Debit purchases (total) = Credit cash (paid) + Credit supplier (remaining)
+      final effectivePaid = paidAmount ?? (paymentMechanism == 'credit' ? 0.0 : total);
+      final isPartialCash = paymentMechanism == 'cash' && effectivePaid < total - 0.005 && effectivePaid > 0.005;
+      final remainingAmount = total - effectivePaid;
 
       if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
         if (isReturn) {
           // Sale Return: Debit Sales Revenue, Credit Customer/Cash
-          debitAccountId = salesAccountId;
-          creditAccountId = paymentMechanism == 'credit' ? customersAccountId : (cashBoxId != null ? cashBanksAccountId : cashBanksAccountId);
+          final debitAccountId = salesAccountId;
+          final creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+
+          if (debitAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': debitAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+          }
+          if (creditAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': creditAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+          }
+        } else if (isPartialCash) {
+          // Sale with partial cash: Debit cash (paid) + Debit customer (remaining), Credit sales (total)
+          if (cashBanksAccountId != null && effectivePaid > 0) {
+            await txn.insert('transactions', {
+              'account_id': cashBanksAccountId,
+              'journal_id': journalId,
+              'debit': effectivePaid,
+              'credit': 0.0,
+              'description': 'فاتورة مبيعات (مدفوع) - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, effectivePaid, 0.0, now);
+          }
+          if (customersAccountId != null && remainingAmount > 0) {
+            await txn.insert('transactions', {
+              'account_id': customersAccountId,
+              'journal_id': journalId,
+              'debit': remainingAmount,
+              'credit': 0.0,
+              'description': 'فاتورة مبيعات (آجل) - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, customersAccountId, remainingAmount, 0.0, now);
+          }
+          if (salesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': salesAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
+          }
         } else {
-          // Sale: Debit Customer/Cash, Credit Sales Revenue
-          debitAccountId = paymentMechanism == 'credit' ? customersAccountId : (cashBoxId != null ? cashBanksAccountId : cashBanksAccountId);
-          creditAccountId = salesAccountId;
+          // Normal sale: full cash or full credit
+          final debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+          if (debitAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': debitAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+          }
+          if (salesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': salesAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
+          }
         }
       } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
         if (isReturn) {
           // Purchase Return: Debit Cash/Supplier, Credit Purchases
-          debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : (cashBoxId != null ? cashBanksAccountId : cashBanksAccountId);
-          creditAccountId = purchasesAccountId;
+          final debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+          if (debitAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': debitAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'فاتورة مشتريات - مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+          }
+          if (purchasesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'فاتورة مشتريات - مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, total, now);
+          }
+        } else if (isPartialCash) {
+          // Purchase with partial cash: Debit purchases (total), Credit cash (paid) + Credit supplier (remaining)
+          if (purchasesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
+          }
+          if (cashBanksAccountId != null && effectivePaid > 0) {
+            await txn.insert('transactions', {
+              'account_id': cashBanksAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': effectivePaid,
+              'description': 'فاتورة مشتريات (مدفوع) - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, effectivePaid, now);
+          }
+          if (suppliersAccountId != null && remainingAmount > 0) {
+            await txn.insert('transactions', {
+              'account_id': suppliersAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': remainingAmount,
+              'description': 'فاتورة مشتريات (آجل) - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, remainingAmount, now);
+          }
         } else {
-          // Purchase: Debit Purchases, Credit Cash/Supplier
-          debitAccountId = purchasesAccountId;
-          creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : (cashBoxId != null ? cashBanksAccountId : cashBanksAccountId);
+          // Normal purchase: full cash or full credit
+          if (purchasesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
+          }
+          final creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+          if (creditAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': creditAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+          }
         }
-      }
-
-      if (debitAccountId != null && total > 0) {
-        await txn.insert('transactions', {
-          'account_id': debitAccountId,
-          'journal_id': journalId,
-          'debit': total,
-          'credit': 0.0,
-          'description': '${(invoiceMap['type'] == 'sale' || invoiceMap['type'] == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - ${invoiceMap['id']}',
-          'date': now,
-          'created_at': now,
-        });
-      }
-
-      if (creditAccountId != null && total > 0) {
-        await txn.insert('transactions', {
-          'account_id': creditAccountId,
-          'journal_id': journalId,
-          'debit': 0.0,
-          'credit': total,
-          'description': '${(invoiceMap['type'] == 'sale' || invoiceMap['type'] == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - ${invoiceMap['id']}',
-          'date': now,
-          'created_at': now,
-        });
-      }
-
-      // Update account balances using balance_type-aware logic
-      if (debitAccountId != null && total > 0) {
-        await _updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
-      }
-      if (creditAccountId != null && total > 0) {
-        await _updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
       }
 
       // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
@@ -2825,36 +2969,49 @@ class DatabaseHelper {
       }
 
       // Update customer/supplier balance
+      // For partial cash payments, the entity gets the remaining amount as credit balance
       if (invoiceMap['customer_id'] != null) {
         final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-        final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return') ? transportCharges : 0);
-        if (isDebit) {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoiceMap['customer_id']]);
+        // For partial cash, only credit the remaining amount to customer
+        double customerAmount;
+        if (isPartialCash && !isReturn) {
+          customerAmount = remainingAmount;
         } else {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoiceMap['customer_id']]);
+          customerAmount = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return') ? transportCharges : 0);
+        }
+        if (isDebit) {
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoiceMap['customer_id']]);
+        } else {
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoiceMap['customer_id']]);
         }
       }
 
       // Supplier balance logic:
-      // Purchase (not return): supplier has credit balance (له) → balance increases
-      // Purchase return: supplier balance decreases
+      // For partial cash payments, only credit the remaining amount to supplier
       if (invoiceMap['supplier_id'] != null) {
         final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-        final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'purchase' || invoiceType == 'purchase_return') ? transportCharges : 0);
-        if (isCreditToSupplier) {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoiceMap['supplier_id']]);
+        double supplierAmount;
+        if (isPartialCash && !isReturn) {
+          supplierAmount = remainingAmount;
         } else {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoiceMap['supplier_id']]);
+          supplierAmount = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'purchase' || invoiceType == 'purchase_return') ? transportCharges : 0);
+        }
+        if (isCreditToSupplier) {
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoiceMap['supplier_id']]);
+        } else {
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoiceMap['supplier_id']]);
         }
       }
 
-      // Update cash box balance (for invoice total, excluding transport which is handled above)
+      // Update cash box balance (for the paid amount only, excluding transport which is handled above)
       if (cashBoxId != null) {
+        // For partial payments, only update cash box with the paid amount
+        final cashAmount = isPartialCash ? effectivePaid : total;
         final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn);
         if (isCashIn) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [cashAmount, now, cashBoxId]);
         } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [cashAmount, now, cashBoxId]);
         }
       }
     });
@@ -2910,6 +3067,150 @@ class DatabaseHelper {
   Future<int> deleteInvoice(String id) async {
     final db = await database;
     return await db.update('invoices', {'status': 'cancelled'}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Record a payment against an existing invoice.
+  /// Updates invoice paid_amount/remaining/status, creates journal entries,
+  /// updates customer/supplier balance, and updates cash box balance.
+  Future<void> recordInvoicePayment({
+    required String invoiceId,
+    required double amount,
+    required int cashBoxId,
+    String paymentMethod = 'cash',
+    String? notes,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    // 1. Get the invoice
+    final invoiceRows = await db.query('invoices', where: 'id = ?', whereArgs: [invoiceId], limit: 1);
+    if (invoiceRows.isEmpty) return;
+    final invoice = invoiceRows.first;
+
+    final currentRemaining = (invoice['remaining'] as num?)?.toDouble() ?? 0.0;
+    final currentPaid = (invoice['paid_amount'] as num?)?.toDouble() ?? 0.0;
+    final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+    final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
+    final invoiceType = (invoice['type'] as String?) ?? 'sale';
+    final customerId = invoice['customer_id'] as int?;
+    final supplierId = invoice['supplier_id'] as int?;
+
+    // 2. Validate amount doesn't exceed remaining
+    if (amount <= 0) return;
+    final paymentAmount = amount > currentRemaining ? currentRemaining : amount;
+    final newPaid = currentPaid + paymentAmount;
+    final newRemaining = total - newPaid;
+
+    // 3. Determine new status
+    String newStatus;
+    if (newRemaining <= 0.005) {
+      newStatus = 'paid';
+    } else if (newPaid > 0) {
+      newStatus = 'partial';
+    } else {
+      newStatus = 'unpaid';
+    }
+
+    await db.transaction((txn) async {
+      // 4. Update invoice paid_amount, remaining, status
+      await txn.update(
+        'invoices',
+        {
+          'paid_amount': newPaid,
+          'remaining': newRemaining > 0 ? newRemaining : 0.0,
+          'status': newStatus,
+        },
+        where: 'id = ?',
+        whereArgs: [invoiceId],
+      );
+
+      // 5. Create journal entries
+      final journalId = DateTime.now().millisecondsSinceEpoch;
+      final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
+
+      final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+      final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), invoiceCurrency], limit: 1);
+      final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+
+      final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
+      final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
+      final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
+
+      // For sale invoices: Debit cash, Credit customer (customer owes less)
+      // For purchase invoices: Debit supplier, Credit cash (we owe supplier less)
+      if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+        // Sale: customer is paying us → Debit cash, Credit customer account
+        if (cashBanksAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': cashBanksAccountId,
+            'journal_id': journalId,
+            'debit': paymentAmount,
+            'credit': 0.0,
+            'description': 'تحصيل دفعة فاتورة مبيعات - $invoiceId',
+            'date': now,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, paymentAmount, 0.0, now);
+        }
+        if (customersAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': customersAccountId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': paymentAmount,
+            'description': 'تحصيل دفعة فاتورة مبيعات - $invoiceId',
+            'date': now,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, paymentAmount, now);
+        }
+      } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
+        // Purchase: we are paying supplier → Debit supplier, Credit cash
+        if (suppliersAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': suppliersAccountId,
+            'journal_id': journalId,
+            'debit': paymentAmount,
+            'credit': 0.0,
+            'description': 'سداد دفعة فاتورة مشتريات - $invoiceId',
+            'date': now,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, suppliersAccountId, paymentAmount, 0.0, now);
+        }
+        if (cashBanksAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': cashBanksAccountId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': paymentAmount,
+            'description': 'سداد دفعة فاتورة مشتريات - $invoiceId',
+            'date': now,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, paymentAmount, now);
+        }
+      }
+
+      // 6. Update customer balance (customer owes less after payment)
+      if (customerId != null) {
+        await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [paymentAmount, now, customerId]);
+      }
+
+      // 7. Update supplier balance (we owe less after payment)
+      if (supplierId != null) {
+        await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [paymentAmount, now, supplierId]);
+      }
+
+      // 8. Update cash box balance
+      if (invoiceType == 'sale' || invoiceType == 'sale_return') {
+        // Sale: cash comes in
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [paymentAmount, now, cashBoxId]);
+      } else {
+        // Purchase: cash goes out
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [paymentAmount, now, cashBoxId]);
+      }
+    });
   }
 
   /// Cancel an invoice: soft-delete + reversal journal entries + balance reversals + stock restore.

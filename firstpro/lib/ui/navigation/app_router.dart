@@ -7,6 +7,9 @@ import '../screens/products/products_screen.dart';
 import '../screens/products/add_product_sheet.dart';
 import '../screens/invoices/invoices_screen.dart';
 import '../screens/invoices/create_invoice_screen.dart';
+import '../screens/invoices/sales_invoices_screen.dart';
+import '../screens/invoices/purchase_invoices_screen.dart';
+import '../screens/invoices/invoice_detail_screen.dart';
 import '../screens/pos/pos_screen.dart';
 import '../screens/reports/reports_screen.dart';
 import '../screens/settings/settings_screen.dart';
@@ -63,8 +66,10 @@ class AppRouter {
         AppConstants.stocktaking: (_) => const StocktakingScreen(),
         AppConstants.expenses: (_) => const ExpensesScreen(),
         AppConstants.employees: (_) => const EmployeesScreen(),
-        AppConstants.newSaleInvoice: (_) => const CreateInvoiceScreen(invoiceType: 'sale'),
-        AppConstants.newPurchaseInvoice: (_) => const CreateInvoiceScreen(invoiceType: 'purchase'),
+        AppConstants.newSaleInvoice: (_) => const SalesInvoicesScreen(),
+        AppConstants.newPurchaseInvoice: (_) => const PurchaseInvoicesScreen(),
+        AppConstants.salesInvoices: (_) => const SalesInvoicesScreen(),
+        AppConstants.purchaseInvoices: (_) => const PurchaseInvoicesScreen(),
         AppConstants.addCustomer: (_) => const AddCustomerSheet(),
         AppConstants.addProduct: (_) => const AddProductSheet(),
         AppConstants.inventory: (_) => const ProductsScreen(),
@@ -104,6 +109,13 @@ class AppRouter {
   static Future<void> pushAccountLedger(BuildContext context, Account account) {
     return Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => AccountLedgerScreen(account: account)),
+    );
+  }
+
+  /// Push the InvoiceDetailScreen directly (requires an invoiceId string).
+  static Future<void> pushInvoiceDetail(BuildContext context, String invoiceId) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => InvoiceDetailScreen(invoiceId: invoiceId)),
     );
   }
 

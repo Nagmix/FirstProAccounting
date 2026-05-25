@@ -44,6 +44,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   String _paymentMethod = 'cash';
   // Is return invoice
   bool _isReturn = false;
+  // Auto-pay toggle
+  bool _autoPay = true;
 
   int? _selectedEntityId; // customer or supplier
   int? _selectedWarehouseId;
@@ -56,6 +58,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   String? _selectedBankTransferProvider;
   // Attachment image
   String? _attachmentPath;
+
+  // Accordion section state
+  bool _section1Expanded = true; // Currency & Return
+  bool _section2Expanded = true; // Payment Info
+  bool _section3Expanded = true; // Entity
+  bool _section4Expanded = true; // Items
+  bool _section5Expanded = true; // Summary
 
   // Data from DB
   List<Map<String, dynamic>> _customers = [];
@@ -88,6 +97,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return '$base جديدة';
   }
 
+  // Entity is required when: credit mechanism OR (paid < total)
+  bool get _isEntityRequired =>
+      _paymentMechanism == 'credit' || _remaining > 0.005;
 
   @override
   void initState() {
@@ -132,18 +144,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   double get _paidAmount => double.tryParse(_paidController.text) ?? 0;
   double get _remaining => _total - _paidAmount;
 
-  // Unused but kept for potential future use
-  // ignore: unused_element
-  String _getEntityBalanceText(int? entityId) {
-    if (entityId == null) return '';
-    final entities = _isSale ? _customers : _suppliers;
-    final entity = entities.where((e) => e['id'] == entityId).firstOrNull;
-    if (entity == null) return '';
-    final balance = (entity['balance'] as num?)?.toDouble() ?? 0.0;
-    final balanceType = entity['balance_type'] as String? ?? 'credit';
-    if (balance == 0) return '';
-    final isCredit = balanceType == 'credit';
-    return '(${CurrencyFormatter.format(balance)} ${isCredit ? 'له' : 'عليه'})';
+  void _updateAutoPay() {
+    if (_autoPay && _total > 0) {
+      _paidController.text = _total.toStringAsFixed(2);
+    }
   }
 
   // ── Image picker helpers ─────────────────────────────────────
@@ -215,20 +219,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildCurrencySection(),
-                            _buildReturnCheckbox(),
-                            _buildPaymentMechanismSection(),
-                            if (_paymentMechanism == 'cash') _buildPaymentMethodSection(),
-                            if (_paymentMechanism == 'cash' && _paymentMethod == 'ewallet')
-                              _buildEwalletSection(),
-                            if (_paymentMechanism == 'cash' && _paymentMethod == 'bank_transfer')
-                              _buildBankTransferSection(),
-                            _buildCashBoxSection(),
-                            _buildEntitySection(),
-                            _buildWarehouseSection(),
-                            _buildItemsSection(),
-                            _buildTransportChargesSection(),
-                            _buildSummarySection(),
+                            // Partial payment warning banner
+                            if (!_autoPay && _paymentMechanism == 'cash' && _paidAmount > 0 && _remaining > 0.005)
+                              _buildPartialPaymentWarning(),
+                            _buildSection1CurrencyAndReturn(),
+                            _buildSection2PaymentInfo(),
+                            _buildSection3Entity(),
+                            _buildSection4Items(),
+                            _buildSection5SummaryAndNotes(),
                           ],
                         ),
                       ),
@@ -241,27 +239,44 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Currency section ──────────────────────────────────────────
-  Widget _buildCurrencySection() {
+  // ── Partial payment warning ──────────────────────────────────────
+  Widget _buildPartialPaymentWarning() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor),
+        color: AppColors.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(Icons.monetization_on, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text('العملة', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-            ],
+          const Icon(Icons.warning_amber, color: AppColors.warning, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'المبلغ المدفوع أقل من المستحق. المتبقي سيتم تسجيله كرصد آجل',
+              style: context.textTheme.bodySmall?.copyWith(
+                color: AppColors.warning,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  // ── Section 1: Currency & Return ─────────────────────────────────
+  Widget _buildSection1CurrencyAndReturn() {
+    return _AccordionSection(
+      title: 'نوع الفاتورة والعملة',
+      icon: Icons.monetization_on,
+      color: AppColors.primary,
+      isExpanded: _section1Expanded,
+      onToggle: () => setState(() => _section1Expanded = !_section1Expanded),
+      child: Column(
+        children: [
           DropdownButtonFormField<String>(
             value: _selectedCurrency,
             decoration: const InputDecoration(
@@ -285,63 +300,40 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'سعر الصرف: $_selectedExchangeRate (من الإعدادات)',
+            'سعر الصرف: $_selectedExchangeRate',
             style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          CheckboxListTile(
+            value: _isReturn,
+            onChanged: (v) => setState(() => _isReturn = v ?? false),
+            title: Text('فاتورة مرتجع', style: context.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: _isReturn ? AppColors.error : null,
+            )),
+            subtitle: _isReturn ? Text('سيتم تحويل الفاتورة إلى فاتورة مرتجع', style: context.textTheme.bodySmall?.copyWith(color: AppColors.error)) : null,
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            activeColor: AppColors.error,
+            dense: true,
           ),
         ],
       ),
     );
   }
 
-  // ── Return checkbox ──────────────────────────────────────────
-  Widget _buildReturnCheckbox() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _isReturn ? AppColors.error.withValues(alpha: 0.08) : context.surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isReturn ? AppColors.error.withValues(alpha: 0.3) : context.dividerColor,
-        ),
-      ),
-      child: CheckboxListTile(
-        value: _isReturn,
-        onChanged: (v) => setState(() => _isReturn = v ?? false),
-        title: Text('فاتورة مرتجع', style: context.textTheme.bodyLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: _isReturn ? AppColors.error : null,
-        )),
-        subtitle: _isReturn ? Text('سيتم تحويل الفاتورة إلى فاتورة مرتجع', style: context.textTheme.bodySmall?.copyWith(color: AppColors.error)) : null,
-        contentPadding: EdgeInsets.zero,
-        controlAffinity: ListTileControlAffinity.leading,
-        activeColor: AppColors.error,
-        dense: true,
-      ),
-    );
-  }
-
-  // ── Payment mechanism (cash or credit) ───────────────────────
-  Widget _buildPaymentMechanismSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor),
-      ),
+  // ── Section 2: Payment Info (always expanded) ────────────────────
+  Widget _buildSection2PaymentInfo() {
+    return _AccordionSection(
+      title: 'معلومات الدفع',
+      icon: Icons.account_balance_wallet,
+      color: AppColors.success,
+      isExpanded: _section2Expanded,
+      onToggle: () => setState(() => _section2Expanded = !_section2Expanded),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.account_balance_wallet, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text('آلية الدفع', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-            ],
-          ),
-          const SizedBox(height: 12),
+          // Payment mechanism cards
           Row(
             children: [
               Expanded(
@@ -365,18 +357,64 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   onTap: () => setState(() {
                     _paymentMechanism = 'credit';
                     _selectedCashBoxId = null;
+                    _autoPay = false;
+                    _paidController.text = '0';
                   }),
                 ),
               ),
             ],
           ),
+          // If credit, show info banner
+          if (_paymentMechanism == 'credit') ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.accentOrange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.accentOrange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: AppColors.accentOrange, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'الفاتورة الآجلة: سيتم تسجيل المبلغ كرصيد على ${_isSale ? "العميل" : "المورد"}',
+                      style: context.textTheme.bodySmall?.copyWith(color: AppColors.accentOrange, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          // Payment method (only when cash)
+          if (_paymentMechanism == 'cash') ...[
+            const SizedBox(height: 16),
+            Text('طريقة الدفع', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            _buildPaymentMethodGrid(),
+          ],
+          // E-wallet / bank transfer sections
+          if (_paymentMechanism == 'cash' && _paymentMethod == 'ewallet')
+            _buildEwalletSection(),
+          if (_paymentMechanism == 'cash' && _paymentMethod == 'bank_transfer')
+            _buildBankTransferSection(),
+          // Cash box
+          const SizedBox(height: 16),
+          _buildCashBoxDropdown(),
+          // Auto-pay toggle + paid amount
+          if (_paymentMechanism == 'cash') ...[
+            const SizedBox(height: 16),
+            _buildAutoPayAndPaidAmount(),
+          ],
         ],
       ),
     );
   }
 
-  // ── Payment method (cash, check, transfer, bank, ewallet, bank_transfer) ──
-  Widget _buildPaymentMethodSection() {
+  // ── Payment method grid ──────────────────────────────────────────
+  Widget _buildPaymentMethodGrid() {
     const methods = [
       ('cash', 'نقدي', Icons.payments, AppColors.success),
       ('check', 'شيك', Icons.sticky_note_2, AppColors.accentBlue),
@@ -386,66 +424,40 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       ('bank_transfer', 'حوالة مصرفية', Icons.business, Color(0xFF6A1B9A)),
     ];
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.credit_card, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text('طريقة الدفع', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1.1,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            children: methods.map((m) {
-              final selected = _paymentMethod == m.$1;
-              return _PaymentMethodChip(
-                icon: m.$3,
-                label: m.$2,
-                color: m.$4,
-                isSelected: selected,
-                onTap: () => setState(() {
-                  _paymentMethod = m.$1;
-                  // Reset provider selections when switching method
-                  if (m.$1 != 'ewallet') {
-                    _selectedEwalletProvider = null;
-                  }
-                  if (m.$1 != 'bank_transfer') {
-                    _selectedBankTransferProvider = null;
-                    _transferNumberController.clear();
-                  }
-                  // Reset attachment when switching away from ewallet/bank_transfer
-                  if (m.$1 != 'ewallet' && m.$1 != 'bank_transfer') {
-                    _attachmentPath = null;
-                  }
-                }),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 1.1,
+      crossAxisSpacing: 8,
+      mainAxisSpacing: 8,
+      children: methods.map((m) {
+        final selected = _paymentMethod == m.$1;
+        return _PaymentMethodChip(
+          icon: m.$3,
+          label: m.$2,
+          color: m.$4,
+          isSelected: selected,
+          onTap: () => setState(() {
+            _paymentMethod = m.$1;
+            if (m.$1 != 'ewallet') _selectedEwalletProvider = null;
+            if (m.$1 != 'bank_transfer') {
+              _selectedBankTransferProvider = null;
+              _transferNumberController.clear();
+            }
+            if (m.$1 != 'ewallet' && m.$1 != 'bank_transfer') {
+              _attachmentPath = null;
+            }
+          }),
+        );
+      }).toList(),
     );
   }
 
-  // ── E-wallet section ─────────────────────────────────────────
+  // ── E-wallet section ─────────────────────────────────────────────
   Widget _buildEwalletSection() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.accentGreen.withValues(alpha: 0.04),
@@ -459,10 +471,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             children: [
               Icon(Icons.account_balance_wallet, size: 20, color: AppColors.accentGreen),
               const SizedBox(width: 8),
-              Text('محافظ إلكترونية', style: context.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.accentGreen,
-              )),
+              Text('محافظ إلكترونية', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.accentGreen)),
             ],
           ),
           const SizedBox(height: 12),
@@ -473,20 +482,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               prefixIcon: const Icon(Icons.account_balance_wallet, color: AppColors.accentGreen),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            items: _ewalletProviders.map((p) => DropdownMenuItem<String>(
-              value: p,
-              child: Text(p, style: const TextStyle(fontSize: 14)),
-            )).toList(),
+            items: _ewalletProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 14)))).toList(),
             onChanged: (val) => setState(() => _selectedEwalletProvider = val),
           ),
           const SizedBox(height: 16),
-          Text(
-            'إرفاق صورة إيصال الدفع (اختياري)',
-            style: context.textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text('إرفاق صورة إيصال الدفع (اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           _buildAttachmentButtons(),
         ],
@@ -494,11 +494,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Bank transfer section ────────────────────────────────────
+  // ── Bank transfer section ────────────────────────────────────────
   Widget _buildBankTransferSection() {
     const purpleColor = Color(0xFF6A1B9A);
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: purpleColor.withValues(alpha: 0.04),
@@ -512,10 +512,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             children: [
               const Icon(Icons.business, size: 20, color: purpleColor),
               const SizedBox(width: 8),
-              Text('حوالات مصرفية', style: context.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: purpleColor,
-              )),
+              Text('حوالات مصرفية', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: purpleColor)),
             ],
           ),
           const SizedBox(height: 12),
@@ -526,10 +523,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               prefixIcon: const Icon(Icons.business, color: purpleColor),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            items: _bankTransferProviders.map((p) => DropdownMenuItem<String>(
-              value: p,
-              child: Text(p, style: const TextStyle(fontSize: 14)),
-            )).toList(),
+            items: _bankTransferProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 14)))).toList(),
             onChanged: (val) => setState(() => _selectedBankTransferProvider = val),
           ),
           const SizedBox(height: 12),
@@ -541,17 +535,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               labelText: 'رقم الحوالة (اختياري)',
               prefixIcon: const Icon(Icons.tag, color: purpleColor),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              hintStyle: TextStyle(color: AppColors.textHint, fontSize: 13),
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            'إرفاق صورة إشعار الحوالة (اختياري)',
-            style: context.textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text('إرفاق صورة إشعار الحوالة (اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           _buildAttachmentButtons(isBankTransfer: true),
         ],
@@ -559,7 +546,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Attachment buttons (shared between ewallet & bank_transfer) ──
+  // ── Attachment buttons ───────────────────────────────────────────
   Widget _buildAttachmentButtons({bool isBankTransfer = false}) {
     return Column(
       children: [
@@ -574,23 +561,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             clipBehavior: Clip.antiAlias,
             child: Stack(
               children: [
-                Image.file(
-                  File(_attachmentPath!),
-                  width: double.infinity,
-                  height: 120,
-                  fit: BoxFit.cover,
-                ),
+                Image.file(File(_attachmentPath!), width: double.infinity, height: 120, fit: BoxFit.cover),
                 Positioned(
-                  top: 4,
-                  left: 4,
+                  top: 4, left: 4,
                   child: GestureDetector(
                     onTap: () => setState(() => _attachmentPath = null),
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(16)),
                       child: const Icon(Icons.close, size: 18, color: Colors.white),
                     ),
                   ),
@@ -606,13 +584,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               child: OutlinedButton.icon(
                 onPressed: _pickImageFromGallery,
                 icon: const Icon(Icons.image, size: 18),
-                label: Text(
-                  isBankTransfer ? 'رفق صورة الإشعار من المعرض' : 'رفق صورة من المعرض',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                ),
+                label: Text(isBankTransfer ? 'رفق صورة الإشعار' : 'رفق صورة', style: const TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
               ),
             ),
             const SizedBox(width: 8),
@@ -620,10 +593,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               child: OutlinedButton.icon(
                 onPressed: _pickImageFromCamera,
                 icon: const Icon(Icons.camera_alt, size: 18),
-                label: const Text('تصوير عبر الكاميرا', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                ),
+                label: const Text('تصوير', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
               ),
             ),
           ],
@@ -632,94 +603,161 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Cash box dropdown (always visible, disabled when credit) ─
-  Widget _buildCashBoxSection() {
+  // ── Cash box dropdown ────────────────────────────────────────────
+  Widget _buildCashBoxDropdown() {
     final isCash = _paymentMechanism == 'cash';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.account_balance_wallet, size: 20, color: isCash ? AppColors.primary : AppColors.textHint),
+            const SizedBox(width: 8),
+            Text('حساب الصندوق', style: context.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isCash ? null : AppColors.textHint,
+            )),
+            if (!isCash) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                child: Text('معطل - فاتورة آجلة', style: context.textTheme.labelSmall?.copyWith(color: AppColors.warning, fontSize: 10)),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<int>(
+          value: isCash ? _selectedCashBoxId : null,
+          decoration: InputDecoration(
+            hintText: isCash ? 'اختر الصندوق *' : 'غير متاح',
+            prefixIcon: Icon(Icons.account_balance_wallet, color: isCash ? null : AppColors.textHint),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.3)),
+            ),
+          ),
+          items: isCash ? _cashBoxes.map((cb) {
+            final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+            final bt = cb['balance_type'] as String? ?? 'credit';
+            return DropdownMenuItem<int>(
+              value: cb['id'] as int,
+              child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})'),
+            );
+          }).toList() : [],
+          onChanged: isCash ? (val) => setState(() => _selectedCashBoxId = val) : null,
+          validator: isCash ? (v) => v == null ? 'يجب اختيار الصندوق' : null : null,
+        ),
+      ],
+    );
+  }
 
+  // ── Auto-pay toggle + paid amount ────────────────────────────────
+  Widget _buildAutoPayAndPaidAmount() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isCash ? context.surfaceColor : context.surfaceColor.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isCash ? context.dividerColor : AppColors.border.withValues(alpha: 0.3)),
+        color: AppColors.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Auto-pay toggle
           Row(
             children: [
-              Icon(Icons.account_balance_wallet, size: 20, color: isCash ? AppColors.primary : AppColors.textHint),
+              const Icon(Icons.auto_fix_high, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('حساب الصندوق', style: context.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: isCash ? null : AppColors.textHint,
-              )),
-              if (!isCash) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text('معطل - فاتورة آجلة', style: context.textTheme.labelSmall?.copyWith(color: AppColors.warning, fontSize: 10)),
-                ),
-              ],
+              Expanded(
+                child: Text('دفع تلقائي', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+              ),
+              Switch(
+                value: _autoPay,
+                onChanged: (val) {
+                  setState(() {
+                    _autoPay = val;
+                    if (_autoPay) {
+                      _paidController.text = _total.toStringAsFixed(2);
+                    }
+                  });
+                },
+                activeColor: AppColors.primary,
+              ),
             ],
           ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<int>(
-            value: isCash ? _selectedCashBoxId : null,
-            decoration: InputDecoration(
-              hintText: isCash ? 'اختر الصندوق *' : 'غير متاح للفاتورة الآجلة',
-              prefixIcon: Icon(Icons.account_balance_wallet, color: isCash ? null : AppColors.textHint),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.3)),
+          Text(
+            _autoPay ? 'سيتم تسجيل المبلغ بالكامل كمدفوع' : 'يمكنك إدخال مبلغ جزئي',
+            style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          // Paid amount field
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('المدفوع', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              SizedBox(
+                width: 150,
+                child: TextField(
+                  controller: _paidController,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.left,
+                  enabled: !_autoPay,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    suffixText: AppConstants.currency,
+                    hintText: '0.00',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    filled: !_autoPay,
+                    fillColor: _autoPay ? AppColors.surfaceVariant.withValues(alpha: 0.5) : null,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
               ),
-            ),
-            items: isCash ? _cashBoxes.map((cb) {
-              final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
-              final bt = cb['balance_type'] as String? ?? 'credit';
-              return DropdownMenuItem<int>(
-                value: cb['id'] as int,
-                child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})'),
-              );
-            }).toList() : [],
-            onChanged: isCash ? (val) => setState(() => _selectedCashBoxId = val) : null,
-            validator: isCash ? (v) => v == null ? 'يجب اختيار الصندوق للفاتورة النقدية' : null : null,
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Remaining
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('المتبقي', style: context.textTheme.bodyMedium),
+              Text(
+                CurrencyFormatter.format(_remaining),
+                style: context.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: _remaining > 0.005 ? AppColors.error : AppColors.success,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // ── Customer/Supplier section ────────────────────────────────
-  Widget _buildEntitySection() {
+  // ── Section 3: Entity ────────────────────────────────────────────
+  Widget _buildSection3Entity() {
     final entities = _isSale ? _customers : _suppliers;
     final label = _isSale ? 'العميل' : 'المورد';
-    final isRequired = _paymentMechanism == 'credit';
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor),
-      ),
+    return _AccordionSection(
+      title: '$label${_isEntityRequired ? ' *' : ''}',
+      icon: _isSale ? Icons.person : Icons.business,
+      color: _isSale ? AppColors.success : AppColors.info,
+      isExpanded: _section3Expanded,
+      onToggle: () => setState(() => _section3Expanded = !_section3Expanded),
+      trailing: !_isEntityRequired
+          ? Text('(اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint))
+          : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+              child: Text('مطلوب', style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10)),
+            ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text('$label${isRequired ? ' *' : ''}', style: context.textTheme.titleSmall),
-              const Spacer(),
-              if (!isRequired) Text('(اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
-            ],
-          ),
-          const SizedBox(height: 10),
           DropdownButtonFormField<int>(
             value: _selectedEntityId,
             decoration: InputDecoration(
@@ -739,62 +777,30 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               );
             }).toList(),
             onChanged: (val) => setState(() => _selectedEntityId = val),
-            validator: isRequired ? (v) => v == null ? '$label مطلوب للفاتورة الآجلة' : null : null,
+            validator: _isEntityRequired ? (v) => v == null ? _isEntityRequiredMsg : null : null,
           ),
         ],
       ),
     );
   }
 
-  // ── Warehouse section ────────────────────────────────────────
-  Widget _buildWarehouseSection() {
-    if (_warehouses.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('المستودع', style: context.textTheme.titleSmall),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<int>(
-            value: _selectedWarehouseId,
-            decoration: const InputDecoration(
-              hintText: 'اختر المستودع',
-              prefixIcon: Icon(Icons.warehouse),
-            ),
-            items: _warehouses.map((w) => DropdownMenuItem<int>(
-              value: w['id'] as int,
-              child: Text(w['name'] as String),
-            )).toList(),
-            onChanged: (val) => setState(() => _selectedWarehouseId = val),
-          ),
-        ],
-      ),
-    );
+  String get _isEntityRequiredMsg {
+    final label = _isSale ? 'العميل' : 'المورد';
+    if (_paymentMechanism == 'credit') return '$label مطلوب للفاتورة الآجلة';
+    return '$label مطلوب عند وجود مبلغ متبقي';
   }
 
-  // ── Items section ────────────────────────────────────────────
-  Widget _buildItemsSection() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+  // ── Section 4: Items ─────────────────────────────────────────────
+  Widget _buildSection4Items() {
+    return _AccordionSection(
+      title: 'الأصناف',
+      icon: Icons.inventory_2,
+      color: AppColors.primary,
+      isExpanded: _section4Expanded,
+      onToggle: () => setState(() => _section4Expanded = !_section4Expanded),
+      trailing: Text('${_items.length} صنف', style: context.textTheme.bodySmall),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('الأصناف', style: context.textTheme.titleSmall),
-              Text('${_items.length} صنف', style: context.textTheme.bodySmall),
-            ],
-          ),
-          const SizedBox(height: 8),
           if (_items.isEmpty)
             Container(
               padding: const EdgeInsets.all(32),
@@ -822,9 +828,15 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 onQuantityChanged: (qty) {
                   setState(() {
                     _items[index] = item.copyWith(quantity: qty, totalPrice: qty * item.unitPrice);
+                    _updateAutoPay();
                   });
                 },
-                onDelete: () => setState(() => _items.removeAt(index)),
+                onDelete: () {
+                  setState(() {
+                    _items.removeAt(index);
+                    _updateAutoPay();
+                  });
+                },
               );
             }),
           const SizedBox(height: 8),
@@ -842,54 +854,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Transport charges section (optional) ────────────────────
-  Widget _buildTransportChargesSection() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.local_shipping, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text('أجور النقل (اختياري)', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _transportChargesController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textInputAction: TextInputAction.next,
-            decoration: InputDecoration(
-              labelText: 'أجور النقل',
-              prefixIcon: const Icon(Icons.local_shipping),
-              suffixText: AppConstants.currency,
-              hintText: '0.00',
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Summary section ──────────────────────────────────────────
-  Widget _buildSummarySection() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.dividerColor),
-      ),
+  // ── Section 5: Summary & Notes ───────────────────────────────────
+  Widget _buildSection5SummaryAndNotes() {
+    return _AccordionSection(
+      title: 'الملخص والملاحظات',
+      icon: Icons.summarize,
+      color: AppColors.accentOrange,
+      isExpanded: _section5Expanded,
+      onToggle: () => setState(() => _section5Expanded = !_section5Expanded),
       child: Column(
         children: [
           _summaryRow('المجموع الفرعي', CurrencyFormatter.format(_subtotal)),
@@ -911,7 +883,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     hintText: '0.00',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (_) {
+                    setState(() {});
+                    _updateAutoPay();
+                  },
                 ),
               ),
             ],
@@ -920,28 +895,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             const SizedBox(height: 8),
             _summaryRow('الضريبة (${AppConstants.defaultVatRate.toStringAsFixed(0)}%)', CurrencyFormatter.format(_taxAmount)),
           ],
-          if (_transportCharges > 0) ...[
-            const SizedBox(height: 8),
-            _summaryRow('أجور النقل', CurrencyFormatter.format(_transportCharges)),
-          ],
-          const Divider(height: 24),
-          _summaryRow('الإجمالي', CurrencyFormatter.format(_total),
-              valueStyle: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
-          if (_selectedCurrency != 'YER') ...[
-            const SizedBox(height: 4),
-            _summaryRow('الإجمالي بالعملة الأساسية', CurrencyFormatter.format(_total * _selectedExchangeRate),
-                valueStyle: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-          ],
+          // Transport
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('المدفوع', style: context.textTheme.bodyMedium),
+              Text('أجور النقل', style: context.textTheme.bodyMedium),
               SizedBox(
                 width: 140,
                 child: TextField(
-                  controller: _paidController,
-                  keyboardType: TextInputType.number,
+                  controller: _transportChargesController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textAlign: TextAlign.left,
                   decoration: InputDecoration(
                     isDense: true,
@@ -950,18 +914,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     hintText: '0.00',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (_) {
+                    setState(() {});
+                    _updateAutoPay();
+                  },
                 ),
               ),
             ],
           ),
+          const Divider(height: 24),
+          _summaryRow('الإجمالي', CurrencyFormatter.format(_total),
+              valueStyle: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+          if (_selectedCurrency != 'YER') ...[
+            const SizedBox(height: 4),
+            _summaryRow('بالعملة الأساسية', CurrencyFormatter.format(_total * _selectedExchangeRate),
+                valueStyle: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          ],
           const SizedBox(height: 8),
+          _summaryRow('المدفوع', CurrencyFormatter.format(_paidAmount), valueColor: AppColors.success),
+          const SizedBox(height: 4),
           _summaryRow('المتبقي', CurrencyFormatter.format(_remaining),
               valueStyle: context.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: _remaining > 0 ? AppColors.error : AppColors.success,
+                color: _remaining > 0.005 ? AppColors.error : AppColors.success,
               )),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _notesController,
             maxLines: 2,
@@ -976,17 +953,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  Widget _summaryRow(String label, String value, {TextStyle? valueStyle}) {
+  Widget _summaryRow(String label, String value, {TextStyle? valueStyle, Color? valueColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: context.textTheme.bodyMedium),
-        Text(value, style: valueStyle ?? context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(value, style: valueStyle ?? context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: valueColor)),
       ],
     );
   }
 
-  // ── Bottom action bar ────────────────────────────────────────
+  // ── Bottom action bar ────────────────────────────────────────────
   Widget _buildBottomBar() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1036,7 +1013,111 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Share invoice details ─────────────────────────────────────
+  // ── Add item ─────────────────────────────────────────────────────
+  Future<void> _addItem() async {
+    final result = await showModalBottomSheet<InvoiceItem>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddInvoiceItemSheet(warehouseId: _selectedWarehouseId),
+    );
+    if (result != null) {
+      setState(() {
+        _items.add(result);
+        _updateAutoPay();
+      });
+    }
+  }
+
+  // ── Save invoice ─────────────────────────────────────────────────
+  Future<void> _saveInvoice() async {
+    // Validate
+    if (_items.isEmpty) {
+      context.showErrorSnackBar('الرجاء إضافة صنف واحد على الأقل');
+      return;
+    }
+    if (_isEntityRequired && _selectedEntityId == null) {
+      context.showErrorSnackBar(_isEntityRequiredMsg);
+      return;
+    }
+    if (_paymentMechanism == 'cash' && _selectedCashBoxId == null) {
+      context.showErrorSnackBar('الرجاء اختيار حساب الصندوق');
+      return;
+    }
+    if (_paidAmount > _total + 0.005) {
+      context.showErrorSnackBar('المبلغ المدفوع لا يمكن أن يتجاوز الإجمالي');
+      return;
+    }
+
+    // Determine effective payment mechanism for journal entries
+    // If cash mechanism but paid < total, this is a split: some cash, some credit
+    final effectivePaymentMechanism = _paymentMechanism;
+    final effectivePaidAmount = _paymentMechanism == 'credit' ? 0.0 : _paidAmount;
+
+    final invoiceId = const Uuid().v4();
+    final invoice = Invoice(
+      id: invoiceId,
+      type: widget.invoiceType,
+      paymentMechanism: _paymentMechanism,
+      paymentMethod: _paymentMethod,
+      isReturn: _isReturn,
+      cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
+      customerId: _isSale ? _selectedEntityId : null,
+      supplierId: !_isSale ? _selectedEntityId : null,
+      subtotal: _subtotal,
+      discountRate: _subtotal > 0 ? (_discountAmount / _subtotal) * 100 : 0.0,
+      discountAmount: _discountAmount,
+      taxAmount: _taxAmount,
+      total: _total,
+      paidAmount: _paidAmount,
+      remaining: _remaining,
+      status: _remaining <= 0.005 ? 'paid' : _paidAmount > 0.005 ? 'partial' : 'unpaid',
+      warehouseId: _selectedWarehouseId,
+      notes: _notesController.text.isEmpty ? null : _notesController.text,
+      currency: _selectedCurrency,
+      exchangeRate: _selectedExchangeRate,
+      ewalletProvider: _paymentMethod == 'ewallet' ? _selectedEwalletProvider : null,
+      bankTransferProvider: _paymentMethod == 'bank_transfer' ? _selectedBankTransferProvider : null,
+      transferNumber: _paymentMethod == 'bank_transfer' && _transferNumberController.text.isNotEmpty
+          ? _transferNumberController.text
+          : null,
+      attachmentPath: (_paymentMethod == 'ewallet' || _paymentMethod == 'bank_transfer')
+          ? _attachmentPath
+          : null,
+    );
+
+    final itemsMaps = _items.map((item) => {
+      'invoice_id': invoiceId,
+      'product_id': item.productId,
+      'product_name': item.productName,
+      'quantity': item.quantity,
+      'unit_price': item.unitPrice,
+      'total_price': item.totalPrice,
+      'notes': item.notes,
+    }).toList();
+
+    final db = DatabaseHelper();
+
+    // For partial payments at creation time (cash + remaining on credit),
+    // we need to pass the paid amount as the effective amount for cash journal entries.
+    // The saveInvoiceWithJournalEntries method needs to be told the split.
+    await db.saveInvoiceWithJournalEntries(
+      invoice.toMap(),
+      itemsMaps,
+      invoiceType: invoice.effectiveType,
+      paymentMechanism: effectivePaymentMechanism,
+      isReturn: _isReturn,
+      cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
+      transportCharges: _transportCharges,
+      paidAmount: effectivePaidAmount,
+    );
+
+    if (mounted) {
+      context.showSuccessSnackBar('تم حفظ الفاتورة بنجاح');
+      Navigator.pop(context);
+    }
+  }
+
+  // ── Share invoice details ────────────────────────────────────────
   void _shareInvoice() {
     if (_items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
@@ -1050,15 +1131,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     buffer.writeln('──────────────────');
     buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: $entityName');
     buffer.writeln('المجموع الفرعي: ${CurrencyFormatter.format(_subtotal)}');
-    if (_discountAmount > 0) {
-      buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
-    }
-    if (_taxAmount > 0) {
-      buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
-    }
-    if (_transportCharges > 0) {
-      buffer.writeln('أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
-    }
+    if (_discountAmount > 0) buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
+    if (_taxAmount > 0) buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
+    if (_transportCharges > 0) buffer.writeln('أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
     buffer.writeln('الإجمالي: ${CurrencyFormatter.format(_total)}');
     buffer.writeln('المدفوع: ${CurrencyFormatter.format(_paidAmount)}');
     buffer.writeln('المتبقي: ${CurrencyFormatter.format(_remaining)}');
@@ -1067,13 +1142,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     for (final item in _items) {
       buffer.writeln('  ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
     }
-    if (_notesController.text.isNotEmpty) {
-      buffer.writeln('ملاحظات: ${_notesController.text}');
-    }
+    if (_notesController.text.isNotEmpty) buffer.writeln('ملاحظات: ${_notesController.text}');
     Share.share(buffer.toString(), subject: _title);
   }
 
-  // ── Share invoice via WhatsApp ────────────────────────────────
+  // ── Share via WhatsApp ───────────────────────────────────────────
   void _shareInvoiceWhatsApp() {
     if (_items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
@@ -1087,15 +1160,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     buffer.writeln('━━━━━━━━━━━━━━━━━━');
     buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: *$entityName*');
     buffer.writeln('المجموع الفرعي: ${CurrencyFormatter.format(_subtotal)}');
-    if (_discountAmount > 0) {
-      buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
-    }
-    if (_taxAmount > 0) {
-      buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
-    }
-    if (_transportCharges > 0) {
-      buffer.writeln('أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
-    }
+    if (_discountAmount > 0) buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
+    if (_taxAmount > 0) buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
+    if (_transportCharges > 0) buffer.writeln('أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
     buffer.writeln('*الإجمالي: ${CurrencyFormatter.format(_total)}*');
     buffer.writeln('المدفوع: ${CurrencyFormatter.format(_paidAmount)}');
     buffer.writeln('المتبقي: ${CurrencyFormatter.format(_remaining)}');
@@ -1104,16 +1171,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     for (final item in _items) {
       buffer.writeln('▫️ ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
     }
-    if (_notesController.text.isNotEmpty) {
-      buffer.writeln('ملاحظات: ${_notesController.text}');
-    }
-    // Launch WhatsApp with the text
-    final text = Uri.encodeComponent(buffer.toString());
-    // Try WhatsApp first, then fallback to share
+    if (_notesController.text.isNotEmpty) buffer.writeln('ملاحظات: ${_notesController.text}');
     Share.share(buffer.toString(), subject: _title);
   }
 
-  // ── Print invoice ──────────────────────────────────────────────
+  // ── Print invoice ────────────────────────────────────────────────
   Future<void> _printInvoice() async {
     if (_items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
@@ -1123,8 +1185,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
       );
-
-      // Build invoice map for PDF generation
       final entityName = _isSale
           ? (_customers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—')
           : (_suppliers.where((e) => e['id'] == _selectedEntityId).firstOrNull?['name'] ?? '—');
@@ -1158,9 +1218,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
       await InvoicePdfGenerator.printInvoice(invoiceMap, itemsMap);
     } catch (e) {
-      if (mounted) {
-        context.showErrorSnackBar('خطأ في الطباعة: $e');
-      }
+      if (mounted) context.showErrorSnackBar('خطأ في الطباعة: $e');
     }
   }
 
@@ -1174,7 +1232,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     final printerService = BluetoothPrinterService.instance;
 
     if (!printerService.isConnected) {
-      // Try auto-connect first
       final connected = await printerService.autoConnect();
       if (!connected) {
         if (mounted) {
@@ -1186,10 +1243,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 label: 'الإعدادات',
                 textColor: Colors.white,
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const _BluetoothSettingsWrapper()),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const _BluetoothSettingsWrapper()));
                 },
               ),
             ),
@@ -1229,110 +1283,99 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم إرسال الفاتورة للطابعة الحرارية'),
-            backgroundColor: AppColors.success,
-          ),
+          const SnackBar(content: Text('تم إرسال الفاتورة للطابعة الحرارية'), backgroundColor: AppColors.success),
         );
       }
     } on PrinterException catch (e) {
-      if (mounted) {
-        context.showErrorSnackBar(e.message);
-      }
+      if (mounted) context.showErrorSnackBar(e.message);
     } catch (e) {
-      if (mounted) {
-        context.showErrorSnackBar('خطأ في الطباعة الحرارية: $e');
-      }
-    }
-  }
-
-  // ── Add item ─────────────────────────────────────────────────
-  Future<void> _addItem() async {
-    final result = await showModalBottomSheet<InvoiceItem>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => AddInvoiceItemSheet(warehouseId: _selectedWarehouseId),
-    );
-    if (result != null) setState(() => _items.add(result));
-  }
-
-  // ── Save invoice ─────────────────────────────────────────────
-  Future<void> _saveInvoice() async {
-    // Validate
-    if (_items.isEmpty) {
-      context.showErrorSnackBar('الرجاء إضافة صنف واحد على الأقل');
-      return;
-    }
-    if (_paymentMechanism == 'credit' && _selectedEntityId == null) {
-      context.showErrorSnackBar(_isSale ? 'الرجاء اختيار العميل للفاتورة الآجلة' : 'الرجاء اختيار المورد للفاتورة الآجلة');
-      return;
-    }
-    if (_paymentMechanism == 'cash' && _selectedCashBoxId == null) {
-      context.showErrorSnackBar('الرجاء اختيار حساب الصندوق للفاتورة النقدية');
-      return;
-    }
-
-    final invoiceId = const Uuid().v4();
-    final invoice = Invoice(
-      id: invoiceId,
-      type: widget.invoiceType,
-      paymentMechanism: _paymentMechanism,
-      paymentMethod: _paymentMethod,
-      isReturn: _isReturn,
-      cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
-      customerId: _isSale ? _selectedEntityId : null,
-      supplierId: !_isSale ? _selectedEntityId : null,
-      subtotal: _subtotal,
-      discountRate: _subtotal > 0 ? (_discountAmount / _subtotal) * 100 : 0.0,
-      discountAmount: _discountAmount,
-      taxAmount: _taxAmount,
-      total: _total,
-      paidAmount: _paidAmount,
-      remaining: _remaining,
-      status: _remaining <= 0 ? 'paid' : _paidAmount > 0 ? 'partial' : 'unpaid',
-      warehouseId: _selectedWarehouseId,
-      notes: _notesController.text.isEmpty ? null : _notesController.text,
-      currency: _selectedCurrency,
-      exchangeRate: _selectedExchangeRate,
-      ewalletProvider: _paymentMethod == 'ewallet' ? _selectedEwalletProvider : null,
-      bankTransferProvider: _paymentMethod == 'bank_transfer' ? _selectedBankTransferProvider : null,
-      transferNumber: _paymentMethod == 'bank_transfer' && _transferNumberController.text.isNotEmpty
-          ? _transferNumberController.text
-          : null,
-      attachmentPath: (_paymentMethod == 'ewallet' || _paymentMethod == 'bank_transfer')
-          ? _attachmentPath
-          : null,
-    );
-
-    final itemsMaps = _items.map((item) => {
-      'invoice_id': invoiceId,
-      'product_id': item.productId,
-      'product_name': item.productName,
-      'quantity': item.quantity,
-      'unit_price': item.unitPrice,
-      'total_price': item.totalPrice,
-      'notes': item.notes,
-    }).toList();
-
-    final db = DatabaseHelper();
-    await db.saveInvoiceWithJournalEntries(
-      invoice.toMap(),
-      itemsMaps,
-      invoiceType: invoice.effectiveType,
-      paymentMechanism: _paymentMechanism,
-      isReturn: _isReturn,
-      cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
-      transportCharges: _transportCharges,
-    );
-
-    if (mounted) {
-      context.showSuccessSnackBar('تم حفظ الفاتورة بنجاح');
-      Navigator.pop(context);
+      if (mounted) context.showErrorSnackBar('خطأ في الطباعة الحرارية: $e');
     }
   }
 }
 
-/// Wrapper to navigate to Bluetooth printer settings from invoice screen.
+// ═══════════════════════════════════════════════════════════════════════════
+//  ACCORDION SECTION WIDGET
+// ═══════════════════════════════════════════════════════════════════════════
+class _AccordionSection extends StatelessWidget {
+  const _AccordionSection({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.isExpanded,
+    required this.onToggle,
+    required this.child,
+    this.trailing,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isExpanded ? color.withValues(alpha: 0.3) : context.dividerColor),
+        boxShadow: isExpanded
+            ? [BoxShadow(color: color.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, size: 18, color: color),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(title, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  ),
+                  if (trailing != null) trailing!,
+                  const SizedBox(width: 8),
+                  AnimatedRotation(
+                    turns: isExpanded ? -0.25 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.chevron_left, color: color, size: 22),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: child,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BLUETOOTH SETTINGS WRAPPER
+// ═══════════════════════════════════════════════════════════════════════════
 class _BluetoothSettingsWrapper extends StatelessWidget {
   const _BluetoothSettingsWrapper();
 
@@ -1342,7 +1385,9 @@ class _BluetoothSettingsWrapper extends StatelessWidget {
   }
 }
 
-/// Card-style payment option for cash/credit selection.
+// ═══════════════════════════════════════════════════════════════════════════
+//  PAYMENT OPTION CARD
+// ═══════════════════════════════════════════════════════════════════════════
 class _PaymentOptionCard extends StatelessWidget {
   const _PaymentOptionCard({
     required this.icon,
@@ -1370,10 +1415,7 @@ class _PaymentOptionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? color.withValues(alpha: 0.08) : context.surfaceColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? color : context.dividerColor,
-            width: isSelected ? 2 : 1,
-          ),
+          border: Border.all(color: isSelected ? color : context.dividerColor, width: isSelected ? 2 : 1),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1422,7 +1464,9 @@ class _PaymentOptionCard extends StatelessWidget {
   }
 }
 
-/// Compact payment method chip for cash/check/transfer/bank/ewallet/bank_transfer.
+// ═══════════════════════════════════════════════════════════════════════════
+//  PAYMENT METHOD CHIP
+// ═══════════════════════════════════════════════════════════════════════════
 class _PaymentMethodChip extends StatelessWidget {
   const _PaymentMethodChip({
     required this.icon,
@@ -1448,10 +1492,7 @@ class _PaymentMethodChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? color.withValues(alpha: 0.08) : context.surfaceColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : context.dividerColor,
-            width: isSelected ? 2 : 1,
-          ),
+          border: Border.all(color: isSelected ? color : context.dividerColor, width: isSelected ? 2 : 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
