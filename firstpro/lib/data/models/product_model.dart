@@ -10,6 +10,7 @@ class Product {
   final String? groupId;
   final String? description;
   final double costPrice;
+  final double averageCost; // Weighted average cost for accurate COGS
   final double sellPrice;
   final double wholesalePrice;
   final double specialWholesalePrice;
@@ -44,6 +45,7 @@ class Product {
     this.groupId,
     this.description,
     this.costPrice = 0.0,
+    this.averageCost = 0.0,
     this.sellPrice = 0.0,
     this.wholesalePrice = 0.0,
     this.specialWholesalePrice = 0.0,
@@ -81,6 +83,7 @@ class Product {
       'group_id': groupId,
       'description': description,
       'cost_price': costPrice,
+      'average_cost': averageCost,
       'sell_price': sellPrice,
       'wholesale_price': wholesalePrice,
       'special_wholesale_price': specialWholesalePrice,
@@ -118,6 +121,7 @@ class Product {
       groupId: map['group_id'],
       description: map['description'],
       costPrice: (map['cost_price'] ?? 0.0).toDouble(),
+      averageCost: (map['average_cost'] ?? map['cost_price'] ?? 0.0).toDouble(),
       sellPrice: (map['sell_price'] ?? 0.0).toDouble(),
       wholesalePrice: (map['wholesale_price'] ?? 0.0).toDouble(),
       specialWholesalePrice: (map['special_wholesale_price'] ?? 0.0).toDouble(),
@@ -156,6 +160,7 @@ class Product {
     String? groupId,
     String? description,
     double? costPrice,
+    double? averageCost,
     double? sellPrice,
     double? wholesalePrice,
     double? specialWholesalePrice,
@@ -190,6 +195,7 @@ class Product {
       groupId: groupId ?? this.groupId,
       description: description ?? this.description,
       costPrice: costPrice ?? this.costPrice,
+      averageCost: averageCost ?? this.averageCost,
       sellPrice: sellPrice ?? this.sellPrice,
       wholesalePrice: wholesalePrice ?? this.wholesalePrice,
       specialWholesalePrice: specialWholesalePrice ?? this.specialWholesalePrice,

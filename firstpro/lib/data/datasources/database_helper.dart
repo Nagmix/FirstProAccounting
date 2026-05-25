@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 23;
+  static const int _databaseVersion = 24;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -797,6 +797,7 @@ class DatabaseHelper {
         'account_type': type,
         'balance': 0.0,
         'currency': currency,
+        'balance_type': (type == 'ASSET' || type == 'COST') ? 'debit' : 'credit',
         'is_active': 1,
         'is_system': 1,
         'created_at': now,
@@ -884,13 +885,15 @@ class DatabaseHelper {
 
     for (final template in templates) {
       final actualCode = ((template[2] as int) + codeOffset).toString();
+      final accountType = template[3] as String;
       await db.insert('accounts', {
         'name_ar': '${template[0]} ($currencySymbol)',
         'name_en': '${template[1]} ($currencyCode)',
         'account_code': actualCode,
-        'account_type': template[3] as String,
+        'account_type': accountType,
         'balance': 0.0,
         'currency': currencyCode,
+        'balance_type': (accountType == 'ASSET' || accountType == 'COST') ? 'debit' : 'credit',
         'is_active': 1,
         'is_system': 1,
         'created_at': now,
@@ -1617,6 +1620,89 @@ class DatabaseHelper {
     }
 
     // ══════════════════════════════════════════════════════════════
+    //  v24 Migration: Fix balance_type + Multi-Unit + Weighted Average Cost
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 24) {
+      // ── Fix balance_type: ASSET and COST accounts should be 'debit' ──
+      await db.execute(
+        "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('ASSET', 'COST') AND balance_type != 'debit'",
+      );
+      // Recalculate balances for affected accounts
+      final affectedAccounts = await db.query(
+        'accounts',
+        columns: ['id'],
+        where: "account_type IN ('ASSET', 'COST')",
+      );
+      for (final row in affectedAccounts) {
+        final accountId = row['id'] as int;
+        final txResult = await db.rawQuery(
+          'SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS net_debit FROM transactions WHERE account_id = ?',
+          [accountId],
+        );
+        final correctBalance = (txResult.first['net_debit'] as num?)?.toDouble() ?? 0.0;
+        await db.update(
+          'accounts',
+          {'balance': correctBalance, 'updated_at': DateTime.now().toIso8601String()},
+          where: 'id = ?',
+          whereArgs: [accountId],
+        );
+      }
+
+      // ── Multi-Unit Conversion table ──
+      // Supports selling/purchasing in different units (e.g., carton vs piece)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS unit_conversions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          from_unit TEXT NOT NULL,
+          to_unit TEXT NOT NULL,
+          conversion_factor REAL NOT NULL,
+          barcode TEXT,
+          sell_price REAL NOT NULL DEFAULT 0.0,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_unit_conversions_product ON unit_conversions (product_id)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_unit_conversions_barcode ON unit_conversions (barcode)',
+      );
+
+      // ── Weighted Average Cost: add average_cost column ──
+      try {
+        await db.execute('ALTER TABLE products ADD COLUMN average_cost REAL NOT NULL DEFAULT 0.0');
+      } catch (_) {}
+      // Initialize average_cost from existing cost_price
+      await db.execute('UPDATE products SET average_cost = cost_price WHERE average_cost = 0.0 AND cost_price > 0.0');
+
+      // ── Stock Movement Log ──
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stock_movements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          movement_type TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          reference_type TEXT,
+          reference_id TEXT,
+          notes TEXT,
+          unit_cost REAL NOT NULL DEFAULT 0.0,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements (product_id)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements (movement_type)',
+      );
+    }
+
+    // ══════════════════════════════════════════════════════════════
     //  v22 Migration: Inventory Vouchers & Fiscal Years
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 22) {
@@ -2168,6 +2254,194 @@ class DatabaseHelper {
   }
 
   // ══════════════════════════════════════════════════════════════
+  //  Unit Conversions (Multi-Unit support)
+  // ══════════════════════════════════════════════════════════════
+
+  /// Insert a unit conversion for a product (e.g., 1 carton = 24 pieces)
+  Future<int> insertUnitConversion(Map<String, dynamic> conversionMap) async {
+    final db = await database;
+    return await db.insert('unit_conversions', conversionMap);
+  }
+
+  /// Get all unit conversions for a product
+  Future<List<Map<String, dynamic>>> getUnitConversions(int productId) async {
+    final db = await database;
+    return await db.query(
+      'unit_conversions',
+      where: 'product_id = ? AND is_active = 1',
+      whereArgs: [productId],
+      orderBy: 'id ASC',
+    );
+  }
+
+  /// Update a unit conversion
+  Future<int> updateUnitConversion(int id, Map<String, dynamic> conversionMap) async {
+    final db = await database;
+    return await db.update('unit_conversions', conversionMap, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Delete a unit conversion
+  Future<int> deleteUnitConversion(int id) async {
+    final db = await database;
+    return await db.delete('unit_conversions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Find unit conversion by barcode (for POS barcode scanning)
+  Future<Map<String, dynamic>?> findUnitConversionByBarcode(String barcode) async {
+    final db = await database;
+    final results = await db.query(
+      'unit_conversions',
+      where: 'barcode = ? AND is_active = 1',
+      whereArgs: [barcode.trim()],
+      limit: 1,
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  /// Get all available units for a product (base unit + conversions)
+  /// Returns a list of maps with: {unit_name, conversion_factor, sell_price, barcode}
+  Future<List<Map<String, dynamic>>> getAvailableUnitsForProduct(int productId) async {
+    final db = await database;
+    // Get base product info
+    final product = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+    if (product.isEmpty) return [];
+
+    final baseUnit = _getUnitName(product.first['unit_id'] as int? ?? 1);
+    final baseSellPrice = (product.first['sell_price'] as num?)?.toDouble() ?? 0.0;
+
+    // Start with base unit (factor = 1.0)
+    final units = <Map<String, dynamic>>[
+      {
+        'unit_name': baseUnit,
+        'conversion_factor': 1.0,
+        'sell_price': baseSellPrice,
+        'barcode': product.first['barcode'] as String? ?? '',
+        'is_base': 1,
+      },
+    ];
+
+    // Add converted units
+    final conversions = await db.query(
+      'unit_conversions',
+      where: 'product_id = ? AND is_active = 1',
+      whereArgs: [productId],
+    );
+    for (final conv in conversions) {
+      final fromUnit = conv['from_unit'] as String? ?? '';
+      final factor = (conv['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+      final convSellPrice = (conv['sell_price'] as num?)?.toDouble() ?? (baseSellPrice * factor);
+      units.add({
+        'unit_name': fromUnit,
+        'conversion_factor': factor,
+        'sell_price': convSellPrice,
+        'barcode': conv['barcode'] as String? ?? '',
+        'is_base': 0,
+        'conversion_id': conv['id'],
+      });
+    }
+    return units;
+  }
+
+  /// Helper: Get unit name from unit_id (matches static list in add_product_sheet)
+  String _getUnitName(int unitId) {
+    const units = {
+      1: 'قطعة', 2: 'كيلو', 3: 'لتر', 4: 'متر',
+      5: 'علبة', 6: 'كرتون', 7: 'طن', 8: 'جرام',
+    };
+    return units[unitId] ?? 'قطعة';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Weighted Average Cost
+  // ══════════════════════════════════════════════════════════════
+
+  /// Update weighted average cost when purchasing at a new price.
+  /// Formula: new_avg_cost = (existing_stock * old_avg_cost + new_qty * new_cost) / (existing_stock + new_qty)
+  Future<void> updateWeightedAverageCost(int productId, double purchasedQty, double purchasedUnitCost) async {
+    if (purchasedQty <= 0) return;
+    final db = await database;
+    final product = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+    if (product.isEmpty) return;
+
+    final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+    final currentAvgCost = (product.first['average_cost'] as num?)?.toDouble() ?? 0.0;
+
+    final newTotalValue = (currentStock * currentAvgCost) + (purchasedQty * purchasedUnitCost);
+    final newTotalStock = currentStock + purchasedQty;
+    final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : purchasedUnitCost;
+
+    await db.update(
+      'products',
+      {
+        'average_cost': newAvgCost,
+        'cost_price': newAvgCost,  // Keep cost_price in sync for backward compatibility
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Stock Movement Log
+  // ══════════════════════════════════════════════════════════════
+
+  /// Log a stock movement for audit trail
+  /// movement_type: 'sale', 'purchase', 'return', 'adjustment', 'transfer', 'opening', 'damage'
+  Future<int> logStockMovement({
+    required int productId,
+    required String movementType,
+    required double quantity,
+    String? referenceType,
+    String? referenceId,
+    String? notes,
+    double unitCost = 0.0,
+  }) async {
+    final db = await database;
+    return await db.insert('stock_movements', {
+      'product_id': productId,
+      'movement_type': movementType,
+      'quantity': quantity,
+      'reference_type': referenceType,
+      'reference_id': referenceId,
+      'notes': notes,
+      'unit_cost': unitCost,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Get stock movement history for a product
+  Future<List<Map<String, dynamic>>> getStockMovements(int productId, {int limit = 50}) async {
+    final db = await database;
+    return await db.query(
+      'stock_movements',
+      where: 'product_id = ?',
+      whereArgs: [productId],
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+  }
+
+  /// Get stock movements by type (e.g., all sales today)
+  Future<List<Map<String, dynamic>>> getStockMovementsByType(String movementType, {DateTime? since}) async {
+    final db = await database;
+    if (since != null) {
+      return await db.query(
+        'stock_movements',
+        where: 'movement_type = ? AND created_at >= ?',
+        whereArgs: [movementType, since.toIso8601String()],
+        orderBy: 'created_at DESC',
+      );
+    }
+    return await db.query(
+      'stock_movements',
+      where: 'movement_type = ?',
+      whereArgs: [movementType],
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
   //  Invoice CRUD methods
   // ══════════════════════════════════════════════════════════════
 
@@ -2213,9 +2487,12 @@ class DatabaseHelper {
 
       // ── Stock management ──
       // Sale/POS: decrement stock; Purchase: increment stock; Returns do the opposite
+      // Also logs stock movements and updates weighted average cost on purchases
       for (final item in items) {
         final productId = (item['product_id'] as num?)?.toInt();
         final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+        final unitPrice = (item['unit_price'] as num?)?.toDouble() ?? 0.0;
+        final invoiceIdStr = invoiceMap['id'] as String? ?? '';
         if (productId == null) continue;
 
         if (invoiceType == 'sale' || invoiceType == 'pos') {
@@ -2225,12 +2502,31 @@ class DatabaseHelper {
               'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
               [quantity, now, productId],
             );
+            // Log stock movement
+            await txn.insert('stock_movements', {
+              'product_id': productId,
+              'movement_type': 'sale',
+              'quantity': -quantity,
+              'reference_type': invoiceType,
+              'reference_id': invoiceIdStr,
+              'unit_cost': unitPrice,
+              'created_at': now,
+            });
           } else {
             // Sale return: stock returns to warehouse
             await txn.rawUpdate(
               'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
               [quantity, now, productId],
             );
+            await txn.insert('stock_movements', {
+              'product_id': productId,
+              'movement_type': 'return',
+              'quantity': quantity,
+              'reference_type': 'sale_return',
+              'reference_id': invoiceIdStr,
+              'unit_cost': unitPrice,
+              'created_at': now,
+            });
           }
         } else if (invoiceType == 'purchase') {
           if (!isReturn) {
@@ -2239,12 +2535,51 @@ class DatabaseHelper {
               'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
               [quantity, now, productId],
             );
+            // Update weighted average cost on purchase
+            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+            if (productRow.isNotEmpty) {
+              final currentStock = (productRow.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+              final currentAvgCost = (productRow.first['average_cost'] as num?)?.toDouble() ?? 0.0;
+              // current_stock already updated above, so subtract the new qty to get the old stock
+              final oldStock = currentStock - quantity;
+              final newTotalValue = (oldStock * currentAvgCost) + (quantity * unitPrice);
+              final newTotalStock = currentStock; // already includes new qty
+              final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : unitPrice;
+              await txn.update(
+                'products',
+                {
+                  'average_cost': newAvgCost,
+                  'cost_price': newAvgCost,
+                  'updated_at': now,
+                },
+                where: 'id = ?',
+                whereArgs: [productId],
+              );
+            }
+            await txn.insert('stock_movements', {
+              'product_id': productId,
+              'movement_type': 'purchase',
+              'quantity': quantity,
+              'reference_type': 'purchase',
+              'reference_id': invoiceIdStr,
+              'unit_cost': unitPrice,
+              'created_at': now,
+            });
           } else {
             // Purchase return: stock leaves warehouse
             await txn.rawUpdate(
               'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
               [quantity, now, productId],
             );
+            await txn.insert('stock_movements', {
+              'product_id': productId,
+              'movement_type': 'return',
+              'quantity': -quantity,
+              'reference_type': 'purchase_return',
+              'reference_id': invoiceIdStr,
+              'unit_cost': unitPrice,
+              'created_at': now,
+            });
           }
         }
       }
@@ -3309,11 +3644,22 @@ class DatabaseHelper {
   Future<void> reconcileAccountBalance(int accountId) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
+
+    // Get the account's balance_type to compute balance correctly
+    final accountRow = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+    if (accountRow.isEmpty) return;
+    final balanceType = accountRow.first['balance_type'] as String? ?? 'credit';
+
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS computed_balance FROM transactions WHERE account_id = ?',
+      'SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS net_debit, COALESCE(SUM(credit) - SUM(debit), 0.0) AS net_credit FROM transactions WHERE account_id = ?',
       [accountId],
     );
-    final computedBalance = (result.first['computed_balance'] as num?)?.toDouble() ?? 0.0;
+    final netDebit = (result.first['net_debit'] as num?)?.toDouble() ?? 0.0;
+    final netCredit = (result.first['net_credit'] as num?)?.toDouble() ?? 0.0;
+
+    // For debit-balance accounts (ASSET, COST): balance = debit - credit
+    // For credit-balance accounts (LIABILITY, REVENUE, EXPENSE): balance = credit - debit
+    final computedBalance = (balanceType == 'debit') ? netDebit : netCredit;
     await db.update('accounts', {'balance': computedBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
   }
 

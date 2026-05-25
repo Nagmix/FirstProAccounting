@@ -29,12 +29,21 @@ class Account {
     this.linkedCashBoxId,
     this.isActive = true,
     this.debtCeiling = 0.0,
-    this.balanceType = 'credit',
+    this.balanceType = 'auto',  // Will be derived from accountType if 'auto'
     this.isSystem = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+       updatedAt = updatedAt ?? DateTime.now() {
+    // Auto-derive balanceType from accountType if not explicitly set
+    // ASSET and COST accounts have debit nature; others have credit nature
+  }
+
+  /// Get the effective balance type, deriving from accountType if set to 'auto'
+  String get effectiveBalanceType {
+    if (balanceType != 'auto') return balanceType;
+    return (accountType == AccountType.ASSET || accountType == AccountType.COST) ? 'debit' : 'credit';
+  }
 
   String get _accountTypeString {
     switch (accountType) {
@@ -79,7 +88,7 @@ class Account {
       'linked_cash_box_id': linkedCashBoxId,
       'is_active': isActive ? 1 : 0,
       'debt_ceiling': debtCeiling,
-      'balance_type': balanceType,
+      'balance_type': effectiveBalanceType,  // Always save derived value
       'is_system': isSystem ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -99,7 +108,7 @@ class Account {
       linkedCashBoxId: map['linked_cash_box_id'],
       isActive: (map['is_active'] ?? 1) == 1,
       debtCeiling: (map['debt_ceiling'] ?? 0.0).toDouble(),
-      balanceType: map['balance_type'] ?? 'credit',
+      balanceType: map['balance_type'] ?? 'auto',
       isSystem: (map['is_system'] ?? 0) == 1,
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
