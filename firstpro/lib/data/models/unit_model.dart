@@ -19,7 +19,7 @@ class Unit {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  const Unit({
+  Unit({
     this.id,
     required this.nameAr,
     this.nameEn = '',
