@@ -4,6 +4,7 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
@@ -357,6 +358,24 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     ).then((_) => _loadInvoices());
   }
 
+  // ── Print invoice ────────────────────────────────────────────────
+  Future<void> _printInvoice(BuildContext context, Map<String, dynamic> invoiceData) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
+      );
+      final db = DatabaseHelper();
+      final items = await db.getInvoiceItems(invoiceData['id'] as String);
+      await InvoicePdfGenerator.printInvoice(invoiceData, items);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في الطباعة: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   Future<void> _pickDateRange() async {
     final range = await showDateRangePicker(
       context: context,
@@ -535,7 +554,7 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   IconButton(
                     icon: const Icon(Icons.print, size: 18, color: AppColors.textSecondary),
-                    onPressed: () {},
+                    onPressed: () => _printInvoice(context, invoiceData),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                   ),

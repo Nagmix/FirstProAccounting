@@ -2891,93 +2891,27 @@ class DatabaseHelper {
         }
       }
 
-      // ── Transport Charges Journal Entries ──
-      if (transportCharges > 0) {
-        final transportAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final transportAccountId = transportAccount.isNotEmpty ? transportAccount.first['id'] as int : null;
-
-        if (invoiceType == 'sale' || invoiceType == 'sale_return') {
-          // Sales with transport: Debit customer/cash (transport), Credit transport expense
-          final transportDebitId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-          final transportCreditId = transportAccountId;
-
-          if (transportDebitId != null) {
-            await txn.insert('transactions', {
-              'account_id': transportDebitId,
-              'journal_id': journalId,
-              'debit': transportCharges,
-              'credit': 0.0,
-              'description': 'اجور نقل - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, transportDebitId, transportCharges, 0.0, now);
-          }
-          if (transportCreditId != null) {
-            await txn.insert('transactions', {
-              'account_id': transportCreditId,
-              'journal_id': journalId,
-              'debit': 0.0,
-              'credit': transportCharges,
-              'description': 'اجور نقل - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, transportCreditId, 0.0, transportCharges, now);
-          }
-        } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
-          // Purchases with transport: Debit transport expense, Credit cash/supplier
-          final transportDebitId = transportAccountId;
-          final transportCreditId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-
-          if (transportDebitId != null) {
-            await txn.insert('transactions', {
-              'account_id': transportDebitId,
-              'journal_id': journalId,
-              'debit': transportCharges,
-              'credit': 0.0,
-              'description': 'اجور نقل - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, transportDebitId, transportCharges, 0.0, now);
-          }
-          if (transportCreditId != null) {
-            await txn.insert('transactions', {
-              'account_id': transportCreditId,
-              'journal_id': journalId,
-              'debit': 0.0,
-              'credit': transportCharges,
-              'description': 'اجور نقل - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, transportCreditId, 0.0, transportCharges, now);
-          }
-        }
-
-        // Update cash box for transport charges (cash payments)
-        if (cashBoxId != null) {
-          if (invoiceType == 'sale' || invoiceType == 'sale_return') {
-            // Sale: transport charges increase cash received
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, cashBoxId]);
-          } else {
-            // Purchase: transport charges decrease cash
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, cashBoxId]);
-          }
-        }
-      }
+      // ── Transport Charges ──
+      // NOTE: Transport charges are already included in `total` (total = subtotal - discount + tax + transportCharges).
+      // The main journal entries and cash box update above already account for transport correctly.
+      // No separate transport journal entries are needed here to avoid double-counting.
 
       // Update customer/supplier balance
-      // For partial cash payments, the entity gets the remaining amount as credit balance
+      // For full cash payments: entity balance should NOT change (they already paid in full)
+      // For partial cash: only the remaining unpaid amount affects entity balance
+      // For credit: entity owes the full amount (total already includes transport)
       if (invoiceMap['customer_id'] != null) {
         final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-        // For partial cash, only credit the remaining amount to customer
         double customerAmount;
-        if (isPartialCash && !isReturn) {
+        if (paymentMechanism == 'cash' && !isPartialCash) {
+          // Full cash payment: entity balance should NOT change (already paid)
+          customerAmount = 0;
+        } else if (isPartialCash && !isReturn) {
+          // Partial cash: only the remaining amount is owed by the customer
           customerAmount = remainingAmount;
         } else {
-          customerAmount = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return') ? transportCharges : 0);
+          // Credit mechanism: entity owes the full amount (total already includes transport)
+          customerAmount = total;
         }
         if (isDebit) {
           await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoiceMap['customer_id']]);
@@ -2987,14 +2921,21 @@ class DatabaseHelper {
       }
 
       // Supplier balance logic:
-      // For partial cash payments, only credit the remaining amount to supplier
+      // For full cash payments: entity balance should NOT change (they already paid in full)
+      // For partial cash: only the remaining unpaid amount affects entity balance
+      // For credit: entity is owed the full amount (total already includes transport)
       if (invoiceMap['supplier_id'] != null) {
         final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
         double supplierAmount;
-        if (isPartialCash && !isReturn) {
+        if (paymentMechanism == 'cash' && !isPartialCash) {
+          // Full cash payment: entity balance should NOT change (already paid)
+          supplierAmount = 0;
+        } else if (isPartialCash && !isReturn) {
+          // Partial cash: only the remaining amount is owed to the supplier
           supplierAmount = remainingAmount;
         } else {
-          supplierAmount = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'purchase' || invoiceType == 'purchase_return') ? transportCharges : 0);
+          // Credit mechanism: entity is owed the full amount (total already includes transport)
+          supplierAmount = total;
         }
         if (isCreditToSupplier) {
           await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoiceMap['supplier_id']]);
@@ -3003,7 +2944,7 @@ class DatabaseHelper {
         }
       }
 
-      // Update cash box balance (for the paid amount only, excluding transport which is handled above)
+      // Update cash box balance (total already includes transport charges)
       if (cashBoxId != null) {
         // For partial payments, only update cash box with the paid amount
         final cashAmount = isPartialCash ? effectivePaid : total;
@@ -3257,52 +3198,200 @@ class DatabaseHelper {
       final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
       final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
 
-      // Determine original debit/credit accounts (same logic as saveInvoiceWithJournalEntries)
-      int? originalDebitAccountId;
-      int? originalCreditAccountId;
+      // Determine original debit/credit accounts and handle partial payments
+      // Check for partial payment (same logic as saveInvoiceWithJournalEntries)
+      final paidAmount = (invoice['paid_amount'] as num?)?.toDouble() ?? 0.0;
+      final remainingAmount = (invoice['remaining'] as num?)?.toDouble() ?? 0.0;
+      final isPartialCash = paymentMechanism == 'cash' && paidAmount > 0.005 && remainingAmount > 0.005;
 
       if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
-        if (isReturn) {
-          originalDebitAccountId = salesAccountId;
-          originalCreditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+        if (isPartialCash && !isReturn) {
+          // Reverse partial cash sale: Credit Cash (paid), Credit Customer (remaining), Debit Sales (total)
+          if (cashBanksAccountId != null && paidAmount > 0) {
+            await txn.insert('transactions', {
+              'account_id': cashBanksAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': paidAmount,
+              'description': 'إلغاء فاتورة مبيعات (مدفوع) - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, paidAmount, now);
+          }
+          if (customersAccountId != null && remainingAmount > 0) {
+            await txn.insert('transactions', {
+              'account_id': customersAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': remainingAmount,
+              'description': 'إلغاء فاتورة مبيعات (آجل) - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, remainingAmount, now);
+          }
+          if (salesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': salesAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'إلغاء فاتورة مبيعات - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, salesAccountId, total, 0.0, now);
+          }
+        } else if (isReturn) {
+          // Reverse sale return: Debit Customer/Cash (original credit), Credit Sales (original debit)
+          final originalCreditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+          if (originalCreditAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': originalCreditAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'إلغاء فاتورة مبيعات - مرتجع - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, originalCreditAccountId, total, 0.0, now);
+          }
+          if (salesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': salesAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'إلغاء فاتورة مبيعات - مرتجع - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
+          }
         } else {
-          originalDebitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-          originalCreditAccountId = salesAccountId;
+          // Normal reversal (full cash or full credit): swap debit/credit
+          final originalDebitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+          if (salesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': salesAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'إلغاء فاتورة مبيعات - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, salesAccountId, total, 0.0, now);
+          }
+          if (originalDebitAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': originalDebitAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'إلغاء فاتورة مبيعات - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, originalDebitAccountId, 0.0, total, now);
+          }
         }
       } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
-        if (isReturn) {
-          originalDebitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          originalCreditAccountId = purchasesAccountId;
+        if (isPartialCash && !isReturn) {
+          // Reverse partial cash purchase: Debit Cash (paid), Debit Supplier (remaining), Credit Purchases (total)
+          if (cashBanksAccountId != null && paidAmount > 0) {
+            await txn.insert('transactions', {
+              'account_id': cashBanksAccountId,
+              'journal_id': journalId,
+              'debit': paidAmount,
+              'credit': 0.0,
+              'description': 'إلغاء فاتورة مشتريات (مدفوع) - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, paidAmount, 0.0, now);
+          }
+          if (suppliersAccountId != null && remainingAmount > 0) {
+            await txn.insert('transactions', {
+              'account_id': suppliersAccountId,
+              'journal_id': journalId,
+              'debit': remainingAmount,
+              'credit': 0.0,
+              'description': 'إلغاء فاتورة مشتريات (آجل) - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, suppliersAccountId, remainingAmount, 0.0, now);
+          }
+          if (purchasesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'إلغاء فاتورة مشتريات - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, total, now);
+          }
+        } else if (isReturn) {
+          // Reverse purchase return: Debit Purchases (original credit), Credit Cash/Supplier (original debit)
+          final originalDebitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+          if (purchasesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'إلغاء فاتورة مشتريات - مرتجع - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
+          }
+          if (originalDebitAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': originalDebitAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'إلغاء فاتورة مشتريات - مرتجع - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, originalDebitAccountId, 0.0, total, now);
+          }
         } else {
-          originalDebitAccountId = purchasesAccountId;
-          originalCreditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+          // Normal reversal (full cash or full credit): swap debit/credit
+          final originalCreditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+          if (originalCreditAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': originalCreditAccountId,
+              'journal_id': journalId,
+              'debit': total,
+              'credit': 0.0,
+              'description': 'إلغاء فاتورة مشتريات - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, originalCreditAccountId, total, 0.0, now);
+          }
+          if (purchasesAccountId != null && total > 0) {
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': total,
+              'description': 'إلغاء فاتورة مشتريات - $id',
+              'date': now,
+              'created_at': now,
+            });
+            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, total, now);
+          }
         }
-      }
-
-      // Reversal: swap debit/credit
-      if (originalCreditAccountId != null && total > 0) {
-        await txn.insert('transactions', {
-          'account_id': originalCreditAccountId,
-          'journal_id': journalId,
-          'debit': total,
-          'credit': 0.0,
-          'description': 'إلغاء فاتورة - $id',
-          'date': now,
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, originalCreditAccountId, total, 0.0, now);
-      }
-      if (originalDebitAccountId != null && total > 0) {
-        await txn.insert('transactions', {
-          'account_id': originalDebitAccountId,
-          'journal_id': journalId,
-          'debit': 0.0,
-          'credit': total,
-          'description': 'إلغاء فاتورة - $id',
-          'date': now,
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, originalDebitAccountId, 0.0, total, now);
       }
 
       // 2b. Reverse COGS journal entries (for sale invoices)
@@ -3375,111 +3464,63 @@ class DatabaseHelper {
         }
       }
 
-      // 3. Reverse transport charge journal entries
-      if (transportCharges > 0) {
-        final transportAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final transportAccountId = transportAccount.isNotEmpty ? transportAccount.first['id'] as int : null;
-
-        if (invoiceType == 'sale' || invoiceType == 'sale_return') {
-          // Original: Debit customer/cash, Credit transport expense
-          // Reversal: Debit transport expense, Credit customer/cash
-          final reversalDebitId = transportAccountId;
-          final reversalCreditId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-
-          if (reversalDebitId != null) {
-            await txn.insert('transactions', {
-              'account_id': reversalDebitId,
-              'journal_id': journalId,
-              'debit': transportCharges,
-              'credit': 0.0,
-              'description': 'إلغاء اجور نقل - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, reversalDebitId, transportCharges, 0.0, now);
-          }
-          if (reversalCreditId != null) {
-            await txn.insert('transactions', {
-              'account_id': reversalCreditId,
-              'journal_id': journalId,
-              'debit': 0.0,
-              'credit': transportCharges,
-              'description': 'إلغاء اجور نقل - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, reversalCreditId, 0.0, transportCharges, now);
-          }
-        } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
-          // Original: Debit transport expense, Credit cash/supplier
-          // Reversal: Debit cash/supplier, Credit transport expense
-          final reversalDebitId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          final reversalCreditId = transportAccountId;
-
-          if (reversalDebitId != null) {
-            await txn.insert('transactions', {
-              'account_id': reversalDebitId,
-              'journal_id': journalId,
-              'debit': transportCharges,
-              'credit': 0.0,
-              'description': 'إلغاء اجور نقل - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, reversalDebitId, transportCharges, 0.0, now);
-          }
-          if (reversalCreditId != null) {
-            await txn.insert('transactions', {
-              'account_id': reversalCreditId,
-              'journal_id': journalId,
-              'debit': 0.0,
-              'credit': transportCharges,
-              'description': 'إلغاء اجور نقل - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, reversalCreditId, 0.0, transportCharges, now);
-          }
-        }
-      }
+      // 3. Transport charges reversal
+      // NOTE: Transport charges are already included in `total`, so the main reversal entries above
+      // already handle transport correctly. No separate transport reversal is needed.
 
       // 4. Reverse customer/supplier balance
+      // Must mirror the save logic: full cash = no balance change, partial cash = only remaining, credit = total
       if (invoice['customer_id'] != null) {
         final wasDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-        final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return') ? transportCharges : 0);
-        if (wasDebit) {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
+        double customerReversalAmount;
+        if (paymentMechanism == 'cash' && !isPartialCash) {
+          // Full cash payment: original save set customerAmount = 0, so reversal is also 0
+          customerReversalAmount = 0;
+        } else if (isPartialCash && !isReturn) {
+          // Partial cash: original save set customerAmount = remainingAmount
+          customerReversalAmount = remainingAmount;
         } else {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
+          // Credit mechanism: original save set customerAmount = total (already includes transport)
+          customerReversalAmount = total;
+        }
+        if (wasDebit) {
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [customerReversalAmount, now, invoice['customer_id']]);
+        } else {
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [customerReversalAmount, now, invoice['customer_id']]);
         }
       }
 
       if (invoice['supplier_id'] != null) {
         final wasCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-        final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'purchase' || invoiceType == 'purchase_return') ? transportCharges : 0);
-        if (wasCreditToSupplier) {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['supplier_id']]);
+        double supplierReversalAmount;
+        if (paymentMechanism == 'cash' && !isPartialCash) {
+          // Full cash payment: original save set supplierAmount = 0, so reversal is also 0
+          supplierReversalAmount = 0;
+        } else if (isPartialCash && !isReturn) {
+          // Partial cash: original save set supplierAmount = remainingAmount
+          supplierReversalAmount = remainingAmount;
         } else {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['supplier_id']]);
+          // Credit mechanism: original save set supplierAmount = total (already includes transport)
+          supplierReversalAmount = total;
+        }
+        if (wasCreditToSupplier) {
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [supplierReversalAmount, now, invoice['supplier_id']]);
+        } else {
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [supplierReversalAmount, now, invoice['supplier_id']]);
         }
       }
 
       // 5. Reverse cash box balance
+      // Must mirror the save logic: full cash = reverse total, partial cash = reverse paidAmount only
       if (cashBoxId != null) {
+        final cashReversalAmount = isPartialCash ? paidAmount : total;
         final wasCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
         if (wasCashIn) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [cashReversalAmount, now, cashBoxId]);
         } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [cashReversalAmount, now, cashBoxId]);
         }
-        // Reverse transport charge cash box effect
-        if (transportCharges > 0) {
-          if (invoiceType == 'sale' || invoiceType == 'sale_return') {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [transportCharges, now, cashBoxId]);
-          } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [transportCharges, now, cashBoxId]);
-          }
-        }
+        // No separate transport reversal needed - transport is already included in total/paidAmount
       }
 
       // 6. Restore product stock

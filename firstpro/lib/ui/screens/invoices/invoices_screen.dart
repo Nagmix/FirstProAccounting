@@ -4,6 +4,7 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
@@ -590,6 +591,23 @@ class _ImprovedInvoiceCard extends StatelessWidget {
   final Map<String, dynamic> invoiceData;
   final VoidCallback? onTap;
 
+  Future<void> _printInvoice(BuildContext context) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
+      );
+      final db = DatabaseHelper();
+      final items = await db.getInvoiceItems(invoiceData['id'] as String);
+      await InvoicePdfGenerator.printInvoice(invoiceData, items);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في الطباعة: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   String _displayId(String? id, String? type) {
     if (type == 'pos') return 'فاتورة نقطة بيع';
     if (id == null || id.isEmpty) return '—';
@@ -711,9 +729,7 @@ class _ImprovedInvoiceCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   IconButton(
                     icon: const Icon(Icons.print, size: 18, color: AppColors.textSecondary),
-                    onPressed: () {
-                      // TODO: print invoice
-                    },
+                    onPressed: () => _printInvoice(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                   ),
