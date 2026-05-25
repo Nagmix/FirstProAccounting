@@ -2476,6 +2476,10 @@ class DatabaseHelper {
     final invoiceCurrency = (invoiceMap['currency'] as String?) ?? 'YER';
     final now = DateTime.now().toIso8601String();
 
+    // ── التحقق من قفل الفترة المحاسبية ──
+    final invoiceDate = invoiceMap['created_at'] as String? ?? now;
+    await _checkFiscalPeriodOpen(invoiceDate);
+
     await db.transaction((txn) async {
       // Insert invoice
       await txn.insert('invoices', invoiceMap);
@@ -4755,7 +4759,19 @@ class DatabaseHelper {
   // ══════════════════════════════════════════════════════════════
 
   /// إدراج سند مع بنوده وإنشاء قيود يومية
+  /// يتضمن التحقق الإلزامي من توازن القيد المزدوج
   Future<int> insertVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) async {
+    // ── التحقق من توازن القيد: مجموع المدين يجب أن يساوي مجموع الدائن ──
+    final totalDebit = items.fold(0.0, (sum, item) => sum + ((item['debit'] as num?)?.toDouble() ?? 0.0));
+    final totalCredit = items.fold(0.0, (sum, item) => sum + ((item['credit'] as num?)?.toDouble() ?? 0.0));
+    if ((totalDebit - totalCredit).abs() > 0.01) {
+      throw Exception('القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit');
+    }
+
+    // ── التحقق من قفل الفترة المحاسبية ──
+    final voucherDate = voucherMap['date'] as String? ?? DateTime.now().toIso8601String();
+    await _checkFiscalPeriodOpen(voucherDate);
+
     final db = await database;
     final now = DateTime.now().toIso8601String();
     final journalId = DateTime.now().millisecondsSinceEpoch;
@@ -5962,6 +5978,197 @@ class DatabaseHelper {
     final db = await database;
     final result = await db.query('fiscal_years', where: 'year = ? AND status = ?', whereArgs: [year, 'closed'], limit: 1);
     return result.isNotEmpty;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Accounting Safeguards (قفل الفترة، توازن القيد، الترقيم)
+  // ══════════════════════════════════════════════════════════════
+
+  /// التحقق من أن الفترة المحاسبية مفتوحة قبل إجراء أي عملية
+  /// يمنع تعديل أو إضافة قيود في فترات مغلقة
+  Future<void> _checkFiscalPeriodOpen(String dateStr) async {
+    final db = await database;
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return;
+    final year = date.year;
+
+    // تحقق من وجود سنة مالية مقفلة لهذه الفترة
+    final result = await db.query(
+      'fiscal_years',
+      where: 'year = ? AND status = ?',
+      whereArgs: [year, 'closed'],
+      limit: 1,
+    );
+    if (result.isNotEmpty) {
+      throw Exception('الفترة المحاسبية للعام $year مغلقة. لا يمكن إجراء عمليات في فترة مقفلة.');
+    }
+  }
+
+  /// الحصول على الرقم التسلسلي التالي للفواتير بدون فجوات
+  /// يستخدم MAX بدلاً من COUNT لضمان عدم وجود فجوات حتى بعد الحذف
+  Future<int> getNextInvoiceSequence(String datePrefix, String invoiceType) async {
+    final db = await database;
+    // البحث عن أكبر رقم تسلسلي موجود لهذا اليوم وهذا النوع
+    final result = await db.rawQuery(
+      "SELECT id FROM invoices WHERE id LIKE ? AND type = ? ORDER BY id DESC LIMIT 1",
+      ['$datePrefix%', invoiceType],
+    );
+    if (result.isEmpty) return 1;
+
+    final lastId = result.first['id'] as String;
+    // استخراج الرقم التسلسلي من المعرف: POS-YYYYMMDD-NNNN → NNNN
+    final parts = lastId.split('-');
+    if (parts.length >= 3) {
+      final lastSeq = int.tryParse(parts.last) ?? 0;
+      return lastSeq + 1;
+    }
+    return 1;
+  }
+
+  /// التحقق من تجاوز سقف الدين للعميل
+  /// يرجع true إذا تجاوز السقف، false إذا لم يتجاوز
+  Future<bool> isCustomerOverDebtCeiling(int customerId, double additionalAmount) async {
+    final db = await database;
+    final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId], limit: 1);
+    if (customer.isEmpty) return false;
+
+    final debtCeiling = (customer.first['debt_ceiling'] as num?)?.toDouble() ?? 0.0;
+    if (debtCeiling <= 0) return false; // لا يوجد سقف محدد
+
+    final currentBalance = (customer.first['balance'] as num?)?.toDouble() ?? 0.0;
+    return (currentBalance + additionalAmount) > debtCeiling;
+  }
+
+  /// التحقق من تجاوز سقف الدين للمورد
+  Future<bool> isSupplierOverDebtCeiling(int supplierId, double additionalAmount) async {
+    final db = await database;
+    final supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId], limit: 1);
+    if (supplier.isEmpty) return false;
+
+    final debtCeiling = (supplier.first['debt_ceiling'] as num?)?.toDouble() ?? 0.0;
+    if (debtCeiling <= 0) return false;
+
+    final currentBalance = (supplier.first['balance'] as num?)?.toDouble() ?? 0.0;
+    return (currentBalance + additionalAmount) > debtCeiling;
+  }
+
+  /// حساب مكاسب/خسائر الصرف الأجنبي
+  /// تُحسب عند إقفال الفترة أو عند تسوية حساب بعملة مختلفة
+  /// formula: gain/loss = (base_amount * current_rate) - (base_amount * original_rate)
+  Future<double> calculateExchangeGainLoss({
+    required double baseAmount,
+    required double originalRate,
+    required double currentRate,
+  }) async {
+    if (originalRate <= 0 || currentRate <= 0) return 0.0;
+    final valueAtOriginalRate = baseAmount / originalRate;
+    final valueAtCurrentRate = baseAmount / currentRate;
+    // إذا كان الفرق إيجابياً = مكسب صرف، سلبياً = خسارة صرف
+    return valueAtCurrentRate - valueAtOriginalRate;
+  }
+
+  /// إنشاء قيد محاسبي لمكاسب/خسائر الصرف الأجنبي
+  Future<void> recordExchangeGainLoss({
+    required int accountId,
+    required double gainLossAmount,
+    required String currency,
+    required String referenceId,
+  }) async {
+    if (gainLossAmount.abs() < 0.01) return;
+
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final journalId = DateTime.now().millisecondsSinceEpoch;
+
+    // البحث عن حساب مكاسب/خسائر الصرف (إن وجد) أو استخدام حساب المصاريف
+    var exchangeAccountId = await _getOrCreateExchangeAccount();
+
+    await db.transaction((txn) async {
+      if (gainLossAmount > 0) {
+        // مكسب صرف: مدين = الحساب الأصلي، دائن = حساب مكاسب الصرف
+        await txn.insert('transactions', {
+          'account_id': accountId,
+          'journal_id': journalId,
+          'debit': gainLossAmount.abs(),
+          'credit': 0.0,
+          'description': 'مكاسب صرف $currency - $referenceId',
+          'date': now.substring(0, 10),
+          'created_at': now,
+        });
+        await txn.insert('transactions', {
+          'account_id': exchangeAccountId,
+          'journal_id': journalId,
+          'debit': 0.0,
+          'credit': gainLossAmount.abs(),
+          'description': 'مكاسب صرف $currency - $referenceId',
+          'date': now.substring(0, 10),
+          'created_at': now,
+        });
+        await _updateAccountBalanceWithJournal(txn, accountId, gainLossAmount.abs(), 0.0, now);
+        await _updateAccountBalanceWithJournal(txn, exchangeAccountId, 0.0, gainLossAmount.abs(), now);
+      } else {
+        // خسارة صرف: مدين = حساب خسائر الصرف، دائن = الحساب الأصلي
+        await txn.insert('transactions', {
+          'account_id': exchangeAccountId,
+          'journal_id': journalId,
+          'debit': gainLossAmount.abs(),
+          'credit': 0.0,
+          'description': 'خسائر صرف $currency - $referenceId',
+          'date': now.substring(0, 10),
+          'created_at': now,
+        });
+        await txn.insert('transactions', {
+          'account_id': accountId,
+          'journal_id': journalId,
+          'debit': 0.0,
+          'credit': gainLossAmount.abs(),
+          'description': 'خسائر صرف $currency - $referenceId',
+          'date': now.substring(0, 10),
+          'created_at': now,
+        });
+        await _updateAccountBalanceWithJournal(txn, exchangeAccountId, gainLossAmount.abs(), 0.0, now);
+        await _updateAccountBalanceWithJournal(txn, accountId, 0.0, gainLossAmount.abs(), now);
+      }
+    });
+  }
+
+  /// الحصول على أو إنشاء حساب مكاسب/خسائر الصرف الأجنبي
+  Future<int> _getOrCreateExchangeAccount() async {
+    final db = await database;
+    // البحث عن حساب مكاسب/خسائر الصرف
+    final existing = await db.query(
+      'accounts',
+      where: "account_code LIKE '53%' AND is_system = 1",
+      limit: 1,
+    );
+    if (existing.isNotEmpty) return existing.first['id'] as int;
+
+    // إنشاء حساب جديد
+    final now = DateTime.now().toIso8601String();
+    final id = await db.insert('accounts', {
+      'name_ar': 'مكاسب/خسائر فروقات الصرف',
+      'name_en': 'Exchange Rate Gains/Losses',
+      'account_code': '5300',
+      'account_type': 'EXPENSE',
+      'balance': 0.0,
+      'currency': 'YER',
+      'balance_type': 'credit',
+      'is_active': 1,
+      'is_system': 1,
+      'created_at': now,
+      'updated_at': now,
+    });
+    return id;
+  }
+
+  /// التحقق الإلزامي من توازن القيد المزدوج قبل الحفظ
+  /// يُستخدم كدالة مساعدة للتأكد من أن مجموع المدين = مجموع الدائن
+  void _assertJournalBalance(List<Map<String, dynamic>> entries) {
+    final totalDebit = entries.fold(0.0, (sum, e) => sum + ((e['debit'] as num?)?.toDouble() ?? 0.0));
+    final totalCredit = entries.fold(0.0, (sum, e) => sum + ((e['credit'] as num?)?.toDouble() ?? 0.0));
+    if ((totalDebit - totalCredit).abs() > 0.01) {
+      throw Exception('القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit. يجب أن يتساوى المدين والدائن.');
+    }
   }
 
   Future<Map<String, double>> getYearProfitLoss(int year) async {

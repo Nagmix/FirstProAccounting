@@ -59,8 +59,12 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
   String? _imagePath;
   bool _isEdit = false;
+  bool _unitConversionsExpanded = false;
 
   bool get _isEditMode => widget.existing != null;
+
+  // ── Unit Conversions ─────────────────────────────────────────
+  List<_UnitConversionEntry> _unitConversions = [];
 
   // ── Dropdown data from DB ─────────────────────────────────────
   List<Map<String, dynamic>> _categories = [];
@@ -89,6 +93,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _isEdit = widget.existing != null;
     if (_isEdit) {
       _populateFromExisting();
+      _loadUnitConversions();
     } else {
       _generateItemCode();
       _taxRateController.text =
@@ -177,6 +182,211 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _includeInReports = p.includeInReports;
     _isActive = p.isActive;
     _imagePath = p.imagePath;
+  }
+
+  Future<void> _loadUnitConversions() async {
+    if (widget.existing?.id == null) return;
+    final db = DatabaseHelper();
+    final conversions = await db.getUnitConversions(widget.existing!.id!);
+    if (!mounted) return;
+    setState(() {
+      _unitConversions = conversions.map((c) => _UnitConversionEntry(
+        fromUnit: c['from_unit'] as String? ?? '',
+        toUnit: c['to_unit'] as String? ?? '',
+        conversionFactor: (c['conversion_factor'] as num?)?.toDouble() ?? 1.0,
+        barcode: c['barcode'] as String?,
+        sellPrice: (c['sell_price'] as num?)?.toDouble() ?? 0.0,
+      )).toList();
+      if (_unitConversions.isNotEmpty) {
+        _unitConversionsExpanded = true;
+      }
+    });
+  }
+
+  Future<void> _showAddUnitConversionDialog() async {
+    int? fromUnitId;
+    int? toUnitId;
+    final factorController = TextEditingController();
+    final barcodeController = TextEditingController();
+    final sellPriceController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.swap_horiz, color: AppColors.primary, size: 22),
+                  const SizedBox(width: 8),
+                  const Text('إضافة وحدة تحويل', style: TextStyle(fontSize: 18)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // From Unit
+                      DropdownButtonFormField<int>(
+                        value: fromUnitId,
+                        decoration: const InputDecoration(
+                          labelText: 'من وحدة',
+                          prefixIcon: Icon(Icons.arrow_forward),
+                        ),
+                        items: _units
+                            .map((u) => DropdownMenuItem<int>(
+                                  value: u['id'] as int,
+                                  child: Text(u['name'] as String),
+                                ))
+                            .toList(),
+                        onChanged: (v) => setDialogState(() => fromUnitId = v),
+                        validator: (v) => v == null ? 'اختر الوحدة المصدر' : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // To Unit
+                      DropdownButtonFormField<int>(
+                        value: toUnitId,
+                        decoration: const InputDecoration(
+                          labelText: 'إلى وحدة',
+                          prefixIcon: Icon(Icons.arrow_back),
+                        ),
+                        items: _units
+                            .map((u) => DropdownMenuItem<int>(
+                                  value: u['id'] as int,
+                                  child: Text(u['name'] as String),
+                                ))
+                            .toList(),
+                        onChanged: (v) => setDialogState(() => toUnitId = v),
+                        validator: (v) => v == null ? 'اختر الوحدة الهدف' : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Conversion Factor
+                      TextFormField(
+                        controller: factorController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,4}')),
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: 'معامل التحويل *',
+                          hintText: 'مثال: 24 (1 كرتون = 24 قطعة)',
+                          prefixIcon: Icon(Icons.functions),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'معامل التحويل مطلوب';
+                          final val = double.tryParse(v);
+                          if (val == null || val <= 0) return 'أدخل قيمة أكبر من صفر';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Barcode (optional)
+                      TextFormField(
+                        controller: barcodeController,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'باركود (اختياري)',
+                          prefixIcon: Icon(Icons.qr_code),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Sell Price
+                      TextFormField(
+                        controller: sellPriceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.done,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'سعر البيع بهذه الوحدة',
+                          prefixIcon: const Icon(Icons.sell),
+                          suffixText: AppConstants.currency,
+                        ),
+                      ),
+
+                      // Validation: from != to
+                      if (fromUnitId != null && toUnitId != null && fromUnitId == toUnitId) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning, size: 16, color: AppColors.error),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'لا يمكن أن تكون الوحدة المصدر والهدف متطابقتين',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('إلغاء'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: (fromUnitId != null && toUnitId != null && fromUnitId == toUnitId)
+                      ? null
+                      : () {
+                          if (!formKey.currentState!.validate()) return;
+                          Navigator.of(context).pop(true);
+                        },
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('إضافة'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == true && fromUnitId != null && toUnitId != null) {
+      final fromUnitName = _units.firstWhere((u) => u['id'] == fromUnitId)['name'] as String;
+      final toUnitName = _units.firstWhere((u) => u['id'] == toUnitId)['name'] as String;
+      setState(() {
+        _unitConversions.add(_UnitConversionEntry(
+          fromUnit: fromUnitName,
+          toUnit: toUnitName,
+          conversionFactor: double.tryParse(factorController.text) ?? 1.0,
+          barcode: barcodeController.text.trim().isNotEmpty ? barcodeController.text.trim() : null,
+          sellPrice: double.tryParse(sellPriceController.text) ?? 0.0,
+        ));
+        _unitConversionsExpanded = true;
+      });
+    }
+
+    factorController.dispose();
+    barcodeController.dispose();
+    sellPriceController.dispose();
   }
 
   Future<void> _pickImage() async {
@@ -313,7 +523,48 @@ class _AddProductSheetState extends State<AddProductSheet> {
       } else {
         final map = product.toMap();
         map['image_path'] = _imagePath;
-        await db.insertProduct(map);
+        final savedId = await db.insertProduct(map);
+
+        // Save unit conversions for new product
+        if (savedId > 0) {
+          for (final uc in _unitConversions) {
+            await db.insertUnitConversion({
+              'product_id': savedId,
+              'from_unit': uc.fromUnit,
+              'to_unit': uc.toUnit,
+              'conversion_factor': uc.conversionFactor,
+              'barcode': uc.barcode ?? '',
+              'sell_price': uc.sellPrice,
+              'is_active': 1,
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+          }
+        }
+      }
+
+      // Save unit conversions for edit mode
+      if (_isEdit && widget.existing != null) {
+        final productId = widget.existing!.id!;
+        // Delete existing conversions
+        final existingConvs = await db.getUnitConversions(productId);
+        for (final ec in existingConvs) {
+          await db.deleteUnitConversion(ec['id'] as int);
+        }
+        // Insert new conversions
+        for (final uc in _unitConversions) {
+          await db.insertUnitConversion({
+            'product_id': productId,
+            'from_unit': uc.fromUnit,
+            'to_unit': uc.toUnit,
+            'conversion_factor': uc.conversionFactor,
+            'barcode': uc.barcode ?? '',
+            'sell_price': uc.sellPrice,
+            'is_active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -732,7 +983,177 @@ class _AddProductSheetState extends State<AddProductSheet> {
               ),
 
               // ══════════════════════════════════════════════════════
-              //  Section 3: المخزون
+              //  Section 3: تحويل الوحدات
+              // ══════════════════════════════════════════════════════
+              _sectionHeader('تحويل الوحدات', Icons.swap_horiz),
+
+              // Collapsible section
+              GestureDetector(
+                onTap: () => setState(() => _unitConversionsExpanded = !_unitConversionsExpanded),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _unitConversionsExpanded ? Icons.expand_less : Icons.expand_more,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _unitConversions.isEmpty
+                              ? 'لا توجد تحويلات - اضغط لإضافة'
+                              : '${_unitConversions.length} تحويل${_unitConversions.length > 1 ? 'ات' : ''}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.primary.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              if (_unitConversionsExpanded) ...[
+                const SizedBox(height: 10),
+
+                // List of conversion entries
+                if (_unitConversions.isNotEmpty)
+                  ...List.generate(_unitConversions.length, (index) {
+                    final uc = _unitConversions[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Conversion line
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '1 ${uc.fromUnit}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward, size: 16, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${uc.conversionFactor.toStringAsFixed(uc.conversionFactor == uc.conversionFactor.roundToDouble() ? 0 : 2)} ${uc.toUnit}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              // Delete button
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+                                tooltip: 'حذف التحويل',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                onPressed: () {
+                                  setState(() {
+                                    _unitConversions.removeAt(index);
+                                    if (_unitConversions.isEmpty) {
+                                      _unitConversionsExpanded = false;
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          // Barcode and price info
+                          if (uc.barcode != null && uc.barcode!.isNotEmpty || uc.sellPrice > 0) ...[
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 4,
+                              children: [
+                                if (uc.barcode != null && uc.barcode!.isNotEmpty)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.qr_code, size: 14, color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        uc.barcode!,
+                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                      ),
+                                    ],
+                                  ),
+                                if (uc.sellPrice > 0)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.sell, size: 14, color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${uc.sellPrice.toStringAsFixed(2)} ${AppConstants.currency}',
+                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+
+                // Add conversion button
+                OutlinedButton.icon(
+                  onPressed: _showAddUnitConversionDialog,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('إضافة وحدة تحويل'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ],
+
+              // ══════════════════════════════════════════════════════
+              //  Section 4: المخزون
               // ══════════════════════════════════════════════════════
               _sectionHeader(
                   'المخزون', Icons.warehouse),
@@ -889,7 +1310,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               ),
 
               // ══════════════════════════════════════════════════════
-              //  Section 4: الحسابات
+              //  Section 5: الحسابات
               // ══════════════════════════════════════════════════════
               _sectionHeader(
                   'الحسابات', Icons.pie_chart),
@@ -960,7 +1381,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               ),
 
               // ══════════════════════════════════════════════════════
-              //  Section 5: إعدادات أخرى
+              //  Section 6: إعدادات أخرى
               // ══════════════════════════════════════════════════════
               _sectionHeader(
                   'إعدادات أخرى', Icons.settings),
@@ -1064,4 +1485,20 @@ class _AddProductSheetState extends State<AddProductSheet> {
       ),
     );
   }
+}
+
+class _UnitConversionEntry {
+  final String fromUnit;
+  final String toUnit;
+  final double conversionFactor;
+  final String? barcode;
+  final double sellPrice;
+
+  _UnitConversionEntry({
+    required this.fromUnit,
+    required this.toUnit,
+    required this.conversionFactor,
+    this.barcode,
+    this.sellPrice = 0.0,
+  });
 }

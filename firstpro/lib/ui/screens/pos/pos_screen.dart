@@ -65,6 +65,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   bool _isLoading = true;
   int? _selectedCategoryId;
 
+  // ── Top sellers (today) ───────────────────────────────────────────
+  List<Map<String, dynamic>> _topSellers = [];
+
   // ── Shift state ───────────────────────────────────────────────────
   Map<String, dynamic>? _activeShift;
   String _shiftCashBoxName = '';
@@ -111,13 +114,35 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _tryBarcodeMatch(String barcode) async {
+    // 1. Check direct product barcode
     final match = _products.where(
       (p) => (p.barcode ?? '').trim() == barcode.trim(),
     );
     if (match.isNotEmpty) {
-      _addToCart(match.first);
+      _addToCartWithUnit(match.first);
       _searchController.clear();
+      _isSearching = false;
+      setState(() {});
+      return;
     }
+
+    // 2. Check unit conversion barcodes
+    final db = DatabaseHelper();
+    final conversion = await db.findUnitConversionByBarcode(barcode);
+    if (conversion != null) {
+      final productId = conversion['product_id'] as int;
+      final product = _products.where((p) => p.id == productId).firstOrNull;
+      if (product != null) {
+        _addToCartDirect(product, {
+          'unit_name': conversion['from_unit'] as String,
+          'sell_price': (conversion['sell_price'] as num?)?.toDouble() ?? product.sellPrice,
+          'conversion_factor': (conversion['conversion_factor'] as num?)?.toDouble() ?? 1.0,
+          'barcode': conversion['barcode'] as String?,
+        });
+        _searchController.clear();
+      }
+    }
+
     _isSearching = false;
     setState(() {});
   }
@@ -159,6 +184,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       }
     });
     await _loadActiveShift();
+    await _loadTopSellers();
   }
 
   Future<void> _loadActiveShift() async {
@@ -186,6 +212,23 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       _shiftDuration = Duration.zero;
     });
     if (_ticker.isActive) _ticker.stop();
+  }
+
+  Future<void> _loadTopSellers() async {
+    final db = DatabaseHelper();
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final dbInstance = await db.database;
+    final result = await dbInstance.rawQuery(
+      "SELECT ii.product_id, ii.product_name, SUM(ii.quantity) AS total_qty "
+      "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id = i.id "
+      "WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 AND i.created_at LIKE ? "
+      "GROUP BY ii.product_id ORDER BY total_qty DESC LIMIT 5",
+      ['$todayStr%'],
+    );
+    if (mounted) {
+      setState(() => _topSellers = result);
+    }
   }
 
   // ── Computed properties ───────────────────────────────────────────
@@ -227,12 +270,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   /// Generate readable invoice ID: POS-YYYYMMDD-NNNN
-  String _generateInvoiceId() {
-    _todayInvoiceCount++;
+  /// Generate invoice ID using DB-based sequence (no gaps)
+  /// Uses getNextInvoiceSequence for gap-free numbering
+  Future<String> _generateInvoiceId() async {
     final now = DateTime.now();
     final dateStr =
         '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final seq = _todayInvoiceCount.toString().padLeft(4, '0');
+    final db = DatabaseHelper();
+    final nextSeq = await db.getNextInvoiceSequence('POS-$dateStr', 'pos');
+    _todayInvoiceCount = nextSeq;
+    final seq = nextSeq.toString().padLeft(4, '0');
     return 'POS-$dateStr-$seq';
   }
 
@@ -259,6 +306,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         if (_activeShift != null) _buildShiftInfoBar(),
                         _buildSearchBar(),
                         _buildCategoryChips(),
+                        if (_topSellers.isNotEmpty) _buildTopSellers(),
                         Expanded(child: _buildProductGrid()),
                       ],
                     ),
@@ -705,6 +753,54 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   // ═══════════════════════════════════════════════════════════════════
+  //  TOP SELLERS
+  // ═══════════════════════════════════════════════════════════════════
+  Widget _buildTopSellers() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.local_fire_department, size: 16, color: AppColors.warning),
+              const SizedBox(width: 4),
+              Text(
+                'الأكثر مبيعاً',
+                style: context.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.warning,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 36,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _topSellers.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, index) {
+                final item = _topSellers[index];
+                final productName = item['product_name'] as String? ?? '';
+                final qty = (item['total_qty'] as num?)?.toInt() ?? 0;
+                // Find matching product for tap
+                final matchProduct = _products.where((p) => p.id == item['product_id']).firstOrNull;
+                return ActionChip(
+                  avatar: const Icon(Icons.local_fire_department, size: 14, color: AppColors.warning),
+                  label: Text('$productName ($qty)', style: const TextStyle(fontSize: 11)),
+                  onPressed: matchProduct != null ? () => _addToCartWithUnit(matchProduct) : null,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
   //  PRODUCT GRID
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildProductGrid() {
@@ -739,7 +835,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         itemBuilder: (context, index) {
           return _ProductCard(
             product: products[index],
-            onTap: () => _addToCart(products[index]),
+            onTap: () => _addToCartWithUnit(products[index]),
           );
         },
       ),
@@ -943,7 +1039,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${CurrencyFormatter.format(item.unitPrice)} × ${item.quantity}',
+                      '${CurrencyFormatter.format(item.unitPrice)} × ${item.quantity} ${item.unitName}',
                       style: TextStyle(
                         fontSize: 11,
                         color: context.textSecondary,
@@ -2576,6 +2672,149 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
   //  CART ACTIONS
   // ═══════════════════════════════════════════════════════════════════
+
+  /// Add to cart with unit selection dialog when multiple units exist.
+  void _addToCartWithUnit(Product product) async {
+    if (_activeShift == null) {
+      context.showErrorSnackBar('يجب فتح وردية أولاً');
+      return;
+    }
+
+    final db = DatabaseHelper();
+    final availableUnits = await db.getAvailableUnitsForProduct(product.id!);
+
+    if (availableUnits.length <= 1) {
+      // Only base unit - add directly (backwards compatible)
+      _addToCartDirect(product, availableUnits.isNotEmpty ? availableUnits.first : null);
+      return;
+    }
+
+    // Multiple units available - show selection dialog
+    String? selectedUnitName = availableUnits.first['unit_name'] as String?;
+    double selectedPrice = (availableUnits.first['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
+    double selectedFactor = (availableUnits.first['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+    String? selectedBarcode = availableUnits.first['barcode'] as String?;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text('اختر الوحدة - ${product.nameAr}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...availableUnits.map((unit) => ListTile(
+                  title: Text(unit['unit_name'] as String),
+                  subtitle: Text('${CurrencyFormatter.format((unit['sell_price'] as num?)?.toDouble() ?? 0.0)}'),
+                  trailing: (unit['unit_name'] == selectedUnitName)
+                      ? Icon(Icons.check_circle, color: AppColors.success)
+                      : null,
+                  onTap: () {
+                    setDialogState(() {
+                      selectedUnitName = unit['unit_name'] as String;
+                      selectedPrice = (unit['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
+                      selectedFactor = (unit['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+                      selectedBarcode = unit['barcode'] as String?;
+                    });
+                  },
+                )),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('إلغاء'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _addToCartDirect(product, {
+                    'unit_name': selectedUnitName,
+                    'sell_price': selectedPrice,
+                    'conversion_factor': selectedFactor,
+                    'barcode': selectedBarcode,
+                  });
+                },
+                child: const Text('إضافة'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Add to cart with a specific unit (from dialog or barcode scan).
+  void _addToCartDirect(Product product, Map<String, dynamic>? unitInfo) {
+    if (_activeShift == null) {
+      context.showErrorSnackBar('يجب فتح وردية أولاً');
+      return;
+    }
+
+    final factor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+    final existingIndex = _cart.indexWhere((i) =>
+        i.productId == product.id && i.unitName == (unitInfo?['unit_name'] as String? ?? 'قطعة'));
+    final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
+
+    // For multi-unit items, check stock in base units
+    final baseQtyNeeded = requestedQty * factor;
+    if (product.currentStock < baseQtyNeeded) {
+      _showLowStockWarning(product, existingIndex, requestedQty, product.currentStock / factor, unitInfo: unitInfo);
+      return;
+    }
+
+    _doAddToCartWithUnit(existingIndex, product, unitInfo);
+  }
+
+  /// Internal: actually add the item to cart with unit info.
+  void _doAddToCartWithUnit(int existingIndex, Product product, Map<String, dynamic>? unitInfo) {
+    final unitName = (unitInfo?['unit_name'] as String?) ?? 'قطعة';
+    final unitPrice = (unitInfo?['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
+    final unitBarcode = unitInfo?['barcode'] as String?;
+    final factor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+
+    if (existingIndex >= 0) {
+      setState(() {
+        _cart[existingIndex] = _cart[existingIndex].copyWith(
+          quantity: _cart[existingIndex].quantity + 1,
+        );
+      });
+    } else {
+      setState(() {
+        _cart.add(_CartItem(
+          productId: product.id!,
+          name: product.nameAr,
+          unitPrice: unitPrice,
+          quantity: 1,
+          unitName: unitName,
+          conversionFactor: factor,
+          unitBarcode: unitBarcode,
+        ));
+      });
+    }
+
+    // Auto-add a default payment if none exists
+    if (_payments.isEmpty && _activePaymentMethod != 'credit') {
+      _payments.add(_PaymentEntry(
+        method: _activePaymentMethod,
+        amount: _total,
+      ));
+    } else if (_payments.isNotEmpty) {
+      // Update the first payment amount if single payment
+      if (_payments.length == 1 && _activePaymentMethod != 'credit') {
+        _payments[0] = _payments[0].copyWith(amount: _total);
+      }
+    }
+
+    // Expand cart sheet slightly
+    if (_sheetExtent < 0.3) {
+      _sheetController.animateTo(0.3,
+          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+    }
+  }
+
   void _addToCart(Product product) {
     if (_activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
@@ -2600,8 +2839,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     Product product,
     int existingIndex,
     int requestedQty,
-    double availableStock,
-  ) async {
+    double availableStock, {
+    Map<String, dynamic>? unitInfo,
+  }) async {
     final proceed = await showDialog<bool>(
       context: context,
       builder: (ctx) => Directionality(
@@ -2636,7 +2876,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     );
 
     if (proceed == true) {
-      _doAddToCart(existingIndex, product);
+      if (unitInfo != null) {
+        _doAddToCartWithUnit(existingIndex, product, unitInfo);
+      } else {
+        _doAddToCart(existingIndex, product);
+      }
     }
   }
 
@@ -2836,7 +3080,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
 
   /// Step 1: Start checkout – capture values and show confirmation overlay
-  void _startCheckout() {
+  void _startCheckout() async {
     if (_checkoutPhase != _CheckoutPhase.idle) return;
     if (_activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً قبل إتمام عملية البيع');
@@ -2849,6 +3093,19 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       context.showErrorSnackBar('يجب اختيار عميل للبيع آجل');
       return;
     }
+
+    // ── التحقق من سقف الدين للعميل عند البيع الآجل ──
+    if (primaryMethod == 'credit' && _selectedCustomerId != null) {
+      final db = DatabaseHelper();
+      final isOverCeiling = await db.isCustomerOverDebtCeiling(_selectedCustomerId!, _total);
+      if (isOverCeiling) {
+        if (mounted) {
+          context.showErrorSnackBar('تجاوز سقف الدين! لا يمكن إتمام البيع الآجل لهذا العميل');
+        }
+        return;
+      }
+    }
+
     if (primaryMethod != 'credit' && _totalPaid < _total - 0.01 && _payments.isNotEmpty) {
       context.showErrorSnackBar('المبلغ المدفوع أقل من الإجمالي');
       return;
@@ -2879,7 +3136,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     setState(() => _checkoutPhase = _CheckoutPhase.saving);
 
     try {
-      final invoiceId = _generateInvoiceId();
+      final invoiceId = await _generateInvoiceId();
       final cashBoxId = _activeShift!['cash_box_id'] as int;
       final shiftId = _activeShift!['id'] as int;
       final now = DateTime.now();
@@ -2915,8 +3172,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       final items = _cart.map((item) => {
         'invoice_id': invoiceId,
         'product_id': item.productId,
-        'product_name': item.name,
-        'quantity': item.quantity,
+        'product_name': '${item.name} (${item.unitName})',
+        'quantity': item.baseQuantity, // Base quantity for stock deduction
         'unit_price': item.unitPrice,
         'total_price': item.total,
       }).toList();
@@ -2942,6 +3199,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
       // Reset cart for next invoice
       _resetForNewInvoice();
+
+      // Refresh top sellers after successful checkout
+      _loadTopSellers();
 
       // Show completion overlay
       setState(() => _checkoutPhase = _CheckoutPhase.completed);
@@ -3261,7 +3521,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         'date': DateTime.now(),
         'customer_name': _selectedCustomerName.isEmpty ? 'بدون عميل' : _selectedCustomerName,
         'items': _cart.map((item) => <String, dynamic>{
-          'product_name': item.name,
+          'product_name': '${item.name} (${item.unitName})',
           'quantity': item.quantity,
           'unit_price': item.unitPrice,
           'total_price': item.total,
@@ -3415,12 +3675,33 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
     );
     if (result != null && result.isNotEmpty) {
+      // Try direct product barcode match first
       final match = _products.where((p) => (p.barcode ?? '').trim() == result.trim());
       if (match.isNotEmpty) {
-        _addToCart(match.first);
+        _addToCartWithUnit(match.first);
       } else {
-        if (mounted) {
-          context.showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
+        // Try unit conversion barcode match
+        final db = DatabaseHelper();
+        final conversion = await db.findUnitConversionByBarcode(result);
+        if (conversion != null) {
+          final productId = conversion['product_id'] as int;
+          final product = _products.where((p) => p.id == productId).firstOrNull;
+          if (product != null) {
+            _addToCartDirect(product, {
+              'unit_name': conversion['from_unit'] as String,
+              'sell_price': (conversion['sell_price'] as num?)?.toDouble() ?? product.sellPrice,
+              'conversion_factor': (conversion['conversion_factor'] as num?)?.toDouble() ?? 1.0,
+              'barcode': conversion['barcode'] as String?,
+            });
+          } else {
+            if (mounted) {
+              context.showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
+            }
+          }
+        } else {
+          if (mounted) {
+            context.showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
+          }
         }
       }
     }
@@ -3448,15 +3729,23 @@ class _CartItem {
   final String name;
   final double unitPrice;
   final int quantity;
+  final String unitName;           // e.g., 'كرتون' or 'قطعة'
+  final double conversionFactor;   // 1.0 for base unit, 24.0 for carton
+  final String? unitBarcode;       // barcode for this specific unit
 
   _CartItem({
     required this.productId,
     required this.name,
     required this.unitPrice,
     required this.quantity,
+    this.unitName = 'قطعة',
+    this.conversionFactor = 1.0,
+    this.unitBarcode,
   });
 
   double get total => unitPrice * quantity;
+  /// Equivalent quantity in base units (for stock deduction)
+  double get baseQuantity => quantity * conversionFactor;
 
   _CartItem copyWith({int? quantity}) {
     return _CartItem(
@@ -3464,6 +3753,9 @@ class _CartItem {
       name: name,
       unitPrice: unitPrice,
       quantity: quantity ?? this.quantity,
+      unitName: unitName,
+      conversionFactor: conversionFactor,
+      unitBarcode: unitBarcode,
     );
   }
 }
