@@ -8,6 +8,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/product_model.dart';
+import '../../../data/models/unit_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -131,6 +132,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
   List<Map<String, dynamic>> _assetAccounts = [];
   List<Map<String, dynamic>> _liabilityAccounts = [];
 
+  // ── Default currency for account auto-selection ────────────────
+  String? _defaultCurrencyCode;
+
   // ── Helper: get unit name by id ───────────────────────────────
   String _unitNameById(int? id) {
     if (id == null) return '';
@@ -208,6 +212,40 @@ class _AddProductSheetState extends State<AddProductSheet> {
       _assetAccounts = results[6];
       _liabilityAccounts = results[7];
     });
+
+    // Auto-select default accounts based on default currency
+    final defaultCurrency = await db.getDefaultCurrency();
+    if (defaultCurrency != null && !_isEditMode) {
+      final currencyCode = defaultCurrency['code'] as String? ?? 'YER';
+      _defaultCurrencyCode = currencyCode;
+      final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[currencyCode] ?? 0;
+
+      if (mounted) {
+        setState(() {
+          // Sales account (4100 + offset)
+          _autoSelectAccount(_revenueAccounts, 4100 + codeOffset, (id) => _selectedSalesAccountId = id);
+          // Purchases account (3100 + offset)
+          _autoSelectAccount(_costAccounts, 3100 + codeOffset, (id) => _selectedPurchaseAccountId = id);
+          // Inventory account (1300 + offset)
+          _autoSelectAccount(_assetAccounts, 1300 + codeOffset, (id) => _selectedInventoryAccountId = id);
+          // COGS account (3200 + offset)
+          _autoSelectAccount(_costAccounts, 3200 + codeOffset, (id) => _selectedCogsAccountId = id);
+          // VAT account (3300 + offset)
+          _autoSelectAccount(_liabilityAccounts, 3300 + codeOffset, (id) => _selectedVatAccountId = id);
+        });
+      }
+    }
+  }
+
+  /// Helper to auto-select an account by its code
+  void _autoSelectAccount(List<Map<String, dynamic>> accounts, int targetCode, void Function(int) setter) {
+    for (final a in accounts) {
+      final code = a['account_code'] as String? ?? '';
+      if (code == targetCode.toString()) {
+        setter(a['id'] as int);
+        break;
+      }
+    }
   }
 
   Future<void> _generateItemCode() async {
@@ -1897,27 +1935,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
     final taxRate = double.tryParse(_taxRateController.text) ?? 0.0;
     final showVatAccount = taxRate > 0;
 
-    // Auto-select COGS account (code 3200)
-    if (_selectedCogsAccountId == null && _costAccounts.isNotEmpty) {
-      for (final a in _costAccounts) {
-        final code = a['account_code'] as String? ?? '';
-        if (code.startsWith('32')) {
-          _selectedCogsAccountId = a['id'] as int;
-          break;
-        }
-      }
-    }
-
-    // Auto-select VAT account (code 3300)
-    if (_selectedVatAccountId == null && _liabilityAccounts.isNotEmpty && showVatAccount) {
-      for (final a in _liabilityAccounts) {
-        final code = a['account_code'] as String? ?? '';
-        if (code.startsWith('33')) {
-          _selectedVatAccountId = a['id'] as int;
-          break;
-        }
-      }
-    }
+    // COGS and VAT auto-selection is now handled in _loadDropdownData()
+    // based on the default currency. No more hardcoded prefix matching.
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2377,76 +2396,216 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
   Future<void> _showAddUnitDialog() async {
     final nameArController = TextEditingController();
-    final abbreviationController = TextEditingController();
+    final nameEnController = TextEditingController();
+    final abbrController = TextEditingController();
+    final descController = TextEditingController();
+    final orderController = TextEditingController(text: '0');
+
+    String selectedType = 'count';
+    bool isActive = true;
+    bool isSellable = true;
+    bool isPurchasable = true;
+    bool isPackaging = false;
+    bool isBaseUnit = false;
+
+    final formKey = GlobalKey<FormState>();
+
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('إضافة وحدة جديدة'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameArController,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  labelText: 'اسم الوحدة بالعربي',
-                  prefixIcon: Icon(Icons.straighten),
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.straighten, color: AppColors.primary, size: 22),
+                    const SizedBox(width: 8),
+                    const Text('إضافة وحدة جديدة', style: TextStyle(fontSize: 18)),
+                  ],
                 ),
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: abbreviationController,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  labelText: 'الاختصار',
+                content: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Name Arabic
+                        TextFormField(
+                          controller: nameArController,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'اسم الوحدة بالعربي *',
+                            prefixIcon: Icon(Icons.text_fields),
+                          ),
+                          validator: (v) => (v == null || v.trim().isEmpty) ? 'اسم الوحدة مطلوب' : null,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Name English
+                        TextFormField(
+                          controller: nameEnController,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'اسم الوحدة بالإنجليزي',
+                            prefixIcon: Icon(Icons.text_fields),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Abbreviation
+                        TextFormField(
+                          controller: abbrController,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'الاختصار',
+                            hintText: 'مثال: كجم، حبة، ل',
+                            prefixIcon: Icon(Icons.short_text),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Unit Type
+                        DropdownButtonFormField<String>(
+                          value: selectedType,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'نوع الوحدة *',
+                            prefixIcon: Icon(Icons.category),
+                          ),
+                          items: Unit.unitTypeLabels.entries
+                              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                              .toList(),
+                          onChanged: (v) => setDialogState(() => selectedType = v ?? 'count'),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Description
+                        TextFormField(
+                          controller: descController,
+                          textInputAction: TextInputAction.next,
+                          maxLines: 2,
+                          minLines: 1,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'وصف (اختياري)',
+                            prefixIcon: Icon(Icons.edit_note),
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Display Order
+                        TextFormField(
+                          controller: orderController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'ترتيب العرض',
+                            prefixIcon: Icon(Icons.sort),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Flags
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            FilterChip(
+                              label: const Text('مفعلة'),
+                              selected: isActive,
+                              onSelected: (v) => setDialogState(() => isActive = v),
+                              selectedColor: AppColors.successLight,
+                            ),
+                            FilterChip(
+                              label: const Text('قابلة للبيع'),
+                              selected: isSellable,
+                              onSelected: (v) => setDialogState(() => isSellable = v),
+                              selectedColor: AppColors.infoLight,
+                            ),
+                            FilterChip(
+                              label: const Text('قابلة للشراء'),
+                              selected: isPurchasable,
+                              onSelected: (v) => setDialogState(() => isPurchasable = v),
+                              selectedColor: AppColors.infoLight,
+                            ),
+                            FilterChip(
+                              label: const Text('وحدة تغليف'),
+                              selected: isPackaging,
+                              onSelected: (v) => setDialogState(() => isPackaging = v),
+                              selectedColor: AppColors.warningLight,
+                            ),
+                            FilterChip(
+                              label: const Text('وحدة أساسية'),
+                              selected: isBaseUnit,
+                              onSelected: (v) => setDialogState(() => isBaseUnit = v),
+                              selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('إلغاء'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (!formKey.currentState!.validate()) return;
+                      Navigator.of(context).pop(true);
+                    },
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('إضافة'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('إضافة'),
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
 
     if (result == true) {
-      final name = nameArController.text.trim();
-      if (name.isNotEmpty) {
-        final now = DateTime.now().toIso8601String();
-        final id = await DatabaseHelper().insertUnit({
-          'name_ar': name,
-          'name_en': '',
-          'abbreviation': abbreviationController.text.trim(),
-          'unit_type': 'count',
-          'is_active': 1,
-          'is_sellable': 1,
-          'is_purchasable': 1,
-          'is_packaging': 0,
-          'is_base_unit': 0,
-          'display_order': 99,
-          'description': '',
-          'created_at': now,
-          'updated_at': now,
-        });
-        await _loadDropdownData();
-        if (mounted) {
-          setState(() {});
-        }
+      final now = DateTime.now().toIso8601String();
+      final id = await DatabaseHelper().insertUnit({
+        'name_ar': nameArController.text.trim(),
+        'name_en': nameEnController.text.trim(),
+        'abbreviation': abbrController.text.trim(),
+        'unit_type': selectedType,
+        'description': descController.text.trim().isNotEmpty ? descController.text.trim() : null,
+        'is_active': isActive ? 1 : 0,
+        'is_sellable': isSellable ? 1 : 0,
+        'is_purchasable': isPurchasable ? 1 : 0,
+        'is_packaging': isPackaging ? 1 : 0,
+        'is_base_unit': isBaseUnit ? 1 : 0,
+        'display_order': int.tryParse(orderController.text) ?? 0,
+        'created_at': now,
+        'updated_at': now,
+      });
+      await _loadDropdownData();
+      if (mounted) {
+        setState(() {});
       }
     }
     nameArController.dispose();
-    abbreviationController.dispose();
+    nameEnController.dispose();
+    abbrController.dispose();
+    descController.dispose();
+    orderController.dispose();
   }
 
   Future<void> _showAddWarehouseDialog() async {
@@ -2520,74 +2679,421 @@ class _AddProductSheetState extends State<AddProductSheet> {
   Future<void> _showAddSupplierDialog() async {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
+    final emailController = TextEditingController();
+    final addressController = TextEditingController();
+    final balanceController = TextEditingController();
+    final debtCeilingController = TextEditingController();
+    final notesController = TextEditingController();
+
+    String balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
+    String contactMethod = 'whatsapp'; // 'whatsapp' or 'phone'
+
+    final formKey = GlobalKey<FormState>();
+
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('إضافة مورد جديد'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  labelText: 'اسم المورد',
-                  prefixIcon: Icon(Icons.local_shipping),
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.local_shipping, color: AppColors.primary, size: 22),
+                    const SizedBox(width: 8),
+                    const Text('إضافة مورد جديد', style: TextStyle(fontSize: 18)),
+                  ],
                 ),
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(
-                  isDense: true,
-                  labelText: 'رقم الهاتف',
+                content: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Name
+                        TextFormField(
+                          controller: nameController,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'الاسم *',
+                            prefixIcon: Icon(Icons.person),
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Phone
+                        TextFormField(
+                          controller: phoneController,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(15),
+                          ],
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'رقم الهاتف',
+                            prefixIcon: Icon(Icons.phone),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Email
+                        TextFormField(
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'البريد الإلكتروني',
+                            prefixIcon: Icon(Icons.email),
+                          ),
+                          validator: (v) {
+                            if (v != null && v.trim().isNotEmpty) {
+                              final regex =
+                                  RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                              if (!regex.hasMatch(v.trim())) {
+                                return 'البريد الإلكتروني غير صالح';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Address
+                        TextFormField(
+                          controller: addressController,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'العنوان',
+                            prefixIcon: Icon(Icons.location_on),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Opening balance + له/عليه toggle
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: TextFormField(
+                                controller: balanceController,
+                                keyboardType: const TextInputType.numberWithOptions(
+                                    decimal: true),
+                                textInputAction: TextInputAction.next,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                      RegExp(r'^\d*\.?\d{0,2}'))
+                                ],
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  labelText: 'الرصيد الافتتاحي',
+                                  prefixIcon:
+                                      const Icon(Icons.calculate),
+                                  suffixText: AppConstants.currency,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Text(
+                                      'اتجاه الرصيد',
+                                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: balanceType == 'credit'
+                                            ? AppColors.success
+                                            : AppColors.error,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () =>
+                                                setDialogState(() => balanceType = 'credit'),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(vertical: 10),
+                                              decoration: BoxDecoration(
+                                                color: balanceType == 'credit'
+                                                    ? AppColors.success
+                                                        .withValues(alpha: 0.1)
+                                                    : Colors.transparent,
+                                                borderRadius: const BorderRadius.only(
+                                                  topRight: Radius.circular(9),
+                                                  bottomRight: Radius.circular(9),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'له',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  color: balanceType == 'credit'
+                                                      ? AppColors.success
+                                                      : AppColors.textHint,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () =>
+                                                setDialogState(() => balanceType = 'debit'),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(vertical: 10),
+                                              decoration: BoxDecoration(
+                                                color: balanceType == 'debit'
+                                                    ? AppColors.error
+                                                        .withValues(alpha: 0.1)
+                                                    : Colors.transparent,
+                                                borderRadius: const BorderRadius.only(
+                                                  topLeft: Radius.circular(9),
+                                                  bottomLeft: Radius.circular(9),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'عليه',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  color: balanceType == 'debit'
+                                                      ? AppColors.error
+                                                      : AppColors.textHint,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Debt Ceiling
+                        TextFormField(
+                          controller: debtCeilingController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                          ],
+                          decoration: InputDecoration(
+                            isDense: true,
+                            labelText: 'سقف المدينية',
+                            prefixIcon: const Icon(Icons.credit_card),
+                            suffixText: AppConstants.currency,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Contact Method toggle
+                        Text(
+                          'طريقة التواصل',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: contactMethod == 'whatsapp'
+                                  ? const Color(0xFF25D366)
+                                  : AppColors.primary,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setDialogState(() => contactMethod = 'whatsapp'),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: contactMethod == 'whatsapp'
+                                          ? const Color(0xFF25D366)
+                                              .withValues(alpha: 0.1)
+                                          : Colors.transparent,
+                                      borderRadius: const BorderRadius.only(
+                                        topRight: Radius.circular(9),
+                                        bottomRight: Radius.circular(9),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.chat,
+                                          size: 16,
+                                          color: contactMethod == 'whatsapp'
+                                              ? const Color(0xFF25D366)
+                                              : AppColors.textHint,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'واتساب',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: contactMethod == 'whatsapp'
+                                                ? const Color(0xFF25D366)
+                                                : AppColors.textHint,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setDialogState(() => contactMethod = 'phone'),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: contactMethod == 'phone'
+                                          ? AppColors.primary.withValues(alpha: 0.1)
+                                          : Colors.transparent,
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(9),
+                                        bottomLeft: Radius.circular(9),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.phone_in_talk,
+                                          size: 16,
+                                          color: contactMethod == 'phone'
+                                              ? AppColors.primary
+                                              : AppColors.textHint,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'اتصال',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: contactMethod == 'phone'
+                                                ? AppColors.primary
+                                                : AppColors.textHint,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Notes
+                        TextFormField(
+                          controller: notesController,
+                          maxLines: 2,
+                          textInputAction: TextInputAction.newline,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'الملاحظات',
+                            prefixIcon: Icon(Icons.edit_note),
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                keyboardType: TextInputType.phone,
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('إلغاء'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (!formKey.currentState!.validate()) return;
+                      Navigator.of(context).pop(true);
+                    },
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('إضافة'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('إضافة'),
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
 
     if (result == true) {
-      final name = nameController.text.trim();
-      if (name.isNotEmpty) {
-        final now = DateTime.now().toIso8601String();
-        final id = await DatabaseHelper().insertSupplier({
-          'name': name,
-          'phone': phoneController.text.trim().isNotEmpty
-              ? phoneController.text.trim()
-              : null,
-          'balance': 0.0,
-          'balance_type': 'credit',
-          'currency': 'YER',
-          'debt_ceiling': 0.0,
-          'contact_method': 'whatsapp',
-          'created_at': now,
-          'updated_at': now,
-        });
-        await _loadDropdownData();
-        if (mounted) {
-          setState(() => _selectedSupplierId = id);
-        }
+      final now = DateTime.now().toIso8601String();
+      final balance = double.tryParse(balanceController.text) ?? 0.0;
+      final id = await DatabaseHelper().insertSupplier({
+        'name': nameController.text.trim(),
+        'phone': phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+        'email': emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+        'address': addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+        'balance': balance,
+        'balance_type': balanceType,
+        'currency': 'YER',
+        'notes': notesController.text.trim().isEmpty ? null : notesController.text.trim(),
+        'debt_ceiling': double.tryParse(debtCeilingController.text) ?? 0.0,
+        'contact_method': contactMethod,
+        'created_at': now,
+        'updated_at': now,
+      });
+      await _loadDropdownData();
+      if (mounted) {
+        setState(() => _selectedSupplierId = id);
       }
     }
     nameController.dispose();
     phoneController.dispose();
+    emailController.dispose();
+    addressController.dispose();
+    balanceController.dispose();
+    debtCeilingController.dispose();
+    notesController.dispose();
   }
 }
 
