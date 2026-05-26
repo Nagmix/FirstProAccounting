@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تحليل مشروع الأول برو المحاسبي</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    :root {
+      --primary: #2633C5;
+      --primary-light: #6A88E5;
+      --primary-dark: #1A237E;
+      --secondary: #F1B440;
+      --accent-blue: #87A0E5;
+      --accent-pink: #F56E98;
+      --accent-green: #4CAF50;
+      --text-primary: #17262A;
+      --text-secondary: #4A6572;
+      --text-hint: #767676;
+      --surface: #FFFFFF;
+      --surface-variant: #F5F6FA;
+      --background: #F2F3F8;
+      --border: #E5E7EB;
+      --error: #E53935;
+      --success: #43A047;
+      --info: #1E88E5;
+      --warning: #FF9800;
+      --radius: 12px;
+      --radius-lg: 16px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
+      background: var(--surface);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 13pt;
+      width: 210mm;
+      direction: rtl;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 0;
+      margin: 0;
+      background: var(--surface);
+      page-break-after: always;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+    }
+
+    /* ===== COVER PAGE ===== */
+    .cover {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 40%, var(--primary-light) 100%);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 40mm 25mm;
+      position: relative;
+    }
+
+    .cover::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 80%;
+      height: 200%;
+      background: rgba(255,255,255,0.03);
+      border-radius: 50%;
+      transform: rotate(-15deg);
+    }
+
+    .cover::after {
+      content: '';
+      position: absolute;
+      bottom: -40%;
+      left: -20%;
+      width: 60%;
+      height: 160%;
+      background: rgba(255,255,255,0.02);
+      border-radius: 50%;
+    }
+
+    .cover-icon {
+      width: 80px;
+      height: 80px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+      font-size: 36px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover h1 {
+      font-size: 36pt;
+      font-weight: 900;
+      margin-bottom: 12px;
+      line-height: 1.3;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover h2 {
+      font-size: 16pt;
+      font-weight: 400;
+      opacity: 0.85;
+      margin-bottom: 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-meta {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius);
+      padding: 20px 30px;
+      border: 1px solid rgba(255,255,255,0.15);
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-meta p {
+      font-size: 11pt;
+      opacity: 0.9;
+      margin: 4px 0;
+    }
+
+    .cover-meta .label {
+      font-weight: 700;
+      opacity: 1;
+    }
+
+    /* ===== CONTENT PAGES ===== */
+    .content-page {
+      padding: 20mm 22mm 25mm 22mm;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .page-header h3 {
+      font-size: 10pt;
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .page-header .version {
+      font-size: 9pt;
+      color: var(--text-hint);
+    }
+
+    .section-title {
+      font-size: 20pt;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 8px;
+      padding-right: 16px;
+      border-right: 5px solid var(--secondary);
+    }
+
+    .section-subtitle {
+      font-size: 11pt;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      padding-right: 21px;
+    }
+
+    .subsection {
+      margin-bottom: 22px;
+    }
+
+    .subsection h4 {
+      font-size: 14pt;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subsection h4 .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--secondary);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    p {
+      margin-bottom: 10px;
+      text-align: right;
+      line-height: 1.8;
+    }
+
+    /* ===== CARDS ===== */
+    .info-card {
+      background: var(--surface-variant);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      border-right: 4px solid var(--primary);
+    }
+
+    .info-card.green { border-right-color: var(--success); }
+    .info-card.orange { border-right-color: var(--warning); }
+    .info-card.red { border-right-color: var(--error); }
+    .info-card.blue { border-right-color: var(--info); }
+    .info-card.pink { border-right-color: var(--accent-pink); }
+
+    .info-card h5 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+
+    .info-card.green h5 { color: var(--success); }
+    .info-card.orange h5 { color: var(--warning); }
+    .info-card.red h5 { color: var(--error); }
+    .info-card.blue h5 { color: var(--info); }
+    .info-card.pink h5 { color: var(--accent-pink); }
+
+    /* ===== STAT GRID ===== */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .stat-box {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      text-align: center;
+      color: white;
+    }
+
+    .stat-box .number {
+      font-size: 28pt;
+      font-weight: 900;
+      display: block;
+      line-height: 1.2;
+    }
+
+    .stat-box .unit {
+      font-size: 10pt;
+      opacity: 0.85;
+    }
+
+    .stat-box .label {
+      font-size: 9pt;
+      opacity: 0.75;
+      margin-top: 4px;
+    }
+
+    /* ===== TABLES ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 10pt;
+    }
+
+    table thead {
+      background: var(--primary);
+      color: white;
+    }
+
+    table thead th {
+      padding: 10px 12px;
+      text-align: right;
+      font-weight: 700;
+      font-size: 10pt;
+    }
+
+    table tbody tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    table tbody tr:nth-child(even) {
+      background: var(--surface-variant);
+    }
+
+    table tbody td {
+      padding: 8px 12px;
+      text-align: right;
+      vertical-align: top;
+    }
+
+    table .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 9pt;
+      font-weight: 600;
+    }
+
+    .badge-green { background: #C8E6C9; color: #2E7D32; }
+    .badge-blue { background: #BBDEFB; color: #1565C0; }
+    .badge-orange { background: #FFE0B2; color: #E65100; }
+    .badge-red { background: #FFCDD2; color: #C62828; }
+    .badge-purple { background: #E1BEE7; color: #6A1B9A; }
+
+    /* ===== TAGS ===== */
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 9pt;
+      font-weight: 600;
+      background: var(--surface-variant);
+      color: var(--primary);
+      border: 1px solid var(--border);
+    }
+
+    /* ===== FEATURE LIST ===== */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .feature-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .feature-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .feature-icon.blue { background: #E3F2FD; }
+    .feature-icon.green { background: #E8F5E9; }
+    .feature-icon.orange { background: #FFF3E0; }
+    .feature-icon.pink { background: #FCE4EC; }
+    .feature-icon.purple { background: #F3E5F5; }
+
+    .feature-text h6 {
+      font-size: 10pt;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .feature-text p {
+      font-size: 9pt;
+      color: var(--text-secondary);
+      margin-bottom: 0;
+      line-height: 1.5;
+    }
+
+    /* ===== STRENGTH/WEAKNESS ===== */
+    .sw-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .sw-card {
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .sw-card.strength {
+      background: #E8F5E9;
+      border: 1px solid #A5D6A7;
+    }
+
+    .sw-card.weakness {
+      background: #FFF3E0;
+      border: 1px solid #FFCC80;
+    }
+
+    .sw-card h5 {
+      font-size: 12pt;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sw-card.strength h5 { color: #2E7D32; }
+    .sw-card.weakness h5 { color: #E65100; }
+
+    .sw-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .sw-card ul li {
+      padding: 4px 0;
+      font-size: 10pt;
+      padding-right: 18px;
+      position: relative;
+    }
+
+    .sw-card.strength ul li::before {
+      content: '✓';
+      position: absolute;
+      right: 0;
+      color: #2E7D32;
+      font-weight: 700;
+    }
+
+    .sw-card.weakness ul li::before {
+      content: '!';
+      position: absolute;
+      right: 0;
+      color: #E65100;
+      font-weight: 700;
+    }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    /* ===== ARCHITECTURE DIAGRAM ===== */
+    .arch-diagram {
+      background: var(--surface-variant);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+
+    .arch-layer {
+      background: white;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .arch-layer:last-child { margin-bottom: 0; }
+
+    .arch-layer-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .arch-layer h6 {
+      font-size: 11pt;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .arch-layer p {
+      font-size: 9pt;
+      color: var(--text-secondary);
+      margin-bottom: 0;
+    }
+
+    .arch-arrow {
+      text-align: center;
+      color: var(--primary-light);
+      font-size: 18px;
+      margin: 4px 0;
+    }
+
+    /* ===== RECOMMENDATION ===== */
+    .rec-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .rec-number {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14pt;
+      flex-shrink: 0;
+    }
+
+    .rec-content h6 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 4px;
+    }
+
+    .rec-content p {
+      font-size: 9.5pt;
+      color: var(--text-secondary);
+      margin-bottom: 0;
+    }
+
+    .priority {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 8pt;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+
+    .priority-high { background: #FFCDD2; color: #C62828; }
+    .priority-medium { background: #FFE0B2; color: #E65100; }
+    .priority-low { background: #C8E6C9; color: #2E7D32; }
+
+    /* ===== DB SCHEMA ===== */
+    .db-table {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .db-table-header {
+      background: var(--primary);
+      color: white;
+      padding: 8px 14px;
+      font-weight: 700;
+      font-size: 11pt;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .db-table-body {
+      padding: 8px 14px;
+      font-size: 9pt;
+    }
+
+    .db-field {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .db-field:last-child { border-bottom: none; }
+
+    .db-field .name { font-weight: 600; }
+    .db-field .type { color: var(--text-hint); font-size: 8.5pt; }
+    .db-field .pk { color: var(--secondary); font-weight: 700; font-size: 8pt; }
+
+    @media print {
+      .page { page-break-after: always; }
+      .page:last-child { page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== PAGE 1: COVER ===== -->
+<div class="page cover">
+  <div class="cover-icon">📊</div>
+  <h1>تحليل مشروع<br>الأول برو المحاسبي</h1>
+  <h2>تقرير تحليل شامل للهيكل والكود والوظائف</h2>
+  <div class="cover-meta">
+    <p><span class="label">المشروع:</span> FirstProAccounting</p>
+    <p><span class="label">الإصدار:</span> 2.0.0 (Build 1.0.10)</p>
+    <p><span class="label">المنصة:</span> Android - Flutter/Dart</p>
+    <p><span class="label">تاريخ التحليل:</span> مايو 2026</p>
+    <p><span class="label">المحلل:</span> Z.ai - تحليل آلي</p>
+  </div>
+</div>
+
+<!-- ===== PAGE 2: OVERVIEW ===== -->
+<div class="page content-page">
+  <div class="page-header">
+    <h3>الأول برو المحاسبي - تقرير التحليل</h3>
+    <span class="version">v2.0.0</span>
+  </div>
+
+  <h2 class="section-title">نظرة عامة على المشروع</h2>
+  <p class="section-subtitle">معلومات أساسية وتعريف بالمشروع وتقنياته المستخدمة</p>
+
+  <p>مشروع "الأول برو المحاسبي" هو تطبيق محاسبي متكامل مخصص لمنصة أندرويد، تم تطويره باستخدام إطار عمل Flutter ولغة Dart. يستهدف التطبيق أصحاب المتاجر والمؤسسات الصغيرة والمتوسطة في اليمن والمنطقة العربية، حيث يوفر واجهة عربية كاملة مع دعم الاتجاه من اليمين لليسار (RTL). يتميز التطبيق بتصميم حديث يعتمد على نظام Material 3 مع سمة لونية تعتمد على التدرجات الزرقاء البنفسجية والذهبية.</p>
+
+  <div class="stat-grid">
+    <div class="stat-box">
+      <span class="number">60</span>
+      <span class="unit">ملف Dart</span>
+      <span class="label">في المكتبة الأساسية</span>
+    </div>
+    <div class="stat-box">
+      <span class="number">23,443</span>
+      <span class="unit">سطر كود</span>
+      <span class="label">إجمالي الكود المصدري</span>
+    </div>
+    <div class="stat-box">
+      <span class="number">14</span>
+      <span class="unit">جدول قاعدة بيانات</span>
+      <span class="label">في SQLite</span>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <h5>التعريف بالمشروع</h5>
+    <p>الأول برو المحاسبي هو نظام محاسبي شامل يعمل بدون اتصال بالإنترنت (Offline-First)، حيث يعتمد على قاعدة بيانات SQLite محلية لتخزين جميع البيانات. يوفر التطبيق إدارة كاملة للمبيعات والمشتريات، والعملاء والموردين، والمنتجات والمخزون، والصناديق والبنوك، والمصروفات والموظفين، مع دعم متعدد العملات (الريال اليمني، الريال السعودي، الدولار الأمريكي) ونظام مزدوج المحاسبة مع دليل الحسابات وقيد اليومية.</p>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>التقنيات المستخدمة</h4>
+    <div class="tags">
+      <span class="tag">Flutter 3.x</span>
+      <span class="tag">Dart ^3.11.5</span>
+      <span class="tag">SQLite (sqflite)</span>
+      <span class="tag">Material 3</span>
+      <span class="tag">Provider</span>
+      <span class="tag">RTL Arabic</span>
+      <span class="tag">Cairo Font</span>
+      <span class="tag">SVG Icons</span>
+      <span class="tag">Phosphor Icons</span>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>التبعيات الرئيسية</h4>
+    <table>
+      <thead>
+        <tr><th>الحزمة</th><th>الإصدار</th><th>الغرض</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>sqflite</td><td>^2.4.1</td><td>قاعدة بيانات SQLite المحلية</td></tr>
+        <tr><td>provider</td><td>^6.1.4</td><td>إدارة الحالة المركزية</td></tr>
+        <tr><td>flutter_svg</td><td>^2.0.17</td><td>عرض الرسوميات المتجهة SVG</td></tr>
+        <tr><td>phosphor_flutter</td><td>^2.1.0</td><td>مكتبة أيقونات حديثة</td></tr>
+        <tr><td>intl</td><td>^0.20.2</td><td>تنسيق التواريخ والأرقام</td></tr>
+        <tr><td>uuid</td><td>^4.5.1</td><td>توليد معرفات فريدة للفواتير</td></tr>
+        <tr><td>image_picker</td><td>^1.0.4</td><td>التقاط واختيار الصور</td></tr>
+        <tr><td>path_provider</td><td>^2.1.1</td><td>مسارات تخزين الملفات</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAGE 3: ARCHITECTURE ===== -->
+<div class="page content-page">
+  <div class="page-header">
+    <h3>الأول برو المحاسبي - تقرير التحليل</h3>
+    <span class="version">v2.0.0</span>
+  </div>
+
+  <h2 class="section-title">البنية البرمجية</h2>
+  <p class="section-subtitle">تنظيم المشروع والبنية المعمارية وأنماط التصميم المستخدمة</p>
+
+  <div class="arch-diagram">
+    <div class="arch-layer">
+      <div class="arch-layer-icon" style="background:#E3F2FD;">🎨</div>
+      <div>
+        <h6>طبقة العرض (UI Layer)</h6>
+        <p>الشاشات، الويدجتس، التنقل، السقالة الرئيسية - 30+ ملف Dart</p>
+      </div>
+    </div>
+    <div class="arch-arrow">⬇</div>
+    <div class="arch-layer">
+      <div class="arch-layer-icon" style="background:#F3E5F5;">⚙️</div>
+      <div>
+        <h6>طبقة الأعمال (Core Layer)</h6>
+        <p>الثوابت، السمات، المنسقون، نظام التصميم، الإضافات</p>
+      </div>
+    </div>
+    <div class="arch-arrow">⬇</div>
+    <div class="arch-layer">
+      <div class="arch-layer-icon" style="background:#E8F5E9;">💾</div>
+      <div>
+        <h6>طبقة البيانات (Data Layer)</h6>
+        <p>نماذج البيانات، مساعد قاعدة البيانات، عمليات CRUD</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>هيكل المجلدات</h4>
+    <table>
+      <thead>
+        <tr><th>المسار</th><th>الوصف</th><th>عدد الملفات</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>lib/core/constants/</td><td>الثوابت والتكوينات</td><td>1</td></tr>
+        <tr><td>lib/core/theme/</td><td>السمات والألوان ونظام التصميم</td><td>3</td></tr>
+        <tr><td>lib/core/utils/</td><td>أدوات تنسيق العملات والتواريخ</td><td>2</td></tr>
+        <tr><td>lib/core/extensions/</td><td>إضافات السياق</td><td>1</td></tr>
+        <tr><td>lib/data/datasources/</td><td>مساعد قاعدة البيانات</td><td>1</td></tr>
+        <tr><td>lib/data/models/</td><td>نماذج البيانات</td><td>10</td></tr>
+        <tr><td>lib/ui/navigation/</td><td>التوجيه والسقالة الرئيسية</td><td>2</td></tr>
+        <tr><td>lib/ui/screens/</td><td>شاشات التطبيق</td><td>25+ شاشة</td></tr>
+        <tr><td>lib/ui/widgets/</td><td>مكونات واجهة المستخدم</td><td>9</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>نمط البنية المعمارية</h4>
+    <p>يتبع المشروع نمطاً معمارياً بسيطاً قريباً من نمط MVP (Model-View-Presenter) بدون طبقة عرض تقديمي رسمية. يتم التعامل المباشر مع قاعدة البيانات من الشاشات عبر Singleton Pattern في DatabaseHelper. لا يوجد فصل صارم بين منطق الأعمال وطبقة العرض، حيث تحتوي الشاشات على منطق الأعمال مدمجاً فيها مباشرة. هذا النمط مناسب للتطبيقات الصغيرة لكنه قد يصعب الصيانة مع نمو المشروع.</p>
+  </div>
+
+  <div class="info-card blue">
+    <h5>نمط Singleton لقاعدة البيانات</h5>
+    <p>يستخدم DatabaseHelper نمط Singleton لضمان وجود نسخة واحدة فقط من اتصال قاعدة البيانات طوال دورة حياة التطبيق. هذا يمنع تسرب الذاكرة ويضمن الاتساق في العمليات، مع استخدام آلية Lazy Initialization لعدم فتح قاعدة البيانات إلا عند الحاجة الفعلية.</p>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>نظام التنقل</h4>
+    <p>يعتمد التطبيق على نظام تنقل بسيط يتكون من: شريط تنقل سفلي مخصص (5 علامات تبويب: الرئيسية، العملاء، الفواتير، التقارير، المزيد)، وقائمة جانبية (Drawer) تحتوي على اختصارات لجميع الأقسام، وتوجيه مسمى (Named Routes) عبر AppRouter مع أكثر من 20 مساراً مسجلاً. يستخدم IndexedStack للحفاظ على حالة الشاشات عند التبديل بين التبويبات.</p>
+  </div>
+</div>
+
+<!-- ===== PAGE 4: DATABASE ===== -->
+<div class="page content-page">
+  <div class="page-header">
+    <h3>الأول برو المحاسبي - تقرير التحليل</h3>
+    <span class="version">v2.0.0</span>
+  </div>
+
+  <h2 class="section-title">قاعدة البيانات</h2>
+  <p class="section-subtitle">المخطط الكامل لجداول SQLite والعلاقات والفهارس مع آلية الترحيل</p>
+
+  <p>يستخدم التطبيق قاعدة بيانات SQLite محلية بالإصدار 8 مع نظام ترحيل متدرج يضمن تحديث المخطط عند كل ترقية. تشمل قاعدة البيانات 14 جدولاً رئيسياً مع 19 فهارساً لتحسين الأداء، وبيانات أولية مزروعة للعملات والحسابات الافتراضية.</p>
+
+  <div class="db-table">
+    <div class="db-table-header">
+      <span>accounts (الحسابات)</span>
+      <span>12 حقل</span>
+    </div>
+    <div class="db-table-body">
+      <div class="db-field"><span class="name">id <span class="pk">PK</span></span><span class="type">INTEGER AUTOINCREMENT</span></div>
+      <div class="db-field"><span class="name">name_ar, name_en</span><span class="type">TEXT</span></div>
+      <div class="db-field"><span class="name">account_code</span><span class="type">TEXT NOT NULL</span></div>
+      <div class="db-field"><span class="name">account_type</span><span class="type">TEXT (ASSET/LIABILITY/COST/REVENUE/EXPENSE)</span></div>
+      <div class="db-field"><span class="name">currency</span><span class="type">TEXT DEFAULT 'YER'</span></div>
+      <div class="db-field"><span class="name">balance, debt_ceiling</span><span class="type">REAL</span></div>
+      <div class="db-field"><span class="name">parent_id <span class="pk">FK</span></span><span class="type">INTEGER → accounts.id</span></div>
+    </div>
+  </div>
+
+  <div class="db-table">
+    <div class="db-table-header">
+      <span>invoices (الفواتير)</span>
+      <span>22 حقل</span>
+    </div>
+    <div class="db-table-body">
+      <div class="db-field"><span class="name">id <span class="pk">PK</span></span><span class="type">TEXT (UUID)</span></div>
+      <div class="db-field"><span class="name">type</span><span class="type">TEXT (sale/purchase/sale_return/purchase_return)</span></div>
+      <div class="db-field"><span class="name">payment_mechanism</span><span class="type">TEXT (cash/credit)</span></div>
+      <div class="db-field"><span class="name">payment_method</span><span class="type">TEXT (cash/check/transfer/bank/ewallet)</span></div>
+      <div class="db-field"><span class="name">currency, exchange_rate</span><span class="type">TEXT, REAL</span></div>
+      <div class="db-field"><span class="name">customer_id, supplier_id <span class="pk">FK</span></span><span class="type">INTEGER</span></div>
+    </div>
+  </div>
+
+  <div class="db-table">
+    <div class="db-table-header">
+      <span>products (المنتجات)</span>
+      <span>25 حقل</span>
+    </div>
+    <div class="db-table-body">
+      <div class="db-field"><span class="name">id <span class="pk">PK</span></span><span class="type">INTEGER AUTOINCREMENT</span></div>
+      <div class="db-field"><span class="name">item_code, barcode</span><span class="type">TEXT</span></div>
+      <div class="db-field"><span class="name">cost_price, sell_price, wholesale_price</span><span class="type">REAL</span></div>
+      <div class="db-field"><span class="name">current_stock, min_stock</span><span class="type">REAL</span></div>
+      <div class="db-field"><span class="name">category_id, supplier_id, warehouse_id <span class="pk">FK</span></span><span class="type">INTEGER</span></div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <h5>آلية الترحيل (Migration)</h5>
+    <p>يدعم التطبيق 8 إصدارات من قاعدة البيانات مع نظام ترحيل تدريجي. كل إصدار يضيف جداول أو أعمدة جديدة مع معالجة الأخطاء عبر try-catch لمنع تعطل التطبيق. يتم زرع بيانات افتراضية تلقائياً عند الإنشاء الأول، بما في ذلك 3 عملات (YER, SAR, USD) و36 حساباً محاسبياً (12 حساباً لكل عملة).</p>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>جداول إضافية</h4>
+    <table>
+      <thead>
+        <tr><th>الجدول</th><th>الوصف</th><th>الحقول الرئيسية</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>customers</td><td>العملاء</td><td>name, phone, balance, currency, credit_limit</td></tr>
+        <tr><td>suppliers</td><td>الموردين</td><td>name, phone, balance, balance_type, currency</td></tr>
+        <tr><td>cash_boxes</td><td>الصناديق والبنوك</td><td>name, type, balance, linked_account_id</td></tr>
+        <tr><td>invoice_items</td><td>عناصر الفاتورة</td><td>invoice_id, product_id, quantity, unit_price</td></tr>
+        <tr><td>transactions</td><td>القيود المحاسبية</td><td>account_id, debit, credit, journal_id</td></tr>
+        <tr><td>expenses</td><td>المصروفات</td><td>title, amount, category, operation_type</td></tr>
+        <tr><td>employees</td><td>الموظفين</td><td>name, job_title, balance, account_id</td></tr>
+        <tr><td>currencies</td><td>العملات</td><td>code, exchange_rate, is_default</td></tr>
+        <tr><td>categories</td><td>التصنيفات</td><td>name, parent_id, icon, color</td></tr>
+        <tr><td>warehouses</td><td>المستودعات</td><td>name, location, is_active</td></tr>
+        <tr><td>users</td><td>المستخدمين (الكاشير)</td><td>username, role, is_active</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAGE 5: FEATURES ===== -->
+<div class="page content-page">
+  <div class="page-header">
+    <h3>الأول برو المحاسبي - تقرير التحليل</h3>
+    <span class="version">v2.0.0</span>
+  </div>
+
+  <h2 class="section-title">الوظائف والميزات</h2>
+  <p class="section-subtitle">تحليل شامل للوحدات الوظيفية وشاشات التطبيق</p>
+
+  <div class="feature-grid">
+    <div class="feature-item">
+      <div class="feature-icon blue">🧾</div>
+      <div class="feature-text">
+        <h6>نظام الفواتير</h6>
+        <p>إنشاء فواتير البيع والشراء مع دعم المرتجعات، خصومات، ضرائب، شحن، و6 طرق دفع تشمل المحافظ الإلكترونية والتحويلات المصرفية</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon green">🛒</div>
+      <div class="feature-text">
+        <h6>نقطة البيع (POS)</h6>
+        <p>واجهة بيع سريعة مع بحث الباركود، سلة مشتريات تفاعلية، ودعم الورديات (Shifts) لإدارة نوبات العمل</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon orange">📦</div>
+      <div class="feature-text">
+        <h6>إدارة المنتجات</h6>
+        <p>إدارة كاملة للأصناف مع باركود، كود صنف، أسعار متعددة (تجزئة/جملة/جملة خاصة)، تصنيفات، وتتبع مخزون</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon pink">👥</div>
+      <div class="feature-text">
+        <h6>العملاء والموردون</h6>
+        <p>إدارة العملاء والموردين مع أرصدة، حدود ائتمانية، عملات متعددة، وتتبع الديون</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon purple">🏦</div>
+      <div class="feature-text">
+        <h6>الصناديق والبنوك</h6>
+        <p>إدارة صناديق النقدية والحسابات البنكية مع ربطها بالحسابات المحاسبية وتتبع الأرصدة</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon blue">💰</div>
+      <div class="feature-text">
+        <h6>المصروفات</h6>
+        <p>تسجيل المصروفات مع تصنيفات، حسابات مصروفات، عمليات صرف واستلام، ومرفقات</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon green">📊</div>
+      <div class="feature-text">
+        <h6>دليل الحسابات</h6>
+        <p>شجرة حسابات محاسبية كاملة (أصول، خصوم، تكاليف، إيرادات، مصاريف) مع قيود يومية مزدوجة</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon orange">💱</div>
+      <div class="feature-text">
+        <h6>تعدد العملات</h6>
+        <p>دعم 3 عملات (ريال يمني، سعودي، دولار) مع أسعار صرف وحسابات محاسبية مستقلة لكل عملة</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card green">
+    <h5>نظام القيود المحاسبية (Double-Entry)</h5>
+    <p>يتميز التطبيق بتطبيق نظام القيد المزدوج تلقائياً عند حفظ الفواتير. كل عملية بيع أو شراء تولد قيوداً محاسبية تلقائية في الحسابات المناسبة (المبيعات، المشتريات، العملاء، الموردين، الصناديق) حسب نوع الفاتورة وآلية الدفع، مع دعم عمولات النقل كقيود إضافية مستقلة. كل قيد يحصل على journal_id موحد لربط الأطراف المدينة والدائنة.</p>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>الشاشات الرئيسية (25+ شاشة)</h4>
+    <table>
+      <thead>
+        <tr><th>الفئة</th><th>الشاشات</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="badge badge-blue">الرئيسية</span></td><td>لوحة التحكم، الإحصائيات</td></tr>
+        <tr><td><span class="badge badge-green">المبيعات</span></td><td>نقطة البيع، إنشاء فاتورة بيع، إنشاء فاتورة شراء</td></tr>
+        <tr><td><span class="badge badge-orange">الإدارة</span></td><td>المنتجات، العملاء، الموردين، المستودعات، الموظفين</td></tr>
+        <tr><td><span class="badge badge-purple">المالية</span></td><td>الصناديق، المصروفات، العملات، دليل الحسابات</td></tr>
+        <tr><td><span class="badge badge-red">التقارير</span></td><td>التقارير، التدقيق المحاسبي، ميزان المراجعة</td></tr>
+        <tr><td><span class="badge badge-orange">النظام</span></td><td>الإعدادات، الدعم الفني</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAGE 6: UI/UX ===== -->
+<div class="page content-page">
+  <div class="page-header">
+    <h3>الأول برو المحاسبي - تقرير التحليل</h3>
+    <span class="version">v2.0.0</span>
+  </div>
+
+  <h2 class="section-title">تصميم واجهة المستخدم</h2>
+  <p class="section-subtitle">نظام السمات والألوان والمكونات وتجربة المستخدم</p>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>نظام التصميم (Design System)</h4>
+    <p>يعتمد التطبيق على نظام تصميم شامل مُعرَّف في ملف design_system.dart يتضمن مسافات موحدة (4-64 بكسل)، أنظمة حركة (قصير 200ms، متوسط 350ms، طويل 500ms)، وأبعاد ثابتة للبطاقات والأزرار والحقول. يتبع التطبيق معايير Material 3 مع تخصيص كامل لجميع المكونات بما يشمل AppBar، Cards، Buttons، Inputs، NavigationBar، Dialogs، BottomSheets، Tabs، وغيرها.</p>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>لوحة الألوان</h4>
+    <table>
+      <thead>
+        <tr><th>الدور</th><th>اللون</th><th>الكود</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>اللون الرئيسي</td><td>أزرق بنفسجي عميق</td><td>#2633C5</td></tr>
+        <tr><td>اللون الثانوي</td><td>ذهبي/كهرماني</td><td>#F1B440</td></tr>
+        <tr><td>اللون المميز الأزرق</td><td>أزرق فاتح</td><td>#87A0E5</td></tr>
+        <tr><td>اللون المميز الوردي</td><td>وردي</td><td>#F56E98</td></tr>
+        <tr><td>النجاح</td><td>أخضر</td><td>#43A047</td></tr>
+        <tr><td>الخطأ</td><td>أحمر</td><td>#E53935</td></tr>
+        <tr><td>خلفية الوضع الداكن</td><td>أزرق داكن جداً</td><td>#0F0F1A</td></tr>
+        <tr><td>سطح الوضع الداكن</td><td>أزرق رمادي داكن</td><td>#1A1A2E</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="info-card">
+    <h5>دعم RTL واللغة العربية</h5>
+    <p>يوفر التطبيق دعماً كاملاً للاتجاه من اليمين لليسار عبر Directionality.rtl على مستوى التطبيق بالكامل. يستخدم خط Cairo العربي المتغير (Variable Font) بجميع الأوزان، مع دعم اللغتين العربية والإنجليزية عبر MaterialApp localization delegates. جميع النصوص في الواجهة باللغة العربية مع دعم الاسماء ثنائية اللغة في قاعدة البيانات.</p>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>المكونات المخصصة (Widgets)</h4>
+    <table>
+      <thead>
+        <tr><th>المكون</th><th>الوصف</th><th>الاستخدام</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>CustomBottomBar</td><td>شريط تنقل سفلي مخصص مع زر إنشاء مركزي</td><td>التنقل الرئيسي</td></tr>
+        <tr><td>StatCard</td><td>بطاقة إحصائية مع أيقونة وعدد وعنوان</td><td>لوحة التحكم</td></tr>
+        <tr><td>BarChartWidget</td><td>رسم بياني شريطي مخصص</td><td>الإحصائيات</td></tr>
+        <tr><td>AnimatedEntry</td><td>حركة دخول متحركة للعناصر</td><td>القوائم والبطاقات</td></tr>
+        <tr><td>EmptyState</td><td>حالة فارغة مع أيقونة ونص</td><td>القوائم الفارغة</td></tr>
+        <tr><td>InvoiceItemCard</td><td>بطاقة عنصر فاتورة</td><td>إنشاء الفواتير</td></tr>
+        <tr><td>CartItemTile</td><td>عنصر سلة المشتريات</td><td>نقطة البيع</td></tr>
+        <tr><td>TransactionTile</td><td>عنصر قيد محاسبي</td><td>دفتر الأستاذ</td></tr>
+        <tr><td>QuickActionButton</td><td>زر إجراء سريع</td><td>لوحة التحكم</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="info-card blue">
+    <h5>الوضع الداكن (Dark Mode)</h5>
+    <p>يدعم التطبيق الوضع الفاتح والداكن مع تبديل تلقائي حسب إعدادات النظام. يتميز الوضع الداكن بخلفية أزرق داكن (#0F0F1A) وسطح (#1A1A2E) مع تدرجات ألوان متوافقة. جميع المكونات مُصممة بشكل متجاوب مع كلا الوضعين عبر isDark checks.</p>
+  </div>
+</div>
+
+<!-- ===== PAGE 7: STRENGTHS & WEAKNESSES ===== -->
+<div class="page content-page">
+  <div class="page-header">
+    <h3>الأول برو المحاسبي - تقرير التحليل</h3>
+    <span class="version">v2.0.0</span>
+  </div>
+
+  <h2 class="section-title">نقاط القوة والضعف</h2>
+  <p class="section-subtitle">تقييم شامل لنقاط القوة والضعف والتحديات في المشروع</p>
+
+  <div class="sw-grid">
+    <div class="sw-card strength">
+      <h5>✓ نقاط القوة</h5>
+      <ul>
+        <li>تصميم UI/UX حديث ومتجاوب مع Material 3 ونظام ألوان احترافي</li>
+        <li>دعم كامل للغة العربية واتجاه RTL على مستوى التطبيق</li>
+        <li>نظام محاسبي مزدوج (Double-Entry) مع قيود يومية تلقائية</li>
+        <li>دعم تعدد العملات مع حسابات محاسبية مستقلة لكل عملة</li>
+        <li>عمل بدون إنترنت (Offline-First) مع قاعدة بيانات محلية</li>
+        <li>نظام ترحيل قاعدة بيانات متدرج مع معالجة الأخطاء</li>
+        <li>بنية ملفات منظمة ومنطقية مع فصل واضح للطبقات</li>
+        <li>دعم الوضع الداكن والفاتح مع تبديل تلقائي</li>
+        <li>نماذج بيانات (Models) محكمة مع toMap/fromMap/copyWith</li>
+        <li>فهارس قاعدة بيانات محسنة للأداء (19 فهرس)</li>
+      </ul>
+    </div>
+    <div class="sw-card weakness">
+      <h5>! نقاط الضعف</h5>
+      <ul>
+        <li>عدم وجود طبقة منطق أعمال منفصلة (BLoC/Repository)</li>
+        <li>التعامل المباشر مع قاعدة البيانات من الشاشات (SQL في UI)</li>
+        <li>غياب اختبارات وحدة واختبارات تكامل شاملة</li>
+        <li>عدم استخدام Provider فعلياً لإدارة الحالة رغم إضافته كتبعية</li>
+        <li>ملفات متعددة بنسخ مكررة (ملفات _current.dart)</li>
+        <li>عدم وجود نظام مصادقة/تسجيل دخول فعلي رغم جدول users</li>
+        <li>غياب النسخ الاحتياطي والاستعادة للبيانات</li>
+        <li>عدم وجود مزامنة سحابية أو مشاركة بيانات بين الأجهزة</li>
+        <li>README بسيط جداً دون توثيق تقني للمشروع</li>
+        <li>ملفات مهارة (skills/) غير ضرورية مُضمَّنة في المستودع</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="info-card orange">
+    <h5>ملفات مكررة ومستودع غير نظيف</h5>
+    <p>يحتوي المستودع على عدد كبير من الملفات المكررة بأسماء مثل _current.dart و pubspec_current.yaml، بالإضافة إلى مجلد skills/ يحتوي على أكثر من 30 مهارة (ppt, pdf, xlsx, charts, وغيرها) لا علاقة لها بالمشروع الأساسي. كما توجد ملفات APK في مجلد download/ وصور في upload/ مما يزيد حجم المستودع بشكل غير مبرر. يُنصح بشدة بتنظيف المستودع وإضافة ملف .gitignore مناسب.</p>
+  </div>
+
+  <div class="info-card red">
+    <h5>مخاوف أمنية</h5>
+    <p>يحتوي جدول users على عمود password_hash لكن لا يوجد نظام مصادقة فعلي في التطبيق. جميع العمليات تتم بدون تسجيل دخول أو صلاحيات، مما يعني أن أي شخص يستخدم التطبيق يمكنه الوصول لجميع البيانات وإجراء أي عملية. كما أن التطبيق لا يشفر قاعدة البيانات المحلية، والبيانات الحساسة مثل أرصدة العملاء والموردين محفوظة بنص عادي في SQLite.</p>
+  </div>
+
+  <div class="subsection">
+    <h4><span class="dot"></span>تحليل جودة الكود</h4>
+    <table>
+      <thead>
+        <tr><th>المعيار</th><th>التقييم</th><th>الملاحظات</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>تنظيم الملفات</td><td><span class="badge badge-green">جيد</span></td><td>هيكل منطقي بفصل طبقات واضح</td></tr>
+        <tr><td>قابلية القراءة</td><td><span class="badge badge-green">جيد</span></td><td>تعليقات عربية واضحة، أسماء معبرة</td></tr>
+        <tr><td>نماذج البيانات</td><td><span class="badge badge-green">جيد</span></td><td>نماذج محكمة مع تحويلات كاملة</td></tr>
+        <tr><td>إدارة الحالة</td><td><span class="badge badge-red">ضعيف</span></td><td>لا يوجد نمط إدارة حالة فعلي</td></tr>
+        <tr><td>الاختبارات</td><td><span class="badge badge-red">ضعيف</span></td><td>اختبار ويدجت واحد فقط</td></tr>
+        <tr><td>معالجة الأخطاء</td><td><span class="badge badge-orange">متوسط</span></td><td>try-catch في الترحيل فقط</td></tr>
+        <tr><td>الأمان</td><td><span class="badge badge-red">ضعيف</span></td><td>لا مصادقة، لا تشفير</td></tr>
+        <tr><td>التوثيق</td><td><span class="badge badge-red">ضعيف</span></td><td>README أساسي جداً</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAGE 8: RECOMMENDATIONS ===== -->
+<div class="page content-page">
+  <div class="page-header">
+    <h3>الأول برو المحاسبي - تقرير التحليل</h3>
+    <span class="version">v2.0.0</span>
+  </div>
+
+  <h2 class="section-title">التوصيات</h2>
+  <p class="section-subtitle">توصيات عملية لتحسين المشروع على المستويات المعمارية والأمنية والوظيفية</p>
+
+  <div class="rec-card">
+    <div class="rec-number">1</div>
+    <div class="rec-content">
+      <h6>تبني نمط BLoC/Cubit لإدارة الحالة <span class="priority priority-high">عالي</span></h6>
+      <p>استبدال التعامل المباشر مع قاعدة البيانات من الشاشات بنمط BLoC أو Cubit مع طبقة Repository وسيطة. هذا يفصل منطق الأعمال عن العرض، يسهل الاختبار، ويحسن قابلية الصيانة. كل شاشة يجب أن يكون لها BLoC خاص يتعامل مع الحالات (loading, success, error) بطريقة موحدة.</p>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-number">2</div>
+    <div class="rec-content">
+      <h6>تنفيذ نظام مصادقة وتفويض <span class="priority priority-high">عالي</span></h6>
+      <p>تفعيل جدول users الموجود بنظام تسجيل دخول حقيقي مع تشفير كلمات المرور (bcrypt)، وإدارة صلاحيات (admin, manager, cashier) تحدد ما يمكن لكل مستخدم الوصول إليه. إضافة قفل التطبيق (App Lock) بالبصمة أو PIN كما هو مخطط في الملفات المرجعية.</p>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-number">3</div>
+    <div class="rec-content">
+      <h6>إضافة نظام نسخ احتياطي واستعادة <span class="priority priority-high">عالي</span></h6>
+      <p>تطوير آلية تصدير واستيراد قاعدة البيانات كاملة بتنسيق JSON أو ملف مشفر. دعم النسخ الاحتياطي التلقائي المحلي والتخزين السحابي (Google Drive/OneDrive) لمنع فقدان البيانات. هذا أمر حاسم لتطبيق محاسبي حيث البيانات المالية لا يمكن تعويضها.</p>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-number">4</div>
+    <div class="rec-content">
+      <h6>تنظيف المستودع وإدارة الملفات <span class="priority priority-medium">متوسط</span></h6>
+      <p>إزالة مجلد skills/ وملفات APK والصور والمستندات البحثية غير المتعلقة بالمشروع. حذف ملفات _current.dart المكررة. تحديث .gitignore لمنع إدراج الملفات الثنائية والكاش. هذا يقلل حجم المستودع من عشرات الميجابايت إلى أقل من 1 ميجابايت ويحسن تجربة التطوير.</p>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-number">5</div>
+    <div class="rec-content">
+      <h6>كتابة اختبارات شاملة <span class="priority priority-medium">متوسط</span></h6>
+      <p>إضافة اختبارات وحدة للنماذج ومنطق الأعمال، واختبارات تكامل لعمليات قاعدة البيانات، واختبارات ويدجت للشاشات الرئيسية. التركيز أولاً على اختبار نظام القيود المحاسبية لضمان صحة الأرصدة، واختبار عمليات الفواتير لضمان اتساق البيانات.</p>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-number">6</div>
+    <div class="rec-content">
+      <h6>تحسين نظام العملات <span class="priority priority-medium">متوسط</span></h6>
+      <p>إضافة تحديث تلقائي لأسعار الصرف من مصادر خارجية، ودعم عمليات التحويل بين العملات مع تسجيل فرق الصرف كإيراد/مصروف محاسبي. حالياً أسعار الصرف ثابتة ويجب تحديثها يدوياً، مما يسبب عدم دقة في القيود المحاسبية متعددة العملات.</p>
+    </div>
+  </div>
+
+  <div class="rec-card">
+    <div class="rec-number">7</div>
+    <div class="rec-content">
+      <h6>إضافة التقارير والطباعة <span class="priority priority-low">منخفض</span></h6>
+      <p>تطوير تقارير مالية متقدمة: الميزانية العمومية، قائمة الدخل، التدفقات النقدية، وتقرير الأرباح والخسائر. إضافة إمكانية تصدير التقارير كملفات PDF وطباعة الفواتير عبر طابعات حرارية (thermal printers) شائعة في المتاجر اليمنية.</p>
+    </div>
+  </div>
+
+  <div class="info-card green">
+    <h5>خارطة طريق مقترحة</h5>
+    <p>المرحلة الأولى (1-2 شهر): تبني BLoC + نظام مصادقة + نسخ احتياطي. المرحلة الثانية (2-3 أشهر): تنظيف الكود + اختبارات + تحسين العملات. المرحلة الثالثة (3-4 أشهر): تقارير مالية + طباعة + مزامنة سحابية اختيارية. كل مرحلة يجب أن تُختتم بإصدار مستقر مع اختبارات كاملة.</p>
+  </div>
+</div>
+
+</body>
+</html>

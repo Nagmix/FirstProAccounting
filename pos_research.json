@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.pearson.com/channels/financial-accounting/asset/33848642/3-in-the-context-of-journal-entries-what-is-t",
+    "name": "3. In the context of journal entries, what is the process of prep",
+    "snippet": "In the context of journal entries, what is the process of preparing a batch report from a point-of-sale (POS) terminal commonly referred to as? A. Batching out.",
+    "host_name": "www.pearson.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.enerpize.com/hub/what-is-pos-transaction",
+    "name": "What is a POS Transaction: Types, Examples, and How They Work?",
+    "snippet": "POS reconciliation is the process of matching POS transactions with bank deposits, accounting entries, cash balances, and other financial ...",
+    "host_name": "www.enerpize.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.navipartner.com/product/retail-posting-setup-accounting-entries",
+    "name": "POS Entry List - Accounting Entries | NaviPartner | NP Documentation",
+    "snippet": "When you post the POS Entry, both the accounting entries and the inventory entries are updated.",
+    "host_name": "docs.navipartner.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.sapphireone.com/knowledge-base/procedures/implementation-course/inventory-point-of-sale-implementation-course/reconcile-point-of-sale-pos-transactions",
+    "name": "Reconcile Point of Sale (POS) Transactions - SapphireOne",
+    "snippet": "Reconciliation ensures that all POS transactions are accurately balanced after each employees shift has been completed or when the till has ...",
+    "host_name": "www.sapphireone.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://support.windwardsoftware.com/support/solutions/articles/66000505958-point-of-sale-transaction-report-batches-and-shifts",
+    "name": "Point of Sale Transaction report - batches and shifts",
+    "snippet": "Batch and shift assignments are done at the time the Point of Sale Transaction File is closed, so you don't need to close the batch or shift ...",
+    "host_name": "support.windwardsoftware.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.kotak.bank.in/en/stories-in-focus/accounts-deposits/current-account/pos-in-banking-what-is-pos-transactions-definition-meaning-and-types.html",
+    "name": "POS (Point of Sale): Full Form, Meaning, Benefits, How It Works?",
+    "snippet": "A PoS (Point of Sale) machine lets customers pay for goods or services using debit/credit cards or QR codes. It's a handy device for making payments at ...\nPoint of Sale (POS) is where a customer completes the purchase of goods or services. These transactions at the cash register in physical stores are crucial ...",
+    "host_name": "www.kotak.bank.in",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.oracle.com/en/applications/jd-edwards/financials/9.2/eoaga/understanding-journal-entry-batch-processing.html",
+    "name": "Understanding Journal Entry Batch Processing - Oracle Help Center",
+    "snippet": "Mapping journal entry transactions to batch input tables. · Processing batch journal entries. · Revising batch journal entries. · Posting batch journal entries.",
+    "host_name": "docs.oracle.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.cmicglobal.com/portal/Content/E_Reference_Material/GL_-_General_Ledger/Reference/Transactions/Standard_Journal_Entries.htm",
+    "name": "Standard Journal Entries - General Ledger",
+    "snippet": "Enter transaction details into a selected batch. A batch may contain entries for multiple journals, periods, or years.",
+    "host_name": "docs.cmicglobal.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://nrsplus.com/blog/integrated-pos-vs-disconnected",
+    "name": "Integrated POS vs. Disconnected Software Stack | NRS",
+    "snippet": "In a disconnected stack, that same transaction may update inventory in one system, require a manual journal entry or nightly batch export to ...",
+    "host_name": "nrsplus.com",
+    "rank": 8,
+    "date": "May 19, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://retail-support.lightspeedhq.com/hc/en-us/articles/360007852953-Selecting-a-posting-method-in-Lightspeed-Accounting",
+    "name": "Selecting a posting method in Lightspeed Accounting",
+    "snippet": "Journal Entry. This posting method summarizes your daily activity into a single journal entry with every sync. Your Retail POS sales are mapped by item category ...",
+    "host_name": "retail-support.lightspeedhq.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

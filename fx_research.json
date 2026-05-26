@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://www.withum.com/resources/accounting-for-foreign-exchange-transactions",
+    "name": "Accounting for Foreign Exchange Transactions - Withum",
+    "snippet": "Let's uncover the intricacies of foreign currency transactions, exploring how companies record them in their books and the nuanced ...\nA realized foreign exchange gain or loss is ultimately recorded when the foreign currency transaction is settled. It is important to account for ...",
+    "host_name": "www.withum.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.oracle.com/cd/E16582_01/doc.91/e15123/enterforeigncurrencyje.htm",
+    "name": "11 Entering and Processing Foreign Currency Journal Entries",
+    "snippet": "When you enter a journal entry in a foreign currency, the system calculates the domestic currency amount. It retrieves the exchange rate from the F0015 table ...",
+    "host_name": "docs.oracle.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.universalcpareview.com/ask-joey/what-is-the-journal-entry-to-record-a-foreign-exchange-transaction-gain",
+    "name": "What is the journal entry to record a foreign exchange transaction",
+    "snippet": "To record the foreign exchange transaction gain, the company would debit cash for $105, credit foreign exchange gain for $5, and then credit accounts receivable ...",
+    "host_name": "www.universalcpareview.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://tipalti.com/resources/learn/fx-accounting",
+    "name": "Complete Guide to FX Accounting - Tipalti",
+    "snippet": "FX accounting for foreign exchange involves recording transactions conducted in other than the functional currency and adjusting them for changes in foreign ...",
+    "host_name": "tipalti.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=eLSmIwHq6DA",
+    "name": "IAS 21 Journal Entries | Effects of Changes in Foreign Exchange Rates",
+    "snippet": "In this lesson, we explain what IAS 21 is and how we record journal entries under IAS 21 Effects of Changes in Foreign Exchange Rates.\n... accounting and tax services. Email us ... IAS 21: The Effects of Changes in Foreign Exchange Rates (ACCA, ICAN, CFA, ICAG,-Foreign currency.",
+    "host_name": "www.youtube.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.karboncard.com/blog/what-is-the-journal-entry-for-foreign-currency-transactions",
+    "name": "What is the journal entry for foreign currency transactions?",
+    "snippet": "Debit: Bank Account (or Accounts Receivable) in INR (amount received after conversion); Credit: Exchange Gain (recognized in the Income Statement). Unrealized ...\nDebit: Bank Account (or Accounts Receivable) in INR (amount received after conversion) · Credit: Exchange Gain (recognized in the Income Statement).",
+    "host_name": "www.karboncard.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.zuora.com/en/accounts-receivable/finance/accounting-periods/view-accounting-period-balances/foreign-currency-gains-and-losses-journal-entries",
+    "name": "Foreign currency gains and losses: Journal entries - Zuora docs",
+    "snippet": "Journal entries for foreign currency gains and losses, including prerequisites, realized and unrealized gains, and specific scenarios involving invoices, ...",
+    "host_name": "docs.zuora.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/Bookkeeping/comments/1ngw5if/how_to_account_for_exchange_rate_when_doing",
+    "name": "How to account for exchange rate when doing journal entries - Reddit",
+    "snippet": "when payment is made, adjust for any difference due to exchange rate fluctuations. record the difference as gain or loss in the foreign exchange ...\nuse the exchange rate on the date the invoice was issued for accrual accounting. when payment is made, adjust for any difference due to exchange ...",
+    "host_name": "www.reddit.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://softledger.com/support/en/articles/10247110-custom-currency-exchange-rates-for-journal-entries",
+    "name": "Custom Currency Exchange Rates for Journal Entries - SoftLedger",
+    "snippet": "The Custom Foreign Currency Rates feature allows users to manually override exchange rates for multi-currency Journal Entries.",
+    "host_name": "softledger.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/100052021824338/videos/accounting-journal-entries-for-foreign-exchange-gains-and-losses/224964139276296",
+    "name": "Accounting Journal Entries for Foreign Exchange Gains and Losses",
+    "snippet": "The rate of currencies fluctuates daily, it causes loss or gain while Export or Import. Currency Rate as on SALE less Currency rate as on ...",
+    "host_name": "www.facebook.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]
