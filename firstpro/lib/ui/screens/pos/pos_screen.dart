@@ -231,6 +231,17 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 
+  /// Refresh product list to update stock badges after sales
+  Future<void> _refreshProducts() async {
+    final db = DatabaseHelper();
+    final prodMaps = await db.getAllProducts(activeOnly: true);
+    if (mounted) {
+      setState(() {
+        _products = prodMaps.map((m) => Product.fromMap(m)).toList();
+      });
+    }
+  }
+
   // ── Computed properties ───────────────────────────────────────────
   List<Product> get _filteredProducts {
     var result = _products;
@@ -2084,7 +2095,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final amount = double.tryParse(amountController.text) ?? 0.0;
                     if (amount <= 0) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
@@ -2092,12 +2103,136 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       );
                       return;
                     }
-                    Navigator.pop(ctx);
-                    context.showSuccessSnackBar(
-                      isCashIn
-                          ? 'تم الإيداع بنجاح: ${CurrencyFormatter.format(amount)}'
-                          : 'تم السحب بنجاح: ${CurrencyFormatter.format(amount)}',
-                    );
+
+                    // Record the cash in/out transaction in the database
+                    try {
+                      final db = DatabaseHelper();
+                      final shiftId = _activeShift!['id'] as int;
+                      final cashBoxId = _activeShift!['cash_box_id'] as int;
+                      final now = DateTime.now();
+                      final dbInstance = await db.database;
+
+                      // Update cash box balance
+                      final cashBox = await db.getCashBoxById(cashBoxId);
+                      if (cashBox != null) {
+                        final currentBalance = (cashBox['balance'] as num?)?.toDouble() ?? 0.0;
+                        final newBalance = isCashIn
+                            ? currentBalance + amount
+                            : currentBalance - amount;
+                        await dbInstance.update(
+                          'cash_boxes',
+                          {
+                            'balance': newBalance.abs(),
+                            'balance_type': newBalance >= 0 ? 'credit' : 'debit',
+                            'updated_at': now.toIso8601String(),
+                          },
+                          where: 'id = ?',
+                          whereArgs: [cashBoxId],
+                        );
+                      }
+
+                      // Create journal entries for the cash in/out
+                      final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[_selectedCurrency] ?? 0;
+                      final cashAccountCode = 1100 + codeOffset;
+                      final cashAccount = await db.getAccountByCodeAndCurrency(
+                        cashAccountCode.toString(), _selectedCurrency,
+                      );
+                      final expenseAccountCode = 5000 + codeOffset;
+                      final expenseAccount = await db.getAccountByCodeAndCurrency(
+                        expenseAccountCode.toString(), _selectedCurrency,
+                      );
+
+                      if (cashAccount != null && expenseAccount != null) {
+                        final cashAccountId = cashAccount['id'] as int;
+                        final expenseAccountId = expenseAccount['id'] as int;
+                        final reason = reasonController.text.trim().isNotEmpty
+                            ? reasonController.text.trim()
+                            : (isCashIn ? 'إيداع نقدي في الوردية' : 'سحب نقدي من الوردية');
+
+                        // Journal entry: Debit and Credit
+                        if (isCashIn) {
+                          // إيداع: مدين (الصندوق) / دائن (مصاريف متنوعة)
+                          await dbInstance.insert('transactions', {
+                            'account_id': cashAccountId,
+                            'debit': amount,
+                            'credit': 0.0,
+                            'description': reason,
+                            'date': now.toIso8601String(),
+                            'created_at': now.toIso8601String(),
+                          });
+                          await dbInstance.insert('transactions', {
+                            'account_id': expenseAccountId,
+                            'debit': 0.0,
+                            'credit': amount,
+                            'description': reason,
+                            'date': now.toIso8601String(),
+                            'created_at': now.toIso8601String(),
+                          });
+                          // Update account balances
+                          await db.updateAccountBalance(cashAccountId, amount, isDebit: true);
+                          await db.updateAccountBalance(expenseAccountId, amount, isDebit: false);
+                        } else {
+                          // سحب: مدين (مصاريف متنوعة) / دائن (الصندوق)
+                          await dbInstance.insert('transactions', {
+                            'account_id': expenseAccountId,
+                            'debit': amount,
+                            'credit': 0.0,
+                            'description': reason,
+                            'date': now.toIso8601String(),
+                            'created_at': now.toIso8601String(),
+                          });
+                          await dbInstance.insert('transactions', {
+                            'account_id': cashAccountId,
+                            'debit': 0.0,
+                            'credit': amount,
+                            'description': reason,
+                            'date': now.toIso8601String(),
+                            'created_at': now.toIso8601String(),
+                          });
+                          // Update account balances
+                          await db.updateAccountBalance(expenseAccountId, amount, isDebit: true);
+                          await db.updateAccountBalance(cashAccountId, amount, isDebit: false);
+                        }
+                      }
+
+                      // Update shift totals
+                      if (isCashIn) {
+                        await dbInstance.update(
+                          'shifts',
+                          {
+                            'total_sales': (( _activeShift!['total_sales'] as num?)?.toDouble() ?? 0.0) + amount,
+                            'updated_at': now.toIso8601String(),
+                          },
+                          where: 'id = ?',
+                          whereArgs: [shiftId],
+                        );
+                      } else {
+                        await dbInstance.update(
+                          'shifts',
+                          {
+                            'total_discounts': ((_activeShift!['total_discounts'] as num?)?.toDouble() ?? 0.0) + amount,
+                            'updated_at': now.toIso8601String(),
+                          },
+                          where: 'id = ?',
+                          whereArgs: [shiftId],
+                        );
+                      }
+
+                      // Refresh shift data
+                      await _loadActiveShift();
+
+                      if (!mounted) return;
+                      Navigator.pop(ctx);
+                      context.showSuccessSnackBar(
+                        isCashIn
+                            ? 'تم الإيداع بنجاح: ${CurrencyFormatter.format(amount)}'
+                            : 'تم السحب بنجاح: ${CurrencyFormatter.format(amount)}',
+                      );
+                    } catch (e) {
+                      if (mounted) {
+                        context.showErrorSnackBar('خطأ في تسجيل العملية: $e');
+                      }
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isCashIn ? AppColors.success : AppColors.error,
@@ -2766,11 +2901,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         i.productId == product.id && i.unitName == (unitInfo?['unit_name'] as String? ?? 'قطعة'));
     final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
 
-    // For multi-unit items, check stock in base units
-    final baseQtyNeeded = requestedQty * factor;
-    if (product.currentStock < baseQtyNeeded) {
-      _showLowStockWarning(product, existingIndex, requestedQty, product.currentStock / factor, unitInfo: unitInfo);
-      return;
+    // Stock check: skip if allowNegative is true
+    if (!product.allowNegative) {
+      final baseQtyNeeded = requestedQty * factor;
+      if (product.currentStock < baseQtyNeeded) {
+        _showLowStockWarning(product, existingIndex, requestedQty, product.currentStock / factor, unitInfo: unitInfo);
+        return;
+      }
+    } else if (product.currentStock <= 0 && product.currentStock < requestedQty * factor) {
+      // allowNegative but still show a brief info that stock is negative
+      debugPrint('Product ${product.nameAr} allowNegative=true, adding despite zero/negative stock');
     }
 
     _doAddToCartWithUnit(existingIndex, product, unitInfo);
@@ -2828,12 +2968,13 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;
     }
-    // H6: Stock validation – check if enough stock before adding
+    // Stock validation – check if enough stock before adding
     final existingIndex = _cart.indexWhere((i) => i.productId == product.id);
     final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
     final availableStock = product.currentStock;
 
-    if (availableStock < requestedQty) {
+    // Skip stock check if allowNegative is true
+    if (!product.allowNegative && availableStock < requestedQty) {
       // Low stock – show warning but allow proceeding (backorder)
       _showLowStockWarning(product, existingIndex, requestedQty, availableStock);
       return;
@@ -3211,8 +3352,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       // Reset cart for next invoice
       _resetForNewInvoice();
 
-      // Refresh top sellers after successful checkout
+      // Refresh top sellers and products after successful checkout
       _loadTopSellers();
+      _refreshProducts();
 
       // Show completion overlay
       setState(() => _checkoutPhase = _CheckoutPhase.completed);

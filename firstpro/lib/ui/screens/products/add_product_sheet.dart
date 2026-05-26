@@ -577,12 +577,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
       await db.transaction((txn) async {
         if (_isEditMode) {
           final updateMap = product.toMap();
-          // Lock system-managed fields
+          // Lock system-managed fields (stock and warehouse), but allow account changes
           updateMap['current_stock'] = widget.existing!.currentStock;
           updateMap['warehouse_id'] = widget.existing!.warehouseId;
-          updateMap['sales_account_id'] = widget.existing!.salesAccountId;
-          updateMap['purchase_account_id'] = widget.existing!.purchaseAccountId;
-          updateMap['inventory_account_id'] = widget.existing!.inventoryAccountId;
           updateMap['image_path'] = _imagePath;
           await txn.update('products', updateMap, where: 'id = ?', whereArgs: [widget.existing!.id!]);
 
@@ -677,7 +674,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
         }
       });
 
-      // Log stock movement AFTER the transaction succeeds (non-critical)
+      // Log stock movement AND create journal entries for opening balance AFTER the transaction succeeds
       if (!_isEditMode && savedProductId != null) {
         final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
         if (openingQty > 0 && _trackStock) {
@@ -689,8 +686,59 @@ class _AddProductSheetState extends State<AddProductSheet> {
               notes: 'رصيد افتتاحي',
               unitCost: baseCostPrice,
             );
+
+            // Create journal entries for opening balance: Debit Inventory / Credit Opening Balance
+            final totalValue = openingQty * baseCostPrice;
+            if (totalValue > 0) {
+              final codeOffset = _defaultCurrencyCode == 'SAR' ? 1 : (_defaultCurrencyCode == 'USD' ? 2 : 0);
+              final currency = _defaultCurrencyCode ?? 'YER';
+              final dbInstance = await dbHelper.database;
+              final now = DateTime.now().toIso8601String();
+
+              // Find inventory account (1300 + offset)
+              final inventoryAccount = await dbInstance.query(
+                'accounts',
+                where: 'account_code = ? AND currency = ?',
+                whereArgs: [(1300 + codeOffset).toString(), currency],
+                limit: 1,
+              );
+              // Find opening balance account (3900 + offset)
+              final openingBalanceAccount = await dbInstance.query(
+                'accounts',
+                where: 'account_code = ? AND currency = ?',
+                whereArgs: [(3900 + codeOffset).toString(), currency],
+                limit: 1,
+              );
+
+              if (inventoryAccount.isNotEmpty && openingBalanceAccount.isNotEmpty) {
+                final inventoryAccountId = inventoryAccount.first['id'] as int;
+                final openingBalanceAccountId = openingBalanceAccount.first['id'] as int;
+
+                // Journal entry: Debit Inventory / Credit Opening Balance
+                await dbInstance.insert('transactions', {
+                  'account_id': inventoryAccountId,
+                  'debit': totalValue,
+                  'credit': 0.0,
+                  'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
+                  'date': now,
+                  'created_at': now,
+                });
+                await dbInstance.insert('transactions', {
+                  'account_id': openingBalanceAccountId,
+                  'debit': 0.0,
+                  'credit': totalValue,
+                  'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
+                  'date': now,
+                  'created_at': now,
+                });
+
+                // Update account balances
+                await dbHelper.updateAccountBalance(inventoryAccountId, totalValue, isDebit: true);
+                await dbHelper.updateAccountBalance(openingBalanceAccountId, totalValue, isDebit: false);
+              }
+            }
           } catch (e) {
-            debugPrint('Stock movement log error (non-critical): $e');
+            debugPrint('Opening balance journal entry error (non-critical): $e');
           }
         }
       }
@@ -2102,7 +2150,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildAccountingStep() {
-    final isLocked = _isEditMode;
+    final isLocked = false; // Allow editing accounts in edit mode - users need to fix incorrect assignments
     final taxRate = double.tryParse(_taxRateController.text) ?? 0.0;
     final showVatAccount = taxRate > 0;
 
@@ -2123,24 +2171,24 @@ class _AddProductSheetState extends State<AddProductSheet> {
       children: [
         _stepTitle(_steps[7].title, _steps[7].icon),
 
-        if (isLocked)
+        if (_isEditMode)
           Container(
             padding: const EdgeInsets.all(10),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: AppColors.warningLight.withValues(alpha: 0.5),
+              color: AppColors.infoLight.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.lock, size: 18, color: AppColors.warning),
+                const Icon(Icons.edit, size: 18, color: AppColors.info),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'الحسابات المحاسبية مقفلة في وضع التعديل - يديرها النظام',
+                    'يمكنك تعديل الحسابات المحاسبية إذا كانت غير صحيحة',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.warning,
+                          color: AppColors.info,
                         ),
                   ),
                 ),

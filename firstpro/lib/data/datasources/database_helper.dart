@@ -2093,6 +2093,30 @@ class DatabaseHelper {
   //  Helper: Update account balance considering balance_type
   // ══════════════════════════════════════════════════════════════
 
+  /// Public helper to update account balance by amount.
+  /// [isDebit] = true means this is a debit entry (increase for debit-balance accounts).
+  /// [isDebit] = false means this is a credit entry (increase for credit-balance accounts).
+  Future<void> updateAccountBalance(int accountId, double amount, {required bool isDebit}) async {
+    final db = await database;
+    final account = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+    if (account.isNotEmpty) {
+      final currentBalance = (account.first['balance'] as num?)?.toDouble() ?? 0.0;
+      final balanceType = account.first['balance_type'] as String? ?? 'credit';
+      double newBalance;
+      if (balanceType == 'credit') {
+        // Credit-balance accounts: credit increases, debit decreases
+        newBalance = isDebit ? currentBalance - amount : currentBalance + amount;
+      } else {
+        // Debit-balance accounts: debit increases, credit decreases
+        newBalance = isDebit ? currentBalance + amount : currentBalance - amount;
+      }
+      await db.update('accounts', {
+        'balance': newBalance,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, where: 'id = ?', whereArgs: [accountId]);
+    }
+  }
+
   /// Update an account's balance considering its balance_type.
   /// For credit-balance accounts (LIABILITY, REVENUE, most EXPENSE):
   ///   balance = balance + credit - debit
