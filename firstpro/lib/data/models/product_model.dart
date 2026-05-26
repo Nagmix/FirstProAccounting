@@ -23,6 +23,8 @@ class Product {
   final int? salesAccountId;
   final int? purchaseAccountId;
   final int? inventoryAccountId;
+  final int? cogsAccountId; // Cost of Goods Sold account
+  final int? vatAccountId; // VAT Payable account
   final double currentStock;
   final double minStock;
   final int? warehouseId;
@@ -69,6 +71,8 @@ class Product {
     this.salesAccountId,
     this.purchaseAccountId,
     this.inventoryAccountId,
+    this.cogsAccountId,
+    this.vatAccountId,
     this.currentStock = 0.0,
     this.minStock = 0.0,
     this.warehouseId,
@@ -121,6 +125,8 @@ class Product {
       'sales_account_id': salesAccountId,
       'purchase_account_id': purchaseAccountId,
       'inventory_account_id': inventoryAccountId,
+      'cogs_account_id': cogsAccountId,
+      'vat_account_id': vatAccountId,
       'current_stock': currentStock,
       'min_stock': minStock,
       'warehouse_id': warehouseId,
@@ -170,6 +176,8 @@ class Product {
       salesAccountId: map['sales_account_id'],
       purchaseAccountId: map['purchase_account_id'],
       inventoryAccountId: map['inventory_account_id'],
+      cogsAccountId: map['cogs_account_id'],
+      vatAccountId: map['vat_account_id'],
       currentStock: (map['current_stock'] ?? 0.0).toDouble(),
       minStock: (map['min_stock'] ?? 0.0).toDouble(),
       warehouseId: map['warehouse_id'],
@@ -220,6 +228,8 @@ class Product {
     int? salesAccountId,
     int? purchaseAccountId,
     int? inventoryAccountId,
+    int? cogsAccountId,
+    int? vatAccountId,
     double? currentStock,
     double? minStock,
     int? warehouseId,
@@ -266,6 +276,8 @@ class Product {
       salesAccountId: salesAccountId ?? this.salesAccountId,
       purchaseAccountId: purchaseAccountId ?? this.purchaseAccountId,
       inventoryAccountId: inventoryAccountId ?? this.inventoryAccountId,
+      cogsAccountId: cogsAccountId ?? this.cogsAccountId,
+      vatAccountId: vatAccountId ?? this.vatAccountId,
       currentStock: currentStock ?? this.currentStock,
       minStock: minStock ?? this.minStock,
       warehouseId: warehouseId ?? this.warehouseId,

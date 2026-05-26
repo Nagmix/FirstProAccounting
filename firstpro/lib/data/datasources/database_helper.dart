@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 26;
+  static const int _databaseVersion = 27;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -78,6 +78,8 @@ class DatabaseHelper {
         sales_account_id INTEGER,
         purchase_account_id INTEGER,
         inventory_account_id INTEGER,
+        cogs_account_id INTEGER,
+        vat_account_id INTEGER,
         current_stock REAL NOT NULL DEFAULT 0.0,
         min_stock REAL NOT NULL DEFAULT 0.0,
         warehouse_id INTEGER,
@@ -2012,6 +2014,14 @@ class DatabaseHelper {
       ''');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements (product_id)');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements (movement_type)');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v27 Migration: Add cogs_account_id and vat_account_id to products
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 27) {
+      try { await db.execute('ALTER TABLE products ADD COLUMN cogs_account_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN vat_account_id INTEGER'); } catch (_) {}
     }
   }
 

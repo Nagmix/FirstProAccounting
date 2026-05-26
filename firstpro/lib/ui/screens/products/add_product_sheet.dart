@@ -84,6 +84,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
   final _specialWholesalePriceController = TextEditingController();
   final _taxRateController = TextEditingController();
   final _openingStockController = TextEditingController();
+  final _purchaseUnitQtyController = TextEditingController();
+  final _purchaseUnitWholesalePriceController = TextEditingController();
   final _minStockController = TextEditingController();
   final _maxStockController = TextEditingController();
   final _supplierCodeController = TextEditingController();
@@ -178,6 +180,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _specialWholesalePriceController.dispose();
     _taxRateController.dispose();
     _openingStockController.dispose();
+    _purchaseUnitQtyController.dispose();
+    _purchaseUnitWholesalePriceController.dispose();
     _minStockController.dispose();
     _maxStockController.dispose();
     _supplierCodeController.dispose();
@@ -279,6 +283,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _selectedSalesAccountId = p.salesAccountId;
     _selectedPurchaseAccountId = p.purchaseAccountId;
     _selectedInventoryAccountId = p.inventoryAccountId;
+    _selectedCogsAccountId = p.cogsAccountId;
+    _selectedVatAccountId = p.vatAccountId;
 
     // Determine sale unit source
     if (p.saleUnitId != null && p.saleUnitId == p.purchaseUnitId && p.purchaseUnitId != p.effectiveBaseUnitId) {
@@ -521,6 +527,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
       salesAccountId: _selectedSalesAccountId,
       purchaseAccountId: _selectedPurchaseAccountId,
       inventoryAccountId: _selectedInventoryAccountId,
+      cogsAccountId: _selectedCogsAccountId,
+      vatAccountId: _selectedVatAccountId,
       currentStock: _isEditMode
           ? widget.existing!.currentStock
           : (double.tryParse(_openingStockController.text) ?? 0.0),
@@ -585,6 +593,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
         }
       } else {
         final map = product.toMap();
+        // Remove 'id' so SQLite auto-generates it
+        map.remove('id');
         map['image_path'] = _imagePath;
         final savedId = await db.insertProduct(map);
 
@@ -624,10 +634,12 @@ class _AddProductSheetState extends State<AddProductSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
+      debugPrint('Save error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('حدث خطأ أثناء الحفظ: $e'),
           backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 5),
         ),
       );
       return;
@@ -1067,9 +1079,22 @@ class _AddProductSheetState extends State<AddProductSheet> {
   //  STEP 2 – الوحدات (ISSUE 4)
   // ═══════════════════════════════════════════════════════════════
 
-  Widget _buildUnitsStep() {
-    final baseUnits = _units.where((u) => (u['is_base_unit'] as int? ?? 0) == 1).toList();
+  /// Whether the current setup has multi-unit (base ≠ purchase)
+  bool get _hasMultiUnits =>
+      _selectedBaseUnitId != null &&
+      _selectedPurchaseUnitId != null &&
+      _selectedPurchaseUnitId != _selectedBaseUnitId;
 
+  /// Get the conversion factor for the purchase unit
+  double get _purchaseUnitFactor {
+    if (!_hasMultiUnits) return 1.0;
+    final conv = _unitConversions.where((uc) => uc.unitId == _selectedPurchaseUnitId);
+    if (conv.isNotEmpty) return conv.first.factor;
+    return 1.0;
+  }
+
+  Widget _buildUnitsStep() {
+    // Show ALL units in the base unit dropdown (not just is_base_unit)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1079,11 +1104,19 @@ class _AddProductSheetState extends State<AddProductSheet> {
         _buildSearchableDropdownWithAdd(
           label: 'الوحدة الأساسية *',
           icon: Icons.straighten,
-          items: baseUnits,
+          items: _units,
           idKey: 'id',
           nameKey: 'name_ar',
           selectedId: _selectedBaseUnitId,
-          onChanged: (v) => setState(() => _selectedBaseUnitId = v),
+          onChanged: (v) {
+            setState(() {
+              _selectedBaseUnitId = v;
+              // If base unit same as purchase unit, clear conversions
+              if (_selectedBaseUnitId == _selectedPurchaseUnitId) {
+                _unitConversions.clear();
+              }
+            });
+          },
           onAdd: () => _showAddUnitDialog(),
         ),
         const SizedBox(height: 14),
@@ -1099,7 +1132,12 @@ class _AddProductSheetState extends State<AddProductSheet> {
           onChanged: (v) {
             setState(() {
               _selectedPurchaseUnitId = v;
-              _autoPopulateConversions();
+              // If purchase unit same as base unit, clear conversions
+              if (_selectedPurchaseUnitId == _selectedBaseUnitId) {
+                _unitConversions.clear();
+              } else {
+                _autoPopulateConversions();
+              }
             });
           },
           onAdd: () => _showAddUnitDialog(),
@@ -1374,7 +1412,15 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               ),
-              onChanged: (v) => row.factor = double.tryParse(v) ?? 1.0,
+              onChanged: (v) {
+                row.factor = double.tryParse(v) ?? 1.0;
+                // Recalculate prices and inventory if this is the purchase unit
+                if (row.unitId == _selectedPurchaseUnitId) {
+                  _autoCalculateBaseCostFromPurchaseUnit();
+                  _autoCalculateOpeningStock();
+                }
+                setState(() {}); // Rebuild to update calculation displays
+              },
             ),
           ),
           const SizedBox(width: 6),
@@ -1416,11 +1462,37 @@ class _AddProductSheetState extends State<AddProductSheet> {
     });
   }
 
+  /// Auto-calculate opening stock from purchase unit quantity
+  void _autoCalculateOpeningStock() {
+    if (!_hasMultiUnits) return;
+    final purchaseQty = double.tryParse(_purchaseUnitQtyController.text);
+    if (purchaseQty == null || purchaseQty <= 0) return;
+    final factor = _purchaseUnitFactor;
+    if (factor <= 0) return;
+    final totalBaseQty = purchaseQty * factor;
+    _openingStockController.text = totalBaseQty.toStringAsFixed(0);
+  }
+
+  /// Display string for auto-calculated opening stock
+  String _calculateOpeningStockDisplay() {
+    final purchaseQty = double.tryParse(_purchaseUnitQtyController.text);
+    if (purchaseQty == null || purchaseQty <= 0) return '...';
+    final factor = _purchaseUnitFactor;
+    if (factor <= 0) return '...';
+    final totalBaseQty = purchaseQty * factor;
+    return totalBaseQty.toStringAsFixed(0);
+  }
+
   // ═══════════════════════════════════════════════════════════════
   //  STEP 3 – الأسعار (ISSUE 5)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildPricesStep() {
+    // Check if we have multi-unit setup
+    final hasMulti = _hasMultiUnits;
+    final purchaseUnitName = _unitNameById(_selectedPurchaseUnitId);
+    final baseUnitName = _unitNameById(_selectedBaseUnitId);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1441,7 +1513,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'جميع الأسعار مرتبطة بالوحدة الأساسية',
+                  hasMulti
+                      ? 'أدخل سعر الجملة لوحدة الشراء ($purchaseUnitName) وسيتم حساب سعر التكلفة للوحدة الأساسية ($baseUnitName) تلقائياً'
+                      : 'جميع الأسعار مرتبطة بالوحدة الأساسية ($baseUnitName)',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.info,
                       ),
@@ -1451,13 +1525,64 @@ class _AddProductSheetState extends State<AddProductSheet> {
           ),
         ),
 
+        // ── Multi-unit: purchase unit wholesale price ────────────
+        if (hasMulti) ...[
+          TextFormField(
+            controller: _purchaseUnitWholesalePriceController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+            ],
+            decoration: InputDecoration(
+              isDense: true,
+              labelText: 'سعر الجملة للوحدة الكبرى ($purchaseUnitName) *',
+              suffixText: AppConstants.currency,
+              prefixIcon: const Icon(Icons.local_offer),
+            ),
+            onChanged: (v) {
+              _autoCalculateBaseCostFromPurchaseUnit();
+              setState(() {}); // Rebuild to update calculation display
+            },
+          ),
+          const SizedBox(height: 8),
+
+          // Auto-calculation info
+          Container(
+            padding: const EdgeInsets.all(8),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.successLight.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.calculate, size: 16, color: AppColors.success),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'سعر التكلفة للوحدة الأساسية = سعر الجملة ÷ عامل التحويل = ${_purchaseUnitWholesalePriceController.text.isEmpty ? "..." : _calculateBaseCostDisplay()}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         // سعر التكلفة + سعر البيع
         Row(
           children: [
             Expanded(
               child: _priceField(
                 controller: _costPriceController,
-                label: 'سعر التكلفة *',
+                label: hasMulti
+                    ? 'سعر التكلفة (${_unitNameById(_selectedBaseUnitId)}) *'
+                    : 'سعر التكلفة *',
               ),
             ),
             const SizedBox(width: 12),
@@ -1527,11 +1652,36 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
   }
 
+  /// Auto-calculate base unit cost price from purchase unit wholesale price
+  void _autoCalculateBaseCostFromPurchaseUnit() {
+    if (!_hasMultiUnits) return;
+    final wholesalePrice = double.tryParse(_purchaseUnitWholesalePriceController.text);
+    if (wholesalePrice == null || wholesalePrice <= 0) return;
+    final factor = _purchaseUnitFactor;
+    if (factor <= 0) return;
+    final baseCost = wholesalePrice / factor;
+    _costPriceController.text = baseCost.toStringAsFixed(2);
+  }
+
+  /// Display string for auto-calculated base cost
+  String _calculateBaseCostDisplay() {
+    final wholesalePrice = double.tryParse(_purchaseUnitWholesalePriceController.text);
+    if (wholesalePrice == null || wholesalePrice <= 0) return '...';
+    final factor = _purchaseUnitFactor;
+    if (factor <= 0) return '...';
+    final baseCost = wholesalePrice / factor;
+    return '${baseCost.toStringAsFixed(2)} ${AppConstants.currency}';
+  }
+
   // ═══════════════════════════════════════════════════════════════
   //  STEP 4 – المخزون (ISSUE 6)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildInventoryStep() {
+    final hasMulti = _hasMultiUnits;
+    final purchaseUnitName = _unitNameById(_selectedPurchaseUnitId);
+    final baseUnitName = _unitNameById(_selectedBaseUnitId);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1548,6 +1698,55 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
         // كمية افتتاحية (new products only)
         if (!_isEditMode) ...[
+          // ── Multi-unit: purchase unit quantity → auto-calculate base unit qty ──
+          if (hasMulti) ...[
+            TextFormField(
+              controller: _purchaseUnitQtyController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.next,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
+              ],
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: 'عدد الوحدات الكبرى ($purchaseUnitName)',
+                prefixIcon: const Icon(Icons.add_shopping_cart),
+                suffixText: purchaseUnitName,
+              ),
+              onChanged: (v) {
+                _autoCalculateOpeningStock();
+                setState(() {}); // Rebuild to update calculation display
+              },
+            ),
+            const SizedBox(height: 8),
+
+            // Auto-calculation info
+            Container(
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: AppColors.successLight.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calculate, size: 16, color: AppColors.success),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'الكمية الافتتاحية = عدد $purchaseUnitName × عامل التحويل = ${_calculateOpeningStockDisplay()} $baseUnitName',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           TextFormField(
             controller: _openingStockController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1557,9 +1756,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
             ],
             decoration: InputDecoration(
               isDense: true,
-              labelText: 'كمية افتتاحية',
+              labelText: hasMulti
+                  ? 'الكمية الافتتاحية بالوحدة الأساسية ($baseUnitName)'
+                  : 'كمية افتتاحية',
               prefixIcon: const Icon(Icons.inventory),
-              suffixText: _unitNameById(_selectedBaseUnitId),
+              suffixText: baseUnitName,
             ),
           ),
           const SizedBox(height: 14),
@@ -1935,8 +2136,17 @@ class _AddProductSheetState extends State<AddProductSheet> {
     final taxRate = double.tryParse(_taxRateController.text) ?? 0.0;
     final showVatAccount = taxRate > 0;
 
-    // COGS and VAT auto-selection is now handled in _loadDropdownData()
-    // based on the default currency. No more hardcoded prefix matching.
+    // Ensure selected IDs exist in their respective lists to avoid DropdownButton errors
+    final validSalesAccountId = _revenueAccounts.any((a) => a['id'] == _selectedSalesAccountId)
+        ? _selectedSalesAccountId : null;
+    final validPurchaseAccountId = _costAccounts.any((a) => a['id'] == _selectedPurchaseAccountId)
+        ? _selectedPurchaseAccountId : null;
+    final validInventoryAccountId = _assetAccounts.any((a) => a['id'] == _selectedInventoryAccountId)
+        ? _selectedInventoryAccountId : null;
+    final validCogsAccountId = _costAccounts.any((a) => a['id'] == _selectedCogsAccountId)
+        ? _selectedCogsAccountId : null;
+    final validVatAccountId = _liabilityAccounts.any((a) => a['id'] == _selectedVatAccountId)
+        ? _selectedVatAccountId : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1970,7 +2180,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
         // حساب المبيعات
         DropdownButtonFormField<int>(
-          value: _selectedSalesAccountId,
+          value: validSalesAccountId,
           isDense: true,
           decoration: const InputDecoration(
             labelText: 'حساب المبيعات',
@@ -1991,7 +2201,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
         // حساب المشتريات
         DropdownButtonFormField<int>(
-          value: _selectedPurchaseAccountId,
+          value: validPurchaseAccountId,
           isDense: true,
           decoration: const InputDecoration(
             labelText: 'حساب المشتريات',
@@ -2012,7 +2222,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
         // حساب المخزون
         DropdownButtonFormField<int>(
-          value: _selectedInventoryAccountId,
+          value: validInventoryAccountId,
           isDense: true,
           decoration: const InputDecoration(
             labelText: 'حساب المخزون',
@@ -2033,7 +2243,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
         // حساب تكلفة البضاعة المباعة (COGS)
         DropdownButtonFormField<int>(
-          value: _selectedCogsAccountId,
+          value: validCogsAccountId,
           isDense: true,
           decoration: const InputDecoration(
             labelText: 'حساب تكلفة البضاعة المباعة',
@@ -2055,7 +2265,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
         // حساب ضريبة القيمة المضافة (only show if tax > 0)
         if (showVatAccount) ...[
           DropdownButtonFormField<int>(
-            value: _selectedVatAccountId,
+            value: validVatAccountId,
             isDense: true,
             decoration: const InputDecoration(
               labelText: 'حساب ضريبة القيمة المضافة',
