@@ -65,6 +65,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   // ── Step state ────────────────────────────────────────────────
   int _currentStep = 0;
   final PageController _pageController = PageController();
+  final ScrollController _stepScrollController = ScrollController();
 
   // ── Form key ──────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
@@ -80,7 +81,6 @@ class _AddProductSheetState extends State<AddProductSheet> {
   final _sellPriceController = TextEditingController();
   final _wholesalePriceController = TextEditingController();
   final _specialWholesalePriceController = TextEditingController();
-  final _minimumSalePriceController = TextEditingController();
   final _taxRateController = TextEditingController();
   final _openingStockController = TextEditingController();
   final _minStockController = TextEditingController();
@@ -91,12 +91,13 @@ class _AddProductSheetState extends State<AddProductSheet> {
   int? _selectedCategoryId;
   int? _selectedBaseUnitId;
   int? _selectedPurchaseUnitId;
-  int? _selectedSaleUnitId;
   int? _selectedWarehouseId;
   int? _selectedSupplierId;
   int? _selectedSalesAccountId;
   int? _selectedPurchaseAccountId;
   int? _selectedInventoryAccountId;
+  int? _selectedCogsAccountId;
+  int? _selectedVatAccountId;
 
   bool _isActive = true;
   bool _trackStock = true;
@@ -107,6 +108,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
   bool _allowNegative = false;
   bool _sellRetail = true;
   bool _showInPos = true;
+
+  // Sale unit checkbox: 0 = base unit, 1 = purchase unit
+  int _saleUnitSource = 0;
 
   DateTime? _expiryDate;
   String? _imagePath;
@@ -123,8 +127,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
   List<Map<String, dynamic>> _suppliers = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _revenueAccounts = [];
-  List<Map<String, dynamic>> _expenseAccounts = [];
+  List<Map<String, dynamic>> _costAccounts = [];
   List<Map<String, dynamic>> _assetAccounts = [];
+  List<Map<String, dynamic>> _liabilityAccounts = [];
 
   // ── Helper: get unit name by id ───────────────────────────────
   String _unitNameById(int? id) {
@@ -132,6 +137,14 @@ class _AddProductSheetState extends State<AddProductSheet> {
     final match = _units.where((u) => u['id'] == id);
     if (match.isNotEmpty) return match.first['name_ar'] as String? ?? '';
     return '';
+  }
+
+  /// Effective sale unit based on checkbox selection
+  int? get _effectiveSaleUnitId {
+    if (_saleUnitSource == 1 && _selectedPurchaseUnitId != null) {
+      return _selectedPurchaseUnitId;
+    }
+    return _selectedBaseUnitId;
   }
 
   @override
@@ -159,13 +172,13 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _sellPriceController.dispose();
     _wholesalePriceController.dispose();
     _specialWholesalePriceController.dispose();
-    _minimumSalePriceController.dispose();
     _taxRateController.dispose();
     _openingStockController.dispose();
     _minStockController.dispose();
     _maxStockController.dispose();
     _supplierCodeController.dispose();
     _pageController.dispose();
+    _stepScrollController.dispose();
     super.dispose();
   }
 
@@ -179,8 +192,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
       db.getAllSuppliers(),
       db.getAllWarehouses(),
       db.getAccountsByType('REVENUE'),
-      db.getAccountsByType('EXPENSE'),
+      db.getAccountsByType('COST'),
       db.getAccountsByType('ASSET'),
+      db.getAccountsByType('LIABILITY'),
     ]);
 
     if (!mounted) return;
@@ -190,8 +204,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
       _suppliers = results[2];
       _warehouses = results[3];
       _revenueAccounts = results[4];
-      _expenseAccounts = results[5];
+      _costAccounts = results[5];
       _assetAccounts = results[6];
+      _liabilityAccounts = results[7];
     });
   }
 
@@ -213,7 +228,6 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _sellPriceController.text = p.sellPrice.toStringAsFixed(2);
     _wholesalePriceController.text = p.wholesalePrice.toStringAsFixed(2);
     _specialWholesalePriceController.text = p.specialWholesalePrice.toStringAsFixed(2);
-    _minimumSalePriceController.text = p.minimumSalePrice.toStringAsFixed(2);
     _taxRateController.text = p.taxRate.toStringAsFixed(2);
     _minStockController.text = p.minStock.toStringAsFixed(0);
     _supplierCodeController.text = p.supplierCode ?? '';
@@ -222,12 +236,18 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _selectedCategoryId = p.categoryId;
     _selectedBaseUnitId = p.effectiveBaseUnitId;
     _selectedPurchaseUnitId = p.purchaseUnitId;
-    _selectedSaleUnitId = p.saleUnitId;
     _selectedWarehouseId = p.warehouseId;
     _selectedSupplierId = p.supplierId;
     _selectedSalesAccountId = p.salesAccountId;
     _selectedPurchaseAccountId = p.purchaseAccountId;
     _selectedInventoryAccountId = p.inventoryAccountId;
+
+    // Determine sale unit source
+    if (p.saleUnitId != null && p.saleUnitId == p.purchaseUnitId && p.purchaseUnitId != p.effectiveBaseUnitId) {
+      _saleUnitSource = 1;
+    } else {
+      _saleUnitSource = 0;
+    }
 
     _isActive = p.isActive;
     _trackStock = p.trackStock;
@@ -328,6 +348,20 @@ class _AddProductSheetState extends State<AddProductSheet> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+    // Scroll step indicator to show current step
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_stepScrollController.hasClients) {
+        final maxScroll = _stepScrollController.position.maxScrollExtent;
+        final viewportWidth = _stepScrollController.position.viewportDimension;
+        // Each step chip is roughly 120px wide + 30px for arrow
+        final targetOffset = (step * 100.0).clamp(0.0, maxScroll);
+        _stepScrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   bool _validateCurrentStep() {
@@ -397,14 +431,31 @@ class _AddProductSheetState extends State<AddProductSheet> {
   Future<void> _save() async {
     if (!_validateCurrentStep()) return;
 
+    // Check for duplicate item code
+    final itemCode = _itemCodeController.text.trim();
+    if (itemCode.isNotEmpty) {
+      final exists = await DatabaseHelper().checkItemCodeExists(
+        itemCode,
+        excludeId: _isEditMode ? widget.existing!.id : null,
+      );
+      if (exists) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('رمز الصنف موجود مسبقاً، يرجى استخدام رمز مختلف'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
 
     final now = DateTime.now();
     final costPrice = double.tryParse(_costPriceController.text) ?? 0.0;
     final product = Product(
-      itemCode: _itemCodeController.text.trim().isNotEmpty
-          ? _itemCodeController.text.trim()
-          : null,
+      itemCode: itemCode.isNotEmpty ? itemCode : null,
       nameAr: _nameArController.text.trim(),
       nameEn: _nameEnController.text.trim(),
       barcode: _barcodeController.text.trim().isNotEmpty
@@ -414,7 +465,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
       unitId: _selectedBaseUnitId,
       baseUnitId: _selectedBaseUnitId,
       purchaseUnitId: _selectedPurchaseUnitId,
-      saleUnitId: _selectedSaleUnitId,
+      saleUnitId: _effectiveSaleUnitId,
       supplierId: _selectedSupplierId,
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
@@ -426,7 +477,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
       specialWholesalePrice:
           double.tryParse(_specialWholesalePriceController.text) ?? 0.0,
       minimumSalePrice:
-          double.tryParse(_minimumSalePriceController.text) ?? 0.0,
+          double.tryParse(_specialWholesalePriceController.text) ?? 0.0,
       taxRate: double.tryParse(_taxRateController.text) ?? 0.0,
       taxInclusive: _taxInclusive,
       salesAccountId: _selectedSalesAccountId,
@@ -584,7 +635,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           child: Column(
             children: [
               // ── Step indicator ──────────────────────────────────
-              _buildStepIndicator(),
+              _buildArrowStepIndicator(),
               const Divider(height: 1),
 
               // ── Page content ───────────────────────────────────
@@ -669,76 +720,90 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
   }
 
-  // ── Step indicator ────────────────────────────────────────────
+  // ── Modern arrow-based step indicator (ISSUE 2) ──────────────
 
-  Widget _buildStepIndicator() {
+  Widget _buildArrowStepIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        children: List.generate(_steps.length, (i) {
-          final isActive = i == _currentStep;
-          final isCompleted = i < _currentStep;
-          return Expanded(
-            child: GestureDetector(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: SingleChildScrollView(
+        controller: _stepScrollController,
+        scrollDirection: Axis.horizontal,
+        reverse: true,
+        child: Row(
+          children: List.generate(_steps.length * 2 - 1, (index) {
+            if (index.isOdd) {
+              // Arrow separator
+              final stepIdx = index ~/ 2;
+              final isCompleted = stepIdx < _currentStep;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Icon(
+                  Icons.arrow_back_ios,
+                  size: 14,
+                  color: isCompleted ? AppColors.success : AppColors.textTertiary.withValues(alpha: 0.4),
+                ),
+              );
+            }
+            final i = index ~/ 2;
+            final isActive = i == _currentStep;
+            final isCompleted = i < _currentStep;
+            final isFuture = i > _currentStep;
+
+            return GestureDetector(
               onTap: () {
                 if (i <= _currentStep || isCompleted) {
                   _goToStep(i);
                 }
               },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Dot / circle
-                  Container(
-                    width: isActive ? 32 : 24,
-                    height: isActive ? 32 : 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isCompleted
-                          ? AppColors.success
-                          : isActive
-                              ? AppColors.primary
-                              : AppColors.border,
-                      border: isActive
-                          ? Border.all(color: AppColors.primary, width: 2.5)
-                          : null,
-                    ),
-                    child: Center(
-                      child: isCompleted
-                          ? const Icon(Icons.check, size: 14, color: Colors.white)
-                          : Text(
-                              '${i + 1}',
-                              style: TextStyle(
-                                fontSize: isActive ? 13 : 11,
-                                fontWeight: FontWeight.w700,
-                                color: isActive ? Colors.white : AppColors.textTertiary,
-                              ),
-                            ),
-                    ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? AppColors.primary
+                      : isCompleted
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isActive
+                        ? AppColors.primary
+                        : isCompleted
+                            ? AppColors.success
+                            : AppColors.border,
+                    width: isActive ? 2 : 1,
                   ),
-                  const SizedBox(height: 4),
-                  // Label (only show for active/completed or on wider screens)
-                  if (isActive || isCompleted)
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isCompleted)
+                      const Icon(Icons.check_circle, size: 16, color: AppColors.success)
+                    else if (isActive)
+                      Icon(_steps[i].icon, size: 14, color: Colors.white)
+                    else
+                      Icon(_steps[i].icon, size: 14, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                    const SizedBox(width: 4),
                     Text(
                       _steps[i].title,
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: 11,
                         fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                         color: isActive
-                            ? AppColors.primary
+                            ? Colors.white
                             : isCompleted
                                 ? AppColors.success
-                                : AppColors.textTertiary,
+                                : isFuture
+                                    ? AppColors.textTertiary.withValues(alpha: 0.5)
+                                    : AppColors.textSecondary,
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -763,7 +828,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  STEP 1 – البيانات الأساسية
+  //  STEP 1 – البيانات الأساسية (ISSUE 3)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildBasicDataStep() {
@@ -905,22 +970,16 @@ class _AddProductSheetState extends State<AddProductSheet> {
         ),
         const SizedBox(height: 14),
 
-        // ── التصنيف ─────────────────────────────────────────
-        DropdownButtonFormField<int>(
-          value: _selectedCategoryId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'التصنيف',
-            prefixIcon: Icon(Icons.folder),
-          ),
-          items: _categories
-              .map((c) => DropdownMenuItem<int>(
-                    value: c['id'] as int,
-                    child: Text(c['name'] as String,
-                        overflow: TextOverflow.ellipsis),
-                  ))
-              .toList(),
+        // ── التصنيف (Searchable + "+" button) ────────────────
+        _buildSearchableDropdownWithAdd(
+          label: 'التصنيف',
+          icon: Icons.folder,
+          items: _categories,
+          idKey: 'id',
+          nameKey: 'name',
+          selectedId: _selectedCategoryId,
           onChanged: (v) => setState(() => _selectedCategoryId = v),
+          onAdd: () => _showAddCategoryDialog(),
         ),
         const SizedBox(height: 14),
 
@@ -967,7 +1026,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  STEP 2 – الوحدات
+  //  STEP 2 – الوحدات (ISSUE 4)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildUnitsStep() {
@@ -978,61 +1037,85 @@ class _AddProductSheetState extends State<AddProductSheet> {
       children: [
         _stepTitle(_steps[1].title, _steps[1].icon),
 
-        // ── الوحدة الأساسية * ────────────────────────────────
-        DropdownButtonFormField<int>(
-          value: _selectedBaseUnitId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'الوحدة الأساسية *',
-            prefixIcon: Icon(Icons.straighten),
-          ),
-          items: baseUnits
-              .map((u) => DropdownMenuItem<int>(
-                    value: u['id'] as int,
-                    child: Text(u['name_ar'] as String,
-                        overflow: TextOverflow.ellipsis),
-                  ))
-              .toList(),
+        // ── الوحدة الأساسية * (Searchable + "+") ────────────
+        _buildSearchableDropdownWithAdd(
+          label: 'الوحدة الأساسية *',
+          icon: Icons.straighten,
+          items: baseUnits,
+          idKey: 'id',
+          nameKey: 'name_ar',
+          selectedId: _selectedBaseUnitId,
           onChanged: (v) => setState(() => _selectedBaseUnitId = v),
-          validator: (v) => v == null ? 'الوحدة الأساسية مطلوبة' : null,
+          onAdd: () => _showAddUnitDialog(),
         ),
         const SizedBox(height: 14),
 
-        // ── وحدة الشراء الافتراضية ──────────────────────────
-        DropdownButtonFormField<int>(
-          value: _selectedPurchaseUnitId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'وحدة الشراء الافتراضية',
-            prefixIcon: Icon(Icons.shopping_cart),
-          ),
-          items: _units
-              .map((u) => DropdownMenuItem<int>(
-                    value: u['id'] as int,
-                    child: Text(u['name_ar'] as String,
-                        overflow: TextOverflow.ellipsis),
-                  ))
-              .toList(),
-          onChanged: (v) => setState(() => _selectedPurchaseUnitId = v),
+        // ── وحدة الشراء الافتراضية (Searchable + "+") ───────
+        _buildSearchableDropdownWithAdd(
+          label: 'وحدة الشراء الافتراضية',
+          icon: Icons.shopping_cart,
+          items: _units,
+          idKey: 'id',
+          nameKey: 'name_ar',
+          selectedId: _selectedPurchaseUnitId,
+          onChanged: (v) {
+            setState(() {
+              _selectedPurchaseUnitId = v;
+              _autoPopulateConversions();
+            });
+          },
+          onAdd: () => _showAddUnitDialog(),
         ),
         const SizedBox(height: 14),
 
-        // ── وحدة البيع الافتراضية ────────────────────────────
-        DropdownButtonFormField<int>(
-          value: _selectedSaleUnitId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'وحدة البيع الافتراضية',
-            prefixIcon: Icon(Icons.sell),
+        // ── وحدة البيع الافتراضية (Checkbox approach) ───────
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(8),
           ),
-          items: _units
-              .map((u) => DropdownMenuItem<int>(
-                    value: u['id'] as int,
-                    child: Text(u['name_ar'] as String,
-                        overflow: TextOverflow.ellipsis),
-                  ))
-              .toList(),
-          onChanged: (v) => setState(() => _selectedSaleUnitId = v),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('وحدة البيع الافتراضية',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      )),
+              const SizedBox(height: 8),
+              // Checkbox for base unit
+              _buildSaleUnitCheckbox(
+                label: _selectedBaseUnitId != null
+                    ? '${_unitNameById(_selectedBaseUnitId)} (الوحدة الأساسية)'
+                    : 'الوحدة الأساسية',
+                value: _saleUnitSource == 0,
+                onChanged: (v) {
+                  if (v == true) {
+                    setState(() => _saleUnitSource = 0);
+                  }
+                },
+              ),
+              // Checkbox for purchase unit
+              _buildSaleUnitCheckbox(
+                label: _selectedPurchaseUnitId != null
+                    ? '${_unitNameById(_selectedPurchaseUnitId)} (وحدة الشراء)'
+                    : 'وحدة الشراء الافتراضية',
+                value: _saleUnitSource == 1,
+                onChanged: (v) {
+                  if (v == true && _selectedPurchaseUnitId != null) {
+                    setState(() => _saleUnitSource = 1);
+                  } else if (_selectedPurchaseUnitId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('يجب اختيار وحدة الشراء أولاً'),
+                        backgroundColor: AppColors.warning,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 20),
 
@@ -1135,6 +1218,70 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
   }
 
+  Widget _buildSaleUnitCheckbox({
+    required String label,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Checkbox(
+              value: value,
+              onChanged: onChanged,
+              activeColor: AppColors.primary,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(label,
+                  style: TextStyle(
+                    fontWeight: value ? FontWeight.w600 : FontWeight.w400,
+                    color: value ? AppColors.primary : AppColors.textSecondary,
+                  )),
+            ),
+            if (value)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('وحدة بيع افتراضية',
+                    style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _autoPopulateConversions() {
+    if (_selectedPurchaseUnitId != null &&
+        _selectedPurchaseUnitId != _selectedBaseUnitId) {
+      // Check if purchase unit already in conversions
+      final existingIdx = _unitConversions.indexWhere(
+        (uc) => uc.unitId == _selectedPurchaseUnitId,
+      );
+      if (existingIdx == -1) {
+        // Add purchase unit as first conversion row
+        _unitConversions.insert(
+          0,
+          _UnitConversionRow(
+            unitId: _selectedPurchaseUnitId,
+            factor: 1.0, // User must fill
+          ),
+        );
+      } else if (existingIdx > 0) {
+        // Move to first position
+        final row = _unitConversions.removeAt(existingIdx);
+        _unitConversions.insert(0, row);
+      }
+    }
+  }
+
   Widget _buildConversionRow(_UnitConversionRow row, int index) {
     final baseUnitName = _unitNameById(_selectedBaseUnitId);
 
@@ -1172,7 +1319,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           ),
           const SizedBox(width: 6),
 
-          // Factor field – smart label
+          // Factor field
           Expanded(
             flex: 3,
             child: TextFormField(
@@ -1232,7 +1379,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  STEP 3 – الأسعار
+  //  STEP 3 – الأسعار (ISSUE 5)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildPricesStep() {
@@ -1240,6 +1387,31 @@ class _AddProductSheetState extends State<AddProductSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _stepTitle(_steps[2].title, _steps[2].icon),
+
+        // Info: all prices are linked to base unit
+        Container(
+          padding: const EdgeInsets.all(10),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: AppColors.infoLight.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, size: 18, color: AppColors.info),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'جميع الأسعار مرتبطة بالوحدة الأساسية',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.info,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
 
         // سعر التكلفة + سعر البيع
         Row(
@@ -1261,7 +1433,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
         ),
         const SizedBox(height: 14),
 
-        // سعر الجملة + سعر الجملة الخاصة
+        // سعر الجملة + أقل سعر بيع
         Row(
           children: [
             Expanded(
@@ -1274,17 +1446,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
             Expanded(
               child: _priceField(
                 controller: _specialWholesalePriceController,
-                label: 'سعر الجملة الخاصة',
+                label: 'أقل سعر بيع',
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 14),
-
-        // أقل سعر بيع
-        _priceField(
-          controller: _minimumSalePriceController,
-          label: 'أقل سعر بيع',
         ),
         const SizedBox(height: 14),
 
@@ -1325,7 +1490,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  STEP 4 – المخزون
+  //  STEP 4 – المخزون (ISSUE 6)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildInventoryStep() {
@@ -1385,24 +1550,17 @@ class _AddProductSheetState extends State<AddProductSheet> {
           ),
         ],
 
-        // مستودع افتراضي
-        DropdownButtonFormField<int>(
-          value: _selectedWarehouseId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'مستودع افتراضي',
-            prefixIcon: Icon(Icons.warehouse),
-          ),
-          items: _warehouses
-              .map((w) => DropdownMenuItem<int>(
-                    value: w['id'] as int,
-                    child: Text(w['name'] as String,
-                        overflow: TextOverflow.ellipsis),
-                  ))
-              .toList(),
-          onChanged: _isEditMode
-              ? null // locked in edit mode
-              : (v) => setState(() => _selectedWarehouseId = v),
+        // مستودع افتراضي (Searchable + "+" with empty state)
+        _buildSearchableDropdownWithAdd(
+          label: 'مستودع افتراضي',
+          icon: Icons.warehouse,
+          items: _warehouses,
+          idKey: 'id',
+          nameKey: 'name',
+          selectedId: _selectedWarehouseId,
+          onChanged: _isEditMode ? null : (v) => setState(() => _selectedWarehouseId = v),
+          onAdd: () => _showAddWarehouseDialog(),
+          emptyMessage: 'يجب إضافة مستودع في النظام أولاً',
         ),
         const SizedBox(height: 14),
 
@@ -1479,7 +1637,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  STEP 5 – الموردين
+  //  STEP 5 – الموردين (ISSUE 7)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildSuppliersStep() {
@@ -1488,22 +1646,17 @@ class _AddProductSheetState extends State<AddProductSheet> {
       children: [
         _stepTitle(_steps[4].title, _steps[4].icon),
 
-        // المورد الافتراضي
-        DropdownButtonFormField<int>(
-          value: _selectedSupplierId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'المورد الافتراضي',
-            prefixIcon: Icon(Icons.local_shipping),
-          ),
-          items: _suppliers
-              .map((s) => DropdownMenuItem<int>(
-                    value: s['id'] as int,
-                    child: Text(s['name'] as String,
-                        overflow: TextOverflow.ellipsis),
-                  ))
-              .toList(),
+        // المورد الافتراضي (Searchable + "+" with empty state)
+        _buildSearchableDropdownWithAdd(
+          label: 'المورد الافتراضي',
+          icon: Icons.local_shipping,
+          items: _suppliers,
+          idKey: 'id',
+          nameKey: 'name',
+          selectedId: _selectedSupplierId,
           onChanged: (v) => setState(() => _selectedSupplierId = v),
+          onAdd: () => _showAddSupplierDialog(),
+          emptyMessage: 'يجب إضافة مورد في النظام أولاً',
         ),
         const SizedBox(height: 14),
 
@@ -1523,20 +1676,14 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  STEP 6 – الباركود
+  //  STEP 6 – الباركود (ISSUE 8)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildBarcodesStep() {
-    // Build barcode list: base unit + conversion units
+    // Build barcode list from conversions + purchase unit (NOT base unit)
     final List<_BarcodeEntry> barcodes = [];
 
-    // Base unit barcode
-    barcodes.add(_BarcodeEntry(
-      unitName: _unitNameById(_selectedBaseUnitId) ?? 'الوحدة الأساسية',
-      barcode: _barcodeController.text,
-    ));
-
-    // Conversion unit barcodes
+    // Add conversion units
     for (final uc in _unitConversions) {
       barcodes.add(_BarcodeEntry(
         unitName: _unitNameById(uc.unitId),
@@ -1545,15 +1692,67 @@ class _AddProductSheetState extends State<AddProductSheet> {
       ));
     }
 
+    // Add purchase unit if not already in conversions
+    if (_selectedPurchaseUnitId != null &&
+        _selectedPurchaseUnitId != _selectedBaseUnitId &&
+        !_unitConversions.any((uc) => uc.unitId == _selectedPurchaseUnitId)) {
+      barcodes.add(_BarcodeEntry(
+        unitName: _unitNameById(_selectedPurchaseUnitId),
+        barcode: '',
+        isPurchaseUnit: true,
+      ));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _stepTitle(_steps[5].title, _steps[5].icon),
 
+        // Info: base unit barcode is in step 1
+        Container(
+          padding: const EdgeInsets.all(10),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: AppColors.infoLight.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, size: 18, color: AppColors.info),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'باركود الوحدة الأساسية (${_unitNameById(_selectedBaseUnitId)}) تم إدخاله في الخطوة الأولى',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.info,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         if (barcodes.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: Text('حدد الوحدة الأساسية أولاً في خطوة الوحدات')),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.qr_code,
+                      size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
+                  const SizedBox(height: 8),
+                  Text('لا توجد وحدات تحويل',
+                      style: TextStyle(
+                          color: AppColors.textTertiary.withValues(alpha: 0.6))),
+                  const SizedBox(height: 4),
+                  Text('أضف وحدات تحويل في خطوة الوحدات أولاً',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary,
+                          )),
+                ],
+              ),
+            ),
           )
         else ...[
           // Header
@@ -1593,21 +1792,34 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   ),
                   const SizedBox(width: 8),
 
-                  // Barcode field
+                  // Barcode field with scan button
                   Expanded(
                     flex: 3,
                     child: TextFormField(
                       initialValue: entry.barcode,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         isDense: true,
                         hintText: 'أدخل الباركود',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.camera_alt, size: 16),
+                          onPressed: () async {
+                            final result = await Navigator.push<String>(
+                              context,
+                              MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+                            );
+                            if (result != null && result.isNotEmpty) {
+                              setState(() {
+                                if (entry.conversionRow != null) {
+                                  entry.conversionRow!.barcode = result;
+                                }
+                              });
+                            }
+                          },
+                        ),
                       ),
                       onChanged: (v) {
-                        if (i == 0) {
-                          // Base unit barcode
-                          _barcodeController.text = v;
-                        } else if (entry.conversionRow != null) {
+                        if (entry.conversionRow != null) {
                           entry.conversionRow!.barcode = v;
                         }
                       },
@@ -1677,11 +1889,35 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  STEP 8 – المحاسبة
+  //  STEP 8 – المحاسبة (ISSUE 9)
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildAccountingStep() {
     final isLocked = _isEditMode;
+    final taxRate = double.tryParse(_taxRateController.text) ?? 0.0;
+    final showVatAccount = taxRate > 0;
+
+    // Auto-select COGS account (code 3200)
+    if (_selectedCogsAccountId == null && _costAccounts.isNotEmpty) {
+      for (final a in _costAccounts) {
+        final code = a['account_code'] as String? ?? '';
+        if (code.startsWith('32')) {
+          _selectedCogsAccountId = a['id'] as int;
+          break;
+        }
+      }
+    }
+
+    // Auto-select VAT account (code 3300)
+    if (_selectedVatAccountId == null && _liabilityAccounts.isNotEmpty && showVatAccount) {
+      for (final a in _liabilityAccounts) {
+        final code = a['account_code'] as String? ?? '';
+        if (code.startsWith('33')) {
+          _selectedVatAccountId = a['id'] as int;
+          break;
+        }
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1742,7 +1978,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
             labelText: 'حساب المشتريات',
             prefixIcon: Icon(Icons.trending_down),
           ),
-          items: _expenseAccounts
+          items: _costAccounts
               .map((a) => DropdownMenuItem<int>(
                     value: a['id'] as int,
                     child: Text(
@@ -1774,6 +2010,97 @@ class _AddProductSheetState extends State<AddProductSheet> {
               .toList(),
           onChanged: isLocked ? null : (v) => setState(() => _selectedInventoryAccountId = v),
         ),
+        const SizedBox(height: 14),
+
+        // حساب تكلفة البضاعة المباعة (COGS)
+        DropdownButtonFormField<int>(
+          value: _selectedCogsAccountId,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'حساب تكلفة البضاعة المباعة',
+            prefixIcon: Icon(Icons.account_balance_wallet),
+          ),
+          items: _costAccounts
+              .map((a) => DropdownMenuItem<int>(
+                    value: a['id'] as int,
+                    child: Text(
+                      '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          onChanged: isLocked ? null : (v) => setState(() => _selectedCogsAccountId = v),
+        ),
+        const SizedBox(height: 14),
+
+        // حساب ضريبة القيمة المضافة (only show if tax > 0)
+        if (showVatAccount) ...[
+          DropdownButtonFormField<int>(
+            value: _selectedVatAccountId,
+            isDense: true,
+            decoration: const InputDecoration(
+              labelText: 'حساب ضريبة القيمة المضافة',
+              prefixIcon: Icon(Icons.receipt_long),
+            ),
+            items: _liabilityAccounts
+                .map((a) => DropdownMenuItem<int>(
+                      value: a['id'] as int,
+                      child: Text(
+                        '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ))
+                .toList(),
+            onChanged: isLocked ? null : (v) => setState(() => _selectedVatAccountId = v),
+          ),
+          const SizedBox(height: 14),
+
+          // VAT accounting info card
+          Container(
+            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.infoLight.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 18, color: AppColors.info),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'آلية محاسبة الضريبة',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.info,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'عند البيع: مدين (العميل/الصندوق) ← دائن (المبيعات) + دائن (ضريبة القيمة المضافة)',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.info,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'عند الشراء: مدين (المشتريات) + مدين (ضريبة القيمة المضافة) ← دائن (الصندوق/المورد)',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.info,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         const SizedBox(height: 40),
       ],
     );
@@ -1841,6 +2168,427 @@ class _AddProductSheetState extends State<AddProductSheet> {
       ),
     );
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Searchable dropdown with "+" add button (ISSUE 3, 4, 6, 7)
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildSearchableDropdownWithAdd({
+    required String label,
+    required IconData icon,
+    required List<Map<String, dynamic>> items,
+    required String idKey,
+    required String nameKey,
+    required int? selectedId,
+    required ValueChanged<int?>? onChanged,
+    required VoidCallback? onAdd,
+    String? emptyMessage,
+  }) {
+    return TextFormField(
+      readOnly: true,
+      controller: TextEditingController(
+        text: selectedId != null
+            ? (items.where((i) => i[idKey] == selectedId).isNotEmpty
+                ? items.firstWhere((i) => i[idKey] == selectedId)[nameKey] as String
+                : '')
+            : '',
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        labelText: label,
+        prefixIcon: Icon(icon),
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onAdd != null)
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, size: 20),
+                tooltip: 'إضافة جديد',
+                onPressed: onAdd,
+              ),
+            if (selectedId != null && onChanged != null)
+              IconButton(
+                icon: const Icon(Icons.close, size: 16),
+                onPressed: () => onChanged(null),
+              ),
+          ],
+        ),
+      ),
+      onTap: () {
+        if (items.isEmpty && emptyMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(emptyMessage),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+          onAdd?.call();
+          return;
+        }
+        _showSearchDialog(
+          label: label,
+          items: items,
+          idKey: idKey,
+          nameKey: nameKey,
+          selectedId: selectedId,
+          onSelected: onChanged ?? (_) {},
+        );
+      },
+    );
+  }
+
+  void _showSearchDialog({
+    required String label,
+    required List<Map<String, dynamic>> items,
+    required String idKey,
+    required String nameKey,
+    required int? selectedId,
+    required ValueChanged<int?> onSelected,
+  }) {
+    final searchController = TextEditingController();
+    List<Map<String, dynamic>> filteredItems = List.from(items);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                title: Text(label),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: 'بحث...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onChanged: (v) {
+                          setDialogState(() {
+                            filteredItems = items
+                                .where((i) => (i[nameKey] as String)
+                                    .toLowerCase()
+                                    .contains(v.toLowerCase()))
+                                .toList();
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 300,
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: filteredItems.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredItems[index];
+                            final id = item[idKey] as int;
+                            final name = item[nameKey] as String;
+                            final isSelected = id == selectedId;
+                            return ListTile(
+                              dense: true,
+                              title: Text(name),
+                              trailing: isSelected
+                                  ? const Icon(Icons.check, color: AppColors.primary)
+                                  : null,
+                              selected: isSelected,
+                              selectedTileColor: AppColors.primary.withValues(alpha: 0.05),
+                              onTap: () {
+                                onSelected(id);
+                                Navigator.of(dialogContext).pop();
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).then((_) {
+      searchController.dispose();
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Inline Add dialogs
+  // ═══════════════════════════════════════════════════════════════
+
+  Future<void> _showAddCategoryDialog() async {
+    final nameController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('إضافة تصنيف جديد'),
+          content: TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              isDense: true,
+              labelText: 'اسم التصنيف',
+              prefixIcon: Icon(Icons.folder),
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('إضافة'),
+            ),
+          ],
+        ),
+      ),
+    );
+    nameController.dispose();
+
+    if (result == true) {
+      final name = nameController.text.trim();
+      if (name.isNotEmpty) {
+        final now = DateTime.now().toIso8601String();
+        final id = await DatabaseHelper().insertCategory({
+          'name': name,
+          'is_active': 1,
+          'created_at': now,
+        });
+        await _loadDropdownData();
+        if (mounted) {
+          setState(() => _selectedCategoryId = id);
+        }
+      }
+    }
+  }
+
+  Future<void> _showAddUnitDialog() async {
+    final nameArController = TextEditingController();
+    final abbreviationController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('إضافة وحدة جديدة'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameArController,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'اسم الوحدة بالعربي',
+                  prefixIcon: Icon(Icons.straighten),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: abbreviationController,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'الاختصار',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('إضافة'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      final name = nameArController.text.trim();
+      if (name.isNotEmpty) {
+        final now = DateTime.now().toIso8601String();
+        final id = await DatabaseHelper().insertUnit({
+          'name_ar': name,
+          'name_en': '',
+          'abbreviation': abbreviationController.text.trim(),
+          'unit_type': 'count',
+          'is_active': 1,
+          'is_sellable': 1,
+          'is_purchasable': 1,
+          'is_packaging': 0,
+          'is_base_unit': 0,
+          'display_order': 99,
+          'description': '',
+          'created_at': now,
+          'updated_at': now,
+        });
+        await _loadDropdownData();
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    }
+    nameArController.dispose();
+    abbreviationController.dispose();
+  }
+
+  Future<void> _showAddWarehouseDialog() async {
+    final nameController = TextEditingController();
+    final locationController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('إضافة مستودع جديد'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'اسم المستودع',
+                  prefixIcon: Icon(Icons.warehouse),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: locationController,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'الموقع',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('إضافة'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      final name = nameController.text.trim();
+      if (name.isNotEmpty) {
+        final now = DateTime.now().toIso8601String();
+        final id = await DatabaseHelper().insertWarehouse({
+          'name': name,
+          'location': locationController.text.trim().isNotEmpty
+              ? locationController.text.trim()
+              : null,
+          'is_active': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+        await _loadDropdownData();
+        if (mounted) {
+          setState(() => _selectedWarehouseId = id);
+        }
+      }
+    }
+    nameController.dispose();
+    locationController.dispose();
+  }
+
+  Future<void> _showAddSupplierDialog() async {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('إضافة مورد جديد'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'اسم المورد',
+                  prefixIcon: Icon(Icons.local_shipping),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'رقم الهاتف',
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('إضافة'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      final name = nameController.text.trim();
+      if (name.isNotEmpty) {
+        final now = DateTime.now().toIso8601String();
+        final id = await DatabaseHelper().insertSupplier({
+          'name': name,
+          'phone': phoneController.text.trim().isNotEmpty
+              ? phoneController.text.trim()
+              : null,
+          'balance': 0.0,
+          'balance_type': 'credit',
+          'currency': 'YER',
+          'debt_ceiling': 0.0,
+          'contact_method': 'whatsapp',
+          'created_at': now,
+          'updated_at': now,
+        });
+        await _loadDropdownData();
+        if (mounted) {
+          setState(() => _selectedSupplierId = id);
+        }
+      }
+    }
+    nameController.dispose();
+    phoneController.dispose();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1851,10 +2599,12 @@ class _BarcodeEntry {
   final String unitName;
   String barcode;
   final _UnitConversionRow? conversionRow;
+  final bool isPurchaseUnit;
 
   _BarcodeEntry({
     required this.unitName,
     required this.barcode,
     this.conversionRow,
+    this.isPurchaseUnit = false,
   });
 }

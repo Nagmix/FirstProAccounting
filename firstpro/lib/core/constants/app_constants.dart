@@ -11,7 +11,7 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 23;
+  static const int dbVersion = 26;
 
   // ── Locale & currency ─────────────────────────────────────────
   static const String currency = 'ر.ي';

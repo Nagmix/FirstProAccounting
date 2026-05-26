@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 25;
+  static const int _databaseVersion = 26;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -68,11 +68,13 @@ class DatabaseHelper {
         group_id TEXT,
         description TEXT,
         cost_price REAL NOT NULL DEFAULT 0.0,
+        average_cost REAL NOT NULL DEFAULT 0.0,
         sell_price REAL NOT NULL DEFAULT 0.0,
         wholesale_price REAL NOT NULL DEFAULT 0.0,
         special_wholesale_price REAL NOT NULL DEFAULT 0.0,
         minimum_sale_price REAL NOT NULL DEFAULT 0.0,
         tax_rate REAL NOT NULL DEFAULT 0.0,
+        tax_inclusive INTEGER NOT NULL DEFAULT 0,
         sales_account_id INTEGER,
         purchase_account_id INTEGER,
         inventory_account_id INTEGER,
@@ -87,6 +89,16 @@ class DatabaseHelper {
         is_active INTEGER NOT NULL DEFAULT 1,
         image_path TEXT,
         has_variants INTEGER NOT NULL DEFAULT 0,
+        base_unit_id INTEGER,
+        purchase_unit_id INTEGER,
+        sale_unit_id INTEGER,
+        track_stock INTEGER NOT NULL DEFAULT 1,
+        is_sellable INTEGER NOT NULL DEFAULT 1,
+        is_purchasable INTEGER NOT NULL DEFAULT 1,
+        allow_negative INTEGER NOT NULL DEFAULT 0,
+        sell_retail INTEGER NOT NULL DEFAULT 1,
+        show_in_pos INTEGER NOT NULL DEFAULT 1,
+        supplier_code TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id),
@@ -846,6 +858,7 @@ class DatabaseHelper {
       ['حساب الموردين', 'Suppliers Account', '2100', 'LIABILITY'],
       ['رصيد افتتاحي', 'Opening Balance Equity', '2200', 'LIABILITY'],
       ['الأرباح المحتجزة', 'Retained Earnings', '2900', 'LIABILITY'],
+      ['ضريبة القيمة المضافة', 'VAT Payable', '3300', 'LIABILITY'],
       ['تكلفة البضاعة المباعة', 'COGS Account', '3200', 'COST'],
       ['حساب المشتريات', 'Purchases Account', '3100', 'COST'],
       ['حساب المبيعات', 'Sales Account', '4100', 'REVENUE'],
@@ -903,6 +916,7 @@ class DatabaseHelper {
       ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY'],
       ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'LIABILITY'],
       ['الأرباح المحتجزة', 'Retained Earnings', 2900, 'LIABILITY'],
+      ['ضريبة القيمة المضافة', 'VAT Payable', 3300, 'LIABILITY'],
       ['تكلفة البضاعة المباعة', 'COGS Account', 3200, 'COST'],
       ['حساب المشتريات', 'Purchases Account', 3100, 'COST'],
       ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE'],
@@ -1855,6 +1869,150 @@ class DatabaseHelper {
       try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN from_unit_id INTEGER'); } catch (_) {}
       try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN to_unit_id INTEGER'); } catch (_) {}
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v26 Migration: Ensure ALL missing columns exist (fixes databases
+    //  created with broken _onCreate that lacked average_cost etc.)
+    //  Also adds VAT account (code 3300) for each currency.
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 26) {
+      // ── Products table: add missing columns ──
+      try { await db.execute('ALTER TABLE products ADD COLUMN average_cost REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN tax_inclusive INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN expiry_tracking INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN has_variants INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN base_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN purchase_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN sale_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN track_stock INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN is_sellable INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN is_purchasable INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN allow_negative INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN sell_retail INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN show_in_pos INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN supplier_code TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN image_path TEXT'); } catch (_) {}
+
+      // Initialize average_cost from cost_price where average_cost is 0
+      await db.execute('UPDATE products SET average_cost = cost_price WHERE average_cost = 0.0 AND cost_price > 0.0');
+
+      // ── Create units table if not exists ──
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS units (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name_ar TEXT NOT NULL,
+          name_en TEXT NOT NULL DEFAULT '',
+          abbreviation TEXT NOT NULL DEFAULT '',
+          unit_type TEXT NOT NULL DEFAULT 'count',
+          description TEXT,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          is_sellable INTEGER NOT NULL DEFAULT 1,
+          is_purchasable INTEGER NOT NULL DEFAULT 1,
+          is_packaging INTEGER NOT NULL DEFAULT 0,
+          is_base_unit INTEGER NOT NULL DEFAULT 0,
+          display_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_units_type ON units (unit_type)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_units_active ON units (is_active)');
+
+      // Seed default units
+      await _seedDefaultUnits(db);
+
+      // ── Create unit_conversions table if not exists ──
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS unit_conversions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          from_unit TEXT NOT NULL,
+          to_unit TEXT NOT NULL,
+          conversion_factor REAL NOT NULL,
+          barcode TEXT,
+          sell_price REAL NOT NULL DEFAULT 0.0,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          from_unit_id INTEGER,
+          to_unit_id INTEGER,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_unit_conversions_product ON unit_conversions (product_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_unit_conversions_barcode ON unit_conversions (barcode)');
+
+      // ── Add unit fields to invoice_items ──
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_name TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN conversion_factor REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN base_quantity REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
+
+      // ── Add debt_ceiling and contact_method to customers ──
+      try { await db.execute('ALTER TABLE customers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+      try { await db.execute("ALTER TABLE customers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (_) {}
+
+      // ── Add debt_ceiling and contact_method to suppliers ──
+      try { await db.execute('ALTER TABLE suppliers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+      try { await db.execute("ALTER TABLE suppliers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (_) {}
+
+      // ── Add operation_type and expense_account_id to expenses ──
+      try { await db.execute("ALTER TABLE expenses ADD COLUMN operation_type TEXT NOT NULL DEFAULT 'صرف'"); } catch (_) {}
+      try { await db.execute('ALTER TABLE expenses ADD COLUMN expense_account_id INTEGER'); } catch (_) {}
+
+      // ── Migrate existing unit_id → base_unit_id ──
+      await db.execute('UPDATE products SET base_unit_id = unit_id WHERE base_unit_id IS NULL AND unit_id IS NOT NULL');
+      await db.execute('UPDATE products SET sale_unit_id = unit_id WHERE sale_unit_id IS NULL AND unit_id IS NOT NULL');
+      await db.execute('UPDATE products SET purchase_unit_id = unit_id WHERE purchase_unit_id IS NULL AND unit_id IS NOT NULL');
+
+      // ── Add VAT account (code 3300, LIABILITY) for each currency ──
+      final now26 = DateTime.now().toIso8601String();
+      final vatAccountTemplates = [
+        {'code': 'YER', 'symbol': 'ر.ي', 'offset': 0},
+        {'code': 'SAR', 'symbol': 'ر.س', 'offset': 1},
+        {'code': 'USD', 'symbol': r'$', 'offset': 2},
+      ];
+      for (final vatConfig in vatAccountTemplates) {
+        final currencyCode = vatConfig['code'] as String;
+        final currencySymbol = vatConfig['symbol'] as String;
+        final codeOffset = vatConfig['offset'] as int;
+        final actualCode = (3300 + codeOffset).toString();
+        final existing = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [actualCode, currencyCode], limit: 1);
+        if (existing.isEmpty) {
+          await db.insert('accounts', {
+            'name_ar': 'ضريبة القيمة المضافة ($currencySymbol)',
+            'name_en': 'VAT Payable ($currencyCode)',
+            'account_code': actualCode,
+            'account_type': 'LIABILITY',
+            'balance': 0.0,
+            'currency': currencyCode,
+            'is_active': 1,
+            'is_system': 1,
+            'debt_ceiling': 0.0,
+            'balance_type': 'credit',
+            'created_at': now26,
+            'updated_at': now26,
+          });
+        }
+      }
+
+      // ── Create stock_movements table if not exists ──
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stock_movements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          movement_type TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          reference_type TEXT,
+          reference_id TEXT,
+          notes TEXT,
+          unit_cost REAL NOT NULL DEFAULT 0.0,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements (product_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements (movement_type)');
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2030,6 +2188,30 @@ class DatabaseHelper {
     );
     final nextNum = (result.first['next_code'] as num?)?.toInt() ?? 1;
     return 'PRD-${nextNum.toString().padLeft(5, '0')}';
+  }
+
+  /// Check if an item_code already exists in the products table.
+  /// Optionally exclude a product ID (for edit mode).
+  Future<bool> checkItemCodeExists(String code, {int? excludeId}) async {
+    final db = await database;
+    if (code.trim().isEmpty) return false;
+    List<Map<String, dynamic>> result;
+    if (excludeId != null) {
+      result = await db.query(
+        'products',
+        where: 'item_code = ? AND id != ?',
+        whereArgs: [code.trim(), excludeId],
+        limit: 1,
+      );
+    } else {
+      result = await db.query(
+        'products',
+        where: 'item_code = ?',
+        whereArgs: [code.trim()],
+        limit: 1,
+      );
+    }
+    return result.isNotEmpty;
   }
 
   // ══════════════════════════════════════════════════════════════
