@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'dart:convert';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -28,6 +29,10 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   String _entityBalanceType = 'credit';
   String _cashBoxName = '—';
   bool _isLoading = true;
+
+  // Linked invoice data
+  Map<String, dynamic>? _originalInvoice;
+  List<Map<String, dynamic>> _linkedReturns = [];
 
   @override
   void initState() {
@@ -80,6 +85,17 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       }
     }
 
+    // Load linked original invoice
+    Map<String, dynamic>? originalInvoice;
+    final originalInvoiceId = invoice['original_invoice_id'] as String?;
+    if (originalInvoiceId != null && originalInvoiceId.isNotEmpty) {
+      originalInvoice = await db.getInvoiceById(originalInvoiceId);
+    }
+
+    // Load linked return invoices
+    List<Map<String, dynamic>> linkedReturns = [];
+    linkedReturns = await db.getLinkedReturns(widget.invoiceId);
+
     setState(() {
       _invoice = invoice;
       _items = items;
@@ -87,6 +103,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       _entityBalance = entityBalance;
       _entityBalanceType = entityBalanceType;
       _cashBoxName = cashBoxName;
+      _originalInvoice = originalInvoice;
+      _linkedReturns = linkedReturns;
       _isLoading = false;
     });
   }
@@ -142,6 +160,10 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildHeaderSection(),
+                          if (_originalInvoice != null)
+                            _buildOriginalInvoiceSection(),
+                          if (_linkedReturns.isNotEmpty)
+                            _buildLinkedReturnsSection(),
                           _buildEntitySection(),
                           _buildPaymentInfoSection(),
                           _buildItemsTable(),
@@ -251,6 +273,196 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(20)),
       child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fgColor)),
+    );
+  }
+
+  // ── Original invoice link section ────────────────────────────────
+  Widget _buildOriginalInvoiceSection() {
+    final originalId = _originalInvoice?['id'] as String? ?? '';
+    final originalType = _originalInvoice?['type'] as String? ?? '';
+    final originalTotal = (_originalInvoice?['total'] as num?)?.toDouble() ?? 0.0;
+    final originalDate = DateTime.tryParse(_originalInvoice?['created_at'] as String? ?? '');
+    final dateStr = originalDate != null ? DateFormatter.formatDateTime(originalDate) : '';
+    final displayId = originalId.length > 12 ? '...${originalId.substring(originalId.length - 8)}' : originalId;
+    final typeAr = originalType == 'sale' ? 'مبيعات' : originalType == 'purchase' ? 'مشتريات' : originalType;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.info.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.link, size: 20, color: AppColors.info),
+              const SizedBox(width: 8),
+              Text('فاتورة مرتبطة', style: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.info,
+              )),
+            ],
+          ),
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => InvoiceDetailScreen(invoiceId: originalId),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: context.surfaceColor,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.receipt, size: 20, color: AppColors.info),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'فاتورة $typeAr - # $displayId',
+                          style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${CurrencyFormatter.format(originalTotal)} • $dateStr',
+                          style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.info),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Linked returns section ───────────────────────────────────────
+  Widget _buildLinkedReturnsSection() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.undo, size: 20, color: AppColors.error),
+              const SizedBox(width: 8),
+              Text('فواتير المرتجع المرتبطة', style: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.error,
+              )),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${_linkedReturns.length}',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ..._linkedReturns.map((ret) {
+            final retId = ret['id'] as String? ?? '';
+            final entityName = ret['entity_name'] as String? ?? '—';
+            final total = (ret['total'] as num?)?.toDouble() ?? 0.0;
+            final status = ret['status'] as String? ?? '';
+            final createdAt = DateTime.tryParse(ret['created_at'] as String? ?? '');
+            final dateStr = createdAt != null ? DateFormatter.formatDateTime(createdAt) : '';
+            final displayId = retId.length > 12 ? '...${retId.substring(retId.length - 8)}' : retId;
+            final isCancelled = status == 'cancelled';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => InvoiceDetailScreen(invoiceId: retId),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: context.surfaceColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isCancelled
+                          ? AppColors.textHint.withValues(alpha: 0.3)
+                          : AppColors.error.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.refresh,
+                        size: 18,
+                        color: isCancelled ? AppColors.textHint : AppColors.error,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '# $displayId',
+                              style: context.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                decoration: isCancelled ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$entityName • ${CurrencyFormatter.format(total)} • $dateStr${isCancelled ? ' • ملغاة' : ''}',
+                              style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textHint),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -537,6 +749,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   // ── Bottom actions ───────────────────────────────────────────────
   Widget _buildBottomActions() {
     final remaining = (_invoice?['remaining'] as num?)?.toDouble() ?? 0.0;
+    final status = _invoice?['status'] as String? ?? 'pending';
+    final isCancelled = status == 'cancelled';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -549,7 +763,21 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (remaining > 0.005)
+            if (!isCancelled)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _confirmCancelInvoice,
+                  icon: const Icon(Icons.cancel_outlined, color: AppColors.error),
+                  label: const Text('إلغاء الفاتورة', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.error),
+                  ),
+                ),
+              ),
+            if (!isCancelled) const SizedBox(height: 8),
+            if (remaining > 0.005 && !isCancelled)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -562,7 +790,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                   ),
                 ),
               ),
-            if (remaining > 0.005) const SizedBox(height: 8),
+            if (remaining > 0.005 && !isCancelled) const SizedBox(height: 8),
             Row(
               children: [
                 IconButton.outlined(
@@ -697,6 +925,69 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         );
       },
     );
+  }
+
+  // ── Cancel Invoice ───────────────────────────────────────────────
+  void _confirmCancelInvoice() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('تأكيد إلغاء الفاتورة'),
+            ],
+          ),
+          content: const Text(
+            'هل أنت متأكد من إلغاء هذه الفاتورة؟ سيتم عكس جميع القيود المحاسبية المرتبطة بها ولا يمكن التراجع عن هذا الإجراء.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('تراجع'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _cancelInvoice();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('إلغاء الفاتورة'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _cancelInvoice() async {
+    try {
+      final db = DatabaseHelper();
+      await db.cancelInvoice(widget.invoiceId);
+      // Log audit event from the UI side as well for extra traceability
+      await db.logAuditEvent(
+        action: 'cancel',
+        tableName: 'invoices',
+        recordId: int.tryParse(widget.invoiceId),
+        recordType: _invoice?['type'] as String?,
+        oldValues: jsonEncode({'status': _invoice?['status']}),
+        newValues: jsonEncode({'status': 'cancelled'}),
+      );
+      if (mounted) {
+        context.showSuccessSnackBar('تم إلغاء الفاتورة بنجاح');
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showErrorSnackBar(e.toString().replaceFirst('Exception: ', ''));
+      }
+    }
   }
 
   // ── Share & Print ────────────────────────────────────────────────

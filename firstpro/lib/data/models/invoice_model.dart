@@ -28,6 +28,7 @@ class Invoice {
   final int? shiftId;
   final String? cashierName;
   final bool isPosted;
+  final String? originalInvoiceId;
   final DateTime createdAt;
 
   Invoice({
@@ -60,6 +61,7 @@ class Invoice {
     this.shiftId,
     this.cashierName,
     this.isPosted = false,
+    this.originalInvoiceId,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -102,6 +104,7 @@ class Invoice {
       'shift_id': shiftId,
       'cashier_name': cashierName,
       'is_posted': isPosted ? 1 : 0,
+      'original_invoice_id': originalInvoiceId,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -137,6 +140,7 @@ class Invoice {
       shiftId: map['shift_id'],
       cashierName: map['cashier_name'],
       isPosted: (map['is_posted'] ?? 0) == 1,
+      originalInvoiceId: map['original_invoice_id'],
       createdAt: DateTime.parse(map['created_at']),
     );
   }
@@ -151,6 +155,7 @@ class Invoice {
     String? ewalletProvider, String? bankTransferProvider,
     String? transferNumber, String? attachmentPath,
     int? shiftId, String? cashierName, bool? isPosted,
+    String? originalInvoiceId,
     DateTime? createdAt,
   }) {
     return Invoice(
@@ -173,6 +178,7 @@ class Invoice {
       attachmentPath: attachmentPath ?? this.attachmentPath,
       shiftId: shiftId ?? this.shiftId, cashierName: cashierName ?? this.cashierName,
       isPosted: isPosted ?? this.isPosted,
+      originalInvoiceId: originalInvoiceId ?? this.originalInvoiceId,
       createdAt: createdAt ?? this.createdAt,
     );
   }

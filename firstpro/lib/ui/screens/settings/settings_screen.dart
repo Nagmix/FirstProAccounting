@@ -1,13 +1,15 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:sqflite/sqflite.dart' as sqflite;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -70,12 +72,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricEnabled = false;
   bool _isBiometricAvailable = false;
 
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+
+  // ── Auto-backup settings state ─────────────────────────────────
+  bool _autoBackupEnabled = false;
+  int _autoBackupFrequencyIndex = 0; // 0=يومي, 1=أسبوعي
+  String? _lastBackupDate;
+  Timer? _autoBackupTimer;
+
   bool _isLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _loadSettings(); // _initAutoBackupTimer is called inside _loadSettings after state is ready
+  }
+
+  @override
+  void dispose() {
+    _businessNameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _addressController.dispose();
+    _userNameController.dispose();
+    _invoicePrefixController.dispose();
+    _autoBackupTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -96,8 +118,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final trackExpiry = await db.getSetting('track_expiry_date');
     final themeMode = await db.getSetting('theme_mode_index');
     final fontSize = await db.getSetting('font_size_index');
-    final pinEnabled = await db.getSetting('pin_enabled');
+    // Read PIN enabled from secure storage with DB fallback for migration
+    String? pinEnabled = await _secureStorage.read(key: 'pin_enabled');
+    if (pinEnabled == null) {
+      pinEnabled = await db.getSetting('pin_enabled');
+      if (pinEnabled != null && pinEnabled.isNotEmpty) {
+        // Migrate to secure storage
+        await _secureStorage.write(key: 'pin_enabled', value: pinEnabled);
+        await db.deleteSetting('pin_enabled');
+      }
+    }
     final biometricEnabled = await db.getSetting('biometric_enabled');
+    final autoBackupEnabled = await db.getSetting('auto_backup_enabled');
+    final autoBackupFreq = await db.getSetting('auto_backup_frequency');
+    final lastBackup = await db.getSetting('last_backup_date');
 
     // Check biometric availability
     bool biometricAvailable = false;
@@ -129,9 +163,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _pinEnabled = pinEnabled == '1';
         _biometricEnabled = biometricEnabled == '1';
         _isBiometricAvailable = biometricAvailable;
+        _autoBackupEnabled = autoBackupEnabled == '1';
+        _autoBackupFrequencyIndex = autoBackupFreq == 'weekly' ? 1 : 0;
+        _lastBackupDate = lastBackup;
         _isLoaded = true;
       });
     }
+
+    // Init auto-backup timer after settings are loaded
+    _initAutoBackupTimer();
   }
 
   Future<void> _saveSetting(String key, String value) async {
@@ -139,27 +179,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await db.setSetting(key, value);
   }
 
-  /// Simple hash function for PIN storage.
-  /// Instead of storing the PIN as plain text, we store a hash.
-  /// This is a basic hash — not cryptographically secure, but better than plain text.
+  /// Improved hash function for PIN storage with salt and multiple rounds.
+  /// New format uses 'h2$' prefix; old format used 'h$' prefix.
+  /// Must match the hash function used in app_lock_screen.dart.
   String _hashPin(String pin) {
-    int hash = 0;
-    for (int i = 0; i < pin.length; i++) {
-      hash = ((hash << 5) - hash) + pin.codeUnitAt(i);
-      hash = hash & 0x7fffffff; // Keep it positive
+    const salt = 'F1r5tPr0_4cc0unt1ng_2024!@#';
+    var hash = 0;
+    final salted = salt + pin + salt;
+    // Multiple rounds for increased difficulty
+    var input = salted;
+    for (var round = 0; round < 100; round++) {
+      hash = 0;
+      for (var i = 0; i < input.length; i++) {
+        hash = ((hash << 5) - hash) + input.codeUnitAt(i);
+        hash = hash & 0x7fffffff;
+      }
+      input = '$hash$salt$pin';
     }
-    return 'h\$hash';
-  }
-
-  @override
-  void dispose() {
-    _businessNameController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _addressController.dispose();
-    _userNameController.dispose();
-    _invoicePrefixController.dispose();
-    super.dispose();
+    return 'h2\$hash';
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -386,13 +423,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // Enabling PIN — must set a PIN first
                       final pin = await _showPinDialog(isSetting: true);
                       if (pin != null && pin.length == 4) {
-                        await _saveSetting('pin_enabled', '1');
-                        await _saveSetting('app_pin', _hashPin(pin));
+                        await _secureStorage.write(key: 'pin_enabled', value: '1');
+                        await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
+                        // Clean up old DB entries if they exist
+                        try {
+                          final db = DatabaseHelper();
+                          await db.deleteSetting('pin_enabled');
+                          await db.deleteSetting('app_pin');
+                        } catch (_) {}
                         setState(() => _pinEnabled = true);
                       }
                     } else {
-                      // Disabling PIN
-                      await _saveSetting('pin_enabled', '0');
+                      // Disabling PIN — delete from secure storage
+                      await _secureStorage.delete(key: 'pin_enabled');
                       setState(() {
                         _pinEnabled = false;
                         _biometricEnabled = false;
@@ -410,9 +453,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () async {
                     final pin = await _showPinDialog(isSetting: true);
                     if (pin != null && pin.length == 4) {
-                      await _saveSetting('app_pin', _hashPin(pin));
+                      await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
+                      // Clean up old DB entry if it exists
+                      try {
+                        await DatabaseHelper().deleteSetting('app_pin');
+                      } catch (_) {}
                       if (!_pinEnabled) {
-                        await _saveSetting('pin_enabled', '1');
+                        await _secureStorage.write(key: 'pin_enabled', value: '1');
+                        try {
+                          await DatabaseHelper().deleteSetting('pin_enabled');
+                        } catch (_) {}
                         setState(() => _pinEnabled = true);
                       }
                       if (mounted) {
@@ -513,6 +563,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: _onRestore,
                   isDark: isDark,
                 ),
+                // ── Last backup info ─────────────────────────
+                if (_lastBackupDate != null)
+                  _buildReadOnlySetting(
+                    label: 'آخر نسخة احتياطية',
+                    value: _formatBackupDate(_lastBackupDate!),
+                    icon: Icons.schedule,
+                    isDark: isDark,
+                  ),
+                // ── Auto-backup toggle ───────────────────────
+                SwitchListTile(
+                  secondary: Icon(
+                    Icons.backup_rounded,
+                    color: _autoBackupEnabled ? AppColors.primary : null,
+                  ),
+                  title: const Text('نسخ احتياطي تلقائي'),
+                  subtitle: Text(
+                    _autoBackupEnabled
+                        ? _autoBackupFrequencyIndex == 0
+                            ? 'نسخ يومي تلقائي'
+                            : 'نسخ أسبوعي تلقائي'
+                        : 'إنشاء نسخ احتياطية تلقائياً',
+                  ),
+                  value: _autoBackupEnabled,
+                  activeColor: AppColors.primary,
+                  onChanged: (v) async {
+                    setState(() => _autoBackupEnabled = v);
+                    await _saveSetting('auto_backup_enabled', v ? '1' : '0');
+                    if (v) {
+                      _initAutoBackupTimer();
+                      await _performAutoBackup();
+                    } else {
+                      _autoBackupTimer?.cancel();
+                    }
+                  },
+                ),
+                // ── Auto-backup frequency ─────────────────────
+                if (_autoBackupEnabled)
+                  ListTile(
+                    leading: Icon(Icons.timer, color: AppColors.primary, size: 22),
+                    title: const Text('تكرار النسخ التلقائي'),
+                    trailing: DropdownButton<int>(
+                      value: _autoBackupFrequencyIndex,
+                      underline: const SizedBox.shrink(),
+                      items: const [
+                        DropdownMenuItem(value: 0, child: Text('يومي')),
+                        DropdownMenuItem(value: 1, child: Text('أسبوعي')),
+                      ],
+                      onChanged: (v) async {
+                        if (v != null) {
+                          setState(() => _autoBackupFrequencyIndex = v);
+                          await _saveSetting(
+                            'auto_backup_frequency',
+                            v == 0 ? 'daily' : 'weekly',
+                          );
+                          _initAutoBackupTimer();
+                        }
+                      },
+                    ),
+                  ),
                 _buildActionTile(
                   icon: Icons.file_download,
                   title: 'تصدير التقارير',
@@ -1346,19 +1455,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _onBackup() async {
     try {
-      final dbPath = await sqflite.getDatabasesPath();
-      final dbFile = File(p.join(dbPath, 'firstpro.db'));
-      if (await dbFile.exists()) {
-        final dir = await getApplicationDocumentsDirectory();
-        final backupPath = p.join(dir.path, 'firstpro_backup_${DateTime.now().millisecondsSinceEpoch}.db');
-        await dbFile.copy(backupPath);
-        await Share.shareXFiles([XFile(backupPath)], text: 'نسخة احتياطية - الأول برو المحاسبي');
-      } else {
+      final dbHelper = DatabaseHelper();
+      final dbPath = await dbHelper.getDatabasePath();
+      final dbFile = File(dbPath);
+      if (!await dbFile.exists()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('لم يتم العثور على قاعدة البيانات')),
           );
         }
+        return;
+      }
+
+      // Save auto-backup copy
+      await _saveAutoBackup(dbFile);
+
+      // Create timestamped backup for sharing
+      final dir = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+      final backupPath = p.join(dir.path, 'firstpro_backup_$timestamp.db');
+      await dbFile.copy(backupPath);
+
+      // Update last backup date
+      final now = DateTime.now().toIso8601String();
+      await _saveSetting('last_backup_date', now);
+      setState(() => _lastBackupDate = now);
+
+      // Share the backup file
+      await Share.shareXFiles(
+        [XFile(backupPath)],
+        text: 'نسخة احتياطية - الأول برو المحاسبي',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إنشاء النسخة الاحتياطية بنجاح'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -1369,25 +1504,359 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _onRestore() {
-    showDialog(
+  /// Save a backup copy to the auto-backup directory and clean up old ones.
+  Future<void> _saveAutoBackup(File dbFile) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final backupDir = Directory(p.join(dir.path, 'auto_backups'));
+      if (!await backupDir.exists()) {
+        await backupDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+      final autoBackupPath = p.join(backupDir.path, 'auto_backup_$timestamp.db');
+      await dbFile.copy(autoBackupPath);
+
+      // Clean up old backups – keep only the last 5
+      final backupFiles = await backupDir
+          .list()
+          .where((f) => f.path.endsWith('.db'))
+          .toList();
+      if (backupFiles.length > 5) {
+        // Sort by modification time, oldest first
+        backupFiles.sort((a, b) =>
+            FileStat.statSync(a.path).modified.compareTo(FileStat.statSync(b.path).modified));
+        for (var i = 0; i < backupFiles.length - 5; i++) {
+          await backupFiles[i].delete();
+        }
+      }
+    } catch (_) {
+      // Auto-backup save failure should not block the main backup flow
+    }
+  }
+
+  /// Perform auto-backup silently (no share dialog).
+  Future<void> _performAutoBackup() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final dbPath = await dbHelper.getDatabasePath();
+      final dbFile = File(dbPath);
+      if (!await dbFile.exists()) return;
+
+      await _saveAutoBackup(dbFile);
+
+      // Update last backup date
+      final now = DateTime.now().toIso8601String();
+      await _saveSetting('last_backup_date', now);
+      if (mounted) {
+        setState(() => _lastBackupDate = now);
+      }
+    } catch (_) {
+      // Silent failure for auto-backup
+    }
+  }
+
+  /// Initialize or reinitialize the periodic auto-backup timer.
+  void _initAutoBackupTimer() {
+    _autoBackupTimer?.cancel();
+    if (!_autoBackupEnabled) return;
+
+    // Check if a backup is needed on startup
+    _checkAndPerformAutoBackup();
+
+    // Periodic check: every 1 hour for daily, every 6 hours for weekly
+    final interval = _autoBackupFrequencyIndex == 0
+        ? const Duration(hours: 1)
+        : const Duration(hours: 6);
+
+    _autoBackupTimer = Timer.periodic(interval, (_) {
+      _checkAndPerformAutoBackup();
+    });
+  }
+
+  /// Check if enough time has passed since the last backup, then perform one.
+  Future<void> _checkAndPerformAutoBackup() async {
+    if (!_autoBackupEnabled) return;
+
+    final db = DatabaseHelper();
+    final lastBackupStr = await db.getSetting('last_backup_date');
+    if (lastBackupStr != null) {
+      final lastBackup = DateTime.tryParse(lastBackupStr);
+      if (lastBackup != null) {
+        final now = DateTime.now();
+        final difference = now.difference(lastBackup);
+        final threshold = _autoBackupFrequencyIndex == 0
+            ? const Duration(hours: 24) // daily
+            : const Duration(days: 7); // weekly
+        if (difference < threshold) return; // Not yet time
+      }
+    }
+
+    await _performAutoBackup();
+  }
+
+  /// Format a backup date string for display.
+  String _formatBackupDate(String isoDate) {
+    final dt = DateTime.tryParse(isoDate);
+    if (dt == null) return isoDate;
+    return '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} '
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _onRestore() async {
+    // Show restore source options
+    final source = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('استعادة البيانات'),
-        content: const Text(
-          'لاستعادة النسخة الاحتياطية:\n'
-          '1. ضع ملف النسخة الاحتياطية (.db) على الجهاز\n'
-          '2. أعد تشغيل التطبيق\n\n'
-          'ملاحظة: ستتوفر ميزة الاستعادة المباشرة قريباً.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_open, color: AppColors.primary),
+              title: const Text('اختيار ملف من الجهاز'),
+              subtitle: const Text('اختر ملف .db من تخزين الجهاز'),
+              onTap: () => Navigator.pop(ctx, 'file'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history, color: AppColors.primary),
+              title: const Text('النسخ الاحتياطية التلقائية'),
+              subtitle: const Text('استعادة من نسخة محفوظة تلقائياً'),
+              onTap: () => Navigator.pop(ctx, 'auto'),
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('حسناً'),
+            child: const Text('إلغاء'),
           ),
         ],
       ),
     );
+
+    if (source == null || !mounted) return;
+
+    String? backupFilePath;
+
+    if (source == 'file') {
+      // Use file_picker to select a .db file
+      try {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['db'],
+          dialogTitle: 'اختر ملف النسخة الاحتياطية',
+        );
+        if (result != null && result.files.single.path != null) {
+          backupFilePath = result.files.single.path!;
+        } else {
+          return; // User cancelled
+        }
+      } on PlatformException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('خطأ في فتح ملف: $e')),
+          );
+        }
+        return;
+      }
+    } else if (source == 'auto') {
+      // List available auto-backup files
+      final autoFile = await _pickAutoBackupFile();
+      if (autoFile == null) return;
+      backupFilePath = autoFile;
+    }
+
+    if (backupFilePath == null || !mounted) return;
+
+    // Show warning dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 48),
+        title: const Text('تحذير: استعادة البيانات'),
+        content: const Text(
+          'تحذير: ستتم استبدال جميع البيانات الحالية بالنسخة الاحتياطية. هل أنت متأكد؟\n\n'
+ 'لا يمكن التراجع عن هذا الإجراء.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.warning,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('استعادة'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // Perform the restore
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('جارٍ استعادة البيانات...'),
+            ],
+          ),
+        ),
+      );
+
+      final dbHelper = DatabaseHelper();
+
+      // 1. Close the database connection
+      await dbHelper.resetInstance();
+
+      // 2. Replace the current DB file with the backup
+      final dbPath = await dbHelper.getDatabasePath();
+      final backupFile = File(backupFilePath!);
+      await backupFile.copy(dbPath);
+
+      // 3. Reopen the database (will happen automatically on next access)
+      // Trigger it by accessing the database
+      await dbHelper.database;
+
+      // 4. Update last backup date
+      final now = DateTime.now().toIso8601String();
+      await _saveSetting('last_backup_date', now);
+
+      // 5. Dismiss loading
+      if (mounted) {
+        Navigator.pop(context); // dismiss loading dialog
+      }
+
+      // 6. Show success and prompt restart
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            icon: const Icon(Icons.check_circle, color: AppColors.success, size: 48),
+            title: const Text('تمت الاستعادة بنجاح'),
+            content: const Text(
+              'تم استعادة البيانات من النسخة الاحتياطية بنجاح.\n'
+              'يُنصح بإعادة تشغيل التطبيق لضمان تحميل جميع البيانات.',
+              textAlign: TextAlign.center,
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  // Reload settings to reflect restored data
+                  _loadSettings();
+                },
+                child: const Text('حسناً'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      // Dismiss loading if still visible
+      if (mounted) {
+        Navigator.of(context).pop(); // dismiss loading dialog
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في استعادة البيانات: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// List available auto-backup files and let user pick one.
+  Future<String?> _pickAutoBackupFile() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final backupDir = Directory(p.join(dir.path, 'auto_backups'));
+
+      if (!await backupDir.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لا توجد نسخ احتياطية تلقائية محفوظة')),
+          );
+        }
+        return null;
+      }
+
+      final files = await backupDir
+          .list()
+          .where((f) => f.path.endsWith('.db'))
+          .toList();
+
+      if (files.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لا توجد نسخ احتياطية تلقائية محفوظة')),
+          );
+        }
+        return null;
+      }
+
+      // Sort by modification time, newest first
+      files.sort((a, b) =>
+          FileStat.statSync(b.path).modified.compareTo(FileStat.statSync(a.path).modified));
+
+      if (!mounted) return null;
+
+      // Show picker dialog
+      return await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('اختر نسخة احتياطية'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: files.length,
+              itemBuilder: (_, index) {
+                final file = files[index];
+                final stat = FileStat.statSync(file.path);
+                final modified = stat.modified;
+                final sizeKB = (stat.size / 1024).toStringAsFixed(1);
+                final dateStr = '${modified.year}/${modified.month.toString().padLeft(2, '0')}/${modified.day.toString().padLeft(2, '0')} '
+                    '${modified.hour.toString().padLeft(2, '0')}:${modified.minute.toString().padLeft(2, '0')}';
+                return ListTile(
+                  leading: const Icon(Icons.insert_drive_file, color: AppColors.primary),
+                  title: Text(dateStr),
+                  subtitle: Text('الحجم: ${sizeKB} ك.ب'),
+                  onTap: () => Navigator.pop(ctx, file.path),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في قراءة النسخ الاحتياطية: $e')),
+        );
+      }
+      return null;
+    }
   }
 
   Future<void> _onExportReports() async {

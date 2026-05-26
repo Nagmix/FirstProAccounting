@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -21,6 +22,7 @@ class _AppLockScreenState extends State<AppLockScreen>
   // ── Services ────────────────────────────────────────────────
   final DatabaseHelper _db = DatabaseHelper();
   final LocalAuthentication _localAuth = LocalAuthentication();
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   // ── State ───────────────────────────────────────────────────
   bool _isLoading = true;
@@ -92,8 +94,8 @@ class _AppLockScreenState extends State<AppLockScreen>
 
   Future<void> _initializeScreen() async {
     try {
-      // Check if PIN is enabled
-      final pinEnabled = await _db.getSetting('pin_enabled');
+      // Check if PIN is enabled (secure storage with DB fallback for migration)
+      final pinEnabled = await _readSecureWithMigration('pin_enabled');
       _isPinEnabled = pinEnabled == '1';
 
       if (!_isPinEnabled) {
@@ -102,7 +104,7 @@ class _AppLockScreenState extends State<AppLockScreen>
         return;
       }
 
-      // Load stored PIN from secure storage
+      // Load stored PIN from secure storage (with DB fallback for migration)
       _storedPin = await _getStoredPin();
 
       // If no PIN stored despite being enabled, force PIN creation
@@ -142,29 +144,105 @@ class _AppLockScreenState extends State<AppLockScreen>
     }
   }
 
-  /// Simple hash function for PIN verification.
+  /// Improved hash function for PIN verification with salt and multiple rounds.
+  /// New format uses 'h2$' prefix; old format used 'h$' prefix.
   /// Must match the hash function used in settings_screen.dart.
   String _hashPin(String pin) {
+    const salt = 'F1r5tPr0_4cc0unt1ng_2024!@#';
+    var hash = 0;
+    final salted = salt + pin + salt;
+    // Multiple rounds for increased difficulty
+    var input = salted;
+    for (var round = 0; round < 100; round++) {
+      hash = 0;
+      for (var i = 0; i < input.length; i++) {
+        hash = ((hash << 5) - hash) + input.codeUnitAt(i);
+        hash = hash & 0x7fffffff;
+      }
+      input = '$hash$salt$pin';
+    }
+    return 'h2\$hash';
+  }
+
+  /// Old hash function for backward-compatible PIN verification.
+  /// Used to verify PINs that were stored with the old 'h$' prefix.
+  String _hashPinOld(String pin) {
     int hash = 0;
     for (int i = 0; i < pin.length; i++) {
       hash = ((hash << 5) - hash) + pin.codeUnitAt(i);
-      hash = hash & 0x7fffffff; // Keep it positive
+      hash = hash & 0x7fffffff;
     }
     return 'h\$hash';
   }
 
-  Future<String?> _getStoredPin() async {
-    // The stored value is a hash (prefixed with 'h'), not the plain PIN.
+  /// Verify a PIN against a stored hash, supporting both old and new formats.
+  bool _verifyPin(String enteredPin, String storedHash) {
+    if (storedHash.startsWith('h2\$')) {
+      return _hashPin(enteredPin) == storedHash;
+    } else if (storedHash.startsWith('h\$')) {
+      // Old format — verify using old algorithm, then re-hash with new format
+      final matches = _hashPinOld(enteredPin) == storedHash;
+      if (matches) {
+        // Upgrade the stored hash to new format
+        _upgradePinHash(enteredPin);
+      }
+      return matches;
+    }
+    return false;
+  }
+
+  /// Upgrade a PIN hash from old format to new format in secure storage.
+  Future<void> _upgradePinHash(String pin) async {
     try {
-      return await _db.getSetting('app_pin');
+      await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
+    } catch (_) {
+      // Non-critical — the old hash still works for this session
+    }
+  }
+
+  Future<String?> _getStoredPin() async {
+    // The stored value is a hash (prefixed with 'h' or 'h2'), not the plain PIN.
+    try {
+      return await _readSecureWithMigration('app_pin');
     } catch (_) {
       return null;
     }
   }
 
+  /// Read a value from FlutterSecureStorage with fallback to DB for migration.
+  /// If found in DB but not in secure storage, migrates the value and removes it from DB.
+  Future<String?> _readSecureWithMigration(String key) async {
+    try {
+      final secureValue = await _secureStorage.read(key: key);
+      if (secureValue != null) return secureValue;
+    } catch (_) {
+      // Secure storage read failed — try DB fallback
+    }
+
+    // Fallback to DB for users upgrading from older versions
+    try {
+      final dbValue = await _db.getSetting(key);
+      if (dbValue != null && dbValue.isNotEmpty) {
+        // Migrate to secure storage
+        await _secureStorage.write(key: key, value: dbValue);
+        // Remove from DB after successful migration
+        await _db.deleteSetting(key);
+        return dbValue;
+      }
+    } catch (_) {
+      // DB fallback also failed
+    }
+    return null;
+  }
+
   Future<void> _savePin(String pin) async {
-    await _db.setSetting('app_pin', _hashPin(pin));
-    await _db.setSetting('pin_enabled', '1');
+    await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
+    await _secureStorage.write(key: 'pin_enabled', value: '1');
+    // Clean up old DB entries if they exist
+    try {
+      await _db.deleteSetting('app_pin');
+      await _db.deleteSetting('pin_enabled');
+    } catch (_) {}
   }
 
   // ── Navigation ──────────────────────────────────────────────
@@ -265,7 +343,8 @@ class _AppLockScreenState extends State<AppLockScreen>
       }
     } else {
       // Verifying existing PIN — compare hash of entered PIN with stored hash
-      if (_hashPin(_enteredPin) == _storedPin) {
+      // Supports both old (h$) and new (h2$) hash formats
+      if (_storedPin != null && _verifyPin(_enteredPin, _storedPin!)) {
         _onAuthSuccess();
       } else {
         _onWrongPin();

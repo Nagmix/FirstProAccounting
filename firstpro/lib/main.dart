@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
@@ -44,6 +45,8 @@ class _FirstProAppState extends State<FirstProApp> {
   /// Theme mode loaded from settings: 0=light, 1=dark, 2=system
   int _themeModeIndex = 2; // Default to system
 
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+
   @override
   void initState() {
     super.initState();
@@ -53,8 +56,23 @@ class _FirstProAppState extends State<FirstProApp> {
   Future<void> _initApp() async {
     final db = DatabaseHelper();
 
-    // Load PIN enabled state
-    final pinEnabled = await db.getSetting('pin_enabled');
+    // Load PIN enabled state from secure storage with DB fallback for migration
+    String? pinEnabled;
+    try {
+      pinEnabled = await _secureStorage.read(key: 'pin_enabled');
+    } catch (_) {
+      // Secure storage read failed — try DB fallback
+    }
+    if (pinEnabled == null) {
+      pinEnabled = await db.getSetting('pin_enabled');
+      if (pinEnabled != null && pinEnabled.isNotEmpty) {
+        // Migrate to secure storage
+        try {
+          await _secureStorage.write(key: 'pin_enabled', value: pinEnabled);
+        } catch (_) {}
+        await db.deleteSetting('pin_enabled');
+      }
+    }
 
     // Load saved theme mode
     final themeModeStr = await db.getSetting('theme_mode_index');

@@ -174,15 +174,23 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     final todayStr = '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
     final count = await db.getTodayPosInvoiceCount(todayStr);
 
-    setState(() {
-      _categories = catMaps;
-      _products = prodMaps.map((m) => Product.fromMap(m)).toList();
-      _isLoading = false;
-      _todayInvoiceCount = count;
-      if (savedName != null && savedName.isNotEmpty) {
-        _cashierName = savedName;
-      }
-    });
+    // Filter products that are sellable and shown in POS
+    final posProducts = prodMaps
+        .map((m) => Product.fromMap(m))
+        .where((p) => p.isSellable && p.showInPos)
+        .toList();
+
+    if (mounted) {
+      setState(() {
+        _categories = catMaps;
+        _products = posProducts;
+        _isLoading = false;
+        _todayInvoiceCount = count;
+        if (savedName != null && savedName.isNotEmpty) {
+          _cashierName = savedName;
+        }
+      });
+    }
     await _loadActiveShift();
     await _loadTopSellers();
   }
@@ -323,11 +331,17 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   // Draggable cart sheet at bottom
-                  // Also absorbed when checkout overlay is active
+                  // Positioned at bottom to prevent intercepting taps on product grid
                   if (_activeShift != null)
-                    AbsorbPointer(
-                      absorbing: _checkoutPhase != _CheckoutPhase.idle,
-                      child: _buildDraggableCartSheet(),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      top: 0,
+                      child: AbsorbPointer(
+                        absorbing: _checkoutPhase != _CheckoutPhase.idle,
+                        child: _buildDraggableCartSheet(),
+                      ),
                     ),
                   // Shift overlay when no active shift
                   if (_activeShift == null) _buildShiftOverlay(),
@@ -2811,7 +2825,18 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   /// Add to cart with unit selection dialog when multiple units exist.
   void _addToCartWithUnit(Product product) async {
     if (_activeShift == null) {
-      context.showErrorSnackBar('يجب فتح وردية أولاً');
+      if (mounted) {
+        context.showErrorSnackBar('يجب فتح وردية أولاً');
+      }
+      return;
+    }
+
+    // Guard: product must have an ID
+    if (product.id == null) {
+      debugPrint('POS: Cannot add product with null ID: ${product.nameAr}');
+      if (mounted) {
+        context.showErrorSnackBar('خطأ: المنتج غير صالح');
+      }
       return;
     }
 
@@ -2822,13 +2847,27 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     } catch (e) {
       debugPrint('Error loading units for product: $e');
       // Fallback: add directly with base unit
-      _addToCartDirect(product, null);
+      try {
+        _addToCartDirect(product, null);
+      } catch (e2) {
+        debugPrint('POS: Fallback add-to-cart error: $e2');
+        if (mounted) {
+          context.showErrorSnackBar('خطأ في إضافة المنتج');
+        }
+      }
       return;
     }
 
     if (availableUnits.length <= 1) {
       // Only base unit - add directly (backwards compatible)
-      _addToCartDirect(product, availableUnits.isNotEmpty ? availableUnits.first : null);
+      try {
+        _addToCartDirect(product, availableUnits.isNotEmpty ? availableUnits.first : null);
+      } catch (e) {
+        debugPrint('POS: Add-to-cart error: $e');
+        if (mounted) {
+          context.showErrorSnackBar('خطأ في إضافة المنتج');
+        }
+      }
       return;
     }
 
@@ -2892,13 +2931,25 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   /// Add to cart with a specific unit (from dialog or barcode scan).
   void _addToCartDirect(Product product, Map<String, dynamic>? unitInfo) {
     if (_activeShift == null) {
-      context.showErrorSnackBar('يجب فتح وردية أولاً');
+      if (mounted) {
+        context.showErrorSnackBar('يجب فتح وردية أولاً');
+      }
+      return;
+    }
+
+    // Guard: product must have an ID
+    if (product.id == null) {
+      debugPrint('POS: Cannot add product with null ID');
+      if (mounted) {
+        context.showErrorSnackBar('خطأ: المنتج غير صالح');
+      }
       return;
     }
 
     final factor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+    final unitName = (unitInfo?['unit_name'] as String?) ?? 'قطعة';
     final existingIndex = _cart.indexWhere((i) =>
-        i.productId == product.id && i.unitName == (unitInfo?['unit_name'] as String? ?? 'قطعة'));
+        i.productId == product.id && i.unitName == unitName);
     final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
 
     // Stock check: show warning but always allow adding to cart
@@ -2906,14 +2957,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     if (product.currentStock < baseQtyNeeded) {
       if (!product.allowNegative) {
         // Show non-blocking warning but still add product to cart
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تنبيه: المخزون منخفض لـ ${product.nameAr} (${product.currentStock.toInt()})'),
-            backgroundColor: AppColors.warning,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('تنبيه: المخزون منخفض لـ ${product.nameAr} (${product.currentStock.toInt()})'),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       } else {
         debugPrint('Product ${product.nameAr} allowNegative=true, adding despite zero/negative stock');
       }
@@ -2924,6 +2977,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   /// Internal: actually add the item to cart with unit info.
   void _doAddToCartWithUnit(int existingIndex, Product product, Map<String, dynamic>? unitInfo) {
+    if (!mounted) return;
+
     final unitName = (unitInfo?['unit_name'] as String?) ?? 'قطعة';
     final unitPrice = (unitInfo?['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
     final unitBarcode = unitInfo?['barcode'] as String?;
@@ -2962,10 +3017,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       }
     }
 
-    // Expand cart sheet slightly
+    // Expand cart sheet slightly to show the item
     if (_sheetExtent < 0.3) {
-      _sheetController.animateTo(0.3,
-          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      try {
+        _sheetController.animateTo(0.3,
+            duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      } catch (e) {
+        debugPrint('Sheet animation error (non-critical): $e');
+      }
     }
   }
 

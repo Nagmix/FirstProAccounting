@@ -11,6 +11,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
@@ -63,6 +64,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   String? _selectedBankTransferProvider;
   // Attachment image
   String? _attachmentPath;
+
+  // Original invoice for returns
+  String? _originalInvoiceId;
+  String? _originalInvoiceDisplay;
 
   // Data from DB
   List<Map<String, dynamic>> _customers = [];
@@ -415,6 +420,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             ),
           ],
         ),
+        // Original invoice selector (only when _isReturn is true)
+        if (_isReturn) ...[
+          const SizedBox(height: 10),
+          _buildOriginalInvoiceSelector(),
+        ],
         if (_selectedCurrency != 'YER')
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -529,6 +539,154 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               const SizedBox(width: 6),
               Icon(Icons.check_circle, size: 14, color: color),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Original Invoice Selector (for returns) ────────────────────────
+  Widget _buildOriginalInvoiceSelector() {
+    return GestureDetector(
+      onTap: _showOriginalInvoiceSelector,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: _originalInvoiceId != null
+              ? AppColors.error.withValues(alpha: 0.04)
+              : context.surfaceColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: _originalInvoiceId != null
+                ? AppColors.error.withValues(alpha: 0.4)
+                : AppColors.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.link,
+              size: 20,
+              color: _originalInvoiceId != null ? AppColors.error : AppColors.textHint,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _originalInvoiceDisplay ?? 'اختر الفاتورة الأصلية...',
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: _originalInvoiceId != null ? AppColors.textPrimary : AppColors.textHint,
+                  fontWeight: _originalInvoiceId != null ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+            if (_originalInvoiceId != null)
+              GestureDetector(
+                onTap: () => setState(() {
+                  _originalInvoiceId = null;
+                  _originalInvoiceDisplay = null;
+                }),
+                child: const Icon(Icons.close, size: 18, color: AppColors.textHint),
+              )
+            else
+              const Icon(Icons.arrow_drop_down, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOriginalInvoiceSelector() async {
+    final db = DatabaseHelper();
+    // Get recent non-return invoices of the same type (sale or purchase)
+    final invoices = await db.getInvoicesByType(widget.invoiceType);
+
+    // Filter to only non-return invoices
+    final nonReturnInvoices = invoices.where((inv) {
+      final isReturn = (inv['is_return'] as int?) == 1;
+      final status = inv['status'] as String? ?? '';
+      return !isReturn && status != 'cancelled';
+    }).toList();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.link, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text('اختر الفاتورة الأصلية', style: context.textTheme.titleMedium),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: nonReturnInvoices.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.receipt_long, size: 48, color: AppColors.textHint),
+                        const SizedBox(height: 12),
+                        Text('لا توجد فواتير أصلية', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: nonReturnInvoices.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.divider),
+                    itemBuilder: (context, index) {
+                      final inv = nonReturnInvoices[index];
+                      final invId = inv['id'] as String? ?? '';
+                      final entityName = inv['entity_name'] as String? ?? '—';
+                      final total = (inv['total'] as num?)?.toDouble() ?? 0.0;
+                      final createdAt = DateTime.tryParse(inv['created_at'] as String? ?? '');
+                      final dateStr = createdAt != null ? DateFormatter.formatDateTime(createdAt) : '';
+                      final displayId = invId.length > 12 ? '...${invId.substring(invId.length - 8)}' : invId;
+                      final isSelected = _originalInvoiceId != null && invId == _originalInvoiceId;
+
+                      return ListTile(
+                        selected: isSelected,
+                        selectedTileColor: AppColors.primary.withValues(alpha: 0.06),
+                        leading: Icon(
+                          _isSale ? Icons.receipt : Icons.shopping_cart,
+                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                          size: 20,
+                        ),
+                        title: Text(
+                          '# $displayId',
+                          style: context.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? AppColors.primary : null,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '$entityName • ${CurrencyFormatter.format(total)} • $dateStr',
+                          style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
+                            : null,
+                        onTap: () {
+                          setState(() {
+                            _originalInvoiceId = invId;
+                            _originalInvoiceDisplay = '# $displayId • $entityName • ${CurrencyFormatter.format(total)}';
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء'),
+            ),
           ],
         ),
       ),
@@ -1328,6 +1486,46 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       return;
     }
 
+    // Check return limits if this is a return invoice with an original invoice linked
+    if (_isReturn && _originalInvoiceId != null) {
+      final db = DatabaseHelper();
+      final itemsMaps = _items.map((item) => <String, dynamic>{
+        'product_id': item.productId,
+        'product_name': item.productName,
+        'quantity': item.quantity,
+        'base_quantity': item.baseQuantity,
+        'unit_price': item.unitPrice,
+        'total_price': item.totalPrice,
+      }).toList();
+      final limitErrors = await db.checkReturnLimits(_originalInvoiceId, itemsMaps);
+      if (limitErrors.isNotEmpty && mounted) {
+        final errorMessages = limitErrors.values.join('\n');
+        showDialog(
+          context: context,
+          builder: (ctx) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: AppColors.error),
+                  SizedBox(width: 8),
+                  Text('تجاوز حد المرتجع'),
+                ],
+              ),
+              content: Text(errorMessages),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('موافق'),
+                ),
+              ],
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     // Determine effective payment mechanism for journal entries
     final effectivePaymentMechanism = _paymentMechanism;
     final effectivePaidAmount = _paymentMechanism == 'credit' ? 0.0 : _paidAmount;
@@ -1362,6 +1560,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       attachmentPath: (_paymentMethod == 'ewallet' || _paymentMethod == 'bank_transfer')
           ? _attachmentPath
           : null,
+      originalInvoiceId: _isReturn ? _originalInvoiceId : null,
     );
 
     final itemsMaps = _items.map((item) => {

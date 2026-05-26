@@ -1660,7 +1660,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 controller: _sellPriceController,
                 label: hasMulti
                     ? 'سعر بيع الـ ${_unitNameById(_effectiveSaleUnitId)} *'
-                    : 'سعر البيع *',
+                    : 'سعر بيع الـ $baseUnitName *',
                 onChanged: hasMulti ? (_) => setState(() {}) : null,
               ),
             ),

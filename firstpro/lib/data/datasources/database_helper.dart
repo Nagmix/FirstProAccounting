@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -9,7 +11,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 28;
+  static const int _databaseVersion = 31;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -17,6 +19,22 @@ class DatabaseHelper {
     _databaseFuture ??= initDatabase();
     _database = await _databaseFuture!;
     return _database!;
+  }
+
+  /// Close the current database connection and reset the singleton instance.
+  /// Call this before replacing the DB file during a restore operation.
+  Future<void> resetInstance() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+      _databaseFuture = null;
+    }
+  }
+
+  /// Get the database file path (useful for backup/restore).
+  Future<String> getDatabasePath() async {
+    final dbPath = await getDatabasesPath();
+    return join(dbPath, _databaseName);
   }
 
   Future<Database> initDatabase() async {
@@ -161,10 +179,12 @@ class DatabaseHelper {
         shift_id INTEGER,
         cashier_name TEXT,
         is_posted INTEGER NOT NULL DEFAULT 0,
+        original_invoice_id TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (customer_id) REFERENCES customers (id),
         FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
-        FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+        FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id),
+        FOREIGN KEY (original_invoice_id) REFERENCES invoices (id)
       )
     ''');
 
@@ -597,6 +617,7 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_invoices_status ON invoices (status)');
     await db.execute('CREATE INDEX idx_invoices_shift_id ON invoices (shift_id)');
     await db.execute('CREATE INDEX idx_invoices_is_posted ON invoices (is_posted)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
     await db.execute('CREATE INDEX idx_invoice_items_invoice_id ON invoice_items (invoice_id)');
     await db.execute('CREATE INDEX idx_transactions_account_id ON transactions (account_id)');
     await db.execute('CREATE INDEX idx_transactions_journal_id ON transactions (journal_id)');
@@ -714,7 +735,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Stocktaking Items (عناصر الجرد) - v19
+    // Stocktaking Items (عناصر الجرد) - v19 (v30: added variance)
     await db.execute('''
       CREATE TABLE stocktaking_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -723,6 +744,7 @@ class DatabaseHelper {
         system_quantity REAL NOT NULL,
         actual_quantity REAL NOT NULL,
         difference REAL NOT NULL,
+        variance REAL NOT NULL DEFAULT 0.0,
         FOREIGN KEY (session_id) REFERENCES stocktaking_sessions (id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products (id)
       )
@@ -805,6 +827,26 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_inventory_voucher_items_product ON inventory_voucher_items (product_id)');
     await db.execute('CREATE INDEX idx_fiscal_years_year ON fiscal_years (year)');
     await db.execute('CREATE INDEX idx_fiscal_years_status ON fiscal_years (status)');
+
+    // Audit Trail - v29
+    await db.execute('''
+      CREATE TABLE audit_trail (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        table_name TEXT NOT NULL,
+        record_id INTEGER,
+        record_type TEXT,
+        old_values TEXT,
+        new_values TEXT,
+        user_name TEXT,
+        shift_id INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_audit_trail_table ON audit_trail (table_name)');
+    await db.execute('CREATE INDEX idx_audit_trail_action ON audit_trail (action)');
+    await db.execute('CREATE INDEX idx_audit_trail_created ON audit_trail (created_at)');
+    await db.execute('CREATE INDEX idx_audit_trail_record ON audit_trail (table_name, record_id)');
 
     // Seed default data
     await _seedCurrencies(db);
@@ -2034,6 +2076,41 @@ class DatabaseHelper {
       try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN from_unit_id INTEGER'); } catch (_) {}
       try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN to_unit_id INTEGER'); } catch (_) {}
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v29 Migration: Add audit_trail table
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 29) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS audit_trail (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          action TEXT NOT NULL,
+          table_name TEXT NOT NULL,
+          record_id INTEGER,
+          record_type TEXT,
+          old_values TEXT,
+          new_values TEXT,
+          user_name TEXT,
+          shift_id INTEGER,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_trail_table ON audit_trail (table_name)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_trail_action ON audit_trail (action)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_trail_created ON audit_trail (created_at)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_trail_record ON audit_trail (table_name, record_id)');
+    }
+    if (oldVersion < 30) {
+      try {
+        await db.execute('ALTER TABLE stocktaking_items ADD COLUMN variance REAL NOT NULL DEFAULT 0.0');
+      } catch (_) {}
+    }
+    if (oldVersion < 31) {
+      try {
+        await db.execute('ALTER TABLE invoices ADD COLUMN original_invoice_id TEXT');
+      } catch (_) {}
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2924,14 +3001,21 @@ class DatabaseHelper {
     bool deferPosting = false,
     double? paidAmount,
   }) async {
+    try {
     final db = await database;
     final total = (invoiceMap['total'] as num?)?.toDouble() ?? 0.0;
     final invoiceCurrency = (invoiceMap['currency'] as String?) ?? 'YER';
     final now = DateTime.now().toIso8601String();
 
     // ── التحقق من قفل الفترة المحاسبية ──
-    final invoiceDate = invoiceMap['created_at'] as String? ?? now;
+    final invoiceDate = invoiceMap['date'] as String? ?? invoiceMap['created_at'] as String? ?? now;
     await _checkFiscalPeriodOpen(invoiceDate);
+
+    // Check if the invoice date falls in a closed fiscal year
+    final isClosed = await isDateInClosedPeriod(DateTime.parse(invoiceDate));
+    if (isClosed) {
+      throw Exception('لا يمكن إضافة فاتورة في سنة مالية مغلقة');
+    }
 
     await db.transaction((txn) async {
       // Insert invoice
@@ -3508,6 +3592,22 @@ class DatabaseHelper {
         }
       }
     });
+    } catch (e) {
+      // If the error is already a closed-fiscal-year message, pass it through
+      final msg = e.toString();
+      if (msg.contains('سنة مالية مغلقة') || msg.contains('فترة مغلقة')) {
+        rethrow;
+      }
+      // Log the error for audit trail
+      await logAuditEvent(
+        action: 'error',
+        tableName: 'invoices',
+        recordId: int.tryParse(invoiceMap['id']?.toString() ?? ''),
+        recordType: invoiceType,
+        oldValues: 'خطأ أثناء حفظ الفاتورة: $e',
+      );
+      throw Exception('حدث خطأ أثناء حفظ الفاتورة: $e');
+    }
   }
 
   Future<List<Map<String, dynamic>>> getAllInvoices({String orderBy = 'created_at DESC'}) async {
@@ -3553,6 +3653,95 @@ class DatabaseHelper {
     final db = await database;
     final results = await db.query('invoices', where: 'id = ?', whereArgs: [invoiceId], limit: 1);
     return results.isNotEmpty ? results.first : null;
+  }
+
+  /// Get all return invoices linked to a specific original invoice.
+  Future<List<Map<String, dynamic>>> getLinkedReturns(String invoiceId) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT i.*,
+        CASE
+          WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل')
+          WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد')
+          ELSE 'بدون عميل'
+        END AS entity_name
+      FROM invoices i
+      LEFT JOIN customers c ON i.customer_id = c.id
+      LEFT JOIN suppliers s ON i.supplier_id = s.id
+      WHERE i.original_invoice_id = ?
+      ORDER BY i.created_at DESC
+    ''', [invoiceId]);
+  }
+
+  /// Check return limits for items against their original invoice quantities.
+  /// Returns a map of product_id -> error message if any product's total returns exceed its original quantity.
+  /// Returns an empty map if all items are within limits.
+  Future<Map<int, String>> checkReturnLimits(
+    String? originalInvoiceId,
+    List<Map<String, dynamic>> items,
+  ) async {
+    if (originalInvoiceId == null || originalInvoiceId.isEmpty) return {};
+
+    final db = await database;
+    final errors = <int, String>{};
+
+    // Get original invoice items
+    final originalItems = await db.query(
+      'invoice_items',
+      where: 'invoice_id = ?',
+      whereArgs: [originalInvoiceId],
+    );
+
+    // Build a map of product_id -> original quantity
+    final originalQtyMap = <int, double>{};
+    for (final item in originalItems) {
+      final productId = (item['product_id'] as num?)?.toInt() ?? 0;
+      final qty = (item['base_quantity'] as num?)?.toDouble() ??
+                  (item['quantity'] as num?)?.toDouble() ?? 0.0;
+      originalQtyMap[productId] = (originalQtyMap[productId] ?? 0.0) + qty;
+    }
+
+    // Get existing returns for this original invoice (excluding cancelled)
+    final existingReturns = await db.rawQuery('''
+      SELECT ii.product_id, SUM(ii.base_quantity) AS total_returned
+      FROM invoice_items ii
+      INNER JOIN invoices i ON ii.invoice_id = i.id
+      WHERE i.original_invoice_id = ? AND i.status != 'cancelled'
+      GROUP BY ii.product_id
+    ''', [originalInvoiceId]);
+
+    // Build map of product_id -> already returned quantity
+    final alreadyReturnedMap = <int, double>{};
+    for (final row in existingReturns) {
+      final productId = (row['product_id'] as num?)?.toInt() ?? 0;
+      final totalReturned = (row['total_returned'] as num?)?.toDouble() ?? 0.0;
+      alreadyReturnedMap[productId] = totalReturned;
+    }
+
+    // Check each item in the new return
+    for (final item in items) {
+      final productId = (item['product_id'] as num?)?.toInt() ?? 0;
+      if (productId == 0) continue;
+      final productName = item['product_name'] as String? ?? '';
+      final newReturnQty = (item['base_quantity'] as num?)?.toDouble() ??
+                           (item['quantity'] as num?)?.toDouble() ?? 0.0;
+
+      final originalQty = originalQtyMap[productId] ?? 0.0;
+      if (originalQty == 0.0) {
+        errors[productId] = 'الصنف "$productName" غير موجود في الفاتورة الأصلية';
+        continue;
+      }
+
+      final alreadyReturned = alreadyReturnedMap[productId] ?? 0.0;
+      final totalAfterReturn = alreadyReturned + newReturnQty;
+
+      if (totalAfterReturn > originalQty + 0.005) {
+        final remaining = originalQty - alreadyReturned;
+        errors[productId] = 'كمية المرتجع للصنف "$productName" ($totalAfterReturn) تتجاوز الكمية المسموحة ($remaining متبقي من أصل $originalQty)';
+      }
+    }
+
+    return errors;
   }
 
   /// Soft-delete an invoice by setting status to 'cancelled'.
@@ -3708,6 +3897,7 @@ class DatabaseHelper {
 
   /// Cancel an invoice: soft-delete + reversal journal entries + balance reversals + stock restore.
   Future<void> cancelInvoice(String id) async {
+    try {
     final db = await database;
     final now = DateTime.now().toIso8601String();
 
@@ -3718,6 +3908,13 @@ class DatabaseHelper {
 
     // Already cancelled — nothing to do
     if ((invoice['status'] as String?) == 'cancelled') return;
+
+    // Check if the invoice date falls in a closed fiscal year
+    final invoiceDate = invoice['date'] as String? ?? invoice['created_at'] as String;
+    final isClosed = await isDateInClosedPeriod(DateTime.parse(invoiceDate));
+    if (isClosed) {
+      throw Exception('لا يمكن إلغاء فاتورة في سنة مالية مغلقة');
+    }
 
     final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
     final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
@@ -4111,6 +4308,32 @@ class DatabaseHelper {
         }
       }
     });
+
+    // Log audit event for invoice cancellation
+    await logAuditEvent(
+      action: 'cancel',
+      tableName: 'invoices',
+      recordId: int.tryParse(id),
+      recordType: invoice['type'] as String?,
+      oldValues: jsonEncode({'status': invoice['status']}),
+      newValues: jsonEncode({'status': 'cancelled'}),
+      userName: null,
+    );
+    } catch (e) {
+      // If the error is already a closed-fiscal-year message, pass it through
+      final msg = e.toString();
+      if (msg.contains('سنة مالية مغلقة') || msg.contains('فترة مغلقة')) {
+        rethrow;
+      }
+      // Log the error for audit trail
+      await logAuditEvent(
+        action: 'error',
+        tableName: 'invoices',
+        recordId: int.tryParse(id),
+        oldValues: 'خطأ أثناء إلغاء الفاتورة: $e',
+      );
+      throw Exception('حدث خطأ أثناء إلغاء الفاتورة: $e');
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -4623,20 +4846,9 @@ class DatabaseHelper {
     await db.insert('settings', {'key': key, 'value': value, 'updated_at': DateTime.now().toIso8601String()}, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  Audit log methods
-  // ══════════════════════════════════════════════════════════════
-
-  /// Log an audit event for tracking data changes.
-  Future<void> logAuditEvent(String action, String tableName, int? recordId, {String? details}) async {
+  Future<void> deleteSetting(String key) async {
     final db = await database;
-    await db.insert('audit_log', {
-      'action': action,
-      'table_name': tableName,
-      'record_id': recordId,
-      'details': details,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
+    await db.delete('settings', where: 'key = ?', whereArgs: [key]);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -6410,7 +6622,7 @@ class DatabaseHelper {
     });
   }
 
-  /// إكمال جلسة الجرد وتحديث المخزون الفعلي
+  /// إكمال جلسة الجرد وتحديث المخزون الفعلي مع تسجيل الفرق والتدقيق
   Future<void> completeStocktakingSession(int sessionId) async {
     final db = await database;
     await db.transaction((txn) async {
@@ -6421,10 +6633,32 @@ class DatabaseHelper {
         whereArgs: [sessionId],
       );
 
-      // تحديث المخزون لكل منتج بالكمية الفعلية
+      // حساب المطابق وغير المطابق
+      int matched = 0;
+      int mismatched = 0;
+
+      // تحديث المخزون لكل منتج بالكمية الفعلية + حساب وتسجيل الفرق + سجل التدقيق
       for (final item in items) {
         final productId = item['product_id'] as int;
+        final systemQuantity = (item['system_quantity'] as num?)?.toDouble() ?? 0.0;
         final actualQuantity = (item['actual_quantity'] as num).toDouble();
+        final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
+
+        // حساب الفرق (variance) بين الكمية بالنظام والكمية الفعلية
+        final variance = actualQuantity - systemQuantity;
+
+        // جلب الكمية الحالية للمنتج قبل التحديث (للسجل)
+        final productRows = await txn.query(
+          'products',
+          columns: ['current_stock'],
+          where: 'id = ?',
+          whereArgs: [productId],
+        );
+        final oldStock = productRows.isNotEmpty
+            ? (productRows.first['current_stock'] as num?)?.toDouble() ?? 0.0
+            : 0.0;
+
+        // تحديث المخزون بالكمية الفعلية
         await txn.update(
           'products',
           {
@@ -6434,14 +6668,31 @@ class DatabaseHelper {
           where: 'id = ?',
           whereArgs: [productId],
         );
-      }
 
-      // حساب المطابق وغير المطابق
-      int matched = 0;
-      int mismatched = 0;
-      for (final item in items) {
-        final diff = (item['difference'] as num?)?.toDouble() ?? 0.0;
-        if (diff.abs() < 0.005) {
+        // تحديث حقل الفرق في عنصر الجرد
+        await txn.update(
+          'stocktaking_items',
+          {'variance': variance},
+          where: 'id = ?',
+          whereArgs: [item['id']],
+        );
+
+        // إضافة سجل تدقيق لكل منتج تغير مخزونه
+        if (variance.abs() >= 0.005) {
+          await txn.insert('audit_trail', {
+            'action': 'stocktake_adjust',
+            'table_name': 'products',
+            'record_id': productId,
+            'record_type': 'stock_adjustment',
+            'old_values': oldStock.toString(),
+            'new_values': actualQuantity.toString(),
+            'user_name': null,
+            'shift_id': null,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+
+        if (variance.abs() < 0.005) {
           matched++;
         } else {
           mismatched++;
@@ -6901,6 +7152,48 @@ class DatabaseHelper {
     final db = await database;
     final result = await db.query('fiscal_years', where: 'year = ? AND status = ?', whereArgs: [year, 'closed'], limit: 1);
     return result.isNotEmpty;
+  }
+
+  /// Check if a date falls in a closed fiscal year
+  Future<bool> isDateInClosedPeriod(DateTime date) async {
+    final db = await database;
+    final year = date.year;
+    final result = await db.query(
+      'fiscal_years',
+      where: 'year = ? AND status = ?',
+      whereArgs: [year, 'closed'],
+      limit: 1,
+    );
+    return result.isNotEmpty;
+  }
+
+  /// Log an audit trail event (non-critical — errors are caught and printed)
+  Future<void> logAuditEvent({
+    required String action,
+    required String tableName,
+    int? recordId,
+    String? recordType,
+    String? oldValues,
+    String? newValues,
+    String? userName,
+    int? shiftId,
+  }) async {
+    final db = await database;
+    try {
+      await db.insert('audit_trail', {
+        'action': action,
+        'table_name': tableName,
+        'record_id': recordId,
+        'record_type': recordType,
+        'old_values': oldValues,
+        'new_values': newValues,
+        'user_name': userName,
+        'shift_id': shiftId,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Audit log error (non-critical): $e');
+    }
   }
 
   // ══════════════════════════════════════════════════════════════

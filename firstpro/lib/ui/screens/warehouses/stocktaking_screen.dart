@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -129,6 +130,302 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
     setState(() => _isStarting = false);
   }
 
+  /// بناء قائمة عناصر الجرد مع حساب الفرق
+  List<Map<String, dynamic>> _buildStocktakingItems() {
+    final items = <Map<String, dynamic>>[];
+    for (final product in _filteredProducts) {
+      final id = product['id'] as int;
+      final systemQty = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
+      final controller = _actualQuantityControllers[id];
+      final actualQty = controller != null ? (double.tryParse(controller.text) ?? systemQty) : systemQty;
+      final variance = actualQty - systemQty;
+
+      items.add({
+        'product_id': id,
+        'product_name': product['name_ar'] as String? ?? '',
+        'cost_price': (product['cost_price'] as num?)?.toDouble() ?? 0.0,
+        'system_quantity': systemQty,
+        'actual_quantity': actualQty,
+        'difference': variance,
+        'variance': variance,
+      });
+    }
+    return items;
+  }
+
+  /// عرض مربع حوار المعاينة والتأكيد قبل حفظ الجرد
+  Future<bool> _showPreviewDialog() async {
+    final items = _buildStocktakingItems();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // حساب الإحصائيات
+    final adjustedItems = items.where((i) => (i['variance'] as double).abs() >= 0.005).toList();
+    final matchedItems = items.where((i) => (i['variance'] as double).abs() < 0.005).toList();
+    final positiveVariance = adjustedItems.where((i) => (i['variance'] as double) > 0).toList();
+    final negativeVariance = adjustedItems.where((i) => (i['variance'] as double) < 0).toList();
+
+    double totalPositiveQty = positiveVariance.fold(0.0, (sum, i) => sum + (i['variance'] as double));
+    double totalNegativeQty = negativeVariance.fold(0.0, (sum, i) => sum + (i['variance'] as double));
+    double totalAdjustmentValue = adjustedItems.fold(0.0, (sum, i) {
+      final variance = i['variance'] as double;
+      final cost = i['cost_price'] as double;
+      return sum + (variance * cost);
+    });
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Icon(Icons.fact_check, color: AppColors.primary, size: 28),
+                const SizedBox(width: 10),
+                Text(
+                  'معاينة تعديلات الجرد',
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: math.max(MediaQuery.of(ctx).size.width * 0.85, 400),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ملخص إجمالي
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _DialogSummaryChip(
+                                  label: 'إجمالي',
+                                  value: '${items.length}',
+                                  color: AppColors.info,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _DialogSummaryChip(
+                                  label: 'مطابق',
+                                  value: '${matchedItems.length}',
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _DialogSummaryChip(
+                                  label: 'معدّل',
+                                  value: '${adjustedItems.length}',
+                                  color: AppColors.warning,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _DialogSummaryChip(
+                                  label: 'زيادة',
+                                  value: '+${totalPositiveQty.toStringAsFixed(1)}',
+                                  color: AppColors.success,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _DialogSummaryChip(
+                                  label: 'نقص',
+                                  value: totalNegativeQty.toStringAsFixed(1),
+                                  color: AppColors.error,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _DialogSummaryChip(
+                                  label: 'قيمة التعديل',
+                                  value: totalAdjustmentValue.toStringAsFixed(0),
+                                  color: totalAdjustmentValue >= 0 ? AppColors.success : AppColors.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // ترويسة الجدول
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(flex: 3, child: Text('المنتج', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                          SizedBox(
+                            width: 55,
+                            child: Text('النظام', textAlign: TextAlign.center, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                          ),
+                          SizedBox(
+                            width: 55,
+                            child: Text('الفعلي', textAlign: TextAlign.center, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                          ),
+                          SizedBox(
+                            width: 60,
+                            child: Text('الفرق', textAlign: TextAlign.center, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // قائمة المنتجات مع الفرق
+                    ...items.map((item) {
+                      final variance = item['variance'] as double;
+                      final isMatch = variance.abs() < 0.005;
+                      final isPositive = variance > 0;
+                      final isNegative = variance < 0;
+
+                      // تحديد اللون حسب نوع الفرق
+                      Color varianceColor;
+                      Color rowBgColor;
+                      if (isMatch) {
+                        varianceColor = AppColors.textTertiary;
+                        rowBgColor = Colors.transparent;
+                      } else if (isPositive) {
+                        varianceColor = AppColors.success;
+                        rowBgColor = AppColors.successLight.withValues(alpha: isDark ? 0.1 : 0.4);
+                      } else {
+                        varianceColor = AppColors.error;
+                        rowBgColor = AppColors.errorLight.withValues(alpha: isDark ? 0.1 : 0.4);
+                      }
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: rowBgColor,
+                          border: Border(
+                            bottom: BorderSide(color: AppColors.divider.withValues(alpha: 0.3), width: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                item['product_name'] as String,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: isMatch ? FontWeight.normal : FontWeight.w700,
+                                  color: isMatch ? AppColors.textSecondary : AppColors.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 55,
+                              child: Text(
+                                (item['system_quantity'] as double).toStringAsFixed(1),
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 55,
+                              child: Text(
+                                (item['actual_quantity'] as double).toStringAsFixed(1),
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 60,
+                              child: Text(
+                                isMatch ? '0' : (variance > 0 ? '+${variance.toStringAsFixed(1)}' : variance.toStringAsFixed(1)),
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: varianceColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+
+                    const SizedBox(height: 16),
+
+                    // تحذير
+                    if (adjustedItems.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'سيتم تعديل مخزون ${adjustedItems.length} منتج بشكل نهائي. هل أنت متأكد من المتابعة؟',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton.icon(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                icon: const Icon(Icons.cancel_outlined, size: 18),
+                label: const Text('إلغاء'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                icon: const Icon(Icons.check_circle, size: 18),
+                label: const Text('تأكيد وتطبيق'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
   Future<void> _saveStocktaking() async {
     if (_filledCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -136,6 +433,10 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
       );
       return;
     }
+
+    // عرض معاينة التعديلات والتأكيد
+    final confirmed = await _showPreviewDialog();
+    if (!confirmed) return;
 
     setState(() => _isSaving = true);
 
@@ -157,22 +458,14 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
       'created_at': now.toIso8601String(),
     };
 
-    // بناء عناصر الجرد
-    final items = <Map<String, dynamic>>[];
-    for (final product in _filteredProducts) {
-      final id = product['id'] as int;
-      final systemQty = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
-      final controller = _actualQuantityControllers[id];
-      final actualQty = controller != null ? (double.tryParse(controller.text) ?? systemQty) : systemQty;
-      final difference = actualQty - systemQty;
-
-      items.add({
-        'product_id': id,
-        'system_quantity': systemQty,
-        'actual_quantity': actualQty,
-        'difference': difference,
-      });
-    }
+    // بناء عناصر الجرد مع الفرق
+    final items = _buildStocktakingItems().map((item) => {
+      'product_id': item['product_id'],
+      'system_quantity': item['system_quantity'],
+      'actual_quantity': item['actual_quantity'],
+      'difference': item['difference'],
+      'variance': item['variance'],
+    }).toList();
 
     final sessionId = await db.createStocktakingSession(sessionMap, items);
 
@@ -560,6 +853,43 @@ class _SummaryChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// شريحة ملخص داخل مربع الحوار
+class _DialogSummaryChip extends StatelessWidget {
+  const _DialogSummaryChip({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: color),
+          ),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
