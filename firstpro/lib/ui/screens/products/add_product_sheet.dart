@@ -478,19 +478,24 @@ class _AddProductSheetState extends State<AddProductSheet> {
     // Check for duplicate item code
     final itemCode = _itemCodeController.text.trim();
     if (itemCode.isNotEmpty) {
-      final exists = await DatabaseHelper().checkItemCodeExists(
-        itemCode,
-        excludeId: _isEditMode ? widget.existing!.id : null,
-      );
-      if (exists) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('رمز الصنف موجود مسبقاً، يرجى استخدام رمز مختلف'),
-            backgroundColor: AppColors.error,
-          ),
+      try {
+        final exists = await DatabaseHelper().checkItemCodeExists(
+          itemCode,
+          excludeId: _isEditMode ? widget.existing!.id : null,
         );
-        return;
+        if (exists) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('رمز الصنف موجود مسبقاً، يرجى استخدام رمز مختلف'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        debugPrint('Duplicate check error (non-critical): $e');
+        // Continue - duplicate check is not critical
       }
     }
 
@@ -555,58 +560,34 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
 
     try {
-      final db = DatabaseHelper();
+      final dbHelper = DatabaseHelper();
+      final db = await dbHelper.database;
+      int? savedProductId;
 
-      if (_isEditMode) {
-        final updateMap = product.toMap();
-        // Lock system-managed fields
-        updateMap['current_stock'] = widget.existing!.currentStock;
-        updateMap['warehouse_id'] = widget.existing!.warehouseId;
-        updateMap['sales_account_id'] = widget.existing!.salesAccountId;
-        updateMap['purchase_account_id'] = widget.existing!.purchaseAccountId;
-        updateMap['inventory_account_id'] = widget.existing!.inventoryAccountId;
-        updateMap['image_path'] = _imagePath;
-        await db.updateProduct(widget.existing!.id!, updateMap);
+      // Use a transaction to ensure atomicity
+      await db.transaction((txn) async {
+        if (_isEditMode) {
+          final updateMap = product.toMap();
+          // Lock system-managed fields
+          updateMap['current_stock'] = widget.existing!.currentStock;
+          updateMap['warehouse_id'] = widget.existing!.warehouseId;
+          updateMap['sales_account_id'] = widget.existing!.salesAccountId;
+          updateMap['purchase_account_id'] = widget.existing!.purchaseAccountId;
+          updateMap['inventory_account_id'] = widget.existing!.inventoryAccountId;
+          updateMap['image_path'] = _imagePath;
+          await txn.update('products', updateMap, where: 'id = ?', whereArgs: [widget.existing!.id!]);
 
-        // Replace unit conversions
-        final productId = widget.existing!.id!;
-        final existingConvs = await db.getUnitConversions(productId);
-        for (final ec in existingConvs) {
-          await db.deleteUnitConversion(ec['id'] as int);
-        }
-        for (final uc in _unitConversions) {
-          if (uc.unitId == null) continue;
-          final unitName = _unitNameById(uc.unitId);
-          await db.insertUnitConversion({
-            'product_id': productId,
-            'from_unit': unitName,
-            'to_unit': _unitNameById(_selectedBaseUnitId),
-            'from_unit_id': uc.unitId,
-            'to_unit_id': _selectedBaseUnitId,
-            'conversion_factor': uc.factor,
-            'barcode': uc.barcode,
-            'sell_price': uc.sellPrice,
-            'is_active': 1,
-            'created_at': DateTime.now().toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
-          });
-        }
-      } else {
-        final map = product.toMap();
-        // Remove 'id' so SQLite auto-generates it
-        map.remove('id');
-        map['image_path'] = _imagePath;
-        final savedId = await db.insertProduct(map);
-
-        // Save unit conversions
-        if (savedId > 0) {
+          // Replace unit conversions
+          final productId = widget.existing!.id!;
+          await txn.delete('unit_conversions', where: 'product_id = ?', whereArgs: [productId]);
           for (final uc in _unitConversions) {
             if (uc.unitId == null) continue;
             final unitName = _unitNameById(uc.unitId);
-            await db.insertUnitConversion({
-              'product_id': savedId,
-              'from_unit': unitName,
-              'to_unit': _unitNameById(_selectedBaseUnitId),
+            final baseUnitName = _unitNameById(_selectedBaseUnitId);
+            await txn.insert('unit_conversions', {
+              'product_id': productId,
+              'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
+              'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
               'from_unit_id': uc.unitId,
               'to_unit_id': _selectedBaseUnitId,
               'conversion_factor': uc.factor,
@@ -617,17 +598,51 @@ class _AddProductSheetState extends State<AddProductSheet> {
               'updated_at': DateTime.now().toIso8601String(),
             });
           }
+        } else {
+          final map = product.toMap();
+          // Remove 'id' so SQLite auto-generates it
+          map.remove('id');
+          map['image_path'] = _imagePath;
+          savedProductId = await txn.insert('products', map);
 
-          // Opening stock movement
-          final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
-          if (openingQty > 0 && _trackStock) {
-            await db.logStockMovement(
-              productId: savedId,
+          // Save unit conversions
+          if (savedProductId != null && savedProductId! > 0) {
+            for (final uc in _unitConversions) {
+              if (uc.unitId == null) continue;
+              final unitName = _unitNameById(uc.unitId);
+              final baseUnitName = _unitNameById(_selectedBaseUnitId);
+              await txn.insert('unit_conversions', {
+                'product_id': savedProductId,
+                'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
+                'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
+                'from_unit_id': uc.unitId,
+                'to_unit_id': _selectedBaseUnitId,
+                'conversion_factor': uc.factor,
+                'barcode': uc.barcode,
+                'sell_price': uc.sellPrice,
+                'is_active': 1,
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+            }
+          }
+        }
+      });
+
+      // Log stock movement AFTER the transaction succeeds (non-critical)
+      if (!_isEditMode && savedProductId != null) {
+        final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
+        if (openingQty > 0 && _trackStock) {
+          try {
+            await dbHelper.logStockMovement(
+              productId: savedProductId!,
               movementType: 'opening',
               quantity: openingQty,
               notes: 'رصيد افتتاحي',
               unitCost: costPrice,
             );
+          } catch (e) {
+            debugPrint('Stock movement log error (non-critical): $e');
           }
         }
       }
@@ -1498,34 +1513,33 @@ class _AddProductSheetState extends State<AddProductSheet> {
       children: [
         _stepTitle(_steps[2].title, _steps[2].icon),
 
-        // Info: all prices are linked to base unit
-        Container(
-          padding: const EdgeInsets.all(10),
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: AppColors.infoLight.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline, size: 18, color: AppColors.info),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  hasMulti
-                      ? 'أدخل سعر الجملة لوحدة الشراء ($purchaseUnitName) وسيتم حساب سعر التكلفة للوحدة الأساسية ($baseUnitName) تلقائياً'
-                      : 'جميع الأسعار مرتبطة بالوحدة الأساسية ($baseUnitName)',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.info,
-                      ),
+        // Info hint
+        if (hasMulti)
+          Container(
+            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.infoLight.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 18, color: AppColors.info),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'أدخل سعر الشراء للـ $purchaseUnitName وسيتم حساب سعر الوحدة ($baseUnitName) تلقائياً',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.info,
+                        ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
 
-        // ── Multi-unit: purchase unit wholesale price ────────────
+        // ── Multi-unit: purchase unit price → auto-calculate base unit cost ──
         if (hasMulti) ...[
           TextFormField(
             controller: _purchaseUnitWholesalePriceController,
@@ -1536,42 +1550,29 @@ class _AddProductSheetState extends State<AddProductSheet> {
             ],
             decoration: InputDecoration(
               isDense: true,
-              labelText: 'سعر الجملة للوحدة الكبرى ($purchaseUnitName) *',
+              labelText: 'سعر شراء الـ $purchaseUnitName *',
               suffixText: AppConstants.currency,
               prefixIcon: const Icon(Icons.local_offer),
             ),
             onChanged: (v) {
               _autoCalculateBaseCostFromPurchaseUnit();
-              setState(() {}); // Rebuild to update calculation display
+              setState(() {});
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Auto-calculation info
-          Container(
-            padding: const EdgeInsets.all(8),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: AppColors.successLight.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+          // Simple auto-calculation display
+          if (_purchaseUnitWholesalePriceController.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                '↪ سعر الـ $baseUnitName = ${_calculateBaseCostDisplay()}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.calculate, size: 16, color: AppColors.success),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'سعر التكلفة للوحدة الأساسية = سعر الجملة ÷ عامل التحويل = ${_purchaseUnitWholesalePriceController.text.isEmpty ? "..." : _calculateBaseCostDisplay()}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.success,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
 
         // سعر التكلفة + سعر البيع
@@ -1581,7 +1582,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               child: _priceField(
                 controller: _costPriceController,
                 label: hasMulti
-                    ? 'سعر التكلفة (${_unitNameById(_selectedBaseUnitId)}) *'
+                    ? 'سعر التكلفة ($baseUnitName) *'
                     : 'سعر التكلفة *',
               ),
             ),
@@ -1596,23 +1597,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
         ),
         const SizedBox(height: 14),
 
-        // سعر الجملة + أقل سعر بيع
-        Row(
-          children: [
-            Expanded(
-              child: _priceField(
-                controller: _wholesalePriceController,
-                label: 'سعر الجملة',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _priceField(
-                controller: _specialWholesalePriceController,
-                label: 'أقل سعر بيع',
-              ),
-            ),
-          ],
+        // أقل سعر بيع
+        _priceField(
+          controller: _specialWholesalePriceController,
+          label: 'أقل سعر بيع',
         ),
         const SizedBox(height: 14),
 
@@ -1639,7 +1627,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
             const SizedBox(width: 12),
             Expanded(
               child: _switchTile(
-                title: 'السعر شامل الضريبة',
+                title: 'شامل الضريبة',
                 subtitle: _taxInclusive ? 'نعم' : 'لا',
                 value: _taxInclusive,
                 onChanged: (v) => setState(() => _taxInclusive = v),
@@ -1709,7 +1697,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               ],
               decoration: InputDecoration(
                 isDense: true,
-                labelText: 'عدد الوحدات الكبرى ($purchaseUnitName)',
+                labelText: 'عدد $purchaseUnitName المشتراة',
                 prefixIcon: const Icon(Icons.add_shopping_cart),
                 suffixText: purchaseUnitName,
               ),
@@ -1720,31 +1708,18 @@ class _AddProductSheetState extends State<AddProductSheet> {
             ),
             const SizedBox(height: 8),
 
-            // Auto-calculation info
-            Container(
-              padding: const EdgeInsets.all(8),
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: AppColors.successLight.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+            // Simple auto-calculation display
+            if (_purchaseUnitQtyController.text.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  '↪ الكمية = ${_calculateOpeningStockDisplay()} $baseUnitName',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.calculate, size: 16, color: AppColors.success),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'الكمية الافتتاحية = عدد $purchaseUnitName × عامل التحويل = ${_calculateOpeningStockDisplay()} $baseUnitName',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.success,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
 
           TextFormField(
@@ -1757,8 +1732,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
             decoration: InputDecoration(
               isDense: true,
               labelText: hasMulti
-                  ? 'الكمية الافتتاحية بالوحدة الأساسية ($baseUnitName)'
-                  : 'كمية افتتاحية',
+                  ? 'إجمالي الكمية ($baseUnitName)'
+                  : 'الكمية الافتتاحية',
               prefixIcon: const Icon(Icons.inventory),
               suffixText: baseUnitName,
             ),
