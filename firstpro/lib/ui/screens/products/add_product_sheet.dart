@@ -1576,7 +1576,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
             Expanded(
               child: _priceField(
                 controller: _sellPriceController,
-                label: 'سعر البيع *',
+                label: hasMulti
+                    ? 'سعر بيع الـ ${_unitNameById(_effectiveSaleUnitId)} *'
+                    : 'سعر البيع *',
               ),
             ),
           ],
@@ -1588,7 +1590,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
-              '↪ سعر الـ $baseUnitName = ${_calculateBaseCostFromCostField()}',
+              '↪ سعر تكلفة الـ $baseUnitName = ${_calculateBaseCostFromCostField()}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.success,
                     fontWeight: FontWeight.w600,
@@ -1601,7 +1603,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
         // أقل سعر بيع
         _priceField(
           controller: _specialWholesalePriceController,
-          label: 'أقل سعر بيع',
+          label: hasMulti
+              ? 'أقل سعر بيع للـ ${_unitNameById(_effectiveSaleUnitId)}'
+              : 'أقل سعر بيع',
         ),
         const SizedBox(height: 14),
 

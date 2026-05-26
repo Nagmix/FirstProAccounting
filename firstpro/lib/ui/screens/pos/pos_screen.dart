@@ -2681,7 +2681,15 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
 
     final db = DatabaseHelper();
-    final availableUnits = await db.getAvailableUnitsForProduct(product.id!);
+    List<Map<String, dynamic>> availableUnits;
+    try {
+      availableUnits = await db.getAvailableUnitsForProduct(product.id!);
+    } catch (e) {
+      debugPrint('Error loading units for product: $e');
+      // Fallback: add directly with base unit
+      _addToCartDirect(product, null);
+      return;
+    }
 
     if (availableUnits.length <= 1) {
       // Only base unit - add directly (backwards compatible)
@@ -3829,14 +3837,14 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lowStock = product.currentStock <= product.minStock && product.currentStock > 0;
-    final outOfStock = product.currentStock <= 0;
+    final outOfStock = product.currentStock <= 0 && !product.allowNegative;
 
     return Card(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: outOfStock ? null : onTap,
+        onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(8),
           child: Column(
@@ -3886,21 +3894,25 @@ class _ProductCard extends StatelessWidget {
                       ? AppColors.errorLight
                       : lowStock
                           ? AppColors.warningLight
-                          : AppColors.successLight,
+                          : product.currentStock <= 0
+                              ? AppColors.warningLight
+                              : AppColors.successLight,
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(
                   outOfStock
                       ? 'نفذ'
-                      : lowStock
-                          ? 'منخفض'
-                          : '${product.currentStock.toStringAsFixed(0)}',
+                      : product.currentStock <= 0
+                          ? 'مسموح'
+                          : lowStock
+                              ? 'منخفض'
+                              : '${product.currentStock.toStringAsFixed(0)}',
                   style: TextStyle(
                     fontSize: 8,
                     fontWeight: FontWeight.w600,
                     color: outOfStock
                         ? AppColors.error
-                        : lowStock
+                        : lowStock || product.currentStock <= 0
                             ? AppColors.warning
                             : AppColors.success,
                   ),
