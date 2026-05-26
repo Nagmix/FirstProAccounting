@@ -80,12 +80,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
   final _notesController = TextEditingController();
   final _costPriceController = TextEditingController();
   final _sellPriceController = TextEditingController();
-  final _wholesalePriceController = TextEditingController();
   final _specialWholesalePriceController = TextEditingController();
   final _taxRateController = TextEditingController();
   final _openingStockController = TextEditingController();
   final _purchaseUnitQtyController = TextEditingController();
-  final _purchaseUnitWholesalePriceController = TextEditingController();
   final _minStockController = TextEditingController();
   final _maxStockController = TextEditingController();
   final _supplierCodeController = TextEditingController();
@@ -176,12 +174,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _notesController.dispose();
     _costPriceController.dispose();
     _sellPriceController.dispose();
-    _wholesalePriceController.dispose();
     _specialWholesalePriceController.dispose();
     _taxRateController.dispose();
     _openingStockController.dispose();
     _purchaseUnitQtyController.dispose();
-    _purchaseUnitWholesalePriceController.dispose();
     _minStockController.dispose();
     _maxStockController.dispose();
     _supplierCodeController.dispose();
@@ -266,9 +262,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _nameArController.text = p.nameAr;
     _nameEnController.text = p.nameEn;
     _descriptionController.text = p.description ?? '';
-    _costPriceController.text = p.costPrice.toStringAsFixed(2);
+    _costPriceController.text = (_hasMultiUnits && p.wholesalePrice > 0)
+        ? p.wholesalePrice.toStringAsFixed(2)
+        : p.costPrice.toStringAsFixed(2);
     _sellPriceController.text = p.sellPrice.toStringAsFixed(2);
-    _wholesalePriceController.text = p.wholesalePrice.toStringAsFixed(2);
     _specialWholesalePriceController.text = p.specialWholesalePrice.toStringAsFixed(2);
     _taxRateController.text = p.taxRate.toStringAsFixed(2);
     _minStockController.text = p.minStock.toStringAsFixed(0);
@@ -502,7 +499,19 @@ class _AddProductSheetState extends State<AddProductSheet> {
     setState(() => _isSaving = true);
 
     final now = DateTime.now();
-    final costPrice = double.tryParse(_costPriceController.text) ?? 0.0;
+    // When multi-unit: costPrice field contains the purchase unit cost,
+    // we need to calculate the base unit cost for storage.
+    final enteredCostPrice = double.tryParse(_costPriceController.text) ?? 0.0;
+    final double baseCostPrice;
+    final double purchaseUnitCostPrice;
+    if (_hasMultiUnits) {
+      final factor = _purchaseUnitFactor;
+      purchaseUnitCostPrice = enteredCostPrice;
+      baseCostPrice = factor > 0 ? enteredCostPrice / factor : enteredCostPrice;
+    } else {
+      baseCostPrice = enteredCostPrice;
+      purchaseUnitCostPrice = enteredCostPrice;
+    }
     final product = Product(
       itemCode: itemCode.isNotEmpty ? itemCode : null,
       nameAr: _nameArController.text.trim(),
@@ -519,10 +528,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
           : null,
-      costPrice: costPrice,
-      averageCost: costPrice,
+      costPrice: baseCostPrice,
+      averageCost: baseCostPrice,
       sellPrice: double.tryParse(_sellPriceController.text) ?? 0.0,
-      wholesalePrice: double.tryParse(_wholesalePriceController.text) ?? 0.0,
+      wholesalePrice: purchaseUnitCostPrice,
       specialWholesalePrice:
           double.tryParse(_specialWholesalePriceController.text) ?? 0.0,
       minimumSalePrice:
@@ -584,19 +593,38 @@ class _AddProductSheetState extends State<AddProductSheet> {
             if (uc.unitId == null) continue;
             final unitName = _unitNameById(uc.unitId);
             final baseUnitName = _unitNameById(_selectedBaseUnitId);
-            await txn.insert('unit_conversions', {
-              'product_id': productId,
-              'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
-              'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
-              'from_unit_id': uc.unitId,
-              'to_unit_id': _selectedBaseUnitId,
-              'conversion_factor': uc.factor,
-              'barcode': uc.barcode,
-              'sell_price': uc.sellPrice,
-              'is_active': 1,
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            });
+            try {
+              await txn.insert('unit_conversions', {
+                'product_id': productId,
+                'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
+                'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
+                'from_unit_id': uc.unitId,
+                'to_unit_id': _selectedBaseUnitId,
+                'conversion_factor': uc.factor,
+                'barcode': uc.barcode,
+                'sell_price': uc.sellPrice,
+                'is_active': 1,
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+            } catch (e) {
+              debugPrint('Unit conversion insert error (edit, non-critical): $e');
+              try {
+                await txn.insert('unit_conversions', {
+                  'product_id': productId,
+                  'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
+                  'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
+                  'conversion_factor': uc.factor,
+                  'barcode': uc.barcode,
+                  'sell_price': uc.sellPrice,
+                  'is_active': 1,
+                  'created_at': DateTime.now().toIso8601String(),
+                  'updated_at': DateTime.now().toIso8601String(),
+                });
+              } catch (e2) {
+                debugPrint('Unit conversion insert error (edit, fallback): $e2');
+              }
+            }
           }
         } else {
           final map = product.toMap();
@@ -611,19 +639,39 @@ class _AddProductSheetState extends State<AddProductSheet> {
               if (uc.unitId == null) continue;
               final unitName = _unitNameById(uc.unitId);
               final baseUnitName = _unitNameById(_selectedBaseUnitId);
-              await txn.insert('unit_conversions', {
-                'product_id': savedProductId,
-                'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
-                'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
-                'from_unit_id': uc.unitId,
-                'to_unit_id': _selectedBaseUnitId,
-                'conversion_factor': uc.factor,
-                'barcode': uc.barcode,
-                'sell_price': uc.sellPrice,
-                'is_active': 1,
-                'created_at': DateTime.now().toIso8601String(),
-                'updated_at': DateTime.now().toIso8601String(),
-              });
+              try {
+                await txn.insert('unit_conversions', {
+                  'product_id': savedProductId,
+                  'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
+                  'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
+                  'from_unit_id': uc.unitId,
+                  'to_unit_id': _selectedBaseUnitId,
+                  'conversion_factor': uc.factor,
+                  'barcode': uc.barcode,
+                  'sell_price': uc.sellPrice,
+                  'is_active': 1,
+                  'created_at': DateTime.now().toIso8601String(),
+                  'updated_at': DateTime.now().toIso8601String(),
+                });
+              } catch (e) {
+                debugPrint('Unit conversion insert error (non-critical): $e');
+                // Try without from_unit_id / to_unit_id in case DB schema is outdated
+                try {
+                  await txn.insert('unit_conversions', {
+                    'product_id': savedProductId,
+                    'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
+                    'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
+                    'conversion_factor': uc.factor,
+                    'barcode': uc.barcode,
+                    'sell_price': uc.sellPrice,
+                    'is_active': 1,
+                    'created_at': DateTime.now().toIso8601String(),
+                    'updated_at': DateTime.now().toIso8601String(),
+                  });
+                } catch (e2) {
+                  debugPrint('Unit conversion insert error (fallback): $e2');
+                }
+              }
             }
           }
         }
@@ -639,7 +687,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               movementType: 'opening',
               quantity: openingQty,
               notes: 'رصيد افتتاحي',
-              unitCost: costPrice,
+              unitCost: baseCostPrice,
             );
           } catch (e) {
             debugPrint('Stock movement log error (non-critical): $e');
@@ -1249,7 +1297,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'الوحدة الأساسية: ${_unitNameById(_selectedBaseUnitId)}. حدد كم تساوي الوحدة الأكبر بالوحدة الأساسية.',
+                    'كم ${_unitNameById(_selectedBaseUnitId)} تساوي الوحدة الأكبر؟',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.info,
                         ),
@@ -1273,7 +1321,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       style: TextStyle(
                           color: AppColors.textTertiary.withValues(alpha: 0.6))),
                   const SizedBox(height: 4),
-                  Text('اضغط "إضافة تحويل" لإضافة وحدة أكبر',
+                  Text('اضغط "إضافة تحويل" لتحديد وحدة أكبر',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.textTertiary,
                           )),
@@ -1429,9 +1477,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
               ),
               onChanged: (v) {
                 row.factor = double.tryParse(v) ?? 1.0;
-                // Recalculate prices and inventory if this is the purchase unit
+                // Recalculate inventory if this is the purchase unit
                 if (row.unitId == _selectedPurchaseUnitId) {
-                  _autoCalculateBaseCostFromPurchaseUnit();
                   _autoCalculateOpeningStock();
                 }
                 setState(() {}); // Rebuild to update calculation displays
@@ -1513,68 +1560,6 @@ class _AddProductSheetState extends State<AddProductSheet> {
       children: [
         _stepTitle(_steps[2].title, _steps[2].icon),
 
-        // Info hint
-        if (hasMulti)
-          Container(
-            padding: const EdgeInsets.all(10),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: AppColors.infoLight.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, size: 18, color: AppColors.info),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'أدخل سعر الشراء للـ $purchaseUnitName وسيتم حساب سعر الوحدة ($baseUnitName) تلقائياً',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.info,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // ── Multi-unit: purchase unit price → auto-calculate base unit cost ──
-        if (hasMulti) ...[
-          TextFormField(
-            controller: _purchaseUnitWholesalePriceController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textInputAction: TextInputAction.next,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-            ],
-            decoration: InputDecoration(
-              isDense: true,
-              labelText: 'سعر شراء الـ $purchaseUnitName *',
-              suffixText: AppConstants.currency,
-              prefixIcon: const Icon(Icons.local_offer),
-            ),
-            onChanged: (v) {
-              _autoCalculateBaseCostFromPurchaseUnit();
-              setState(() {});
-            },
-          ),
-          const SizedBox(height: 6),
-
-          // Simple auto-calculation display
-          if (_purchaseUnitWholesalePriceController.text.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                '↪ سعر الـ $baseUnitName = ${_calculateBaseCostDisplay()}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.success,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ),
-        ],
-
         // سعر التكلفة + سعر البيع
         Row(
           children: [
@@ -1582,8 +1567,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
               child: _priceField(
                 controller: _costPriceController,
                 label: hasMulti
-                    ? 'سعر التكلفة ($baseUnitName) *'
+                    ? 'سعر تكلفة الـ $purchaseUnitName *'
                     : 'سعر التكلفة *',
+                onChanged: hasMulti ? (_) => setState(() {}) : null,
               ),
             ),
             const SizedBox(width: 12),
@@ -1595,6 +1581,21 @@ class _AddProductSheetState extends State<AddProductSheet> {
             ),
           ],
         ),
+
+        // Auto-calculated base unit cost display
+        if (hasMulti && _costPriceController.text.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              '↪ سعر الـ $baseUnitName = ${_calculateBaseCostFromCostField()}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
         const SizedBox(height: 14),
 
         // أقل سعر بيع
@@ -1640,24 +1641,14 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
   }
 
-  /// Auto-calculate base unit cost price from purchase unit wholesale price
-  void _autoCalculateBaseCostFromPurchaseUnit() {
-    if (!_hasMultiUnits) return;
-    final wholesalePrice = double.tryParse(_purchaseUnitWholesalePriceController.text);
-    if (wholesalePrice == null || wholesalePrice <= 0) return;
+  /// Display string for auto-calculated base unit cost from the cost price field
+  /// When multi-unit: costPrice field shows purchase unit cost, so we divide by factor
+  String _calculateBaseCostFromCostField() {
+    final costPrice = double.tryParse(_costPriceController.text);
+    if (costPrice == null || costPrice <= 0) return '...';
     final factor = _purchaseUnitFactor;
-    if (factor <= 0) return;
-    final baseCost = wholesalePrice / factor;
-    _costPriceController.text = baseCost.toStringAsFixed(2);
-  }
-
-  /// Display string for auto-calculated base cost
-  String _calculateBaseCostDisplay() {
-    final wholesalePrice = double.tryParse(_purchaseUnitWholesalePriceController.text);
-    if (wholesalePrice == null || wholesalePrice <= 0) return '...';
-    final factor = _purchaseUnitFactor;
-    if (factor <= 0) return '...';
-    final baseCost = wholesalePrice / factor;
+    if (factor <= 1) return '${costPrice.toStringAsFixed(2)} ${AppConstants.currency}';
+    final baseCost = costPrice / factor;
     return '${baseCost.toStringAsFixed(2)} ${AppConstants.currency}';
   }
 
@@ -1774,7 +1765,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           selectedId: _selectedWarehouseId,
           onChanged: _isEditMode ? null : (v) => setState(() => _selectedWarehouseId = v),
           onAdd: () => _showAddWarehouseDialog(),
-          emptyMessage: 'يجب إضافة مستودع في النظام أولاً',
+          emptyMessage: 'أضف مستودع من الإعدادات أولاً',
         ),
         const SizedBox(height: 14),
 
@@ -1870,7 +1861,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           selectedId: _selectedSupplierId,
           onChanged: (v) => setState(() => _selectedSupplierId = v),
           onAdd: () => _showAddSupplierDialog(),
-          emptyMessage: 'يجب إضافة مورد في النظام أولاً',
+          emptyMessage: 'أضف مورد من الإعدادات أولاً',
         ),
         const SizedBox(height: 14),
 
@@ -1937,7 +1928,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'باركود الوحدة الأساسية (${_unitNameById(_selectedBaseUnitId)}) تم إدخاله في الخطوة الأولى',
+                  'باركود ${_unitNameById(_selectedBaseUnitId)} أُدخل في الخطوة الأولى',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.info,
                       ),
@@ -1956,11 +1947,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   Icon(Icons.qr_code,
                       size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
                   const SizedBox(height: 8),
-                  Text('لا توجد وحدات تحويل',
+                  Text('لا توجد وحدات أخرى',
                       style: TextStyle(
                           color: AppColors.textTertiary.withValues(alpha: 0.6))),
                   const SizedBox(height: 4),
-                  Text('أضف وحدات تحويل في خطوة الوحدات أولاً',
+                  Text('أضف وحدات أكبر في خطوة الوحدات أولاً',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.textTertiary,
                           )),
@@ -2277,7 +2268,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'آلية محاسبة الضريبة',
+                        'محاسبة الضريبة',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.info,
@@ -2288,14 +2279,14 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'عند البيع: مدين (العميل/الصندوق) ← دائن (المبيعات) + دائن (ضريبة القيمة المضافة)',
+                  'البيع: مدين (العميل) ← دائن (المبيعات + الضريبة)',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.info,
                       ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'عند الشراء: مدين (المشتريات) + مدين (ضريبة القيمة المضافة) ← دائن (الصندوق/المورد)',
+                  'الشراء: مدين (المشتريات + الضريبة) ← دائن (المورد)',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.info,
                       ),
@@ -2337,6 +2328,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     required TextEditingController controller,
     required String label,
     TextInputAction textInputAction = TextInputAction.next,
+    ValueChanged<String>? onChanged,
   }) {
     return TextFormField(
       controller: controller,
@@ -2350,6 +2342,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
         labelText: label,
         suffixText: AppConstants.currency,
       ),
+      onChanged: onChanged,
     );
   }
 

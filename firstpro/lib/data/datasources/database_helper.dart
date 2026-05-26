@@ -9,7 +9,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 27;
+  static const int _databaseVersion = 28;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -1700,6 +1700,8 @@ class DatabaseHelper {
           product_id INTEGER NOT NULL,
           from_unit TEXT NOT NULL,
           to_unit TEXT NOT NULL,
+          from_unit_id INTEGER,
+          to_unit_id INTEGER,
           conversion_factor REAL NOT NULL,
           barcode TEXT,
           sell_price REAL NOT NULL DEFAULT 0.0,
@@ -2022,6 +2024,15 @@ class DatabaseHelper {
     if (oldVersion < 27) {
       try { await db.execute('ALTER TABLE products ADD COLUMN cogs_account_id INTEGER'); } catch (_) {}
       try { await db.execute('ALTER TABLE products ADD COLUMN vat_account_id INTEGER'); } catch (_) {}
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v28 Migration: Ensure from_unit_id and to_unit_id exist in unit_conversions
+    //  (was missing from _onCreate in earlier versions)
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 28) {
+      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN from_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN to_unit_id INTEGER'); } catch (_) {}
     }
   }
 
