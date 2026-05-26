@@ -262,16 +262,12 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _nameArController.text = p.nameAr;
     _nameEnController.text = p.nameEn;
     _descriptionController.text = p.description ?? '';
-    _costPriceController.text = (_hasMultiUnits && p.wholesalePrice > 0)
-        ? p.wholesalePrice.toStringAsFixed(2)
-        : p.costPrice.toStringAsFixed(2);
-    _sellPriceController.text = p.sellPrice.toStringAsFixed(2);
-    _specialWholesalePriceController.text = p.specialWholesalePrice.toStringAsFixed(2);
     _taxRateController.text = p.taxRate.toStringAsFixed(2);
     _minStockController.text = p.minStock.toStringAsFixed(0);
     _supplierCodeController.text = p.supplierCode ?? '';
     _notesController.text = p.notes ?? '';
 
+    // Set unit IDs FIRST (needed for _hasMultiUnits, _purchaseUnitFactor, _saleUnitSource)
     _selectedCategoryId = p.categoryId;
     _selectedBaseUnitId = p.effectiveBaseUnitId;
     _selectedPurchaseUnitId = p.purchaseUnitId;
@@ -283,12 +279,23 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _selectedCogsAccountId = p.cogsAccountId;
     _selectedVatAccountId = p.vatAccountId;
 
-    // Determine sale unit source
+    // Determine sale unit source (before price fields that depend on it)
     if (p.saleUnitId != null && p.saleUnitId == p.purchaseUnitId && p.purchaseUnitId != p.effectiveBaseUnitId) {
       _saleUnitSource = 1;
     } else {
       _saleUnitSource = 0;
     }
+
+    // Now set price fields (they depend on _hasMultiUnits, _purchaseUnitFactor, _saleUnitSource)
+    _costPriceController.text = (_hasMultiUnits && p.wholesalePrice > 0)
+        ? p.wholesalePrice.toStringAsFixed(2)
+        : p.costPrice.toStringAsFixed(2);
+    _sellPriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
+        ? (p.sellPrice * _purchaseUnitFactor).toStringAsFixed(2)
+        : p.sellPrice.toStringAsFixed(2);
+    _specialWholesalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
+        ? (p.specialWholesalePrice * _purchaseUnitFactor).toStringAsFixed(2)
+        : p.specialWholesalePrice.toStringAsFixed(2);
 
     _isActive = p.isActive;
     _trackStock = p.trackStock;
@@ -319,6 +326,20 @@ class _AddProductSheetState extends State<AddProductSheet> {
           sellPrice: (c['sell_price'] as num?)?.toDouble() ?? 0.0,
         );
       }).toList();
+
+      // Update price fields now that unit conversions are loaded (factor is available)
+      if (_isEditMode) {
+        final p = widget.existing!;
+        _costPriceController.text = (_hasMultiUnits && p.wholesalePrice > 0)
+            ? p.wholesalePrice.toStringAsFixed(2)
+            : p.costPrice.toStringAsFixed(2);
+        _sellPriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
+            ? (p.sellPrice * _purchaseUnitFactor).toStringAsFixed(2)
+            : p.sellPrice.toStringAsFixed(2);
+        _specialWholesalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
+            ? (p.specialWholesalePrice * _purchaseUnitFactor).toStringAsFixed(2)
+            : p.specialWholesalePrice.toStringAsFixed(2);
+      }
     });
   }
 
@@ -502,15 +523,24 @@ class _AddProductSheetState extends State<AddProductSheet> {
     // When multi-unit: costPrice field contains the purchase unit cost,
     // we need to calculate the base unit cost for storage.
     final enteredCostPrice = double.tryParse(_costPriceController.text) ?? 0.0;
+    final enteredSellPrice = double.tryParse(_sellPriceController.text) ?? 0.0;
     final double baseCostPrice;
     final double purchaseUnitCostPrice;
+    final double baseSellPrice;
     if (_hasMultiUnits) {
       final factor = _purchaseUnitFactor;
       purchaseUnitCostPrice = enteredCostPrice;
       baseCostPrice = factor > 0 ? enteredCostPrice / factor : enteredCostPrice;
+      // Convert sell price to base unit if sale unit is the purchase unit
+      if (_saleUnitSource == 1 && factor > 0) {
+        baseSellPrice = enteredSellPrice / factor;
+      } else {
+        baseSellPrice = enteredSellPrice; // Already in base unit
+      }
     } else {
       baseCostPrice = enteredCostPrice;
       purchaseUnitCostPrice = enteredCostPrice;
+      baseSellPrice = enteredSellPrice;
     }
     final product = Product(
       itemCode: itemCode.isNotEmpty ? itemCode : null,
@@ -530,12 +560,16 @@ class _AddProductSheetState extends State<AddProductSheet> {
           : null,
       costPrice: baseCostPrice,
       averageCost: baseCostPrice,
-      sellPrice: double.tryParse(_sellPriceController.text) ?? 0.0,
+      sellPrice: baseSellPrice,
       wholesalePrice: purchaseUnitCostPrice,
       specialWholesalePrice:
-          double.tryParse(_specialWholesalePriceController.text) ?? 0.0,
+          _hasMultiUnits && _saleUnitSource == 1
+              ? (double.tryParse(_specialWholesalePriceController.text) ?? 0.0) / (_purchaseUnitFactor > 0 ? _purchaseUnitFactor : 1.0)
+              : (double.tryParse(_specialWholesalePriceController.text) ?? 0.0),
       minimumSalePrice:
-          double.tryParse(_specialWholesalePriceController.text) ?? 0.0,
+          _hasMultiUnits && _saleUnitSource == 1
+              ? (double.tryParse(_specialWholesalePriceController.text) ?? 0.0) / (_purchaseUnitFactor > 0 ? _purchaseUnitFactor : 1.0)
+              : (double.tryParse(_specialWholesalePriceController.text) ?? 0.0),
       taxRate: double.tryParse(_taxRateController.text) ?? 0.0,
       taxInclusive: _taxInclusive,
       salesAccountId: _selectedSalesAccountId,
@@ -1627,6 +1661,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 label: hasMulti
                     ? 'سعر بيع الـ ${_unitNameById(_effectiveSaleUnitId)} *'
                     : 'سعر البيع *',
+                onChanged: hasMulti ? (_) => setState(() {}) : null,
               ),
             ),
           ],
@@ -1641,6 +1676,20 @@ class _AddProductSheetState extends State<AddProductSheet> {
               '↪ سعر تكلفة الـ $baseUnitName = ${_calculateBaseCostFromCostField()}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+        // Auto-calculated base unit sell price display
+        if (hasMulti && _saleUnitSource == 1 && _sellPriceController.text.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              '↪ سعر بيع الـ $baseUnitName = ${_calculateBaseSellPrice()}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.info,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -1702,6 +1751,17 @@ class _AddProductSheetState extends State<AddProductSheet> {
     if (factor <= 1) return '${costPrice.toStringAsFixed(2)} ${AppConstants.currency}';
     final baseCost = costPrice / factor;
     return '${baseCost.toStringAsFixed(2)} ${AppConstants.currency}';
+  }
+
+  /// Display string for auto-calculated base unit sell price
+  /// When sale unit is the purchase unit, convert to base unit
+  String _calculateBaseSellPrice() {
+    final sellPrice = double.tryParse(_sellPriceController.text);
+    if (sellPrice == null || sellPrice <= 0) return '...';
+    final factor = _purchaseUnitFactor;
+    if (factor <= 1) return '${sellPrice.toStringAsFixed(2)} ${AppConstants.currency}';
+    final baseSell = sellPrice / factor;
+    return '${baseSell.toStringAsFixed(2)} ${AppConstants.currency}';
   }
 
   // ═══════════════════════════════════════════════════════════════

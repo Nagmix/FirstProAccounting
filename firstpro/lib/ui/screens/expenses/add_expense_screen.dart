@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart' show Transaction;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -790,8 +791,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       final title = expenseMap['title'] as String? ?? 'مصروف';
       final isSarf = expenseMap['operation_type'] == 'صرف';
 
+      // Get cash/bank account (the other side of the double-entry)
+      final codeOffset = _selectedCurrency == 'SAR' ? 1 : (_selectedCurrency == 'USD' ? 2 : 0);
+      int? cashBankAccountId;
+      final cashBoxId = expenseMap['cash_box_id'] as int?;
+      if (cashBoxId != null) {
+        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+        if (cashBox.isNotEmpty) {
+          final linkedAccountId = cashBox.first['linked_account_id'] as int?;
+          if (linkedAccountId != null) {
+            cashBankAccountId = linkedAccountId;
+          }
+        }
+      }
+      if (cashBankAccountId == null) {
+        final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), _selectedCurrency], limit: 1);
+        cashBankAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
+      }
+
       if (isSarf) {
-        // صرف (disburse): debit the expense account (عليه)
+        // صرف (disburse): Debit expense account, Credit cash/bank
         await txn.insert('transactions', {
           'account_id': expenseAccountId,
           'journal_id': journalId,
@@ -801,10 +820,34 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           'date': now,
           'created_at': now,
         });
-        // Update account balance
-        await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, expenseAccountId]);
+        await _updateAccountBalanceWithJournal(txn, expenseAccountId, amountBase, 0.0, now, codeOffset);
+
+        if (cashBankAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': cashBankAccountId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': amountBase,
+            'description': 'مصروف: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, cashBankAccountId, 0.0, amountBase, now, codeOffset);
+        }
       } else {
-        // قبض (receive): credit the expense account (له)
+        // قبض (receive): Debit cash/bank, Credit expense account
+        if (cashBankAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': cashBankAccountId,
+            'journal_id': journalId,
+            'debit': amountBase,
+            'credit': 0.0,
+            'description': 'قبض: $title',
+            'date': now,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, cashBankAccountId, amountBase, 0.0, now, codeOffset);
+        }
         await txn.insert('transactions', {
           'account_id': expenseAccountId,
           'journal_id': journalId,
@@ -814,87 +857,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           'date': now,
           'created_at': now,
         });
-        // Update account balance
-        await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, expenseAccountId]);
-      }
-
-      // Also update the system expense account and cash/bank account for double-entry
-      final codeOffset = _selectedCurrency == 'SAR' ? 1 : (_selectedCurrency == 'USD' ? 2 : 0);
-
-      // Get system expense account (5000+offset)
-      final systemExpenseAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5000 + codeOffset).toString(), _selectedCurrency], limit: 1);
-      final systemExpenseAccountId = systemExpenseAccount.isNotEmpty ? systemExpenseAccount.first['id'] as int : null;
-
-      // Get cash/bank account
-      int? creditAccountId;
-      final cashBoxId = expenseMap['cash_box_id'] as int?;
-      if (cashBoxId != null) {
-        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-        if (cashBox.isNotEmpty) {
-          final linkedAccountId = cashBox.first['linked_account_id'] as int?;
-          if (linkedAccountId != null) {
-            creditAccountId = linkedAccountId;
-          }
-        }
-      }
-      if (creditAccountId == null) {
-        final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), _selectedCurrency], limit: 1);
-        creditAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-      }
-
-      if (isSarf) {
-        // Debit system expense account
-        if (systemExpenseAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': systemExpenseAccountId,
-            'journal_id': journalId,
-            'debit': amountBase,
-            'credit': 0.0,
-            'description': 'مصروف: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, systemExpenseAccountId]);
-        }
-        // Credit cash/bank
-        if (creditAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': creditAccountId,
-            'journal_id': journalId,
-            'debit': 0.0,
-            'credit': amountBase,
-            'description': 'مصروف: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, creditAccountId]);
-        }
-      } else {
-        // قبض: Credit system expense account, Debit cash/bank
-        if (systemExpenseAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': systemExpenseAccountId,
-            'journal_id': journalId,
-            'debit': 0.0,
-            'credit': amountBase,
-            'description': 'قبض: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, systemExpenseAccountId]);
-        }
-        if (creditAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': creditAccountId,
-            'journal_id': journalId,
-            'debit': amountBase,
-            'credit': 0.0,
-            'description': 'قبض: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, creditAccountId]);
-        }
+        await _updateAccountBalanceWithJournal(txn, expenseAccountId, 0.0, amountBase, now, codeOffset);
       }
 
       // Update cash box balance
@@ -906,5 +869,24 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         }
       }
     });
+  }
+
+  /// Helper to update account balance with proper debit/credit nature handling
+  Future<void> _updateAccountBalanceWithJournal(Transaction txn, int accountId, double debit, double credit, String now, int codeOffset) async {
+    final accountRow = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+    if (accountRow.isEmpty) return;
+    final account = accountRow.first;
+    final balanceType = (account['balance_type'] as String?) ?? 'debit';
+    // Use effectiveBalanceType logic: ASSET/COST/EXPENSE → debit, LIABILITY/REVENUE → credit
+    final accountType = account['account_type'] as String? ?? '';
+    final effectiveType = (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE') ? 'debit' : 'credit';
+    
+    double currentBalance = (account['balance'] as num?)?.toDouble() ?? 0.0;
+    if (effectiveType == 'debit') {
+      currentBalance = currentBalance + debit - credit;
+    } else {
+      currentBalance = currentBalance + credit - debit;
+    }
+    await txn.update('accounts', {'balance': currentBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
   }
 }

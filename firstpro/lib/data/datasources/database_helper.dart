@@ -2204,10 +2204,20 @@ class DatabaseHelper {
   Future<void> decrementProductStock(int productId, double quantity) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
-    await db.rawUpdate(
-      'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-      [quantity, now, productId],
-    );
+    // Check if product allows negative stock
+    final productRow = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+    final allowNegative = productRow.isNotEmpty ? (productRow.first['allow_negative'] as int?) == 1 : false;
+    if (allowNegative) {
+      await db.rawUpdate(
+        'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
+        [quantity, now, productId],
+      );
+    } else {
+      await db.rawUpdate(
+        'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
+        [quantity, now, productId],
+      );
+    }
   }
 
   /// Increment product stock (used for purchase invoices and sale return restocking).
@@ -2948,10 +2958,20 @@ class DatabaseHelper {
         if (invoiceType == 'sale' || invoiceType == 'pos') {
           if (!isReturn) {
             // Sale: stock leaves warehouse (always in base units)
-            await txn.rawUpdate(
-              'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-              [baseQuantity, now, productId],
-            );
+            // Check if product allows negative stock
+            final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+            final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
+            if (allowNeg) {
+              await txn.rawUpdate(
+                'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
+                [baseQuantity, now, productId],
+              );
+            } else {
+              await txn.rawUpdate(
+                'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
+                [baseQuantity, now, productId],
+              );
+            }
             // Log stock movement
             await txn.insert('stock_movements', {
               'product_id': productId,
@@ -3017,10 +3037,20 @@ class DatabaseHelper {
             });
           } else {
             // Purchase return: stock leaves warehouse (always in base units)
-            await txn.rawUpdate(
-              'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-              [baseQuantity, now, productId],
-            );
+            // Check if product allows negative stock
+            final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+            final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
+            if (allowNeg) {
+              await txn.rawUpdate(
+                'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
+                [baseQuantity, now, productId],
+              );
+            } else {
+              await txn.rawUpdate(
+                'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
+                [baseQuantity, now, productId],
+              );
+            }
             await txn.insert('stock_movements', {
               'product_id': productId,
               'movement_type': 'return',
@@ -3262,8 +3292,10 @@ class DatabaseHelper {
       }
 
       // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
-      // For sale invoices (not return): Debit COGS, Credit Inventory for cost_price * quantity
+      // For sale invoices (not return): Debit COGS, Credit Inventory for average_cost * base_quantity
       // For sale returns: Debit Inventory, Credit COGS
+      // For purchase invoices (not return): Debit Inventory, Credit Purchases (transfer to inventory)
+      // For purchase returns: Debit Purchases, Credit Inventory (reverse transfer)
       if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
         final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), invoiceCurrency], limit: 1);
         final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
@@ -3275,13 +3307,16 @@ class DatabaseHelper {
           for (final item in items) {
             final productId = (item['product_id'] as num?)?.toInt();
             final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
             if (productId == null) continue;
 
-            // Look up product cost price
+            // Look up product average cost (weighted average)
             final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
             if (productRow.isEmpty) continue;
-            final costPrice = (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
-            totalCogs += costPrice * quantity;
+            final averageCost = (productRow.first['average_cost'] as num?)?.toDouble()
+                          ?? (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+            // COGS must use base_quantity (not quantity) because average_cost is per base unit
+            totalCogs += averageCost * baseQuantity;
           }
 
           if (totalCogs > 0) {
@@ -3331,6 +3366,78 @@ class DatabaseHelper {
               // Update account balances
               await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
               await _updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
+            }
+          }
+        }
+      }
+
+      // ── Purchase Inventory Transfer Entries ──
+      // In perpetual inventory: Purchases debit Purchases account, but inventory must also increase.
+      // Add transfer: Debit Inventory, Credit Purchases (for the cost of items purchased)
+      if ((invoiceType == 'purchase' || invoiceType == 'purchase_return')) {
+        final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
+        final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
+
+        if (inventoryAccountId != null && purchasesAccountId != null) {
+          double totalPurchaseCost = 0.0;
+          for (final item in items) {
+            final productId = (item['product_id'] as num?)?.toInt();
+            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            if (productId == null) continue;
+            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+            if (productRow.isEmpty) continue;
+            final averageCost = (productRow.first['average_cost'] as num?)?.toDouble()
+                          ?? (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+            totalPurchaseCost += averageCost * baseQuantity;
+          }
+
+          if (totalPurchaseCost > 0) {
+            if (!isReturn) {
+              // Purchase: Debit Inventory (goods come in), Credit Purchases (transfer from purchases account)
+              await txn.insert('transactions', {
+                'account_id': inventoryAccountId,
+                'journal_id': journalId,
+                'debit': totalPurchaseCost,
+                'credit': 0.0,
+                'description': 'إضافة مخزون مشتريات - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': totalPurchaseCost,
+                'description': 'تحويل من حساب المشتريات - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalPurchaseCost, 0.0, now);
+              await _updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, totalPurchaseCost, now);
+            } else {
+              // Purchase return: Debit Purchases, Credit Inventory (reverse)
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': totalPurchaseCost,
+                'credit': 0.0,
+                'description': 'عكس تحويل مشتريات مرتجعة - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': inventoryAccountId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': totalPurchaseCost,
+                'description': 'تخفيض مخزون مرتجع مشتريات - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _updateAccountBalanceWithJournal(txn, purchasesAccountId, totalPurchaseCost, 0.0, now);
+              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalPurchaseCost, now);
             }
           }
         }
@@ -3973,6 +4080,9 @@ class DatabaseHelper {
         final productId = (item['product_id'] as num?)?.toInt();
         final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
         if (productId == null) continue;
+        // Check allow_negative for this product
+        final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+        final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
 
         if (invoiceType == 'sale' || invoiceType == 'pos') {
           if (!isReturn) {
@@ -3980,12 +4090,20 @@ class DatabaseHelper {
             await txn.rawUpdate('UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
           } else {
             // Was incremented (return), now decrement
-            await txn.rawUpdate('UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?', [quantity, now, productId]);
+            if (allowNeg) {
+              await txn.rawUpdate('UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
+            } else {
+              await txn.rawUpdate('UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?', [quantity, now, productId]);
+            }
           }
         } else if (invoiceType == 'purchase') {
           if (!isReturn) {
             // Was incremented, now decrement
-            await txn.rawUpdate('UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?', [quantity, now, productId]);
+            if (allowNeg) {
+              await txn.rawUpdate('UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
+            } else {
+              await txn.rawUpdate('UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?', [quantity, now, productId]);
+            }
           } else {
             // Was decremented (return), now restore
             await txn.rawUpdate('UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
@@ -5351,12 +5469,15 @@ class DatabaseHelper {
             for (final item in invoiceItems) {
               final productId = (item['product_id'] as num?)?.toInt();
               final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+              final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
               if (productId == null) continue;
 
               final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
               if (productRow.isEmpty) continue;
-              final costPrice = (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
-              totalCogs += costPrice * quantity;
+              final averageCost = (productRow.first['average_cost'] as num?)?.toDouble()
+                            ?? (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+              // COGS must use base_quantity (not quantity) because average_cost is per base unit
+              totalCogs += averageCost * baseQuantity;
             }
 
             if (totalCogs > 0) {
@@ -5407,88 +5528,103 @@ class DatabaseHelper {
           }
         }
 
-        // ── قيود أجور النقل ──
-        if (transportCharges > 0) {
-          final transportAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final transportAccountId = transportAccount.isNotEmpty ? transportAccount.first['id'] as int : null;
+        // ── Purchase Inventory Transfer Entries ──
+        if ((invoiceType == 'purchase' || invoiceType == 'purchase_return')) {
+          final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
+          final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+          final invAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
+          final purchAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
 
-          if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
-            final transportDebitId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-            final transportCreditId = transportAccountId;
+          if (invAccountId != null && purchAccountId != null) {
+            final invoiceItems = await txn.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
+            double totalPurchaseCost = 0.0;
+            for (final item in invoiceItems) {
+              final productId = (item['product_id'] as num?)?.toInt();
+              final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
+              if (productId == null) continue;
+              final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+              if (productRow.isEmpty) continue;
+              final avgCost = (productRow.first['average_cost'] as num?)?.toDouble()
+                          ?? (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+              totalPurchaseCost += avgCost * baseQuantity;
+            }
 
-            if (transportDebitId != null) {
-              await txn.insert('transactions', {
-                'account_id': transportDebitId,
-                'journal_id': journalId,
-                'debit': transportCharges,
-                'credit': 0.0,
-                'description': 'اجور نقل - $invoiceId',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, transportDebitId, transportCharges, 0.0, now);
-            }
-            if (transportCreditId != null) {
-              await txn.insert('transactions', {
-                'account_id': transportCreditId,
-                'journal_id': journalId,
-                'debit': 0.0,
-                'credit': transportCharges,
-                'description': 'اجور نقل - $invoiceId',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, transportCreditId, 0.0, transportCharges, now);
-            }
-          } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
-            final transportDebitId = transportAccountId;
-            final transportCreditId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-
-            if (transportDebitId != null) {
-              await txn.insert('transactions', {
-                'account_id': transportDebitId,
-                'journal_id': journalId,
-                'debit': transportCharges,
-                'credit': 0.0,
-                'description': 'اجور نقل - $invoiceId',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, transportDebitId, transportCharges, 0.0, now);
-            }
-            if (transportCreditId != null) {
-              await txn.insert('transactions', {
-                'account_id': transportCreditId,
-                'journal_id': journalId,
-                'debit': 0.0,
-                'credit': transportCharges,
-                'description': 'اجور نقل - $invoiceId',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, transportCreditId, 0.0, transportCharges, now);
+            if (totalPurchaseCost > 0) {
+              if (!isReturn) {
+                await txn.insert('transactions', {
+                  'account_id': invAccountId,
+                  'journal_id': journalId,
+                  'debit': totalPurchaseCost,
+                  'credit': 0.0,
+                  'description': 'إضافة مخزون مشتريات - $invoiceId',
+                  'date': now,
+                  'created_at': now,
+                });
+                await txn.insert('transactions', {
+                  'account_id': purchAccountId,
+                  'journal_id': journalId,
+                  'debit': 0.0,
+                  'credit': totalPurchaseCost,
+                  'description': 'تحويل من حساب المشتريات - $invoiceId',
+                  'date': now,
+                  'created_at': now,
+                });
+                await _updateAccountBalanceWithJournal(txn, invAccountId, totalPurchaseCost, 0.0, now);
+                await _updateAccountBalanceWithJournal(txn, purchAccountId, 0.0, totalPurchaseCost, now);
+              } else {
+                await txn.insert('transactions', {
+                  'account_id': purchAccountId,
+                  'journal_id': journalId,
+                  'debit': totalPurchaseCost,
+                  'credit': 0.0,
+                  'description': 'عكس تحويل مشتريات مرتجعة - $invoiceId',
+                  'date': now,
+                  'created_at': now,
+                });
+                await txn.insert('transactions', {
+                  'account_id': invAccountId,
+                  'journal_id': journalId,
+                  'debit': 0.0,
+                  'credit': totalPurchaseCost,
+                  'description': 'تخفيض مخزون مرتجع مشتريات - $invoiceId',
+                  'date': now,
+                  'created_at': now,
+                });
+                await _updateAccountBalanceWithJournal(txn, purchAccountId, totalPurchaseCost, 0.0, now);
+                await _updateAccountBalanceWithJournal(txn, invAccountId, 0.0, totalPurchaseCost, now);
+              }
             }
           }
         }
 
+        // ── Transport Charges ──
+        // NOTE: Transport charges are already included in `total` (total = subtotal - discount + tax + transportCharges).
+        // The main journal entries and cash box update above already account for transport correctly.
+        // No separate transport journal entries are needed here to avoid double-counting.
+
         // تحديث رصيد العميل/المورد
+        // NOTE: `total` already includes transport charges, so no need to add them again
         if (invoice['customer_id'] != null) {
           final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'pos' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-          final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') ? transportCharges : 0);
+          // For credit payments, customer owes the full total (already includes transport)
+          // For cash payments, customer balance should not change (they paid)
+          final customerAmount = paymentMechanism == 'credit' ? total : 0.0;
           if (isDebit) {
-            await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
+            await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoice['customer_id']]);
           } else {
-            await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['customer_id']]);
+            await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoice['customer_id']]);
           }
         }
 
         if (invoice['supplier_id'] != null) {
           final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-          final totalWithTransport = total + (transportCharges > 0 && paymentMechanism == 'credit' && (invoiceType == 'purchase' || invoiceType == 'purchase_return') ? transportCharges : 0);
+          // For credit purchases, supplier is owed the full total (already includes transport)
+          // For cash purchases, supplier balance should not change (we paid)
+          final supplierAmount = paymentMechanism == 'credit' ? total : 0.0;
           if (isCreditToSupplier) {
-            await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['supplier_id']]);
+            await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoice['supplier_id']]);
           } else {
-            await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalWithTransport, now, invoice['supplier_id']]);
+            await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoice['supplier_id']]);
           }
         }
 

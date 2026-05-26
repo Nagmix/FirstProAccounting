@@ -2901,16 +2901,22 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         i.productId == product.id && i.unitName == (unitInfo?['unit_name'] as String? ?? 'قطعة'));
     final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
 
-    // Stock check: skip if allowNegative is true
-    if (!product.allowNegative) {
-      final baseQtyNeeded = requestedQty * factor;
-      if (product.currentStock < baseQtyNeeded) {
-        _showLowStockWarning(product, existingIndex, requestedQty, product.currentStock / factor, unitInfo: unitInfo);
-        return;
+    // Stock check: show warning but always allow adding to cart
+    final baseQtyNeeded = requestedQty * factor;
+    if (product.currentStock < baseQtyNeeded) {
+      if (!product.allowNegative) {
+        // Show non-blocking warning but still add product to cart
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تنبيه: المخزون منخفض لـ ${product.nameAr} (${product.currentStock.toInt()})'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        debugPrint('Product ${product.nameAr} allowNegative=true, adding despite zero/negative stock');
       }
-    } else if (product.currentStock <= 0 && product.currentStock < requestedQty * factor) {
-      // allowNegative but still show a brief info that stock is negative
-      debugPrint('Product ${product.nameAr} allowNegative=true, adding despite zero/negative stock');
     }
 
     _doAddToCartWithUnit(existingIndex, product, unitInfo);
@@ -2973,11 +2979,18 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
     final availableStock = product.currentStock;
 
-    // Skip stock check if allowNegative is true
-    if (!product.allowNegative && availableStock < requestedQty) {
-      // Low stock – show warning but allow proceeding (backorder)
-      _showLowStockWarning(product, existingIndex, requestedQty, availableStock);
-      return;
+    // Show low stock warning but always allow adding to cart
+    if (availableStock < requestedQty) {
+      if (!product.allowNegative) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تنبيه: المخزون منخفض لـ ${product.nameAr} (${availableStock.toInt()})'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
 
     _doAddToCart(existingIndex, product);
