@@ -4737,7 +4737,6 @@ class DatabaseHelper {
     }
 
     // Create the account inside a transaction for atomicity
-    final db = await database;
     return await db.transaction((txn) async {
       // Create account with initial balance = 0 (will be updated via journal)
       final accountId = await txn.insert('accounts', {
