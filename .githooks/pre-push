@@ -1,0 +1,23 @@
+#!/bin/bash
+# Pre-push hook — يشغل فحص الكود قبل الدفع إلى GitHub
+# يتأكد من عدم وجود أخطاء قبل رفع الكود
+
+export PATH="/home/z/my-project/tools/flutter/bin:/home/z/my-project/tools/dart-sdk/bin:$PATH"
+cd /home/z/my-project/FirstProAccounting
+
+echo "🔍 فحص الكود قبل الدفع..."
+
+# Quick analyze - errors only
+ANALYSIS=$(dart analyze lib/ 2>&1)
+ERRORS=$(echo "$ANALYSIS" | grep -c "error -" || true)
+
+if [ "$ERRORS" -gt 0 ]; then
+    echo "❌ يوجد $ERRORS خطأ في الكود! لا يمكن الدفع."
+    echo "$ANALYSIS" | grep "error -"
+    echo ""
+    echo "صلّح الأخطاء ثم حاول مرة أخرى."
+    exit 1
+fi
+
+echo "✅ لا أخطاء — جاري الدفع..."
+exit 0
