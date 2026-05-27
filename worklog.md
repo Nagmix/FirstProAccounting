@@ -403,3 +403,238 @@ Stage Summary:
 - Stock movements are now logged for both stocktaking adjustments and stock transfers
 - All logging is atomic within the same DB transaction as the stock update
 - No screen file changes needed — the enhanced database methods are called by existing screen code
+
+---
+Task ID: 2-b
+Agent: Subagent
+Task: Fix P1 issues - supplier detail double-count, fiscal year substring crash, units/category delete safety
+
+Work Log:
+
+- P1-1: Fixed supplier detail opening balance double-counted
+  - `_totalCredit` and `_totalDebit` getters were adding opening balance + movement totals
+  - `_computeNetPosition()` also added opening balance, causing double-count in bottom stats
+  - Removed opening balance from `_totalCredit` and `_totalDebit` — they now only sum `_allMovements`
+  - Added `_openingBalance` and `_openingBalanceLabel` getters
+  - Updated `_BottomStats` widget to accept and display opening balance separately (shows only if non-zero)
+  - `_computeNetPosition()` still includes opening balance for correct net position calculation
+  - Bottom stats now shows: رصيد افتتاحي (opening balance) | له (credit movements) | عليه (debit movements) | الرصيد (net position)
+
+- P1-2: Fixed fiscal year closedAt.substring crash
+  - Found `closedAt.substring(0, 10)` at annual_posting_screen.dart line 448
+  - Replaced with safe version: `closedAt.length >= 10 ? closedAt.substring(0, 10) : closedAt`
+  - fiscal_year_screen.dart doesn't use closedAt at all — no fix needed there
+
+- P1-3: Fixed units screen delete without checking product references
+  - Added pre-check before showing delete confirmation dialog in `_deleteUnit()`
+  - Queries products table for any rows with base_unit_id, purchase_unit_id, sale_unit_id, or unit_id matching the unit
+  - If products found, shows Arabic error message listing the product names (up to 5) and returns without deleting
+  - The DB-level check in `deleteUnit()` still serves as a safety net
+
+- P1-4: Fixed products screen delete category without checking linked products
+  - Added check in category management dialog's delete handler
+  - Queries products table for rows with matching category_id
+  - If products found, shows Arabic error message listing product names (up to 5) and returns without deleting
+  - The DB-level `deleteCategory()` has no such check — this UI-level guard prevents orphaned data
+
+Stage Summary:
+- 4 P1 issues fixed across 4 files
+- supplier_detail_screen.dart: Opening balance no longer double-counted; shown separately in bottom stats
+- annual_posting_screen.dart: Safe substring for closedAt prevents crash on short strings
+- units_screen.dart: Pre-delete check prevents deleting units used by products (with helpful error listing product names)
+- products_screen.dart: Pre-delete check prevents deleting categories linked to products (with helpful error listing product names)
+
+---
+Task ID: 2-a
+Agent: Subagent
+Task: Fix P1 issues: vouchers, reports, statistics
+
+Work Log:
+- Fix 1: Vouchers Screen - clicking voucher now shows detail instead of opening create screen
+  - Changed onTap from `_navigateToCreateVoucher(initialType: type)` to `_showVoucherDetail(voucher)`
+  - Added `_showVoucherDetail()` method that displays a modal bottom sheet with:
+    - Voucher header (number, type badge, delete button)
+    - Detail rows (date, description, currency, total amount)
+    - Voucher items loaded from DB via `db.getVoucherItems(voucherId)` with account name enrichment
+    - Each item shows account name, debit (red) or credit (green) amount, and item description
+  - Added `_buildDetailRow()` helper widget
+  - Long press still triggers delete; delete button also available inside the detail sheet
+
+- Fix 2: Reports Screen - customer/supplier statement uses fragile name search
+  - Checked DB schema: customers and suppliers tables do NOT have `linked_account_id` or `account_id` columns
+  - In `_loadCustomerStatementReport()`: Changed `final acctRes` to `var acctRes` and added LIKE fallback
+    - First tries exact name match: `WHERE name_ar=? AND currency=?`
+    - If empty and name is non-empty, falls back to: `WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=?`
+  - Same fix applied to `_loadSupplierStatementReport()`
+
+- Fix 3: Statistics Screen - excludes POS invoices from customer stats
+  - Changed `i.type = 'sale'` to `i.type IN ('sale', 'pos')` in the top customers query
+  - POS invoices are now included in the "أفضل العملاء" (Top Customers) calculation
+
+- Fix 4: Reports Screen - null cast crash in invoice ID
+  - Replaced unsafe: `(r['id'] as String?)?.substring(0, (r['id'] as String).length.clamp(1, 12)) ?? ''`
+  - With safe: `() { final idStr = (r['id'] as String?) ?? ''; return idStr.length > 12 ? idStr.substring(0, 12) : idStr; }()`
+  - No more crash if r['id'] is null; empty string returned instead
+
+- Fix 5: Accounting Audit - fragile orphan invoice detection
+  - Checked DB schema: transactions table does NOT have `reference_type`/`reference_id` columns
+  - Replaced fragile `SUBSTR(t.description, -36)` approach with LEFT JOIN approach
+  - New SQL: `LEFT JOIN transactions t ON t.description LIKE '%' || i.id || '%' AND t.description LIKE 'فاتورة%'`
+  - Orphans detected by `t.id IS NULL` (no matching transaction found)
+  - Added comment noting the limitation that transactions table lacks reference_type/reference_id
+
+Stage Summary:
+- 5 P1 bugs fixed across 4 files
+- vouchers_screen.dart: Voucher tap shows detail bottom sheet with items instead of create screen
+- reports_screen.dart: Customer/supplier account lookup has LIKE fallback; null-safe invoice ID display
+- statistics_screen.dart: Top customers now includes POS invoices
+- accounting_audit_screen.dart: Orphan detection uses LEFT JOIN with LIKE instead of fragile SUBSTR
+
+---
+Task ID: T32
+Agent: Subagent
+Task: Add try/catch error handling to data loading operations in 18 screens
+
+Work Log:
+- Audited all 18 screen files for existing try/catch in data loading functions
+- Found 16 screens lacking try/catch (would cause infinite spinner on DB error)
+- Found 2 screens already had try/catch:
+  - quotations_screen.dart: Already had full try/catch with snackbar ✓
+  - dashboard_screen.dart: Had try/catch but catch block was missing snackbar → fixed
+
+- Added try/catch to 16 screens with consistent error handling pattern:
+  1. vouchers_screen.dart - _loadData()
+  2. inventory_voucher_screen.dart - _loadData()
+  3. cash_boxes_screen.dart - _loadCashBoxes()
+  4. currencies_screen.dart - _loadCurrencies()
+  5. customers_screen.dart - _loadCustomers()
+  6. suppliers_screen.dart - _loadSuppliers()
+  7. employees_screen.dart - _loadEmployees()
+  8. products_screen.dart - _loadData()
+  9. units_screen.dart - _loadUnits()
+  10. warehouses_screen.dart - _loadWarehouses()
+  11. shifts_screen.dart - _loadData()
+  12. notifications_screen.dart - _loadNotifications()
+  13. support_screen.dart - _loadComplaintsFromDb()
+  14. sales_invoices_screen.dart - _loadInvoices()
+  15. purchase_invoices_screen.dart - _loadInvoices()
+  16. invoices_screen.dart - _loadInvoices()
+
+- Fixed 1 screen with incomplete try/catch:
+  - dashboard_screen.dart - Added snackbar to existing catch block
+
+- All catch blocks follow the same pattern:
+  - `setState(() => _isLoading = false)` with `mounted` check (stops spinner)
+  - `ScaffoldMessenger.of(context).showSnackBar(...)` with Arabic error message and AppColors.error
+  - All setState calls in try blocks also wrapped with mounted checks
+
+- Verified AppColors import already present in all 18 files (no import additions needed)
+
+Stage Summary:
+- 17 files modified (16 new try/catch + 1 catch block enhanced)
+- 1 file skipped (quotations_screen.dart already had proper try/catch)
+- No more infinite spinners on database errors — users see Arabic error message instead
+
+---
+Task ID: T39+T41+T42
+Agent: Subagent
+Task: Add currency selection (T39), date filtering in account ledger (T41), search debounce (T42)
+
+Work Log:
+
+- T39: Added currency dropdown (YER/SAR/USD) to add_customer_sheet.dart
+  - Added `String _currency = 'YER'` state variable with `_currencyInfo` static map
+  - Added DropdownButtonFormField after address field, before opening balance
+  - Passed `_currency` to Customer constructor in `_save()`
+
+- T39: Added currency dropdown (YER/SAR/USD) to add_supplier_sheet.dart
+  - Added `String _currency = 'YER'` state variable with `_currencyInfo` static map
+  - Added DropdownButtonFormField after address field, before opening balance
+  - Changed hardcoded `'currency': 'YER'` to `'currency': _currency` in `_save()`
+  - Initialized `_currency` from `s.currency` when editing existing supplier
+
+- T41: Added date range filtering to account_ledger_screen.dart
+  - Added `DateTime? _fromDate` and `DateTime? _toDate` state variables
+  - Added `_filteredTransactions` getter that filters by date range
+  - Added `_pickFromDate()`, `_pickToDate()`, `_clearDateFilter()` methods
+  - Added `_DateFilterBar` widget with from/to date picker buttons and clear button
+  - Filter bar shows after summary row, before transaction list
+  - Summary totals computed from filtered transactions
+  - Running balance correctly computed with opening balance adjustment for date-filtered range
+  - Added `import 'package:intl/intl.dart' as intl` for date formatting
+
+- T42: Added 300ms search debounce to products_screen.dart
+  - Added `Timer? _searchDebounce` field
+  - Replaced immediate `_searchQuery` update with debounced Timer in listener
+  - Added `_searchDebounce?.cancel()` in dispose()
+  - Added `import 'dart:async'`
+
+- T42: Added 300ms search debounce to vouchers_screen.dart
+  - Added `Timer? _searchDebounce` field
+  - Replaced immediate `_searchQuery = value; _filterVouchers()` with debounced Timer in onChanged
+  - Added `_searchDebounce?.cancel()` in dispose()
+  - Added `import 'dart:async'`
+
+- T42: Added 300ms search debounce to customers_screen.dart
+  - Added `Timer? _searchDebounce` field
+  - Replaced immediate `_searchQuery` update with debounced Timer in listener
+  - Added `_searchDebounce?.cancel()` in dispose()
+  - Added `import 'dart:async'`
+
+Stage Summary:
+- 6 files modified across 3 tasks
+- add_customer_sheet.dart: Currency dropdown (YER/SAR/USD) added, defaults to YER
+- add_supplier_sheet.dart: Currency dropdown (YER/SAR/USD) added, defaults to YER, loaded on edit
+- account_ledger_screen.dart: Date range filter bar with from/to pickers and clear button; running balances adjusted for filtered range
+- products_screen.dart: 300ms debounce on search
+- vouchers_screen.dart: 300ms debounce on search
+- customers_screen.dart: 300ms debounce on search
+
+---
+Task ID: T33+T36+T44
+Agent: Subagent
+Task: Fix memory leaks, add numeric validation, update deprecated APIs
+
+Work Log:
+
+- T33: Verified all 6 audited files already have proper dispose() methods
+  - create_invoice_screen.dart: 6 controllers + all disposed ✅
+  - add_invoice_item_sheet.dart: 5 controllers + all disposed ✅
+  - pos_screen.dart: searchController, searchFocusNode, sheetController, ticker + all disposed ✅
+  - add_expense_screen.dart: 6 controllers + all disposed ✅
+  - settings_screen.dart: 6 controllers + autoBackupTimer + all disposed ✅
+  - add_product_sheet.dart: 16 controllers + PageController + ScrollController + all disposed ✅
+  - No changes needed — previous agents already implemented proper dispose
+
+- T36: Added input validation for numeric fields
+  - add_invoice_item_sheet.dart: Enhanced _addItem() validation
+    - Changed error messages to be more specific: "يرجى إدخال كمية صحيحة أكبر من صفر" / "يرجى إدخال سعر صحيح أكبر من صفر"
+    - Added negative discount check: "الخصم لا يمكن أن يكون سالباً"
+    - Added discount exceeds item total check: "الخصم لا يمكن أن يتجاوز إجمالي الصنف"
+  - pos_screen.dart: Added discount validation in _showDiscountDialog()
+    - Negative discount: "الخصم لا يمكن أن يكون سالباً"
+    - Fixed discount exceeds subtotal: "الخصم لا يمكن أن يتجاوز الإجمالي"
+    - Percentage discount exceeds 100%: "نسبة الخصم لا يمكن أن تتجاوز 100%"
+  - cash_transfer_screen.dart: Already had `amount <= 0` validation ✅
+  - currency_exchange_screen.dart: Already had `fromAmount <= 0` and `exchangeRate <= 0` validation ✅
+
+- T44: Replaced all `.withOpacity()` with `.withValues(alpha:)` across 3 files (11 occurrences)
+  - notifications_screen.dart: 1 replacement
+    - `_colorForType(type).withOpacity(0.15)` → `.withValues(alpha: 0.15)`
+  - app_lock_screen.dart: 8 replacements
+    - `AppColors.primary.withOpacity(0.8)` → `.withValues(alpha: 0.8)`
+    - `AppColors.primary.withOpacity(0.3)` → `.withValues(alpha: 0.3)` (2 occurrences)
+    - `AppColors.primary.withOpacity(0.85)` → `.withValues(alpha: 0.85)`
+    - `AppColors.primary.withOpacity(0.05)` → `.withValues(alpha: 0.05)`
+    - `AppColors.primary/error.withOpacity(0.4)` → `.withValues(alpha: 0.4)`
+    - `AppColors.primary.withOpacity(0.08)` → `.withValues(alpha: 0.08)`
+    - `AppColors.primary.withOpacity(0.15)` → `.withValues(alpha: 0.15)`
+  - quotations_screen.dart: 3 replacements
+    - `Colors.black.withOpacity(0.04)` → `.withValues(alpha: 0.04)`
+    - `statusColor.withOpacity(0.1)` → `.withValues(alpha: 0.1)` (2 occurrences)
+  - Verified zero remaining `.withOpacity(` occurrences in entire lib/ directory
+
+Stage Summary:
+- T33: No code changes needed — all controllers already properly disposed in all 6 audited files
+- T36: 2 files modified — add_invoice_item_sheet.dart (4 validation checks), pos_screen.dart (3 validation checks)
+- T44: 3 files modified — 11 withOpacity calls replaced with withValues(alpha:)

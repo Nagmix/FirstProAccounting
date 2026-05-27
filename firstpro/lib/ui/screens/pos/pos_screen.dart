@@ -2805,8 +2805,30 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             ),
             ElevatedButton(
               onPressed: () {
+                final value = double.tryParse(controller.text) ?? 0;
+                // Validation: discount must be >= 0
+                if (value < 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('الخصم لا يمكن أن يكون سالباً'), backgroundColor: AppColors.error),
+                  );
+                  return;
+                }
+                // Validation: fixed discount must not exceed total
+                if (_discountType == DiscountType.fixed && value > _subtotal) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('الخصم لا يمكن أن يتجاوز الإجمالي'), backgroundColor: AppColors.error),
+                  );
+                  return;
+                }
+                // Validation: percentage discount must not exceed 100%
+                if (_discountType == DiscountType.percentage && value > 100) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('نسبة الخصم لا يمكن أن تتجاوز 100%'), backgroundColor: AppColors.error),
+                  );
+                  return;
+                }
                 setState(() {
-                  _orderDiscount = double.tryParse(controller.text) ?? 0;
+                  _orderDiscount = value;
                 });
                 Navigator.pop(ctx);
               },

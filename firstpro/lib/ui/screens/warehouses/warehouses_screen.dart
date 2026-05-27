@@ -33,21 +33,32 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
 
   Future<void> _loadWarehouses() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final warehouses = await db.getAllWarehouses();
+    try {
+      final db = DatabaseHelper();
+      final warehouses = await db.getAllWarehouses();
 
-    // Load product counts per warehouse
-    final counts = <int, int>{};
-    for (final w in warehouses) {
-      final id = w['id'] as int;
-      counts[id] = await db.getProductCountByWarehouse(id);
+      // Load product counts per warehouse
+      final counts = <int, int>{};
+      for (final w in warehouses) {
+        final id = w['id'] as int;
+        counts[id] = await db.getProductCountByWarehouse(id);
+      }
+
+      if (mounted) {
+        setState(() {
+          _warehouses = warehouses;
+          _productCounts = counts;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
     }
-
-    setState(() {
-      _warehouses = warehouses;
-      _productCounts = counts;
-      _isLoading = false;
-    });
   }
 
   List<Map<String, dynamic>> get _filteredWarehouses {

@@ -120,6 +120,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         setState(() {
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
       }
     }
   }

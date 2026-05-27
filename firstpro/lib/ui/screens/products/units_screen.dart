@@ -39,13 +39,22 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
 
   Future<void> _loadUnits() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final rawUnits = await db.getAllUnits();
-    if (!mounted) return;
-    setState(() {
-      _allUnits = rawUnits.map((m) => Unit.fromMap(m)).toList();
-      _isLoading = false;
-    });
+    try {
+      final db = DatabaseHelper();
+      final rawUnits = await db.getAllUnits();
+      if (!mounted) return;
+      setState(() {
+        _allUnits = rawUnits.map((m) => Unit.fromMap(m)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   List<Unit> _filteredUnits(String type) {
@@ -282,6 +291,34 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
   }
 
   Future<void> _deleteUnit(Unit unit) async {
+    // Pre-check: verify no products reference this unit before showing confirmation
+    try {
+      final db = DatabaseHelper();
+      final database = await db.database;
+      final productsWithUnit = await database.query(
+        'products',
+        columns: ['id', 'name_ar'],
+        where: 'base_unit_id = ? OR purchase_unit_id = ? OR sale_unit_id = ? OR unit_id = ?',
+        whereArgs: [unit.id, unit.id, unit.id, unit.id],
+        limit: 5,
+      );
+      if (productsWithUnit.isNotEmpty) {
+        if (!mounted) return;
+        final productNames = productsWithUnit.map((p) => p['name_ar'] as String? ?? '').join('، ');
+        final extra = productsWithUnit.length > 5 ? ' وغيرها...' : '';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('لا يمكن حذف الوحدة "${unit.nameAr}" لأنها مستخدمة في الأصناف: $productNames$extra'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      // If pre-check fails, let the actual delete handle it
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

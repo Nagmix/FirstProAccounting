@@ -66,14 +66,22 @@ class _SupportScreenState extends State<SupportScreen>
 
   // ── Load complaints from notifications table ────────────────────
   Future<void> _loadComplaintsFromDb() async {
-    final rows = await _dbHelper.getNotificationsByType('complaint');
-    if (!mounted) return;
-    setState(() {
-      _previousComplaints.clear();
-      for (final row in rows) {
-        _previousComplaints.add(_Complaint.fromMap(row));
+    try {
+      final rows = await _dbHelper.getNotificationsByType('complaint');
+      if (!mounted) return;
+      setState(() {
+        _previousComplaints.clear();
+        for (final row in rows) {
+          _previousComplaints.add(_Complaint.fromMap(row));
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
       }
-    });
+    }
   }
 
   // ════════════════════════════════════════════════════════════════

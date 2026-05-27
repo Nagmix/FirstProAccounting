@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
@@ -26,6 +27,7 @@ class _CustomersScreenState extends State<CustomersScreen>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Timer? _searchDebounce;
   List<Customer> _customers = [];
   bool _isLoading = true;
 
@@ -34,13 +36,17 @@ class _CustomersScreenState extends State<CustomersScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.trim());
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+      });
     });
     _loadCustomers();
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -48,12 +54,23 @@ class _CustomersScreenState extends State<CustomersScreen>
 
   Future<void> _loadCustomers() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final maps = await db.getAllCustomers();
-    setState(() {
-      _customers = maps.map((m) => Customer.fromMap(m)).toList();
-      _isLoading = false;
-    });
+    try {
+      final db = DatabaseHelper();
+      final maps = await db.getAllCustomers();
+      if (mounted) {
+        setState(() {
+          _customers = maps.map((m) => Customer.fromMap(m)).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   // ── Filter logic ──────────────────────────────────────────────

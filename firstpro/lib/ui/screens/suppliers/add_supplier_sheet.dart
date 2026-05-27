@@ -26,8 +26,15 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
   final _notesController = TextEditingController();
 
   String _balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
+  String _currency = 'YER';
   String _contactMethod = 'whatsapp'; // 'whatsapp' or 'phone'
   bool _isSaving = false;
+
+  static const _currencyInfo = {
+    'YER': {'symbol': 'ر.ي', 'label': 'ريال يمني'},
+    'SAR': {'symbol': 'ر.س', 'label': 'ريال سعودي'},
+    'USD': {'symbol': '\$', 'label': 'دولار أمريكي'},
+  };
   bool get _isEditing => widget.supplier != null;
 
   @override
@@ -41,6 +48,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       _addressController.text = s.address ?? '';
       _balanceController.text = s.balance > 0 ? s.balance.toStringAsFixed(2) : '';
       _balanceType = s.balanceType;
+      _currency = s.currency;
       _debtCeilingController.text = s.debtCeiling > 0 ? s.debtCeiling.toStringAsFixed(2) : '';
       _contactMethod = s.contactMethod ?? 'whatsapp';
       _notesController.text = s.notes ?? '';
@@ -73,7 +81,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       'address': _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
       'balance': balance,
       'balance_type': _balanceType,
-      'currency': 'YER',
+      'currency': _currency,
       'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       'debt_ceiling': double.tryParse(_debtCeilingController.text) ?? 0.0,
       'contact_method': _contactMethod,
@@ -198,6 +206,21 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                   labelText: 'العنوان',
                   prefixIcon: Icon(Icons.location_on),
                 ),
+              ),
+              const SizedBox(height: 14),
+
+              // ── Currency ───────────────────────────────────────────
+              DropdownButtonFormField<String>(
+                value: _currency,
+                decoration: const InputDecoration(
+                  labelText: 'العملة',
+                  prefixIcon: Icon(Icons.currency_exchange),
+                ),
+                items: _currencyInfo.entries.map((e) => DropdownMenuItem(
+                  value: e.key,
+                  child: Text('${e.value['label']} (${e.value['symbol']})'),
+                )).toList(),
+                onChanged: (v) => setState(() => _currency = v!),
               ),
               const SizedBox(height: 14),
 

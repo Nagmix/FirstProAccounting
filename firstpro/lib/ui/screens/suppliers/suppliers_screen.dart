@@ -48,12 +48,23 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   // ── Load suppliers from database ──────────────────────────────
   Future<void> _loadSuppliers() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final maps = await db.getAllSuppliers();
-    setState(() {
-      _suppliers = maps.map((m) => Supplier.fromMap(m)).toList();
-      _isLoading = false;
-    });
+    try {
+      final db = DatabaseHelper();
+      final maps = await db.getAllSuppliers();
+      if (mounted) {
+        setState(() {
+          _suppliers = maps.map((m) => Supplier.fromMap(m)).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   // ── Filter logic ──────────────────────────────────────────────

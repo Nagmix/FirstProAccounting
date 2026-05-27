@@ -25,14 +25,23 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final vouchers = await db.getInventoryVouchers(searchQuery: _searchQuery.isEmpty ? null : _searchQuery);
-    if (mounted) {
-      setState(() {
-        _vouchers = vouchers;
-        _isLoading = false;
-      });
-      _filterVouchers();
+    try {
+      final db = DatabaseHelper();
+      final vouchers = await db.getInventoryVouchers(searchQuery: _searchQuery.isEmpty ? null : _searchQuery);
+      if (mounted) {
+        setState(() {
+          _vouchers = vouchers;
+          _isLoading = false;
+        });
+        _filterVouchers();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
     }
   }
 

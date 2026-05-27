@@ -456,7 +456,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       totalPaid += paid;
       totalRemaining += remaining;
       return {
-        'رقم الفاتورة': (r['id'] as String?)?.substring(0, (r['id'] as String).length.clamp(1, 12)) ?? '',
+        'رقم الفاتورة': () { final idStr = (r['id'] as String?) ?? ''; return idStr.length > 12 ? idStr.substring(0, 12) : idStr; }(),
         'النوع': _invoiceTypeAr(r['type'] as String? ?? '', isReturn: r['is_return'] as int?),
         'الجهة': r['entity_name'] as String? ?? '',
         'الإجمالي': total,
@@ -770,9 +770,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final custName = cust['name'] as String? ?? '';
     final custCurrency = cust['currency'] as String? ?? 'YER';
 
-    // Get account movements for the customer's linked account
-    final acctRes = await database.rawQuery(
+    // Try to find the customer's receivable account by exact name first, then fallback to LIKE
+    var acctRes = await database.rawQuery(
       "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1", [custName, custCurrency]);
+    if (acctRes.isEmpty && custName.isNotEmpty) {
+      acctRes = await database.rawQuery(
+        "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
+        ['%$custName%', '%$custName%', custCurrency]);
+    }
     if (acctRes.isEmpty) {
       _reportRows = [];
       return;
@@ -810,8 +815,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final supName = sup['name'] as String? ?? '';
     final supCurrency = sup['currency'] as String? ?? 'YER';
 
-    final acctRes = await database.rawQuery(
+    // Try to find the supplier's payable account by exact name first, then fallback to LIKE
+    var acctRes = await database.rawQuery(
       "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1", [supName, supCurrency]);
+    if (acctRes.isEmpty && supName.isNotEmpty) {
+      acctRes = await database.rawQuery(
+        "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
+        ['%$supName%', '%$supName%', supCurrency]);
+    }
     if (acctRes.isEmpty) { _reportRows = []; return; }
 
     final accountId = acctRes.first['id'] as int;

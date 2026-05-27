@@ -445,7 +445,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
                             ),
                             if (isClosed && closedAt != null) ...[
                               const SizedBox(height: 2),
-                              Text('تاريخ الإقفال: ${closedAt.substring(0, 10)}', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                              Text('تاريخ الإقفال: ${closedAt.length >= 10 ? closedAt.substring(0, 10) : closedAt}', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
                             ],
                             if (isClosed) ...[
                               const SizedBox(height: 2),

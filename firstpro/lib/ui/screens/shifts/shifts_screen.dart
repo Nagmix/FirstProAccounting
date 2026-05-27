@@ -20,9 +20,20 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final shifts = await db.getAllShifts();
-    setState(() { _shifts = shifts; _isLoading = false; });
+    try {
+      final db = DatabaseHelper();
+      final shifts = await db.getAllShifts();
+      if (mounted) {
+        setState(() { _shifts = shifts; _isLoading = false; });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   @override

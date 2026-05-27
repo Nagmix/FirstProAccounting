@@ -300,9 +300,18 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
     return result;
   }
 
-  // ── Totals for bottom statistics ──────────────────────────────
+  // ── Opening balance (separate from movements) ────────────────
+  double get _openingBalance {
+    return widget.supplier.balance;
+  }
+
+  String get _openingBalanceLabel {
+    return widget.supplier.balanceType == 'credit' ? 'له' : 'عليه';
+  }
+
+  // ── Totals for bottom statistics (movements only, no opening balance) ──
   double get _totalCredit {
-    double total = widget.supplier.balanceType == 'credit' ? widget.supplier.balance : 0;
+    double total = 0;
     for (final m in _allMovements) {
       if (_getMovementDirection(m) == 'credit') {
         total += _getMovementAmount(m);
@@ -312,7 +321,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   }
 
   double get _totalDebit {
-    double total = widget.supplier.balanceType == 'debit' ? widget.supplier.balance : 0;
+    double total = 0;
     for (final m in _allMovements) {
       if (_getMovementDirection(m) == 'debit') {
         total += _getMovementAmount(m);
@@ -979,6 +988,8 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                     totalDebit: _totalDebit,
                     netPosition: netPosition,
                     balanceLabel: balanceLabel,
+                    openingBalance: _openingBalance,
+                    openingBalanceLabel: _openingBalanceLabel,
                     isDark: isDark,
                   ),
                 ],
@@ -1885,6 +1896,8 @@ class _BottomStats extends StatelessWidget {
   final double totalDebit;
   final double netPosition;
   final String balanceLabel;
+  final double openingBalance;
+  final String openingBalanceLabel;
   final bool isDark;
 
   const _BottomStats({
@@ -1892,6 +1905,8 @@ class _BottomStats extends StatelessWidget {
     required this.totalDebit,
     required this.netPosition,
     required this.balanceLabel,
+    required this.openingBalance,
+    required this.openingBalanceLabel,
     required this.isDark,
   });
 
@@ -1921,48 +1936,70 @@ class _BottomStats extends StatelessWidget {
           ),
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // له
-          Expanded(
-            child: _StatItem(
-              label: 'له',
-              value: CurrencyFormatter.format(totalCredit),
-              color: AppColors.success,
-              icon: Icons.south_east,
+          // Opening balance row (only if non-zero)
+          if (openingBalance.abs() > 0.005)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _StatItem(
+                      label: 'رصيد افتتاحي ($openingBalanceLabel)',
+                      value: CurrencyFormatter.format(openingBalance),
+                      color: openingBalanceLabel == 'له' ? AppColors.success : AppColors.error,
+                      icon: Icons.account_balance,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Container(
-            width: 1,
-            height: 36,
-            color: isDark ? AppColors.darkDivider : AppColors.divider,
-          ),
-          // عليه
-          Expanded(
-            child: _StatItem(
-              label: 'عليه',
-              value: CurrencyFormatter.format(totalDebit),
-              color: AppColors.error,
-              icon: Icons.north_west,
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 36,
-            color: isDark ? AppColors.darkDivider : AppColors.divider,
-          ),
-          // الرصيد
-          Expanded(
-            child: _StatItem(
-              label: 'الرصيد ($balanceLabel)',
-              value: CurrencyFormatter.format(netPosition.abs()),
-              color: netPosition.abs() < 0.005
-                  ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-                  : netPosition > 0
-                      ? AppColors.success
-                      : AppColors.error,
-              icon: Icons.balance,
-            ),
+          Row(
+            children: [
+              // له
+              Expanded(
+                child: _StatItem(
+                  label: 'له',
+                  value: CurrencyFormatter.format(totalCredit),
+                  color: AppColors.success,
+                  icon: Icons.south_east,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 36,
+                color: isDark ? AppColors.darkDivider : AppColors.divider,
+              ),
+              // عليه
+              Expanded(
+                child: _StatItem(
+                  label: 'عليه',
+                  value: CurrencyFormatter.format(totalDebit),
+                  color: AppColors.error,
+                  icon: Icons.north_west,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 36,
+                color: isDark ? AppColors.darkDivider : AppColors.divider,
+              ),
+              // الرصيد
+              Expanded(
+                child: _StatItem(
+                  label: 'الرصيد ($balanceLabel)',
+                  value: CurrencyFormatter.format(netPosition.abs()),
+                  color: netPosition.abs() < 0.005
+                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
+                      : netPosition > 0
+                          ? AppColors.success
+                          : AppColors.error,
+                  icon: Icons.balance,
+                ),
+              ),
+            ],
           ),
         ],
       ),

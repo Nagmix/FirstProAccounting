@@ -4,6 +4,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/account_model.dart';
+import 'package:intl/intl.dart' as intl;
 
 class AccountLedgerScreen extends StatefulWidget {
   final Account account;
@@ -17,6 +18,8 @@ class AccountLedgerScreen extends StatefulWidget {
 class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoading = true;
+  DateTime? _fromDate;
+  DateTime? _toDate;
 
   final _typeColors = {
     AccountType.ASSET: AppColors.primary,
@@ -54,6 +57,51 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     }
   }
 
+  List<Map<String, dynamic>> get _filteredTransactions {
+    if (_fromDate == null && _toDate == null) return _transactions;
+    return _transactions.where((tx) {
+      final dateStr = tx['date'] as String? ?? tx['created_at'] as String? ?? '';
+      DateTime? txDate;
+      try { txDate = DateTime.parse(dateStr); } catch (_) { return true; }
+      if (_fromDate != null && txDate.isBefore(_fromDate!)) return false;
+      if (_toDate != null && txDate.isAfter(_toDate!)) return false;
+      return true;
+    }).toList();
+  }
+
+  Future<void> _pickFromDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fromDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'من تاريخ',
+      cancelText: 'إلغاء',
+      confirmText: 'اختيار',
+    );
+    if (picked != null) setState(() => _fromDate = picked);
+  }
+
+  Future<void> _pickToDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _toDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'إلى تاريخ',
+      cancelText: 'إلغاء',
+      confirmText: 'اختيار',
+    );
+    if (picked != null) setState(() => _toDate = picked);
+  }
+
+  void _clearDateFilter() {
+    setState(() {
+      _fromDate = null;
+      _toDate = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,10 +109,12 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     final color = _typeColors[widget.account.accountType] ?? AppColors.primary;
     final icon = _typeIcons[widget.account.accountType] ?? Icons.menu_book;
 
-    // Compute summary totals
+    final filteredTx = _filteredTransactions;
+
+    // Compute summary totals (always from ALL transactions for correct running balance)
     double totalDebit = 0;
     double totalCredit = 0;
-    for (final tx in _transactions) {
+    for (final tx in filteredTx) {
       totalDebit += (tx['debit'] as num?)?.toDouble() ?? 0.0;
       totalCredit += (tx['credit'] as num?)?.toDouble() ?? 0.0;
     }
@@ -72,11 +122,31 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
 
     // Compute running balances
     // Start from opening balance so final running balance matches account's current balance
-    final openingBalance = widget.account.balance - netBalance;
+    // When date filter is active, compute opening balance for the filtered set
+    double openingBalance;
+    if (_fromDate == null && _toDate == null) {
+      openingBalance = widget.account.balance - netBalance;
+    } else {
+      // Compute opening balance from all transactions before the filter range
+      double preFilterDebit = 0;
+      double preFilterCredit = 0;
+      for (final tx in _transactions) {
+        final dateStr = tx['date'] as String? ?? tx['created_at'] as String? ?? '';
+        DateTime? txDate;
+        try { txDate = DateTime.parse(dateStr); } catch (_) { txDate = null; }
+        if (txDate != null && _fromDate != null && txDate.isBefore(_fromDate!)) {
+          preFilterDebit += (tx['debit'] as num?)?.toDouble() ?? 0.0;
+          preFilterCredit += (tx['credit'] as num?)?.toDouble() ?? 0.0;
+        }
+      }
+      openingBalance = (widget.account.balance - (_transactions.fold<double>(0, (sum, tx) =>
+        sum + ((tx['debit'] as num?)?.toDouble() ?? 0.0) - ((tx['credit'] as num?)?.toDouble() ?? 0.0))))
+        + preFilterDebit - preFilterCredit;
+    }
     final runningBalances = <double>[];
     double running = openingBalance;
     // Transactions are ordered date DESC, so reverse for running balance
-    final reversed = _transactions.reversed.toList();
+    final reversed = filteredTx.reversed.toList();
     for (final tx in reversed) {
       final debit = (tx['debit'] as num?)?.toDouble() ?? 0.0;
       final credit = (tx['credit'] as num?)?.toDouble() ?? 0.0;
@@ -86,8 +156,8 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     // Map back: index in original list -> running balance
     // original index i corresponds to reversed index (len - 1 - i)
     final runningMap = <int, double>{};
-    for (int i = 0; i < _transactions.length; i++) {
-      final revIdx = _transactions.length - 1 - i;
+    for (int i = 0; i < filteredTx.length; i++) {
+      final revIdx = filteredTx.length - 1 - i;
       runningMap[i] = runningBalances[revIdx];
     }
 
@@ -123,8 +193,20 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                       ),
                     ),
 
+                    // ── Date Filter Bar ──────────────────────────────
+                    SliverToBoxAdapter(
+                      child: _DateFilterBar(
+                        fromDate: _fromDate,
+                        toDate: _toDate,
+                        onFromTap: _pickFromDate,
+                        onToTap: _pickToDate,
+                        onClear: _clearDateFilter,
+                        isDark: isDark,
+                      ),
+                    ),
+
                     // ── Transactions List or Empty State ───────────
-                    if (_transactions.isEmpty)
+                    if (filteredTx.isEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: _EmptyState(color: color),
@@ -133,16 +215,16 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                       SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            final tx = _transactions[index];
+                            final tx = filteredTx[index];
                             final running = runningMap[index] ?? 0.0;
                             return _TransactionCard(
                               transaction: tx,
                               runningBalance: running,
                               isDark: isDark,
-                              isLast: index == _transactions.length - 1,
+                              isLast: index == filteredTx.length - 1,
                             );
                           },
-                          childCount: _transactions.length,
+                          childCount: filteredTx.length,
                         ),
                       ),
 
@@ -393,6 +475,138 @@ class _SummaryItem extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
       ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Date Filter Bar Widget
+// ═══════════════════════════════════════════════════════════════════════
+
+class _DateFilterBar extends StatelessWidget {
+  final DateTime? fromDate;
+  final DateTime? toDate;
+  final VoidCallback onFromTap;
+  final VoidCallback onToTap;
+  final VoidCallback onClear;
+  final bool isDark;
+
+  const _DateFilterBar({
+    required this.fromDate,
+    required this.toDate,
+    required this.onFromTap,
+    required this.onToTap,
+    required this.onClear,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasFilter = fromDate != null || toDate != null;
+    final dateFormat = intl.DateFormat('yyyy/MM/dd');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      decoration: BoxDecoration(
+        color: hasFilter
+            ? AppColors.primary.withValues(alpha: 0.06)
+            : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+        borderRadius: BorderRadius.circular(12),
+        border: hasFilter
+            ? Border.all(color: AppColors.primary.withValues(alpha: 0.3))
+            : null,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.filter_list, size: 18, color: hasFilter ? AppColors.primary : AppColors.textHint),
+          const SizedBox(width: 8),
+          // From date button
+          Expanded(
+            child: InkWell(
+              onTap: onFromTap,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: fromDate != null
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.calendar_today, size: 14,
+                      color: fromDate != null ? AppColors.primary : AppColors.textHint),
+                    const SizedBox(width: 4),
+                    Text(
+                      fromDate != null ? dateFormat.format(fromDate!) : 'من تاريخ',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: fromDate != null ? AppColors.primary : AppColors.textHint,
+                        fontWeight: fromDate != null ? FontWeight.w700 : FontWeight.w500,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text('—', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+          const SizedBox(width: 4),
+          // To date button
+          Expanded(
+            child: InkWell(
+              onTap: onToTap,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: toDate != null
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.calendar_today, size: 14,
+                      color: toDate != null ? AppColors.primary : AppColors.textHint),
+                    const SizedBox(width: 4),
+                    Text(
+                      toDate != null ? dateFormat.format(toDate!) : 'إلى تاريخ',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: toDate != null ? AppColors.primary : AppColors.textHint,
+                        fontWeight: toDate != null ? FontWeight.w700 : FontWeight.w500,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Clear button
+          if (hasFilter) ...[
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: onClear,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.close, size: 16, color: AppColors.error),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

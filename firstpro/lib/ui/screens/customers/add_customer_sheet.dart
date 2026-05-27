@@ -25,7 +25,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
   String _contactMethod = 'whatsapp';
   String _balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
+  String _currency = 'YER';
   bool _isSaving = false;
+
+  static const _currencyInfo = {
+    'YER': {'symbol': 'ر.ي', 'label': 'ريال يمني'},
+    'SAR': {'symbol': 'ر.س', 'label': 'ريال سعودي'},
+    'USD': {'symbol': '\$', 'label': 'دولار أمريكي'},
+  };
 
   @override
   void dispose() {
@@ -54,6 +61,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       balance: double.tryParse(_balanceController.text) ?? 0.0,
       balanceType: _balanceType,
+      currency: _currency,
       debtCeiling: double.tryParse(_debtCeilingController.text) ?? 0.0,
     );
 
@@ -140,6 +148,21 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(Icons.location_on)),
                 ),
                 const SizedBox(height:  14),
+
+                // العملة
+                DropdownButtonFormField<String>(
+                  value: _currency,
+                  decoration: const InputDecoration(
+                    labelText: 'العملة',
+                    prefixIcon: Icon(Icons.currency_exchange),
+                  ),
+                  items: _currencyInfo.entries.map((e) => DropdownMenuItem(
+                    value: e.key,
+                    child: Text('${e.value['label']} (${e.value['symbol']})'),
+                  )).toList(),
+                  onChanged: (v) => setState(() => _currency = v!),
+                ),
+                const SizedBox(height: 14),
 
                 // الرصيد الافتتاحي + اتجاه الرصيد
                 Row(

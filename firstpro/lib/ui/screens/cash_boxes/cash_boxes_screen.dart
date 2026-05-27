@@ -33,12 +33,23 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
 
   Future<void> _loadCashBoxes() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final maps = await db.getAllCashBoxes();
-    setState(() {
-      _cashBoxes = maps.map((m) => CashBox.fromMap(m)).toList();
-      _isLoading = false;
-    });
+    try {
+      final db = DatabaseHelper();
+      final maps = await db.getAllCashBoxes();
+      if (mounted) {
+        setState(() {
+          _cashBoxes = maps.map((m) => CashBox.fromMap(m)).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   List<CashBox> _filterByTab(int tabIndex) {

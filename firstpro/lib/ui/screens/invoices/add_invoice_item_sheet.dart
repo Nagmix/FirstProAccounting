@@ -375,11 +375,19 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
       return;
     }
     if (_quantity <= 0) {
-      context.showErrorSnackBar('الرجاء إدخال كمية صحيحة');
+      context.showErrorSnackBar('يرجى إدخال كمية صحيحة أكبر من صفر');
       return;
     }
     if (_unitPrice <= 0) {
-      context.showErrorSnackBar('الرجاء إدخال سعر صحيح');
+      context.showErrorSnackBar('يرجى إدخال سعر صحيح أكبر من صفر');
+      return;
+    }
+    if (_discount < 0) {
+      context.showErrorSnackBar('الخصم لا يمكن أن يكون سالباً');
+      return;
+    }
+    if (_discount > _quantity * _unitPrice) {
+      context.showErrorSnackBar('الخصم لا يمكن أن يتجاوز إجمالي الصنف');
       return;
     }
 

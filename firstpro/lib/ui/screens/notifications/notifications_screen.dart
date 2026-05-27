@@ -22,17 +22,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _loadNotifications() async {
-    final db = await _db.database;
-    final notifications = await db.query(
-      'notifications',
-      orderBy: 'created_at DESC',
-    );
+    try {
+      final db = await _db.database;
+      final notifications = await db.query(
+        'notifications',
+        orderBy: 'created_at DESC',
+      );
 
-    if (mounted) {
-      setState(() {
-        _notifications = notifications;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _notifications = notifications;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
     }
   }
 
@@ -146,7 +155,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: _colorForType(type).withOpacity(0.15),
+                          backgroundColor: _colorForType(type).withValues(alpha: 0.15),
                           child: Icon(
                             _iconForType(type),
                             color: _colorForType(type),

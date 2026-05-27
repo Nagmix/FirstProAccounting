@@ -61,7 +61,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
       final topCustomersResult = await dbInstance.rawQuery('''
         SELECT c.id, c.name, COALESCE(SUM(i.total), 0.0) AS total_sales
         FROM customers c
-        LEFT JOIN invoices i ON i.customer_id = c.id AND i.type = 'sale' AND i.is_return = 0 AND date(i.created_at) >= ?
+        LEFT JOIN invoices i ON i.customer_id = c.id AND i.type IN ('sale', 'pos') AND i.is_return = 0 AND date(i.created_at) >= ?
         GROUP BY c.id
         HAVING total_sales > 0
         ORDER BY total_sales DESC

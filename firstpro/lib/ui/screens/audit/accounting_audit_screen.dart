@@ -71,6 +71,10 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       ''');
 
       // 3. Orphaned Invoices (invoices without journal entries)
+      // NOTE: The transactions table does not have reference_type/reference_id columns,
+      // so we rely on description pattern matching. Invoice IDs are embedded in
+      // transaction descriptions like 'فاتورة مبيعات - {id}'. We use LIKE matching
+      // which is more robust than the previous SUBSTR(t.description, -36) approach.
       final orphanedInvoices = await db.rawQuery('''
         SELECT i.id, i.type, i.total, i.currency, i.created_at,
                CASE WHEN i.customer_id IS NOT NULL THEN c.name
@@ -79,11 +83,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
         FROM invoices i
         LEFT JOIN customers c ON c.id = i.customer_id
         LEFT JOIN suppliers s ON s.id = i.supplier_id
+        LEFT JOIN transactions t ON t.description LIKE '%' || i.id || '%' AND t.description LIKE 'فاتورة%'
         WHERE i.is_return = 0 AND i.total > 0
-        AND i.id NOT IN (
-          SELECT DISTINCT SUBSTR(t.description, -36) FROM transactions t
-          WHERE t.description LIKE 'فاتورة%'
-        )
+          AND t.id IS NULL
         ORDER BY i.created_at DESC
         LIMIT 20
       ''');

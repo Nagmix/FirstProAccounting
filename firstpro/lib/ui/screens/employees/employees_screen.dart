@@ -24,14 +24,23 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   }
 
   Future<void> _loadEmployees() async {
-    final db = DatabaseHelper();
-    final employees = await db.getAllEmployees();
-    if (mounted) {
-      setState(() {
-        _employees = employees;
-        _filteredEmployees = employees;
-        _isLoading = false;
-      });
+    try {
+      final db = DatabaseHelper();
+      final employees = await db.getAllEmployees();
+      if (mounted) {
+        setState(() {
+          _employees = employees;
+          _filteredEmployees = employees;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
     }
   }
 

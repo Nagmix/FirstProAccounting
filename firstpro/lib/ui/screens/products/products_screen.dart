@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
@@ -27,6 +28,7 @@ class _ProductsScreenState extends State<ProductsScreen>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Timer? _searchDebounce;
   int _selectedCategoryIndex = 0;
 
   // ── Data from DB ──────────────────────────────────────────────
@@ -42,13 +44,17 @@ class _ProductsScreenState extends State<ProductsScreen>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.trim());
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+      });
     });
     _loadData();
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -58,34 +64,43 @@ class _ProductsScreenState extends State<ProductsScreen>
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    final db = DatabaseHelper();
-    final results = await Future.wait([
-      db.getAllProducts(),
-      db.getAllCategories(),
-    ]);
+    try {
+      final db = DatabaseHelper();
+      final results = await Future.wait([
+        db.getAllProducts(),
+        db.getAllCategories(),
+      ]);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final productsRaw = results[0];
-    final categoriesRaw = results[1];
+      final productsRaw = results[0];
+      final categoriesRaw = results[1];
 
-    final products =
-        productsRaw.map((m) => Product.fromMap(m)).toList();
+      final products =
+          productsRaw.map((m) => Product.fromMap(m)).toList();
 
-    // Build category name lookup
-    final catNames = <int, String>{};
-    for (final c in categoriesRaw) {
-      catNames[c['id'] as int] = c['name'] as String;
+      // Build category name lookup
+      final catNames = <int, String>{};
+      for (final c in categoriesRaw) {
+        catNames[c['id'] as int] = c['name'] as String;
+      }
+
+      setState(() {
+        _products = products;
+        _categories = categoriesRaw;
+        _categoryNames
+          ..clear()
+          ..addAll(catNames);
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
     }
-
-    setState(() {
-      _products = products;
-      _categories = categoriesRaw;
-      _categoryNames
-        ..clear()
-        ..addAll(catNames);
-      _isLoading = false;
-    });
   }
 
   // ── Stock status helper ──────────────────────────────────────
@@ -228,7 +243,36 @@ class _ProductsScreenState extends State<ProductsScreen>
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete, size: 18, color: AppColors.error),
                                 onPressed: () async {
-                                  await db.deleteCategory(cat['id'] as int);
+                                  // Check if any products use this category before deleting
+                                  final catId = cat['id'] as int;
+                                  try {
+                                    final database = await db.database;
+                                    final productsWithCategory = await database.query(
+                                      'products',
+                                      columns: ['id', 'name_ar'],
+                                      where: 'category_id = ?',
+                                      whereArgs: [catId],
+                                      limit: 5,
+                                    );
+                                    if (productsWithCategory.isNotEmpty) {
+                                      final productNames = productsWithCategory.map((p) => p['name_ar'] as String? ?? '').join('، ');
+                                      final extra = productsWithCategory.length > 5 ? ' وغيرها...' : '';
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('لا يمكن حذف التصنيف لأنه مستخدم في الأصناف: $productNames$extra'),
+                                            backgroundColor: AppColors.error,
+                                            duration: const Duration(seconds: 4),
+                                          ),
+                                        );
+                                      }
+                                      return;
+                                    }
+                                  } catch (_) {
+                                    // If check fails, proceed with delete attempt
+                                  }
+
+                                  await db.deleteCategory(catId);
                                   final updated = await db.getAllCategories();
                                   setDialogState(() => categories.clear());
                                   setDialogState(() => categories.addAll(updated));

@@ -52,12 +52,23 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
   Future<void> _loadInvoices() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final maps = await db.getAllInvoices();
-    setState(() {
-      _invoices = maps;
-      _isLoading = false;
-    });
+    try {
+      final db = DatabaseHelper();
+      final maps = await db.getAllInvoices();
+      if (mounted) {
+        setState(() {
+          _invoices = maps;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   double get _totalSales => _invoices

@@ -518,13 +518,13 @@ class _AppLockScreenState extends State<AppLockScreen>
           end: Alignment.bottomRight,
           colors: [
             AppColors.primary,
-            AppColors.primary.withOpacity(0.8),
+            AppColors.primary.withValues(alpha: 0.8),
           ],
         ),
         borderRadius: BorderRadius.circular(size * 0.25),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -561,7 +561,7 @@ class _AppLockScreenState extends State<AppLockScreen>
       style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w600,
-        color: AppColors.primary.withOpacity(0.85),
+        color: AppColors.primary.withValues(alpha: 0.85),
       ),
       textAlign: TextAlign.center,
     );
@@ -597,11 +597,11 @@ class _AppLockScreenState extends State<AppLockScreen>
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(16),
-          color: AppColors.primary.withOpacity(0.05),
+          color: AppColors.primary.withValues(alpha: 0.05),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -698,7 +698,7 @@ class _AppLockScreenState extends State<AppLockScreen>
               ? [
                   BoxShadow(
                     color: (isError ? AppColors.error : AppColors.primary)
-                        .withOpacity(0.4),
+                        .withValues(alpha: 0.4),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -871,11 +871,11 @@ class _KeypadButtonState extends State<_KeypadButton>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isEnabled
-                ? AppColors.primary.withOpacity(0.08)
+                ? AppColors.primary.withValues(alpha: 0.08)
                 : Colors.grey[100],
             border: Border.all(
               color: isEnabled
-                  ? AppColors.primary.withOpacity(0.15)
+                  ? AppColors.primary.withValues(alpha: 0.15)
                   : Colors.grey[200]!,
               width: 1.5,
             ),

@@ -42,15 +42,26 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
 
   Future<void> _loadInvoices() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final allInvoices = await db.getAllInvoices();
-    setState(() {
-      _invoices = allInvoices.where((i) {
-        final type = i['type'] as String? ?? '';
-        return type == 'sale' || type == 'sale_return';
-      }).toList();
-      _isLoading = false;
-    });
+    try {
+      final db = DatabaseHelper();
+      final allInvoices = await db.getAllInvoices();
+      if (mounted) {
+        setState(() {
+          _invoices = allInvoices.where((i) {
+            final type = i['type'] as String? ?? '';
+            return type == 'sale' || type == 'sale_return';
+          }).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   double get _totalSales => _invoices.fold(0.0, (sum, i) {

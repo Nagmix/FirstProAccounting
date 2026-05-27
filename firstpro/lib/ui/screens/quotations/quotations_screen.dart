@@ -491,7 +491,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? AppColors.darkDivider : AppColors.divider),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: InkWell(
@@ -506,7 +506,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                   Container(
                     width: 44, height: 44,
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(Icons.description, color: statusColor, size: 22),
@@ -529,7 +529,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
+                                color: statusColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
