@@ -11,7 +11,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 31;
+  static const int _databaseVersion = 32;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -847,6 +847,46 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_audit_trail_action ON audit_trail (action)');
     await db.execute('CREATE INDEX idx_audit_trail_created ON audit_trail (created_at)');
     await db.execute('CREATE INDEX idx_audit_trail_record ON audit_trail (table_name, record_id)');
+
+    // Unit Conversions (was only in migrations before, now in _onCreate for fresh installs)
+    await db.execute('''
+      CREATE TABLE unit_conversions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        from_unit TEXT NOT NULL,
+        to_unit TEXT NOT NULL,
+        from_unit_id INTEGER,
+        to_unit_id INTEGER,
+        conversion_factor REAL NOT NULL,
+        barcode TEXT,
+        sell_price REAL NOT NULL DEFAULT 0.0,
+        cost_price REAL NOT NULL DEFAULT 0.0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_unit_conversions_product ON unit_conversions (product_id)');
+
+    // Stock Movements (was only in migrations before, now in _onCreate for fresh installs)
+    await db.execute('''
+      CREATE TABLE stock_movements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        movement_type TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        reference_type TEXT,
+        reference_id TEXT,
+        notes TEXT,
+        unit_cost REAL NOT NULL DEFAULT 0.0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_stock_movements_product ON stock_movements (product_id)');
+    await db.execute('CREATE INDEX idx_stock_movements_type ON stock_movements (movement_type)');
+    await db.execute('CREATE INDEX idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
 
     // Seed default data
     await _seedCurrencies(db);
@@ -2111,6 +2151,54 @@ class DatabaseHelper {
       } catch (_) {}
       await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
     }
+
+    // v32: Ensure stock_movements and unit_conversions tables exist, add cost_price column
+    if (oldVersion < 32) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stock_movements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          movement_type TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          reference_type TEXT,
+          reference_id TEXT,
+          notes TEXT,
+          unit_cost REAL NOT NULL DEFAULT 0.0,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements (product_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements (movement_type)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS unit_conversions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          from_unit TEXT NOT NULL,
+          to_unit TEXT NOT NULL,
+          from_unit_id INTEGER,
+          to_unit_id INTEGER,
+          conversion_factor REAL NOT NULL,
+          barcode TEXT,
+          sell_price REAL NOT NULL DEFAULT 0.0,
+          cost_price REAL NOT NULL DEFAULT 0.0,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_unit_conversions_product ON unit_conversions (product_id)');
+
+      // Add cost_price column to unit_conversions if it doesn't exist
+      try {
+        await db.execute('ALTER TABLE unit_conversions ADD COLUMN cost_price REAL NOT NULL DEFAULT 0.0');
+      } catch (_) {
+        // Column already exists, ignore
+      }
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2833,6 +2921,7 @@ class DatabaseHelper {
       baseUnitName = _getUnitName(baseUnitId);
     }
     final baseSellPrice = (product.first['sell_price'] as num?)?.toDouble() ?? 0.0;
+    final baseCostPrice = (product.first['cost_price'] as num?)?.toDouble() ?? 0.0;
 
     // Start with base unit (factor = 1.0)
     final units = <Map<String, dynamic>>[
@@ -2840,6 +2929,7 @@ class DatabaseHelper {
         'unit_name': baseUnitName,
         'conversion_factor': 1.0,
         'sell_price': baseSellPrice,
+        'cost_price': baseCostPrice,
         'barcode': product.first['barcode'] as String? ?? '',
         'is_base': 1,
         'unit_id': baseUnitId,
@@ -2856,12 +2946,14 @@ class DatabaseHelper {
       final fromUnit = conv['from_unit'] as String? ?? '';
       final factor = (conv['conversion_factor'] as num?)?.toDouble() ?? 1.0;
       final convSellPrice = (conv['sell_price'] as num?)?.toDouble() ?? (baseSellPrice * factor);
+      final convCostPrice = (conv['cost_price'] as num?)?.toDouble() ?? (baseCostPrice * factor);
       // Resolve unit_id from the conversion if available
       final fromUnitId = conv['from_unit_id'] as int?;
       units.add({
         'unit_name': fromUnit,
         'conversion_factor': factor,
         'sell_price': convSellPrice,
+        'cost_price': convCostPrice,
         'barcode': conv['barcode'] as String? ?? '',
         'is_base': 0,
         'conversion_id': conv['id'],

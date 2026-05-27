@@ -91,7 +91,12 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
         } else {
           _selectedUnit = units.first;
         }
-        _priceController.text = ((_selectedUnit?['sell_price'] as num?)?.toDouble() ?? 0).toStringAsFixed(2);
+        // Use cost_price for purchase invoices, sell_price for sale invoices
+        if (widget.invoiceType == 'purchase') {
+          _priceController.text = ((_selectedUnit?['cost_price'] as num?)?.toDouble() ?? 0).toStringAsFixed(2);
+        } else {
+          _priceController.text = ((_selectedUnit?['sell_price'] as num?)?.toDouble() ?? 0).toStringAsFixed(2);
+        }
       }
     });
   }
@@ -221,7 +226,10 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                         children: _availableUnits.map((unit) {
                           final isSelected = _selectedUnit?['unit_name'] == unit['unit_name'];
                           final factor = (unit['conversion_factor'] as num?)?.toDouble() ?? 1.0;
-                          final price = (unit['sell_price'] as num?)?.toDouble() ?? 0.0;
+                          // Show cost_price for purchase invoices, sell_price for sale invoices
+                          final price = widget.invoiceType == 'purchase'
+                              ? (unit['cost_price'] as num?)?.toDouble() ?? 0.0
+                              : (unit['sell_price'] as num?)?.toDouble() ?? 0.0;
                           return ChoiceChip(
                             label: Text('${unit['unit_name']} (${CurrencyFormatter.format(price)})'),
                             selected: isSelected,
@@ -262,7 +270,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildTextField(
-                      label: 'سعر الوحدة',
+                      label: widget.invoiceType == 'purchase' ? 'سعر التكلفة${_unitName.isNotEmpty ? ' ($_unitName)' : ''}' : 'سعر البيع${_unitName.isNotEmpty ? ' ($_unitName)' : ''}',
                       controller: _priceController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       suffixText: AppConstants.currency,

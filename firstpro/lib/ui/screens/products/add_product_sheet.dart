@@ -41,12 +41,14 @@ class _UnitConversionRow {
   double factor;
   String barcode;
   double sellPrice;
+  double costPrice;
 
   _UnitConversionRow({
     this.unitId,
     this.factor = 1.0,
     this.barcode = '',
     this.sellPrice = 0.0,
+    this.costPrice = 0.0,
   });
 }
 
@@ -324,6 +326,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           factor: (c['conversion_factor'] as num?)?.toDouble() ?? 1.0,
           barcode: (c['barcode'] as String?) ?? '',
           sellPrice: (c['sell_price'] as num?)?.toDouble() ?? 0.0,
+          costPrice: (c['cost_price'] as num?)?.toDouble() ?? 0.0,
         );
       }).toList();
 
@@ -634,6 +637,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 'conversion_factor': uc.factor,
                 'barcode': uc.barcode,
                 'sell_price': uc.sellPrice,
+                'cost_price': uc.costPrice,
                 'is_active': 1,
                 'created_at': DateTime.now().toIso8601String(),
                 'updated_at': DateTime.now().toIso8601String(),
@@ -648,6 +652,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   'conversion_factor': uc.factor,
                   'barcode': uc.barcode,
                   'sell_price': uc.sellPrice,
+                  'cost_price': uc.costPrice,
                   'is_active': 1,
                   'created_at': DateTime.now().toIso8601String(),
                   'updated_at': DateTime.now().toIso8601String(),
@@ -680,6 +685,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   'conversion_factor': uc.factor,
                   'barcode': uc.barcode,
                   'sell_price': uc.sellPrice,
+                  'cost_price': uc.costPrice,
                   'is_active': 1,
                   'created_at': DateTime.now().toIso8601String(),
                   'updated_at': DateTime.now().toIso8601String(),
@@ -695,6 +701,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                     'conversion_factor': uc.factor,
                     'barcode': uc.barcode,
                     'sell_price': uc.sellPrice,
+                    'cost_price': uc.costPrice,
                     'is_active': 1,
                     'created_at': DateTime.now().toIso8601String(),
                     'updated_at': DateTime.now().toIso8601String(),
@@ -1585,6 +1592,26 @@ class _AddProductSheetState extends State<AddProductSheet> {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               ),
               onChanged: (v) => row.sellPrice = double.tryParse(v) ?? 0.0,
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Cost price
+          Expanded(
+            flex: 2,
+            child: TextFormField(
+              initialValue: row.costPrice > 0 ? row.costPrice.toStringAsFixed(2) : '',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: 'سعر التكلفة',
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              ),
+              onChanged: (v) => row.costPrice = double.tryParse(v) ?? 0.0,
             ),
           ),
 

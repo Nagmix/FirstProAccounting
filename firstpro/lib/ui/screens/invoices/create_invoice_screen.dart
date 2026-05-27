@@ -1456,7 +1456,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     final result = await showModalBottomSheet<InvoiceItem>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => AddInvoiceItemSheet(warehouseId: _selectedWarehouseId),
+      builder: (_) => AddInvoiceItemSheet(warehouseId: _selectedWarehouseId, invoiceType: widget.invoiceType),
     );
     if (result != null) {
       setState(() {
