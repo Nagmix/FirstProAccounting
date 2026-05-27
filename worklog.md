@@ -638,3 +638,221 @@ Stage Summary:
 - T33: No code changes needed — all controllers already properly disposed in all 6 audited files
 - T36: 2 files modified — add_invoice_item_sheet.dart (4 validation checks), pos_screen.dart (3 validation checks)
 - T44: 3 files modified — 11 withOpacity calls replaced with withValues(alpha:)
+
+---
+Task ID: T48
+Agent: Subagent
+Task: Complete the Shifts Screen
+
+Work Log:
+- Read existing shifts_screen.dart — was basic (72 lines, only showed shift number + status + opening_amount in a simple ListTile)
+- Analyzed shifts table schema from database_helper.dart:
+  - Fields: id, shift_number, cashier_id, cashier_name, cash_box_id, opening_amount, closing_amount, expected_amount, difference, status, opened_at, closed_at, notes, total_sales, total_returns, total_discounts, transaction_count, currency, created_at, updated_at
+  - getAllShifts() joins with cash_boxes for cash_box_name
+  - getShiftInvoices(shiftId) returns invoices with entity_name
+  - closeShift() + postShiftInvoices() for shift closing flow
+- Studied POS screen's X-report and Z-report implementations for consistent design patterns
+- Rewrote shifts_screen.dart from 72 lines to ~750 lines with all required features:
+
+1. **Professional shift list with proper formatting**
+   - Uses CurrencyFormatter.format() for all amounts with currency symbol support (ر.ي/ر.س/$)
+   - Uses DateFormatter.formatDateTime() for dates
+   - Shows shift number, status badge (مفتوحة/مغلقة), open date, cash box name, cashier name
+   - Shows financial chips: sales, opening amount, transaction count
+   - Color-coded difference bar for closed shifts (balanced/surplus/deficit)
+   - Real-time duration timer (HH:MM:SS) for open shifts with tabular figures
+   - Duration display for closed shifts
+
+2. **Shift detail view (bottom sheet)**
+   - DraggableScrollableSheet (70% initial, 95% max) for comfortable viewing
+   - Shift info section: number, cashier, cash box, currency (with Arabic names), open/close time, notes
+   - Financial summary: opening, total sales, returns, discounts
+   - Expected vs actual box with difference indicator
+   - Transaction count
+   - List of invoices during the shift (with invoice number, entity name, amount, time, type icon)
+   - For open shifts: "إقفال الوردية" button
+   - For closed shifts: Z-Report summary section (opening, sales, returns, discounts, expected, actual, difference)
+
+3. **For open shifts**
+   - Prominent red "إقفال الوردية" OutlinedButton on card + ElevatedButton in detail sheet
+   - Real-time duration timer updates every second via Timer.periodic
+   - Timer only fires when there are open shifts (performance optimization)
+
+4. **Close shift dialog**
+   - Full financial summary (opening, sales, returns, discounts, expected, transactions)
+   - Closing amount input field (pre-filled with expected amount)
+   - Notes field
+   - Posts shift invoices then closes shift (same flow as POS screen)
+   - Result dialog shows expected/actual/difference with color-coded status
+   - Error handling with Arabic error messages
+
+5. **Filter tabs**
+   - الكل / مفتوحة / مغلقة
+   - Animated tab switching with primary color highlight
+   - Empty state per filter with appropriate Arabic messages
+
+6. **Summary header card**
+   - Gradient background (AppColors.primaryGradient) with shadow
+   - Three summary items: open shifts count, closed today count, total sales across all shifts
+   - Uses CurrencyFormatter.formatCompactWithSymbol() for sales
+   - Icon badges with semi-transparent backgrounds
+
+7. **Other improvements**
+   - Pull-to-refresh with RefreshIndicator
+   - CustomScrollView with slivers for smooth scrolling
+   - Safe date parsing with DateTime.tryParse
+   - Proper dispose() for duration timer
+   - Consistent use of AppColors (no hardcoded colors)
+   - withValues(alpha:) instead of deprecated withOpacity()
+
+Stage Summary:
+- 1 file completely rewritten: shifts_screen.dart (72 → ~750 lines)
+- Shifts screen now fully functional: filter tabs, summary header, professional cards, detail bottom sheet, close shift dialog, Z-report, real-time duration timer
+- Follows existing codebase patterns (RTL, AppColors, CurrencyFormatter, DateFormatter)
+- No database changes needed — uses existing getAllShifts(), getShiftInvoices(), closeShift(), postShiftInvoices()
+
+---
+Task ID: T49
+Agent: Subagent
+Task: Implement the "Create Quotation" feature
+
+Work Log:
+- Analyzed existing quotations_screen.dart — FAB showed "قريباً - إنشاء عرض سعر جديد" placeholder
+- Checked database_helper.dart for quotation schema and methods:
+  - `quotations` table: id (TEXT PK), quotation_number, customer_id, currency, exchange_rate, subtotal, discount_rate, discount_amount, tax_amount, total, status, valid_until, notes, terms_conditions, converted_to_sales_order, sales_order_id, created_at, updated_at
+  - `quotation_items` table: id (INTEGER PK), quotation_id, product_id, product_name, description, quantity, unit_price, total_price
+  - `insertQuotationWithItems()` — inserts quotation + items in a single transaction
+  - `getNextQuotationNumber()` — generates QT-YYYYMM-NNNN format
+  - `getAllCustomers()` — for customer dropdown
+  - `getAllProducts(activeOnly: true)` — for product selection
+- Removed unused `create_invoice_screen.dart` import
+
+Implementation:
+1. Added `_QuotationItem` helper class at file top with productId, productName, quantity, unitPrice, and computed total getter
+2. Added `_showCreateQuotationDialog()` method that opens a large modal bottom sheet with `_CreateQuotationForm`
+3. Replaced FAB `onPressed` from snackbar placeholder to `_showCreateQuotationDialog`
+4. Created `_CreateQuotationForm` StatefulWidget with full form:
+   - Customer dropdown (from DB, optional — "بدون عميل" hint)
+   - Currency dropdown (YER/SAR/USD, defaults YER)
+   - Valid until date picker (defaults 30 days from now)
+   - Dynamic items list with add/remove:
+     - Product picker: search-enabled bottom sheet with name/barcode search
+     - Quantity and unit price editable fields
+     - Auto-calculated item total
+     - Delete button per item
+   - Discount: rate % or fixed amount (mutually exclusive — entering one clears the other)
+   - Notes text field
+   - Auto-calculated totals box: subtotal, discount, total with currency symbol
+   - Save button: validates all fields, creates quotation as 'draft' status
+5. Validation on save:
+   - At least one item required
+   - Product must be selected for each item
+   - Quantity must be > 0
+   - Unit price must be >= 0
+   - Discount rate must be 0-100
+   - Discount amount cannot be negative
+   - Discount cannot exceed subtotal
+6. Save flow:
+   - Calls `db.getNextQuotationNumber()` for auto-generated QT-YYYYMM-NNNN
+   - Calls `db.insertQuotationWithItems()` in transaction
+   - Shows success snackbar with quotation number
+   - Refreshes quotation list via `onSaved` callback
+7. Proper dispose() for all TextEditingControllers
+8. Consistent use of AppColors, CurrencyFormatter, RTL Directionality
+
+Stage Summary:
+- 1 file modified: quotations_screen.dart
+- FAB now opens full quotation creation form instead of placeholder
+- Complete form with customer selection, currency, date, items, discount, notes, totals
+- Product picker with search functionality
+- All validation with Arabic error messages
+- Saves as 'draft' status using existing `insertQuotationWithItems()` DB method
+- No database schema changes needed
+
+---
+Task ID: T46+T47
+Agent: Subagent
+Task: Implement Purchase Orders and Sales Orders screens
+
+Work Log:
+- Read existing placeholder screens: both were 55-line stubs with empty state messages
+- Checked database_helper.dart — confirmed dedicated tables and full CRUD methods exist:
+  - `purchase_orders` table: id, order_number, supplier_id, currency, exchange_rate, subtotal, discount_rate, discount_amount, tax_amount, total, status, expected_date, notes, terms_conditions, warehouse_id, converted_to_invoice, invoice_id, created_at, updated_at
+  - `purchase_order_items` table: id, purchase_order_id, product_id, product_name, description, quantity, unit_price, total_price
+  - `sales_orders` table: id, order_number, customer_id, currency, exchange_rate, subtotal, discount_rate, discount_amount, tax_amount, total, status, expected_date, notes, terms_conditions, warehouse_id, converted_to_invoice, invoice_id, quotation_id, created_at, updated_at
+  - `sales_order_items` table: id, sales_order_id, product_id, product_name, description, quantity, unit_price, total_price
+  - Full CRUD: insertWithItems, getAll, getByStatus, getById, getItems, update, delete, getNextNumber
+- Studied quotations_screen.dart design patterns for consistency
+
+T46 - Purchase Orders Screen (55 → 1282 lines):
+1. **Order list from DB** using `db.getAllPurchaseOrders()` which JOINs suppliers for supplier_name
+2. **Status tabs**: الكل / مسودة / مرسل / مستلم / ملغي (with TabController)
+3. **Search bar**: by order number or supplier name
+4. **Summary card**: gradient header with total orders, total value, received count
+5. **Order cards**: order number, status badge (color-coded), supplier name, total with currency, date
+6. **Tap**: detail bottom sheet with DraggableScrollableSheet showing:
+   - Order info (number, supplier, currency, total, expected date, notes, status)
+   - Items list loaded async via `db.getPurchaseOrderItems()`
+   - Change status button → status picker bottom sheet
+   - Delete button
+7. **Long press**: delete with confirmation dialog
+8. **FAB**: "طلب شراء جديد" opens create form bottom sheet
+9. **Create form** (`_CreatePurchaseOrderForm`):
+   - Supplier dropdown (from DB, optional)
+   - Currency dropdown (YER/SAR/USD)
+   - Expected delivery date picker
+   - Dynamic items: product picker with search, quantity, unit price (defaults to cost_price), auto-calculated total
+   - Discount: rate % or fixed amount (mutually exclusive)
+   - Notes field
+   - Auto-calculated totals box (subtotal, discount, total)
+   - Full validation with Arabic error messages
+   - Saves as 'draft' via `db.insertPurchaseOrderWithItems()`
+   - Auto-generates PO-YYYYMM-NNNN number via `db.getNextPurchaseOrderNumber()`
+
+T47 - Sales Orders Screen (55 → 1428 lines):
+1. **Order list from DB** using `db.getAllSalesOrders()` which JOINs customers for customer_name
+2. **Status tabs**: الكل / مسودة / مؤكد / مشحون / ملغي (with TabController)
+3. **Search bar**: by order number or customer name
+4. **Summary card**: gradient header with total orders, total value, confirmed count
+5. **Order cards**: order number, status badge (color-coded), customer name, total with currency, date
+6. **Convert to invoice button** on confirmed/shipped order cards (same pattern as quotations)
+7. **Tap**: detail bottom sheet with DraggableScrollableSheet showing:
+   - Order info (number, customer, currency, total, expected date, notes, status)
+   - Items list loaded async via `db.getSalesOrderItems()`
+   - Change status button (excludes 'converted' from manual options)
+   - Convert to invoice button (for confirmed/shipped orders)
+   - Delete button
+8. **Long press**: delete with confirmation dialog
+9. **FAB**: "طلب بيع جديد" opens create form bottom sheet
+10. **Create form** (`_CreateSalesOrderForm`):
+    - Customer dropdown (from DB, optional)
+    - Currency dropdown (YER/SAR/USD)
+    - Expected delivery date picker
+    - Dynamic items: product picker with search, quantity, unit price (defaults to sell_price), auto-calculated total
+    - Discount: rate % or fixed amount (mutually exclusive)
+    - Notes field
+    - Auto-calculated totals box (subtotal, discount, total)
+    - Full validation with Arabic error messages
+    - Saves as 'draft' via `db.insertSalesOrderWithItems()`
+    - Auto-generates SO-YYYYMM-NNNN number via `db.getNextSalesOrderNumber()`
+11. **Convert to invoice**: Creates sales invoice via `db.saveInvoiceWithJournalEntries()`, updates order status to 'converted' with invoice_id reference
+
+Shared patterns with quotations screen:
+- RTL Directionality throughout
+- Same card layout with icon + status badge + name + total + date
+- Same gradient summary card
+- Same search + filter + tab structure
+- Same product picker with search
+- Same discount UI (rate vs fixed, mutually exclusive)
+- Same totals box styling
+- withValues(alpha:) instead of deprecated withOpacity()
+- try/catch with Arabic error snackbar
+- mounted checks before setState
+- Proper dispose() for controllers
+
+Stage Summary:
+- 2 files completely rewritten: purchase_orders_screen.dart (55 → 1282 lines), sales_orders_screen.dart (55 → 1428 lines)
+- Both screens fully functional: list from DB, status tabs, search, summary card, order cards, detail bottom sheet, create form with product picker, delete, status change
+- Sales Orders includes "convert to invoice" feature (creates invoice + journal entries, updates order status)
+- Uses existing DB tables and methods — no schema changes needed
+- Follows existing codebase design patterns (quotations_screen.dart)

@@ -2,7 +2,23 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
-import '../invoices/create_invoice_screen.dart';
+
+/// Helper class for quotation line items in the creation form.
+class _QuotationItem {
+  int? productId;
+  String productName;
+  double quantity;
+  double unitPrice;
+
+  _QuotationItem({
+    this.productId,
+    this.productName = '',
+    this.quantity = 1.0,
+    this.unitPrice = 0.0,
+  });
+
+  double get total => quantity * unitPrice;
+}
 
 class QuotationsScreen extends StatefulWidget {
   const QuotationsScreen({super.key});
@@ -335,6 +351,28 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
     );
   }
 
+  // ── Create Quotation Dialog ────────────────────────────────────
+
+  static const Map<String, String> _currencyLabels = {
+    'YER': 'ر.ي (ريال يمني)',
+    'SAR': 'ر.س (ريال سعودي)',
+    'USD': '$ (دولار أمريكي)',
+  };
+
+  void _showCreateQuotationDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CreateQuotationForm(
+        onSaved: () => _loadData(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -408,11 +446,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                 ),
               ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('قريباً - إنشاء عرض سعر جديد')),
-            );
-          },
+          onPressed: _showCreateQuotationDialog,
           icon: const Icon(Icons.add, color: Colors.white),
           label: const Text('عرض سعر جديد', style: TextStyle(color: Colors.white)),
           backgroundColor: AppColors.primary,
@@ -615,6 +649,762 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
           Text('اضغط على + لإنشاء عرض سعر جديد', style: TextStyle(fontSize: 14, color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary)),
         ],
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  Create Quotation Form (Bottom Sheet)
+// ══════════════════════════════════════════════════════════════════
+
+class _CreateQuotationForm extends StatefulWidget {
+  final VoidCallback onSaved;
+  const _CreateQuotationForm({required this.onSaved});
+
+  @override
+  State<_CreateQuotationForm> createState() => _CreateQuotationFormState();
+}
+
+class _CreateQuotationFormState extends State<_CreateQuotationForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _discountRateController = TextEditingController();
+  final _discountAmountController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  int? _selectedCustomerId;
+  String _selectedCurrency = 'YER';
+  DateTime _validUntilDate = DateTime.now().add(const Duration(days: 30));
+  List<_QuotationItem> _items = [];
+  bool _isSaving = false;
+
+  // Dropdown data
+  List<Map<String, dynamic>> _customers = [];
+  List<Map<String, dynamic>> _products = [];
+  bool _isLoadingData = true;
+
+  static const Map<String, String> _currencyLabels = {
+    'YER': 'ر.ي (ريال يمني)',
+    'SAR': 'ر.س (ريال سعودي)',
+    'USD': '$ (دولار أمريكي)',
+  };
+
+  static const Map<String, String> _currencySymbol = {
+    'YER': 'ر.ي',
+    'SAR': 'ر.س',
+    'USD': '$',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDropdownData();
+  }
+
+  @override
+  void dispose() {
+    _discountRateController.dispose();
+    _discountAmountController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadDropdownData() async {
+    try {
+      final db = DatabaseHelper();
+      final customers = await db.getAllCustomers(orderBy: 'name ASC');
+      final products = await db.getAllProducts(activeOnly: true, orderBy: 'name_ar ASC');
+      if (mounted) {
+        setState(() {
+          _customers = customers;
+          _products = products;
+          _isLoadingData = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingData = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  double get _subtotal => _items.fold<double>(0, (sum, item) => sum + item.total);
+
+  double get _discountRate {
+    final val = double.tryParse(_discountRateController.text) ?? 0;
+    return val.clamp(0, 100);
+  }
+
+  double get _discountAmount {
+    final val = double.tryParse(_discountAmountController.text) ?? 0;
+    return val < 0 ? 0 : val;
+  }
+
+  double get _calculatedDiscountAmount => _subtotal * (_discountRate / 100);
+
+  double get _effectiveDiscountAmount => _discountAmount > 0 ? _discountAmount : _calculatedDiscountAmount;
+
+  double get _total => _subtotal - _effectiveDiscountAmount;
+
+  void _onDiscountRateChanged(String value) {
+    setState(() {
+      // Clear fixed amount when rate is being used
+      if (value.isNotEmpty && double.tryParse(value) != null && double.tryParse(value)! > 0) {
+        _discountAmountController.clear();
+      }
+    });
+  }
+
+  void _onDiscountAmountChanged(String value) {
+    setState(() {
+      // Clear rate when fixed amount is being used
+      if (value.isNotEmpty && double.tryParse(value) != null && double.tryParse(value)! > 0) {
+        _discountRateController.clear();
+      }
+    });
+  }
+
+  void _addItem() {
+    setState(() {
+      _items.add(_QuotationItem());
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _items.removeAt(index);
+    });
+  }
+
+  void _updateItem(int index, {_QuotationItem? Function(_QuotationItem)? update}) {
+    if (index < 0 || index >= _items.length) return;
+    setState(() {
+      final current = _items[index];
+      final updated = update != null ? update(current) : current;
+      if (updated != null) _items[index] = updated;
+    });
+  }
+
+  Future<void> _pickValidUntilDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _validUntilDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('ar'),
+    );
+    if (picked != null) {
+      setState(() => _validUntilDate = picked);
+    }
+  }
+
+  void _showProductPicker(int itemIndex) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            var filtered = _products;
+            if (searchQuery.isNotEmpty) {
+              final q = searchQuery.toLowerCase();
+              filtered = _products.where((p) {
+                final nameAr = (p['name_ar'] ?? '').toString().toLowerCase();
+                final nameEn = (p['name_en'] ?? '').toString().toLowerCase();
+                final barcode = (p['barcode'] ?? '').toString().toLowerCase();
+                return nameAr.contains(q) || nameEn.contains(q) || barcode.contains(q);
+              }).toList();
+            }
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Container(
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Text('اختر منتج', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: TextField(
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: 'بحث بالاسم أو الباركود...',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                        ),
+                        onChanged: (v) => setModalState(() => searchQuery = v),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? const Center(child: Text('لا توجد منتجات'))
+                          : ListView.builder(
+                              itemCount: filtered.length,
+                              itemBuilder: (ctx, i) {
+                                final p = filtered[i];
+                                final sellPrice = (p['sell_price'] as num?)?.toDouble() ?? 0;
+                                return ListTile(
+                                  title: Text(p['name_ar'] ?? ''),
+                                  subtitle: Text(CurrencyFormatter.formatValue(sellPrice) + ' ${_currencySymbol[_selectedCurrency] ?? ''}'),
+                                  trailing: Text('كود: ${p['item_code'] ?? p['id'] ?? ''}', style: const TextStyle(fontSize: 12)),
+                                  onTap: () {
+                                    _updateItem(itemIndex, update: (item) {
+                                      item.productId = p['id'] as int?;
+                                      item.productName = p['name_ar'] ?? '';
+                                      item.unitPrice = sellPrice;
+                                      return item;
+                                    });
+                                    Navigator.pop(ctx);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _saveQuotation() async {
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى إضافة صنف واحد على الأقل'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    // Validate items
+    for (int i = 0; i < _items.length; i++) {
+      if (_items[i].productId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('يرجى اختيار المنتج للصنف ${i + 1}'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+      if (_items[i].quantity <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('يرجى إدخال كمية صحيحة للصنف ${i + 1}'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+      if (_items[i].unitPrice < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('يرجى إدخال سعر صحيح للصنف ${i + 1}'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+    }
+
+    if (_discountRate < 0 || _discountRate > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('نسبة الخصم يجب أن تكون بين 0 و 100'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    if (_discountAmount < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('مبلغ الخصم لا يمكن أن يكون سالباً'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    if (_effectiveDiscountAmount > _subtotal) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الخصم لا يمكن أن يتجاوز المجموع الفرعي'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final db = DatabaseHelper();
+      final quotationNumber = await db.getNextQuotationNumber();
+      final now = DateTime.now();
+
+      final quotationMap = {
+        'id': quotationNumber,
+        'quotation_number': quotationNumber,
+        'customer_id': _selectedCustomerId,
+        'currency': _selectedCurrency,
+        'exchange_rate': 1.0,
+        'subtotal': _subtotal,
+        'discount_rate': _discountRate,
+        'discount_amount': _effectiveDiscountAmount,
+        'tax_amount': 0.0,
+        'total': _total,
+        'status': 'draft',
+        'valid_until': _validUntilDate.toIso8601String(),
+        'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        'terms_conditions': null,
+        'converted_to_sales_order': 0,
+        'sales_order_id': null,
+        'created_at': now.toIso8601String(),
+        'updated_at': now.toIso8601String(),
+      };
+
+      final quotationItems = _items.map((item) => {
+        'quotation_id': quotationNumber,
+        'product_id': item.productId,
+        'product_name': item.productName,
+        'description': null,
+        'quantity': item.quantity,
+        'unit_price': item.unitPrice,
+        'total_price': item.total,
+      }).toList();
+
+      await db.insertQuotationWithItems(quotationMap, quotationItems);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم إنشاء عرض السعر $quotationNumber بنجاح'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        widget.onSaved();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في حفظ عرض السعر: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.92),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 4),
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Row(
+                children: [
+                  Text('إنشاء عرض سعر جديد', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Form body
+            Expanded(
+              child: _isLoadingData
+                  ? const Center(child: CircularProgressIndicator())
+                  : Form(
+                      key: _formKey,
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.only(
+                          left: 20, right: 20, top: 16,
+                          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // ── Customer & Currency Row ──
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: DropdownButtonFormField<int>(
+                                    value: _selectedCustomerId,
+                                    decoration: InputDecoration(
+                                      labelText: 'العميل',
+                                      prefixIcon: const Icon(Icons.person_outline, size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                                    ),
+                                    hint: const Text('بدون عميل'),
+                                    items: _customers.map((c) => DropdownMenuItem<int>(
+                                      value: c['id'] as int?,
+                                      child: Text(c['name'] ?? '', overflow: TextOverflow.ellipsis),
+                                    )).toList(),
+                                    onChanged: (v) => setState(() {
+                                      _selectedCustomerId = v;
+                                    }),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  flex: 2,
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedCurrency,
+                                    decoration: InputDecoration(
+                                      labelText: 'العملة',
+                                      prefixIcon: const Icon(Icons.currency_exchange, size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                                    ),
+                                    items: _currencyLabels.entries.map((e) => DropdownMenuItem<String>(
+                                      value: e.key,
+                                      child: Text(e.key, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    )).toList(),
+                                    onChanged: (v) {
+                                      if (v != null) setState(() => _selectedCurrency = v);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Valid Until ──
+                            InkWell(
+                              onTap: _pickValidUntilDate,
+                              borderRadius: BorderRadius.circular(12),
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'صالح حتى',
+                                  prefixIcon: const Icon(Icons.calendar_today, size: 20),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                                ),
+                                child: Text(
+                                  '${_validUntilDate.day}/${_validUntilDate.month}/${_validUntilDate.year}',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // ── Items Section ──
+                            Row(
+                              children: [
+                                Text('الأصناف', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                                const Spacer(),
+                                ElevatedButton.icon(
+                                  onPressed: _addItem,
+                                  icon: const Icon(Icons.add, size: 18),
+                                  label: const Text('إضافة صنف'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Items list
+                            if (_items.isEmpty)
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.darkBackground : Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: isDark ? AppColors.darkDivider : AppColors.divider, style: BorderStyle.solid),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.inventory_2_outlined, size: 40, color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
+                                    const SizedBox(height: 8),
+                                    Text('لم يتم إضافة أصناف بعد', style: TextStyle(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
+                                  ],
+                                ),
+                              )
+                            else
+                              ..._items.asMap().entries.map((entry) {
+                                final idx = entry.key;
+                                final item = entry.value;
+                                return _buildItemCard(idx, item, isDark, theme);
+                              }),
+
+                            const SizedBox(height: 16),
+
+                            // ── Discount ──
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _discountRateController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(
+                                      labelText: 'نسبة الخصم %',
+                                      prefixIcon: const Icon(Icons.percent, size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                                    ),
+                                    onChanged: _onDiscountRateChanged,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _discountAmountController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(
+                                      labelText: 'مبلغ الخصم',
+                                      prefixIcon: const Icon(Icons.money_off, size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                                    ),
+                                    onChanged: _onDiscountAmountChanged,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Notes ──
+                            TextFormField(
+                              controller: _notesController,
+                              maxLines: 2,
+                              decoration: InputDecoration(
+                                labelText: 'ملاحظات',
+                                prefixIcon: const Padding(
+                                  padding: EdgeInsets.only(bottom: 20),
+                                  child: Icon(Icons.note, size: 20),
+                                ),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Totals ──
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.darkBackground : Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: isDark ? AppColors.darkDivider : AppColors.divider),
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildTotalRow('المجموع الفرعي', _subtotal, isDark),
+                                  if (_effectiveDiscountAmount > 0) ...[
+                                    const SizedBox(height: 8),
+                                    _buildTotalRow('الخصم', -_effectiveDiscountAmount, isDark, color: Colors.red),
+                                  ],
+                                  const Divider(height: 20),
+                                  _buildTotalRow('الإجمالي', _total, isDark, isBold: true, color: AppColors.primary),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // ── Save Button ──
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton.icon(
+                                onPressed: _isSaving ? null : _saveQuotation,
+                                icon: _isSaving
+                                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.save, size: 20),
+                                label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ عرض السعر (مسودة)'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemCard(int index, _QuotationItem item, bool isDark, ThemeData theme) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBackground : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.darkDivider : AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Product row
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => _showProductPicker(index),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: item.productId == null ? AppColors.error : (isDark ? AppColors.darkDivider : AppColors.divider)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 18, color: item.productId == null ? AppColors.error : AppColors.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item.productName.isEmpty ? 'اختر منتج...' : item.productName,
+                            style: TextStyle(
+                              color: item.productName.isEmpty ? AppColors.error : null,
+                              fontWeight: item.productName.isEmpty ? FontWeight.w400 : FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Icon(Icons.arrow_drop_down, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => _removeItem(index),
+                icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                padding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Quantity, Price, Total row
+          Row(
+            children: [
+              // Quantity
+              Expanded(
+                child: TextFormField(
+                  initialValue: item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 2),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'الكمية',
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                  onChanged: (v) {
+                    final val = double.tryParse(v) ?? 0;
+                    _updateItem(index, update: (i) { i.quantity = val > 0 ? val : 0; return i; });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Unit price
+              Expanded(
+                child: TextFormField(
+                  initialValue: item.unitPrice.toStringAsFixed(2),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'سعر الوحدة',
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                  onChanged: (v) {
+                    final val = double.tryParse(v) ?? 0;
+                    _updateItem(index, update: (i) { i.unitPrice = val >= 0 ? val : 0; return i; });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Total (read-only)
+              Expanded(
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'الإجمالي',
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                  ),
+                  child: Text(
+                    CurrencyFormatter.formatValue(item.total),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotalRow(String label, double amount, bool isDark, {bool isBold = false, Color? color}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+            fontSize: isBold ? 16 : 14,
+            color: color ?? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
+          ),
+        ),
+        Text(
+          '${amount < 0 ? '-' : ''}${CurrencyFormatter.formatValue(amount.abs())} ${_currencySymbol[_selectedCurrency] ?? ''}',
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,
+            fontSize: isBold ? 16 : 14,
+            color: color ?? (isDark ? AppColors.darkText : AppColors.textPrimary),
+          ),
+        ),
+      ],
     );
   }
 }
