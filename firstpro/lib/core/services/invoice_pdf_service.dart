@@ -475,7 +475,7 @@ class InvoicePdfService {
 
     return pw.Table(
       border: pw.TableBorder.all(color: _mediumGray, width: 0.5),
-      columnWidths: columnWidths.map((w) => pw.FixedColumnWidth(w)).toList(),
+      columnWidths: { for (var i = 0; i < columnWidths.length; i++) i: pw.FixedColumnWidth(columnWidths[i]) },
       children: [headerRow, ...dataRows, totalRow],
     );
   }

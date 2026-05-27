@@ -356,7 +356,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
   static const Map<String, String> _currencyLabels = {
     'YER': 'ر.ي (ريال يمني)',
     'SAR': 'ر.س (ريال سعودي)',
-    'USD': '$ (دولار أمريكي)',
+    'USD': '\$ (دولار أمريكي)',
   };
 
   void _showCreateQuotationDialog() {
@@ -685,13 +685,13 @@ class _CreateQuotationFormState extends State<_CreateQuotationForm> {
   static const Map<String, String> _currencyLabels = {
     'YER': 'ر.ي (ريال يمني)',
     'SAR': 'ر.س (ريال سعودي)',
-    'USD': '$ (دولار أمريكي)',
+    'USD': '\$ (دولار أمريكي)',
   };
 
   static const Map<String, String> _currencySymbol = {
     'YER': 'ر.ي',
     'SAR': 'ر.س',
-    'USD': '$',
+    'USD': '\$',
   };
 
   @override

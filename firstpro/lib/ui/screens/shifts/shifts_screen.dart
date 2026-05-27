@@ -119,7 +119,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
       case 'SAR':
         return 'ر.س';
       case 'USD':
-        return '$';
+        return '\$';
       default:
         return 'ر.ي';
     }

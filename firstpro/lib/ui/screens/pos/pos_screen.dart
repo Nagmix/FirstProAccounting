@@ -3845,7 +3845,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
   //  HELD ORDERS
   // ═══════════════════════════════════════════════════════════════════
-  void _holdOrder() {
+  void _holdOrder() async {
     if (_activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;

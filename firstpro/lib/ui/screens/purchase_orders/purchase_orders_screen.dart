@@ -332,7 +332,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
   static const Map<String, String> _currencyLabels = {
     'YER': 'ر.ي (ريال يمني)',
     'SAR': 'ر.س (ريال سعودي)',
-    'USD': '$ (دولار أمريكي)',
+    'USD': '\$ (دولار أمريكي)',
   };
 
   void _showCreateOrderDialog() {
@@ -639,13 +639,13 @@ class _CreatePurchaseOrderFormState extends State<_CreatePurchaseOrderForm> {
   static const Map<String, String> _currencyLabels = {
     'YER': 'ر.ي (ريال يمني)',
     'SAR': 'ر.س (ريال سعودي)',
-    'USD': '$ (دولار أمريكي)',
+    'USD': '\$ (دولار أمريكي)',
   };
 
   static const Map<String, String> _currencySymbol = {
     'YER': 'ر.ي',
     'SAR': 'ر.س',
-    'USD': '$',
+    'USD': '\$',
   };
 
   @override

@@ -52,6 +52,8 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.14.2
   excel: ^4.0.6
+  flutter_blue_plus: ^1.32.0
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

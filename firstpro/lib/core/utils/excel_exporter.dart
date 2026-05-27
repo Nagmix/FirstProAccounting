@@ -217,7 +217,7 @@ class ExcelExporter {
         if (totals.containsKey(colName)) {
           cell.value = DoubleCellValue(totals[colName]!);
         } else if (colIdx == 0) {
-          cell.value = const TextCellValue('الإجمالي');
+          cell.value = TextCellValue('الإجمالي');
         }
         cell.cellStyle = CellStyle(bold: true, backgroundColorHex: ExcelColor.fromHexString('E8EAF6'));
       }

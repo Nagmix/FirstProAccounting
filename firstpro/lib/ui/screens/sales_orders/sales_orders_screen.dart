@@ -455,7 +455,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
   static const Map<String, String> _currencyLabels = {
     'YER': 'ر.ي (ريال يمني)',
     'SAR': 'ر.س (ريال سعودي)',
-    'USD': '$ (دولار أمريكي)',
+    'USD': '\$ (دولار أمريكي)',
   };
 
   void _showCreateOrderDialog() {
@@ -784,13 +784,13 @@ class _CreateSalesOrderFormState extends State<_CreateSalesOrderForm> {
   static const Map<String, String> _currencyLabels = {
     'YER': 'ر.ي (ريال يمني)',
     'SAR': 'ر.س (ريال سعودي)',
-    'USD': '$ (دولار أمريكي)',
+    'USD': '\$ (دولار أمريكي)',
   };
 
   static const Map<String, String> _currencySymbol = {
     'YER': 'ر.ي',
     'SAR': 'ر.س',
-    'USD': '$',
+    'USD': '\$',
   };
 
   @override
