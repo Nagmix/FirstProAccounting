@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
@@ -10,16 +10,17 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../navigation/app_router.dart';
 import '../../widgets/animated_entry.dart';
-import '../../widgets/quick_action_button.dart';
 import '../../widgets/transaction_tile.dart';
 
 /// The main dashboard screen – the first thing the user sees.
 ///
-/// Modern design with premium animations and glassmorphism effects:
-/// 1. Gradient Header – animated greeting + date + frosted-glass sales summary
-/// 2. Categorized service grid (Quick Ops, Management, Reports)
-/// 3. Redesigned statistics cards (2 × 2) with count-up & progress bars
-/// 4. Recent transactions list with slide-in & dividers
+/// Modern clean design inspired by 2026 fintech dashboards:
+/// 1. Clean Header – greeting + date + action icons (no gradient)
+/// 2. Hero Sales Card – large prominent card with daily sales & trend
+/// 3. Quick Actions Grid – 2×2 cards with modern rounded icons
+/// 4. Secondary Metrics – 3 horizontal metric pills
+/// 5. Management Grid – compact icon grid for all services
+/// 6. Recent Transactions – clean list with dividers
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -28,23 +29,23 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   double _todaySales = 0.0;
   int _todayInvoiceCount = 0;
   double _monthSales = 0.0;
   double _monthPurchases = 0.0;
   int _customerCount = 0;
   double _cashBalance = 0.0;
+  double _yesterdaySales = 0.0;
   List<Map<String, dynamic>> _recentInvoices = [];
   bool _isLoading = true;
 
-  // Periodic refresh timer for auto-updating dashboard data
+  // Faster periodic refresh timer (15s instead of 60s)
   Timer? _refreshTimer;
 
-  // Animation controllers for the header
-  late AnimationController _pulseController;
-  late AnimationController _waveController;
-  late AnimationController _headerEntryController;
+  // Animation controllers
+  late AnimationController _entryController;
+  late AnimationController _chartDrawController;
 
   @override
   void initState() {
@@ -52,37 +53,30 @@ class _DashboardScreenState extends State<DashboardScreen>
     _loadDashboardData();
     WidgetsBinding.instance.addObserver(this);
 
-    // Auto-refresh every 60 seconds
+    // Auto-refresh every 15 seconds for near-real-time updates
     _refreshTimer = Timer.periodic(
-      const Duration(seconds: 60),
+      const Duration(seconds: 15),
       (_) => _loadDashboardData(),
     );
 
-    // Pulse animation for chart icon (repeating)
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
-
-    // Waving hand animation (repeating)
-    _waveController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-
-    // Header entry animation
-    _headerEntryController = AnimationController(
+    // Entry animation
+    _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..forward();
+
+    // Chart line draw animation
+    _chartDrawController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _pulseController.dispose();
-    _waveController.dispose();
-    _headerEntryController.dispose();
+    _entryController.dispose();
+    _chartDrawController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -98,6 +92,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     try {
       final db = DatabaseHelper();
       final now = DateTime.now();
+      final yesterday = now.subtract(const Duration(days: 1));
 
       final results = await Future.wait([
         db.getTotalSalesForDate(now),
@@ -107,6 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         db.getCustomerCount(),
         db.getCashBalance(),
         db.getRecentInvoices(limit: 5),
+        db.getTotalSalesForDate(yesterday),
       ]);
 
       if (mounted) {
@@ -117,9 +113,17 @@ class _DashboardScreenState extends State<DashboardScreen>
           _monthPurchases = (results[3] as num?)?.toDouble() ?? 0.0;
           _customerCount = (results[4] as num?)?.toInt() ?? 0;
           _cashBalance = (results[5] as num?)?.toDouble() ?? 0.0;
-          _recentInvoices = (results[6] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+          _recentInvoices =
+              (results[6] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+                  [];
+          _yesterdaySales = (results[7] as num?)?.toDouble() ?? 0.0;
           _isLoading = false;
         });
+
+        // Start chart animation after data loads
+        if (!_chartDrawController.isCompleted) {
+          _chartDrawController.forward();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -127,7 +131,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('خطأ في تحميل البيانات: $e'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -135,50 +141,126 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   /// Navigate to a route and refresh dashboard data when returning.
   void _navigateTo(String route) {
-    AppRouter.push(context, route).then((_) => _loadDashboardData());
+    AppRouter.push(context, route).then((_) {
+      // Immediately refresh when returning from any screen
+      _loadDashboardData();
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  SERVICE DATA — organized into 3 logical categories
+  //  QUICK ACTION DATA
   // ══════════════════════════════════════════════════════════════════
 
-  /// Quick Operations — the 4 most important daily actions.
-  List<_QuickActionData> get _quickOperations => [
-    _QuickActionData(label: 'نقطة البيع', icon: Icons.point_of_sale, color: AppColors.secondaryDark, route: AppConstants.pos),
-    _QuickActionData(label: 'فاتورة بيع', icon: Icons.sell_outlined, color: AppColors.accentBlue, route: AppConstants.newSaleInvoice),
-    _QuickActionData(label: 'فاتورة شراء', icon: Icons.shopping_bag_outlined, color: AppColors.accentPink, route: AppConstants.newPurchaseInvoice),
-    _QuickActionData(label: 'المصروفات', icon: Icons.payments_outlined, color: AppColors.accentOrange, route: AppConstants.expenses),
-  ];
+  List<_ActionItem> get _quickActions => [
+        _ActionItem(
+          label: 'نقطة البيع',
+          icon: Icons.point_of_sale_rounded,
+          color: const Color(0xFF4F6AF0),
+          bgColor: const Color(0xFFEEF0FF),
+          route: AppConstants.pos,
+        ),
+        _ActionItem(
+          label: 'فاتورة بيع',
+          icon: Icons.receipt_long_rounded,
+          color: const Color(0xFF22C55E),
+          bgColor: const Color(0xFFECFDF5),
+          route: AppConstants.newSaleInvoice,
+        ),
+        _ActionItem(
+          label: 'فاتورة شراء',
+          icon: Icons.shopping_cart_rounded,
+          color: const Color(0xFFF97316),
+          bgColor: const Color(0xFFFFF7ED),
+          route: AppConstants.newPurchaseInvoice,
+        ),
+        _ActionItem(
+          label: 'المصروفات',
+          icon: Icons.account_balance_wallet_rounded,
+          color: const Color(0xFFEF4444),
+          bgColor: const Color(0xFFFEF2F2),
+          route: AppConstants.expenses,
+        ),
+      ];
 
-  /// Management — business entities and records.
-  List<_QuickActionData> get _managementServices => [
-    _QuickActionData(label: 'العملاء', icon: Icons.group_outlined, color: AppColors.accentGreen, route: AppConstants.customers),
-    _QuickActionData(label: 'الموردون', icon: Icons.local_shipping_outlined, color: AppColors.info, route: AppConstants.suppliers),
-    _QuickActionData(label: 'المنتجات', icon: Icons.inventory_2_outlined, color: AppColors.accentOrange, route: AppConstants.products),
-    _QuickActionData(label: 'الفواتير', icon: Icons.receipt_long_outlined, color: AppColors.primary, route: AppConstants.invoices),
-    _QuickActionData(label: 'المستودعات', icon: Icons.warehouse_outlined, color: AppColors.secondaryDark, route: AppConstants.warehouses),
-    _QuickActionData(label: 'الصناديق', icon: Icons.account_balance_wallet_outlined, color: AppColors.accentGreen, route: AppConstants.cashBoxes),
-    _QuickActionData(label: 'الموظفين', icon: Icons.badge_outlined, color: AppColors.warning, route: AppConstants.employees),
-    _QuickActionData(label: 'العملات', icon: Icons.currency_exchange_outlined, color: AppColors.success, route: AppConstants.currencies),
-  ];
+  List<_ActionItem> get _managementActions => [
+        _ActionItem(
+            label: 'العملاء',
+            icon: Icons.people_rounded,
+            color: const Color(0xFF22C55E),
+            route: AppConstants.customers),
+        _ActionItem(
+            label: 'الموردون',
+            icon: Icons.local_shipping_rounded,
+            color: const Color(0xFF3B82F6),
+            route: AppConstants.suppliers),
+        _ActionItem(
+            label: 'المنتجات',
+            icon: Icons.inventory_2_rounded,
+            color: const Color(0xFFF97316),
+            route: AppConstants.products),
+        _ActionItem(
+            label: 'الفواتير',
+            icon: Icons.receipt_rounded,
+            color: const Color(0xFF4F6AF0),
+            route: AppConstants.invoices),
+        _ActionItem(
+            label: 'المستودعات',
+            icon: Icons.warehouse_rounded,
+            color: const Color(0xFF8B5CF6),
+            route: AppConstants.warehouses),
+        _ActionItem(
+            label: 'الصناديق',
+            icon: Icons.credit_card_rounded,
+            color: const Color(0xFF06B6D4),
+            route: AppConstants.cashBoxes),
+        _ActionItem(
+            label: 'الموظفين',
+            icon: Icons.badge_rounded,
+            color: const Color(0xFFEC4899),
+            route: AppConstants.employees),
+        _ActionItem(
+            label: 'العملات',
+            icon: Icons.currency_exchange_rounded,
+            color: const Color(0xFF14B8A6),
+            route: AppConstants.currencies),
+      ];
 
-  /// Reports & Settings — analysis and configuration.
-  List<_QuickActionData> get _reportsAndSettings => [
-    _QuickActionData(label: 'التقارير', icon: Icons.assessment_outlined, color: AppColors.primary, route: AppConstants.reports),
-    _QuickActionData(label: 'الإحصائيات', icon: Icons.query_stats_outlined, color: AppColors.accentBlue, route: AppConstants.statistics),
-    _QuickActionData(label: 'دليل الحسابات', icon: Icons.account_tree_outlined, color: AppColors.primaryLight, route: AppConstants.chartOfAccounts),
-    _QuickActionData(label: 'الإعدادات', icon: Icons.settings_outlined, color: AppColors.textSecondary, route: AppConstants.settings),
-    _QuickActionData(label: 'الدعم الفني', icon: Icons.support_agent_outlined, color: AppColors.warning, route: AppConstants.support),
-  ];
+  List<_ActionItem> get _reportActions => [
+        _ActionItem(
+            label: 'التقارير',
+            icon: Icons.bar_chart_rounded,
+            color: const Color(0xFF4F6AF0),
+            route: AppConstants.reports),
+        _ActionItem(
+            label: 'الإحصائيات',
+            icon: Icons.insights_rounded,
+            color: const Color(0xFF8B5CF6),
+            route: AppConstants.statistics),
+        _ActionItem(
+            label: 'دليل الحسابات',
+            icon: Icons.account_tree_rounded,
+            color: const Color(0xFF06B6D4),
+            route: AppConstants.chartOfAccounts),
+        _ActionItem(
+            label: 'الإعدادات',
+            icon: Icons.settings_rounded,
+            color: const Color(0xFF6B7280),
+            route: AppConstants.settings),
+        _ActionItem(
+            label: 'الدعم الفني',
+            icon: Icons.support_agent_rounded,
+            color: const Color(0xFFF97316),
+            route: AppConstants.support),
+      ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
       extendBodyBehindAppBar: true,
       body: RefreshIndicator(
         onRefresh: _loadDashboardData,
@@ -186,44 +268,46 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // ── Gradient Header ──────────────────────────────────
+            // ── Clean Header ─────────────────────────────────────
             SliverToBoxAdapter(child: _buildHeader(context, isDark)),
 
-            // ── Quick Operations (2×2 large cards) ───────────────
+            // ── Hero Sales Card ──────────────────────────────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
-                delay: const Duration(milliseconds: 100),
-                child: _buildQuickOperations(context, isDark),
+                delay: const Duration(milliseconds: 80),
+                child: _buildHeroSalesCard(context, isDark),
               ),
             ),
 
-            // ── Management (4×2 smaller cards) ────────────────────
+            // ── Quick Actions (2×2) ──────────────────────────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
-                delay: const Duration(milliseconds: 200),
-                child: _buildManagementServices(context, isDark),
+                delay: const Duration(milliseconds: 150),
+                child: _buildQuickActions(context, isDark),
               ),
             ),
 
-            // ── Reports & Settings (horizontal scrollable) ────────
+            // ── Secondary Metrics (3 horizontal cards) ───────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
-                delay: const Duration(milliseconds: 250),
-                child: _buildReportsAndSettings(context, isDark),
+                delay: const Duration(milliseconds: 220),
+                child: _buildSecondaryMetrics(context, isDark),
               ),
             ),
 
-            // ── Statistics ───────────────────────────────────────
+            // ── Management Section ───────────────────────────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
-                delay: const Duration(milliseconds: 300),
-                child: _buildSectionTitle(context, 'الإحصائيات'),
+                delay: const Duration(milliseconds: 280),
+                child: _buildManagementSection(context, isDark),
               ),
             ),
+
+            // ── Reports & Settings Section ───────────────────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
-                delay: const Duration(milliseconds: 350),
-                child: _buildStatCards(context, isDark),
+                delay: const Duration(milliseconds: 340),
+                child: _buildReportsSection(context, isDark),
               ),
             ),
 
@@ -231,7 +315,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             SliverToBoxAdapter(
               child: AnimatedEntry(
                 delay: const Duration(milliseconds: 400),
-                child: _buildSectionTitle(context, 'آخر المعاملات'),
+                child: _buildSectionHeader(context, 'آخر المعاملات'),
               ),
             ),
             _buildRecentTransactions(context, isDark),
@@ -247,7 +331,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  GRADIENT HEADER with animations & glassmorphism
+  //  CLEAN HEADER
   // ══════════════════════════════════════════════════════════════════
   Widget _buildHeader(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
@@ -259,343 +343,296 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        DesignSystem.spacing20,
-        MediaQuery.of(context).padding.top + DesignSystem.spacing16,
-        DesignSystem.spacing20,
-        DesignSystem.spacing28,
+        20,
+        MediaQuery.of(context).padding.top + 12,
+        20,
+        16,
       ),
-      decoration: DesignSystem.headerGradientDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Top bar with animated entry ──────────────────────────
-          FadeTransition(
-            opacity: CurvedAnimation(
-              parent: _headerEntryController,
-              curve: Curves.fastOutSlowIn,
-            ),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, -0.15),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: _headerEntryController,
-                curve: Curves.fastOutSlowIn,
-              )),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      color: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
+      child: FadeTransition(
+        opacity: CurvedAnimation(
+          parent: _entryController,
+          curve: Curves.fastOutSlowIn,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Greeting section
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Greeting with waving hand
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            // Animated waving hand
-                            AnimatedBuilder(
-                              animation: _waveController,
-                              builder: (context, child) {
-                                return Transform.rotate(
-                                  angle: _waveController.value * 0.4 - 0.2,
-                                  child: child,
-                                );
-                              },
-                              child: const Text(
-                                '👋',
-                                style: TextStyle(fontSize: 24),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                greeting,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          dateStr,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    greeting,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-
-                  // Action icons — notifications + drawer only
-                  Row(
-                    children: [
-                      _HeaderIconButton(
-                        icon: Icons.notifications_outlined,
-                        onTap: () => _navigateTo(AppConstants.notifications),
-                      ),
-                      _HeaderIconButton(
-                        icon: Icons.list,
-                        onTap: () => Scaffold.of(context).openEndDrawer(),
-                      ),
-                    ],
+                  const SizedBox(height: 2),
+                  Text(
+                    dateStr,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: DesignSystem.spacing20),
 
-          // ── Today's sales summary card with glassmorphism ──────
-          AnimatedBuilder(
-            animation: _headerEntryController,
-            builder: (context, child) {
-              final progress = Curves.fastOutSlowIn.transform(
-                _headerEntryController.value,
-              );
-              return FadeTransition(
-                opacity: AlwaysStoppedAnimation(progress),
-                child: Transform.translate(
-                  offset: Offset(0, 20 * (1 - progress)),
-                  child: child,
+            // Action icons
+            Row(
+              children: [
+                _HeaderActionIcon(
+                  icon: Icons.notifications_none_rounded,
+                  isDark: isDark,
+                  onTap: () => _navigateTo(AppConstants.notifications),
                 ),
-              );
-            },
-            child: ClipRRect(
-              borderRadius: DesignSystem.asymmetricTopRight(
-                large: 50,
-                small: 14,
+                const SizedBox(width: 8),
+                _HeaderActionIcon(
+                  icon: Icons.menu_rounded,
+                  isDark: isDark,
+                  onTap: () => Scaffold.of(context).openEndDrawer(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  HERO SALES CARD
+  // ══════════════════════════════════════════════════════════════════
+  Widget _buildHeroSalesCard(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+
+    // Calculate trend percentage
+    double trendPercent = 0.0;
+    bool isTrendUp = true;
+    if (_yesterdaySales > 0) {
+      trendPercent = ((_todaySales - _yesterdaySales) / _yesterdaySales * 100);
+      isTrendUp = trendPercent >= 0;
+      trendPercent = trendPercent.abs();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF1A1A2E), const Color(0xFF262640)]
+                : [const Color(0xFF4F6AF0), const Color(0xFF6C8CFF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF4F6AF0).withValues(alpha: isDark ? 0.2 : 0.3),
+              offset: const Offset(0, 8),
+              blurRadius: 24,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // ── Decorative circles ─────────────────────────────────
+            Positioned(
+              left: -30,
+              top: -30,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.06),
+                ),
               ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.13),
-                    borderRadius: DesignSystem.asymmetricTopRight(
-                      large: 50,
-                      small: 14,
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      width: 1,
-                    ),
+            ),
+            Positioned(
+              right: -20,
+              bottom: -40,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.04),
+                ),
+              ),
+            ),
+
+            // ── Mini chart ─────────────────────────────────────────
+            Positioned(
+              left: 20,
+              bottom: 16,
+              right: 20,
+              child: SizedBox(
+                height: 50,
+                child: CustomPaint(
+                  painter: _MiniChartPainter(
+                    progress: _chartDrawController,
+                    lineColor: Colors.white.withValues(alpha: 0.3),
+                    fillColor: Colors.white.withValues(alpha: 0.08),
                   ),
-                  child: Row(
+                ),
+              ),
+            ),
+
+            // ── Card Content ───────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 70),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top row: label + invoice count
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Sales icon with gradient circle + pulse
-                      AnimatedBuilder(
-                        animation: _pulseController,
-                        builder: (context, child) {
-                          final scale =
-                              1.0 + _pulseController.value * 0.08;
-                          return Transform.scale(scale: scale, child: child);
-                        },
-                        child: Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                AppColors.secondary,
-                                AppColors.secondaryLight,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.secondary
-                                    .withValues(alpha: 0.3),
-                                offset: const Offset(0, 4),
-                                blurRadius: 12,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.query_stats_outlined,
-                            color: Colors.white,
-                            size: 24,
-                          ),
+                      Text(
+                        'إجمالي مبيعات اليوم',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(width: DesignSystem.spacing16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'إجمالي مبيعات اليوم',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            // Count-up animation for today's sales
-                            _CountUpText(
-                              value: _todaySales,
-                              style: theme.textTheme.titleLarge!.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              isLoading: _isLoading,
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Invoice count badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
+                          horizontal: 12,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.13),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.12),
-                          ),
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Column(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               '$_todayInvoiceCount',
-                              style:
-                                  theme.textTheme.titleLarge?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
+                            const SizedBox(width: 4),
                             Text(
                               'فاتورة',
-                              style:
-                                  theme.textTheme.labelSmall?.copyWith(
-                                    color: Colors.white70,
-                                  ),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 12),
+
+                  // Sales amount
+                  _CountUpText(
+                    value: _todaySales,
+                    style: theme.textTheme.displaySmall!.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      height: 1.1,
+                      letterSpacing: -0.5,
+                    ),
+                    isLoading: _isLoading,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Trend indicator
+                  if (_yesterdaySales > 0 || _todaySales > 0)
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isTrendUp
+                                ? Colors.white.withValues(alpha: 0.2)
+                                : Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isTrendUp
+                                    ? Icons.trending_up_rounded
+                                    : Icons.trending_down_rounded,
+                                color: isTrendUp
+                                    ? const Color(0xFF4ADE80)
+                                    : const Color(0xFFFCA5A5),
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${trendPercent.toStringAsFixed(1)}%',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: isTrendUp
+                                      ? const Color(0xFF4ADE80)
+                                      : const Color(0xFFFCA5A5),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isTrendUp ? 'أكثر من أمس' : 'أقل من أمس',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  SECTION TITLE
+  //  QUICK ACTIONS (2×2)
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    final theme = Theme.of(context);
+  Widget _buildQuickActions(BuildContext context, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        DesignSystem.spacing20,
-        DesignSystem.spacing20,
-        DesignSystem.spacing20,
-        DesignSystem.spacing8,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 20,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryLight],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: DesignSystem.spacing8),
-          Text(
-            title,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════
-  //  QUICK OPERATIONS — 2×2 large action cards
-  // ══════════════════════════════════════════════════════════════════
-  Widget _buildQuickOperations(BuildContext context, bool isDark) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        DesignSystem.spacing16,
-        DesignSystem.spacing16,
-        DesignSystem.spacing16,
-        0,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section title
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 20,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryLight],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: DesignSystem.spacing8),
-              Text(
-                'العمليات السريعة',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: DesignSystem.spacing8),
-              Icon(
-                Icons.bolt_rounded,
-                color: AppColors.secondary,
-                size: 18,
-              ),
-            ],
-          ),
-          const SizedBox(height: DesignSystem.spacing12),
-
-          // 2×2 grid
+          _buildSectionHeader(context, 'العمليات السريعة'),
+          const SizedBox(height: 12),
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            childAspectRatio: 1.15,
-            children: _quickOperations.asMap().entries.map((entry) {
-              return _StaggeredServiceButton(
-                key: ValueKey('quick_${entry.key}'),
-                delay: Duration(milliseconds: 60 * entry.key),
-                label: entry.value.label,
-                icon: entry.value.icon,
-                color: entry.value.color,
-                isLarge: true,
-                onTap: () => _navigateTo(entry.value.route),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.4,
+            children: _quickActions.asMap().entries.map((entry) {
+              final item = entry.value;
+              return _ModernActionCard(
+                label: item.label,
+                icon: item.icon,
+                color: item.color,
+                bgColor: item.bgColor,
+                onTap: () => _navigateTo(item.route),
               );
             }).toList(),
           ),
@@ -605,64 +642,131 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  MANAGEMENT SERVICES — 4×2 smaller cards
+  //  SECONDARY METRICS (3 horizontal cards)
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildManagementServices(BuildContext context, bool isDark) {
+  Widget _buildSecondaryMetrics(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
+    final metrics = [
+      _MetricData(
+        label: 'مبيعات الشهر',
+        value: _monthSales,
+        icon: Icons.trending_up_rounded,
+        color: const Color(0xFF22C55E),
+        isCount: false,
+      ),
+      _MetricData(
+        label: 'مشتريات الشهر',
+        value: _monthPurchases,
+        icon: Icons.shopping_bag_rounded,
+        color: const Color(0xFFF97316),
+        isCount: false,
+      ),
+      _MetricData(
+        label: 'العملاء',
+        value: _customerCount.toDouble(),
+        icon: Icons.people_rounded,
+        color: const Color(0xFF4F6AF0),
+        isCount: true,
+      ),
+    ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        DesignSystem.spacing16,
-        DesignSystem.spacing16,
-        DesignSystem.spacing16,
-        0,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Row(
+        children: metrics.asMap().entries.map((entry) {
+          final m = entry.value;
+          return Expanded(
+            child: Container(
+              margin: EdgeInsets.only(
+                left: entry.key == 0 ? 0 : 6,
+                right: entry.key == metrics.length - 1 ? 0 : 6,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.2)
+                        : Colors.black.withValues(alpha: 0.04),
+                    offset: const Offset(0, 2),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: m.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(m.icon, color: m.color, size: 16),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    m.isCount
+                        ? m.value.toInt().toString()
+                        : CurrencyFormatter.formatCompactWithSymbol(m.value),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    m.label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: isDark
+                          ? AppColors.darkTextTertiary
+                          : AppColors.textTertiary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  MANAGEMENT SECTION (4-column grid)
+  // ══════════════════════════════════════════════════════════════════
+  Widget _buildManagementSection(BuildContext context, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section title
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 20,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryLight],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: DesignSystem.spacing8),
-              Text(
-                'الإدارة',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DesignSystem.spacing8),
-
-          // 4 columns × 2 rows
+          _buildSectionHeader(context, 'الإدارة'),
+          const SizedBox(height: 10),
           GridView.count(
             crossAxisCount: 4,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            childAspectRatio: 0.78,
-            children: _managementServices.asMap().entries.map((entry) {
-              return _StaggeredServiceButton(
-                key: ValueKey('mgmt_${entry.key}'),
-                delay: Duration(milliseconds: 40 * entry.key + 100),
-                label: entry.value.label,
-                icon: entry.value.icon,
-                color: entry.value.color,
-                isLarge: false,
-                onTap: () => _navigateTo(entry.value.route),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.82,
+            children: _managementActions.map((item) {
+              return _CompactActionItem(
+                label: item.label,
+                icon: item.icon,
+                color: item.color,
+                isDark: isDark,
+                onTap: () => _navigateTo(item.route),
               );
             }).toList(),
           ),
@@ -672,67 +776,33 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  REPORTS & SETTINGS — horizontal scrollable row
+  //  REPORTS & SETTINGS SECTION (horizontal scrollable)
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildReportsAndSettings(BuildContext context, bool isDark) {
-    final theme = Theme.of(context);
-
+  Widget _buildReportsSection(BuildContext context, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        DesignSystem.spacing16,
-        DesignSystem.spacing16,
-        0,
-        0,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 0, 0, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section title
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 20,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryLight],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: DesignSystem.spacing8),
-              Text(
-                'التقارير والإعدادات',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(right: 20),
+            child: _buildSectionHeader(context, 'التقارير والإعدادات'),
           ),
-          const SizedBox(height: DesignSystem.spacing8),
-
-          // Horizontal scrollable list
+          const SizedBox(height: 10),
           SizedBox(
-            height: 90,
+            height: 84,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(
-                right: DesignSystem.spacing16,
-                left: DesignSystem.spacing4,
-              ),
-              itemCount: _reportsAndSettings.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              padding: const EdgeInsets.only(right: 4, left: 16),
+              itemCount: _reportActions.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
-                final item = _reportsAndSettings[index];
-                return _StaggeredServiceButton(
-                  key: ValueKey('report_$index'),
-                  delay: Duration(milliseconds: 50 * index + 200),
+                final item = _reportActions[index];
+                return _CompactActionItem(
                   label: item.label,
                   icon: item.icon,
                   color: item.color,
-                  isLarge: false,
+                  isDark: isDark,
                   onTap: () => _navigateTo(item.route),
                 );
               },
@@ -744,88 +814,29 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  STATISTICS CARDS (2×2) – redesigned with gradient circles,
-  //  count-up animation, progress bars & subtle gradient bg
+  //  SECTION HEADER
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildStatCards(BuildContext context, bool isDark) {
-    // Cash balance progress: compare today's sales to monthly average
-    // If month has sales, progress = (todaySales * 30) / monthSales
-    // This represents "sales pace" — are we above or below the monthly average?
-    final cashProgress = _monthSales > 0
-        ? ((_todaySales * 30) / _monthSales).clamp(0.0, 1.0)
-        : 0.0;
-    // Direction indicator: is today's pace above or below the monthly average?
-    final isCashTrendUp = _monthSales > 0 && _todaySales * 30 > _monthSales;
-
-    final stats = <_StatData>[
-      _StatData(
-        title: 'إجمالي المبيعات',
-        value: _monthSales,
-        icon: Icons.query_stats_outlined,
-        color: AppColors.accentBlue,
-        subtitle: 'هذا الشهر',
-        isCount: false,
-        progress: _monthSales > 0 ? (_monthSales / (_monthSales + _monthPurchases)).clamp(0.0, 1.0) : 0.0,
-      ),
-      _StatData(
-        title: 'إجمالي المشتريات',
-        value: _monthPurchases,
-        icon: Icons.shopping_bag_outlined,
-        color: AppColors.accentPink,
-        subtitle: 'هذا الشهر',
-        isCount: false,
-        progress: _monthPurchases > 0 ? (_monthPurchases / (_monthSales + _monthPurchases)).clamp(0.0, 1.0) : 0.0,
-      ),
-      _StatData(
-        title: 'عدد العملاء',
-        value: _customerCount.toDouble(),
-        icon: Icons.group_outlined,
-        color: AppColors.accentGreen,
-        subtitle: 'إجمالي',
-        isCount: true,
-        progress: _customerCount > 0 ? (_customerCount / 100).clamp(0.0, 1.0) : 0.0,
-      ),
-      _StatData(
-        title: 'رصيد الصندوق',
-        value: _cashBalance,
-        icon: Icons.account_balance_wallet_outlined,
-        color: AppColors.accentOrange,
-        subtitle: isCashTrendUp ? 'وتيرة فوق المتوسط' : 'وتيرة تحت المتوسط',
-        isCount: false,
-        progress: cashProgress,
-        isTrendUp: isCashTrendUp,
-      ),
-    ];
-
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DesignSystem.spacing12,
-      ),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: DesignSystem.spacing12,
-        crossAxisSpacing: DesignSystem.spacing12,
-        childAspectRatio: 0.95,
-        children: stats.asMap().entries.map((entry) {
-          return AnimatedEntry(
-            delay: Duration(milliseconds: 120 * entry.key + 200),
-            duration: DesignSystem.animEntry,
-            offset: 20.0,
-            child: _RedesignedStatCard(
-              data: entry.value,
-              isDark: isDark,
-              isLoading: _isLoading,
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  RECENT TRANSACTIONS with slide-in & dividers
+  //  RECENT TRANSACTIONS
   // ══════════════════════════════════════════════════════════════════
   Widget _buildRecentTransactions(BuildContext context, bool isDark) {
     if (_isLoading) {
@@ -844,25 +855,25 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: AnimatedEntry(
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: DesignSystem.spacing20,
-              vertical: DesignSystem.spacing32,
+              horizontal: 20,
+              vertical: 32,
             ),
             child: Column(
               children: [
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
+                    color: AppColors.primary.withValues(alpha: 0.06),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.receipt_long_outlined,
-                    size: 36,
-                    color: AppColors.primary,
+                  child: Icon(
+                    Icons.receipt_long_rounded,
+                    size: 32,
+                    color: AppColors.primary.withValues(alpha: 0.5),
                   ),
                 ),
-                const SizedBox(height: DesignSystem.spacing16),
+                const SizedBox(height: 16),
                 Text(
                   'لا توجد معاملات بعد',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -888,10 +899,9 @@ class _DashboardScreenState extends State<DashboardScreen>
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Slide-in animation for each tile
                 AnimatedEntry(
-                  delay: Duration(milliseconds: 80 * index),
-                  offset: 20.0,
+                  delay: Duration(milliseconds: 60 * index),
+                  offset: 16.0,
                   child: TransactionTile(
                     customerName:
                         invoice['entity_name'] as String? ?? '—',
@@ -906,45 +916,39 @@ class _DashboardScreenState extends State<DashboardScreen>
                     },
                   ),
                 ),
-                // Subtle divider between items (not after last)
                 if (index < _recentInvoices.length - 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: DesignSystem.spacing32,
+                      horizontal: 32,
                     ),
                     child: Divider(
                       height: 1,
                       thickness: 0.5,
                       color: isDark
-                          ? AppColors.darkDivider.withValues(alpha: 0.4)
-                          : AppColors.divider.withValues(alpha: 0.6),
+                          ? AppColors.darkDivider.withValues(alpha: 0.3)
+                          : AppColors.divider.withValues(alpha: 0.5),
                     ),
                   ),
               ],
             );
           }
 
-          // "عرض الكل" gradient button
+          // "عرض الكل" button
           return Padding(
-            padding: const EdgeInsets.fromLTRB(
-              DesignSystem.spacing20,
-              DesignSystem.spacing12,
-              DesignSystem.spacing20,
-              DesignSystem.spacing8,
-            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
             child: SizedBox(
               width: double.infinity,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryLight],
+                    colors: [Color(0xFF4F6AF0), Color(0xFF6C8CFF)],
                     begin: Alignment.centerRight,
                     end: Alignment.centerLeft,
                   ),
-                  borderRadius: DesignSystem.borderRadius12,
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.25),
+                      color: const Color(0xFF4F6AF0).withValues(alpha: 0.25),
                       offset: const Offset(0, 4),
                       blurRadius: 12,
                     ),
@@ -954,7 +958,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () => _navigateTo(AppConstants.invoices),
-                    borderRadius: DesignSystem.borderRadius12,
+                    borderRadius: BorderRadius.circular(14),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       child: Row(
@@ -968,7 +972,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 ?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
-                                  letterSpacing: 0,
                                 ),
                           ),
                           const SizedBox(width: 6),
@@ -1009,62 +1012,79 @@ class _DashboardScreenState extends State<DashboardScreen>
 //  INTERNAL HELPER CLASSES
 // ══════════════════════════════════════════════════════════════════════
 
-class _QuickActionData {
-  const _QuickActionData({
+class _ActionItem {
+  const _ActionItem({
     required this.label,
     required this.icon,
     required this.color,
     required this.route,
+    this.bgColor,
   });
 
   final String label;
   final IconData icon;
   final Color color;
+  final Color? bgColor;
   final String route;
 }
 
-/// Data model for redesigned stat cards.
-class _StatData {
-  const _StatData({
-    required this.title,
+class _MetricData {
+  const _MetricData({
+    required this.label,
     required this.value,
     required this.icon,
     required this.color,
-    required this.subtitle,
     required this.isCount,
-    required this.progress,
-    this.isTrendUp,
   });
 
-  final String title;
+  final String label;
   final double value;
   final IconData icon;
   final Color color;
-  final String subtitle;
   final bool isCount;
-  final double progress;
-  final bool? isTrendUp;
 }
 
-// ── Header icon button ────────────────────────────────────────────
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({required this.icon, required this.onTap});
+// ── Header action icon ─────────────────────────────────────────────
+class _HeaderActionIcon extends StatelessWidget {
+  const _HeaderActionIcon({
+    required this.icon,
+    required this.isDark,
+    required this.onTap,
+  });
+
   final IconData icon;
+  final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 4),
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkSurfaceVariant
+            : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ],
+      ),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Icon(icon, color: Colors.white, size: 20),
+          borderRadius: BorderRadius.circular(14),
+          child: Icon(
+            icon,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            size: 20,
           ),
         ),
       ),
@@ -1072,113 +1092,159 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
-// ── Staggered service button wrapper ─────────────────────────────
-/// Wraps a [QuickActionButton] with a fade-in + slide-up animation
-/// that plays each time the widget is built (i.e. on page change).
-class _StaggeredServiceButton extends StatefulWidget {
-  const _StaggeredServiceButton({
-    super.key,
+// ── Modern Action Card (2×2 quick ops) ────────────────────────────
+class _ModernActionCard extends StatelessWidget {
+  const _ModernActionCard({
     required this.label,
     required this.icon,
     required this.color,
+    this.bgColor,
     required this.onTap,
-    this.isLarge = false,
-    this.delay = Duration.zero,
   });
 
   final String label;
   final IconData icon;
   final Color color;
+  final Color? bgColor;
   final VoidCallback onTap;
-  final bool isLarge;
-  final Duration delay;
-
-  @override
-  State<_StaggeredServiceButton> createState() =>
-      _StaggeredServiceButtonState();
-}
-
-class _StaggeredServiceButtonState extends State<_StaggeredServiceButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnim;
-  late Animation<double> _slideAnim;
-  late Animation<double> _scaleAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: DesignSystem.animEntry,
-    );
-
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
-
-    _slideAnim = Tween<double>(begin: 18.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
-
-    _scaleAnim = Tween<double>(begin: 0.88, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
-
-    if (widget.delay == Duration.zero) {
-      _controller.forward();
-    } else {
-      Future.delayed(widget.delay, () {
-        if (mounted) _controller.forward();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return FadeTransition(
-          opacity: _fadeAnim,
-          child: Transform.translate(
-            offset: Offset(0, _slideAnim.value),
-            child: Transform.scale(
-              scale: _scaleAnim.value,
-              child: child,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final effectiveBgColor = bgColor ?? color.withValues(alpha: 0.1);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon with solid colored background
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? color.withValues(alpha: 0.15)
+                        : effectiveBgColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(icon, color: color, size: 26),
+                ),
+                const SizedBox(height: 12),
+                // Label
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
-        );
-      },
-      child: QuickActionButton(
-        label: widget.label,
-        icon: widget.icon,
-        color: widget.color,
-        isLarge: widget.isLarge,
-        onTap: widget.onTap,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Compact Action Item (management grid) ─────────────────────────
+class _CompactActionItem extends StatelessWidget {
+  const _CompactActionItem({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.03),
+              offset: const Offset(0, 1),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: isDark ? 0.15 : 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.textSecondary,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ── Count-up text widget ─────────────────────────────────────────
-/// Animates a numeric value from 0 to [value] using
-/// Curves.fastOutSlowIn for a natural deceleration effect.
 class _CountUpText extends StatefulWidget {
   const _CountUpText({
     required this.value,
@@ -1198,6 +1264,7 @@ class _CountUpTextState extends State<_CountUpText>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  double _previousValue = 0.0;
 
   @override
   void initState() {
@@ -1219,8 +1286,13 @@ class _CountUpTextState extends State<_CountUpText>
   @override
   void didUpdateWidget(covariant _CountUpText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.isLoading && oldWidget.isLoading) {
-      _animation = Tween<double>(begin: 0, end: widget.value).animate(
+    // Always re-animate when value changes (not just loading → loaded)
+    if (oldWidget.value != widget.value || (!widget.isLoading && oldWidget.isLoading)) {
+      _previousValue = oldWidget.value;
+      _animation = Tween<double>(
+        begin: _previousValue,
+        end: widget.value,
+      ).animate(
         CurvedAnimation(parent: _controller, curve: Curves.fastOutSlowIn),
       );
       _controller.forward(from: 0);
@@ -1247,299 +1319,85 @@ class _CountUpTextState extends State<_CountUpText>
   }
 }
 
-// ── Redesigned stat card ─────────────────────────────────────────
-/// A modern statistics card with:
-/// - Larger icon with gradient background **circle** (fitness-app style)
-/// - Prominent value with count-up animation
-/// - Subtle progress bar showing percentage of target
-/// - Trend indicator for cash balance (up/down arrow)
-/// - Card background with very subtle gradient
-class _RedesignedStatCard extends StatefulWidget {
-  const _RedesignedStatCard({
-    required this.data,
-    required this.isDark,
-    required this.isLoading,
-  });
+// ── Mini Chart Painter (decorative line chart in hero card) ───────
+class _MiniChartPainter extends CustomPainter {
+  _MiniChartPainter({
+    required this.progress,
+    required this.lineColor,
+    required this.fillColor,
+  }) : super(repaint: progress);
 
-  final _StatData data;
-  final bool isDark;
-  final bool isLoading;
+  final Animation<double> progress;
+  final Color lineColor;
+  final Color fillColor;
 
   @override
-  State<_RedesignedStatCard> createState() => _RedesignedStatCardState();
-}
+  void paint(Canvas canvas, Size size) {
+    final animatedProgress = progress.value;
+    if (animatedProgress <= 0) return;
 
-class _RedesignedStatCardState extends State<_RedesignedStatCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _countUpController;
-  late Animation<double> _countUpAnimation;
-  late AnimationController _progressController;
-  late Animation<double> _progressAnimation;
+    final points = [
+      Offset(0, size.height * 0.7),
+      Offset(size.width * 0.15, size.height * 0.5),
+      Offset(size.width * 0.3, size.height * 0.65),
+      Offset(size.width * 0.45, size.height * 0.3),
+      Offset(size.width * 0.6, size.height * 0.45),
+      Offset(size.width * 0.75, size.height * 0.15),
+      Offset(size.width * 0.9, size.height * 0.25),
+      Offset(size.width, size.height * 0.1),
+    ];
 
-  @override
-  void initState() {
-    super.initState();
+    // Draw only up to animated progress
+    final visibleCount = (points.length * animatedProgress).ceil();
+    if (visibleCount < 2) return;
 
-    // Count-up animation
-    _countUpController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _countUpAnimation = Tween<double>(
-      begin: 0,
-      end: widget.data.value,
-    ).animate(
-      CurvedAnimation(
-        parent: _countUpController,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
+    final visiblePoints = points.sublist(0, visibleCount);
 
-    // Progress bar animation
-    _progressController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _progressAnimation = Tween<double>(
-      begin: 0,
-      end: widget.data.progress,
-    ).animate(
-      CurvedAnimation(
-        parent: _progressController,
-        curve: Curves.fastOutSlowIn,
-      ),
-    );
+    // Fill path
+    final fillPath = Path();
+    fillPath.moveTo(visiblePoints[0].dx, size.height);
+    fillPath.lineTo(visiblePoints[0].dx, visiblePoints[0].dy);
+    for (int i = 1; i < visiblePoints.length; i++) {
+      final prev = visiblePoints[i - 1];
+      final curr = visiblePoints[i];
+      final cpx = (prev.dx + curr.dx) / 2;
+      fillPath.cubicTo(cpx, prev.dy, cpx, curr.dy, curr.dx, curr.dy);
+    }
+    fillPath.lineTo(visiblePoints.last.dx, size.height);
+    fillPath.close();
 
-    if (!widget.isLoading) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          _countUpController.forward();
-          _progressController.forward();
-        }
-      });
+    final fillPaint = Paint()..color = fillColor;
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Line path
+    final linePath = Path();
+    linePath.moveTo(visiblePoints[0].dx, visiblePoints[0].dy);
+    for (int i = 1; i < visiblePoints.length; i++) {
+      final prev = visiblePoints[i - 1];
+      final curr = visiblePoints[i];
+      final cpx = (prev.dx + curr.dx) / 2;
+      linePath.cubicTo(cpx, prev.dy, cpx, curr.dy, curr.dx, curr.dy);
+    }
+
+    final linePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawPath(linePath, linePaint);
+
+    // Dot at the end
+    if (visiblePoints.isNotEmpty) {
+      final lastPoint = visiblePoints.last;
+      canvas.drawCircle(
+        lastPoint,
+        3,
+        Paint()..color = lineColor,
+      );
     }
   }
 
   @override
-  void didUpdateWidget(covariant _RedesignedStatCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!widget.isLoading && oldWidget.isLoading) {
-      _countUpAnimation = Tween<double>(
-        begin: 0,
-        end: widget.data.value,
-      ).animate(
-        CurvedAnimation(
-          parent: _countUpController,
-          curve: Curves.fastOutSlowIn,
-        ),
-      );
-      _progressAnimation = Tween<double>(
-        begin: 0,
-        end: widget.data.progress,
-      ).animate(
-        CurvedAnimation(
-          parent: _progressController,
-          curve: Curves.fastOutSlowIn,
-        ),
-      );
-      _countUpController.forward(from: 0);
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (mounted) _progressController.forward(from: 0);
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _countUpController.dispose();
-    _progressController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final d = widget.data;
-    final isDark = widget.isDark;
-    final hasTrend = d.isTrendUp != null;
-
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            d.color.withValues(alpha: 0.06),
-            isDark
-                ? AppColors.darkSurface
-                : AppColors.surface,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: DesignSystem.borderRadius16,
-        boxShadow: DesignSystem.cardShadow(isLight: !isDark),
-        border: Border.all(
-          color: d.color.withValues(alpha: 0.08),
-          width: 0.5,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: DesignSystem.borderRadius16,
-        child: Stack(
-          children: [
-            // ── Accent bar on the right side (RTL) ──────────────
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  color: d.color.withValues(alpha: 0.6),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(4),
-                    bottomLeft: Radius.circular(4),
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Card content ────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Larger icon with gradient CIRCLE ──────────
-                  Center(
-                    child: Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            d.color.withValues(alpha: 0.25),
-                            d.color.withValues(alpha: 0.08),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: d.color.withValues(alpha: 0.15),
-                            offset: const Offset(0, 4),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Icon(d.icon, color: d.color, size: 24),
-                    ),
-                  ),
-                  const Spacer(),
-
-                  // ── Value with count-up animation ─────────────
-                  Center(
-                    child: AnimatedBuilder(
-                      animation: _countUpController,
-                      builder: (context, child) {
-                        final currentValue = _countUpAnimation.value;
-                        return Text(
-                          d.isCount
-                              ? currentValue.toInt().toString()
-                              : CurrencyFormatter.formatCompactWithSymbol(
-                                  currentValue,
-                                ),
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.textPrimary,
-                          ),
-                          textAlign: TextAlign.center,
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  // ── Title ─────────────────────────────────────
-                  Center(
-                    child: Text(
-                      d.title,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppColors.darkTextSecondary
-                            : AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-
-                  // ── Subtitle + progress or trend indicator ────
-                  if (hasTrend)
-                    // Trend indicator (for cash balance)
-                    Row(
-                      children: [
-                        Icon(
-                          d.isTrendUp!
-                              ? Icons.trending_up_rounded
-                              : Icons.trending_down_rounded,
-                          color: d.isTrendUp! ? AppColors.success : AppColors.error,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            d.subtitle,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: d.isTrendUp! ? AppColors.success : AppColors.error,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    // Standard subtitle + animated progress bar
-                    Row(
-                      children: [
-                        Text(
-                          d.subtitle,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.textHint,
-                            fontSize: 10,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: AnimatedBuilder(
-                            animation: _progressController,
-                            builder: (context, _) {
-                              return DesignSystem.progressBar(
-                                progress: _progressAnimation.value,
-                                color: d.color,
-                                width: double.infinity,
-                                height: 3,
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  bool shouldRepaint(covariant _MiniChartPainter oldDelegate) => true;
 }
