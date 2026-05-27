@@ -188,6 +188,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   double get _total => _subtotal - _discountAmount + _taxAmount + _transportCharges;
   double get _paidAmount => double.tryParse(_paidController.text) ?? 0;
   double get _remaining => _total - _paidAmount;
+  // YER-equivalent getters for multi-currency display
+  double get _totalInBaseCurrency => _total * _selectedExchangeRate;
+  double get _paidAmountInBaseCurrency => _paidAmount * _selectedExchangeRate;
+  double get _remainingInBaseCurrency => _remaining * _selectedExchangeRate;
 
   void _updateAutoPay() {
     if (_autoPay && _total > 0) {
@@ -1418,9 +1422,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           _summaryRow('الإجمالي', CurrencyFormatter.format(_total),
               valueStyle: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
           if (_selectedCurrency != 'YER') ...[
-            const SizedBox(height: 2),
-            _summaryRow('بالعملة الأساسية', CurrencyFormatter.format(_total * _selectedExchangeRate),
-                valueStyle: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.info.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                children: [
+                  _summaryRow('المعادل بالريال اليمني', '${CurrencyFormatter.format(_totalInBaseCurrency)} ر.ي',
+                      valueStyle: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.info)),
+                  if (_paidAmount > 0.005) ...[
+                    const SizedBox(height: 2),
+                    _summaryRow('المدفوع (ر.ي)', '${CurrencyFormatter.format(_paidAmountInBaseCurrency)} ر.ي',
+                        valueStyle: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.success)),
+                  ],
+                  if (_remaining > 0.005) ...[
+                    const SizedBox(height: 2),
+                    _summaryRow('المتبقي (ر.ي)', '${CurrencyFormatter.format(_remainingInBaseCurrency)} ر.ي',
+                        valueStyle: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.error)),
+                  ],
+                ],
+              ),
+            ),
           ],
           const SizedBox(height: 8),
           // Notes
@@ -1479,6 +1505,18 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
     if (_paymentMechanism == 'cash' && _selectedCashBoxId == null) {
       context.showErrorSnackBar('الرجاء اختيار الصندوق');
+      return;
+    }
+    if (_discountAmount < -0.005) {
+      context.showErrorSnackBar('الخصم لا يمكن أن يكون سالباً');
+      return;
+    }
+    if (_discountAmount > _subtotal + 0.005) {
+      context.showErrorSnackBar('الخصم لا يمكن أن يتجاوز المجموع الفرعي');
+      return;
+    }
+    if (_paidAmount < -0.005) {
+      context.showErrorSnackBar('المبلغ المدفوع لا يمكن أن يكون سالباً');
       return;
     }
     if (_paidAmount > _total + 0.005) {

@@ -179,6 +179,69 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
         await db.updateCashBox(cashBox.id!, map);
       } else {
         await db.insertCashBox(map);
+
+        // ── Opening Balance Journal Entry ──
+        final openingBalance = double.tryParse(_balanceController.text) ?? 0.0;
+        if (openingBalance > 0 && _linkedAccountId != null) {
+          final codeOffset = _currency == 'SAR' ? 1 : (_currency == 'USD' ? 2 : 0);
+          final openingBalanceAccount = await db.getAccountByCodeAndCurrency(
+            (2200 + codeOffset).toString(), _currency,
+          );
+          final openingBalanceAccountId = openingBalanceAccount?['id'] as int?;
+
+          if (openingBalanceAccountId != null) {
+            final now = DateTime.now().toIso8601String();
+            final journalId = DateTime.now().millisecondsSinceEpoch;
+            final database = await db.database;
+            final name = _nameController.text.trim();
+
+            if (_balanceType == 'debit') {
+              // Debit Cash & Banks, Credit Opening Balance Equity
+              await database.insert('transactions', {
+                'account_id': _linkedAccountId,
+                'journal_id': journalId,
+                'debit': openingBalance,
+                'credit': 0.0,
+                'description': 'رصيد افتتاحي صندوق - $name',
+                'date': now,
+                'created_at': now,
+              });
+              await database.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': openingBalance,
+                'description': 'رصيد افتتاحي صندوق - $name',
+                'date': now,
+                'created_at': now,
+              });
+              await db.updateAccountBalance(_linkedAccountId!, openingBalance, isDebit: true);
+              await db.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: false);
+            } else {
+              // Credit Cash & Banks, Debit Opening Balance Equity
+              await database.insert('transactions', {
+                'account_id': _linkedAccountId,
+                'journal_id': journalId,
+                'debit': 0.0,
+                'credit': openingBalance,
+                'description': 'رصيد افتتاحي صندوق - $name',
+                'date': now,
+                'created_at': now,
+              });
+              await database.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
+                'debit': openingBalance,
+                'credit': 0.0,
+                'description': 'رصيد افتتاحي صندوق - $name',
+                'date': now,
+                'created_at': now,
+              });
+              await db.updateAccountBalance(_linkedAccountId!, openingBalance, isDebit: false);
+              await db.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: true);
+            }
+          }
+        }
       }
 
       if (!mounted) return;

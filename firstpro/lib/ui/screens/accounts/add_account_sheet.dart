@@ -21,7 +21,15 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   AccountType _selectedType = AccountType.ASSET;
   int? _selectedCashBoxId;
   int? _selectedParentId;
+  String _currency = 'YER';
   bool _isSaving = false;
+
+  /// Currency display info.
+  static const Map<String, Map<String, String>> _currencyInfo = {
+    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
+    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
+    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
+  };
 
   List<Map<String, dynamic>> _cashBoxes = [];
 
@@ -66,6 +74,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
       _codeController.text = widget.existing!.accountCode;
       _selectedCashBoxId = widget.existing!.linkedCashBoxId;
       _selectedParentId = widget.existing!.parentId;
+      _currency = widget.existing!.currency;
     }
     _loadCashBoxes();
     _generateCode();
@@ -104,7 +113,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
       parentId: _selectedParentId,
       accountCode: _codeController.text.trim(),
       accountType: _selectedType,
-      currency: widget.existing?.currency ?? 'YER',
+      currency: _currency,
       balance: widget.existing?.balance ?? 0.0,
       balanceType: widget.existing?.balanceType ?? (_selectedType == 'ASSET' || _selectedType == 'COST' ? 'debit' : 'credit'),
       linkedCashBoxId: _selectedCashBoxId,
@@ -227,6 +236,25 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                   onChanged: (v) => setState(() => _selectedParentId = v),
                 );
               }),
+              const SizedBox(height: 14),
+
+              // Currency selection
+              DropdownButtonFormField<String>(
+                value: _currency,
+                decoration: const InputDecoration(
+                  labelText: 'العملة',
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                items: _currencyInfo.entries.map((entry) {
+                  return DropdownMenuItem<String>(
+                    value: entry.key,
+                    child: Text('${entry.value['label']} (${entry.key})'),
+                  );
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _currency = v);
+                },
+              ),
               const SizedBox(height: 14),
 
               // Linked cash box

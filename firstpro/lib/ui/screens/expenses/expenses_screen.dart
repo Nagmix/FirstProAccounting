@@ -32,9 +32,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     for (final account in accounts) {
       final balance = (account['balance'] as num?)?.toDouble() ?? 0.0;
       final balanceType = account['balance_type'] as String? ?? 'credit';
-      if (balanceType == 'credit') {
+      final accountType = account['account_type'] as String? ?? '';
+      // Use effective balance type: EXPENSE/COST/ASSET are debit-nature
+      final effectiveIsDebit = (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE');
+      if (effectiveIsDebit) {
+        // Debit-nature: positive balance = debit (expense incurred) → add to total
         totalBalance += balance;
       } else {
+        // Credit-nature: positive balance = credit → subtract from total
         totalBalance -= balance;
       }
     }
@@ -170,7 +175,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               _buildSummaryChip(
                 icon: Icons.trending_down,
                 label: 'الحالة',
-                value: _totalExpenseBalance >= 0 ? 'له' : 'عليه',
+                value: _totalExpenseBalance >= 0 ? 'عليه' : 'له',
               ),
             ],
           ),
@@ -235,7 +240,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     final currencyColor = _getCurrencyColor(currency);
     final currencySymbol = _getCurrencySymbol(currency);
 
-    final isCredit = balanceType == 'credit';
+    // Use effective balance direction for expense accounts (debit-nature)
+    final accountType = account['account_type'] as String? ?? '';
+    final effectiveIsDebit = (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE');
+    // For debit-nature accounts, positive balance = debit (عليه)
+    final isCredit = effectiveIsDebit ? balance < 0 : balance > 0;
     final balanceColor = isCredit ? AppColors.success : AppColors.error;
 
     return Container(

@@ -71,8 +71,10 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     final netBalance = totalDebit - totalCredit;
 
     // Compute running balances
+    // Start from opening balance so final running balance matches account's current balance
+    final openingBalance = widget.account.balance - netBalance;
     final runningBalances = <double>[];
-    double running = 0;
+    double running = openingBalance;
     // Transactions are ordered date DESC, so reverse for running balance
     final reversed = _transactions.reversed.toList();
     for (final tx in reversed) {

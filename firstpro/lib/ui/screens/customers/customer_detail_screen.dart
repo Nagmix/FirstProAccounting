@@ -177,38 +177,51 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       });
     }
 
-    // 2. Load voucher items for accounts linked to this customer
-    // Find the customer's account in the chart of accounts
-    final customerAccounts = await db.rawQuery(
-      "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET'",
-      ['%العملاء%'],
+    // 2. Load vouchers linked to this customer via customer_id column
+    // Primary: vouchers with customer_id matching this customer
+    // Fallback: vouchers with NULL customer_id but items referencing customer accounts
+    final voucherRows = await db.rawQuery(
+      'SELECT * FROM vouchers WHERE customer_id = ? ORDER BY date ASC',
+      [customerId],
     );
 
-    // Also load vouchers directly linked through voucher items
-    final vouchers = await dbHelper.getAllVouchers();
-    for (final v in vouchers) {
-      final voucherId = v['id'] as int?;
+    // Backward compatibility: find vouchers with NULL customer_id that reference
+    // this customer's receivable account through voucher items
+    final customerCurrency = _freshCustomer?.currency ?? widget.customer.currency;
+    final customerAccounts = await db.rawQuery(
+      "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET' AND currency = ?",
+      ['%العملاء%', customerCurrency],
+    );
+    final customerAccountIds = customerAccounts.map((a) => a['id']).toList();
+
+    if (customerAccountIds.isNotEmpty) {
+      final unlinkedVouchers = await db.rawQuery(
+        'SELECT * FROM vouchers WHERE customer_id IS NULL ORDER BY date ASC',
+      );
+      for (final v in unlinkedVouchers) {
+        final voucherId = v['id'] as int?;
+        if (voucherId == null) continue;
+        final items = await dbHelper.getVoucherItems(voucherId);
+        for (final item in items) {
+          final accountId = item['account_id'] as int?;
+          if (accountId != null && customerAccountIds.contains(accountId)) {
+            // Check if description contains this customer's name for specificity
+            final desc = v['description'] as String? ?? '';
+            final customerName = _freshCustomer?.name ?? widget.customer.name;
+            if (desc.contains(customerName)) {
+              voucherRows.add(v);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    for (final v in voucherRows) {
       final voucherType = v['voucher_type'] as String? ?? '';
       final totalAmount = (v['total_amount'] as num?)?.toDouble() ?? 0.0;
       final currency = v['currency'] as String? ?? 'YER';
       final dateStr = v['date'] as String? ?? v['created_at'] as String? ?? DateTime.now().toIso8601String();
-
-      // Check if any voucher item references a customer account
-      if (voucherId != null && customerAccounts.isNotEmpty) {
-        final accountIds = customerAccounts.map((a) => a['id']).toList();
-        final items = await dbHelper.getVoucherItems(voucherId);
-        bool linkedToCustomer = false;
-        for (final item in items) {
-          final accountId = item['account_id'] as int?;
-          if (accountId != null && accountIds.contains(accountId)) {
-            linkedToCustomer = true;
-            break;
-          }
-        }
-        if (!linkedToCustomer) continue;
-      } else {
-        continue;
-      }
 
       String typeAr;
       IconData icon;
@@ -287,7 +300,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   }
 
   void _applyFilters() {
-    var filtered = List<Map<String, dynamic>>.from(_allMovements);
+    // Deep copy maps to avoid mutating _allMovements when setting running_balance
+    var filtered = _allMovements.map((m) => Map<String, dynamic>.from(m)).toList();
 
     // Apply tab filter
     final filterKey = _filterTabs[_selectedFilterIndex].key;
@@ -317,8 +331,28 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       }).toList();
     }
 
+    // Calculate opening balance: the customer's stored balance minus the sum
+    // of all tracked movements. This captures any initial balance set when the
+    // customer was created that doesn't have a corresponding transaction.
+    final customer = _freshCustomer ?? widget.customer;
+    double openingBalance = 0.0;
+    if (customer.balance != 0.0) {
+      double allDebit = 0.0;
+      double allCredit = 0.0;
+      for (final m in _allMovements) {
+        allDebit += (m['debit'] as num?)?.toDouble() ?? 0.0;
+        allCredit += (m['credit'] as num?)?.toDouble() ?? 0.0;
+      }
+      // Running balance convention: positive = credit (له), negative = debit (عليه)
+      final customerBalance = customer.balanceType == 'credit'
+          ? customer.balance
+          : -customer.balance;
+      final movementBalance = allCredit - allDebit;
+      openingBalance = customerBalance - movementBalance;
+    }
+
     // Calculate running balance and totals
-    double runningBalance = 0.0;
+    double runningBalance = openingBalance;
     double totalDebit = 0.0;
     double totalCredit = 0.0;
 
@@ -335,7 +369,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       _filteredMovements = filtered;
       _totalDebit = totalDebit;
       _totalCredit = totalCredit;
-      _netBalance = totalCredit - totalDebit;
+      _netBalance = openingBalance + totalCredit - totalDebit;
     });
   }
 
@@ -513,6 +547,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                             'currency': selectedCurrency,
                             'total_amount': amount,
                             'cash_box_id': selectedCashBoxId,
+                            'customer_id': _freshCustomer?.id,
                             'is_posted': 1,
                             'created_at': now.toIso8601String(),
                             'updated_at': now.toIso8601String(),

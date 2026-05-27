@@ -15,6 +15,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
   List<Map<String, dynamic>> _fiscalYears = [];
   Map<String, double> _currentYearPL = {};
   bool _isPosting = false;
+  int _activeYear = DateTime.now().year;
 
   @override
   void initState() {
@@ -25,12 +26,26 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
   Future<void> _loadData() async {
     final db = DatabaseHelper();
     final years = await db.getFiscalYears();
-    final currentYear = DateTime.now().year;
-    final pl = await db.getYearProfitLoss(currentYear);
+
+    // Determine the active fiscal year: prefer the most recent open fiscal year
+    int activeYear = DateTime.now().year;
+    if (years.isNotEmpty) {
+      // Find the most recent open fiscal year
+      final openYears = years.where((fy) => fy['status'] != 'closed');
+      if (openYears.isNotEmpty) {
+        activeYear = (openYears.first['year'] as num).toInt();
+      } else {
+        // All closed – use the most recent fiscal year
+        activeYear = (years.first['year'] as num).toInt();
+      }
+    }
+
+    final pl = await db.getYearProfitLoss(activeYear);
 
     if (mounted) {
       setState(() {
         _fiscalYears = years;
+        _activeYear = activeYear;
         _currentYearPL = pl;
         _isLoading = false;
       });
@@ -173,7 +188,6 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final currentYear = DateTime.now().year;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -207,7 +221,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildCurrentYearSection(theme, isDark, currentYear),
+                    _buildCurrentYearSection(theme, isDark, _activeYear),
                     const SizedBox(height: 16),
                     _buildFiscalYearsHistory(theme, isDark),
                   ],

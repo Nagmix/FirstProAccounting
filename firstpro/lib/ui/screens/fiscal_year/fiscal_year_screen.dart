@@ -155,6 +155,50 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                         return;
                       }
 
+                      // Validate no overlap with existing fiscal years
+                      final newStart = startDate;
+                      final newEnd = endDate;
+                      for (final existing in _fiscalYears) {
+                        final existStartStr = existing['start_date'] as String? ?? '';
+                        final existEndStr = existing['end_date'] as String? ?? '';
+                        DateTime? existStart, existEnd;
+                        try { existStart = DateTime.parse(existStartStr); } catch (_) {}
+                        try { existEnd = DateTime.parse(existEndStr); } catch (_) {}
+                        if (existStart == null || existEnd == null) continue;
+
+                        // Check overlap: two ranges overlap if start1 <= end2 AND start2 <= end1
+                        final overlaps = !newStart.isAfter(existEnd) && !existStart.isAfter(newEnd);
+                        if (overlaps) {
+                          if (mounted) {
+                            await showDialog(
+                              context: context,
+                              builder: (dCtx) => Directionality(
+                                textDirection: TextDirection.rtl,
+                                child: AlertDialog(
+                                  title: Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+                                      const SizedBox(width: 8),
+                                      Text('تداخل في التواريخ'),
+                                    ],
+                                  ),
+                                  content: Text(
+                                    'الفترة المحددة (${newStart.year}-${newStart.month.toString().padLeft(2, '0')}-${newStart.day.toString().padLeft(2, '0')} → ${newEnd.year}-${newEnd.month.toString().padLeft(2, '0')}-${newEnd.day.toString().padLeft(2, '0')}) تتداخل مع السنة المالية "${existing['name'] ?? ''}" (${existStartStr} → ${existEndStr}).\n\nيرجى اختيار فترة لا تتداخل مع السنوات المالية الموجودة.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dCtx),
+                                      child: const Text('حسناً'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                      }
+
                       final now = DateTime.now().toIso8601String();
                       await _db.insertFiscalYear({
                         'name': nameController.text,

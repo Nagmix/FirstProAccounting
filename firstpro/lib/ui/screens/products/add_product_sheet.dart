@@ -83,6 +83,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   final _costPriceController = TextEditingController();
   final _sellPriceController = TextEditingController();
   final _specialWholesalePriceController = TextEditingController();
+  final _minimumSalePriceController = TextEditingController();
   final _taxRateController = TextEditingController();
   final _openingStockController = TextEditingController();
   final _purchaseUnitQtyController = TextEditingController();
@@ -177,6 +178,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _costPriceController.dispose();
     _sellPriceController.dispose();
     _specialWholesalePriceController.dispose();
+    _minimumSalePriceController.dispose();
     _taxRateController.dispose();
     _openingStockController.dispose();
     _purchaseUnitQtyController.dispose();
@@ -298,6 +300,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _specialWholesalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
         ? (p.specialWholesalePrice * _purchaseUnitFactor).toStringAsFixed(2)
         : p.specialWholesalePrice.toStringAsFixed(2);
+    _minimumSalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
+        ? (p.minimumSalePrice * _purchaseUnitFactor).toStringAsFixed(2)
+        : p.minimumSalePrice.toStringAsFixed(2);
 
     _isActive = p.isActive;
     _trackStock = p.trackStock;
@@ -342,6 +347,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
         _specialWholesalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
             ? (p.specialWholesalePrice * _purchaseUnitFactor).toStringAsFixed(2)
             : p.specialWholesalePrice.toStringAsFixed(2);
+        _minimumSalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
+            ? (p.minimumSalePrice * _purchaseUnitFactor).toStringAsFixed(2)
+            : p.minimumSalePrice.toStringAsFixed(2);
       }
     });
   }
@@ -562,7 +570,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           ? _descriptionController.text.trim()
           : null,
       costPrice: baseCostPrice,
-      averageCost: baseCostPrice,
+      averageCost: _isEditMode ? widget.existing!.averageCost : baseCostPrice,
       sellPrice: baseSellPrice,
       wholesalePrice: purchaseUnitCostPrice,
       specialWholesalePrice:
@@ -571,8 +579,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
               : (double.tryParse(_specialWholesalePriceController.text) ?? 0.0),
       minimumSalePrice:
           _hasMultiUnits && _saleUnitSource == 1
-              ? (double.tryParse(_specialWholesalePriceController.text) ?? 0.0) / (_purchaseUnitFactor > 0 ? _purchaseUnitFactor : 1.0)
-              : (double.tryParse(_specialWholesalePriceController.text) ?? 0.0),
+              ? (double.tryParse(_minimumSalePriceController.text) ?? 0.0) / (_purchaseUnitFactor > 0 ? _purchaseUnitFactor : 1.0)
+              : (double.tryParse(_minimumSalePriceController.text) ?? 0.0),
       taxRate: double.tryParse(_taxRateController.text) ?? 0.0,
       taxInclusive: _taxInclusive,
       salesAccountId: _selectedSalesAccountId,
@@ -713,76 +721,88 @@ class _AddProductSheetState extends State<AddProductSheet> {
             }
           }
         }
-      });
-
-      // Log stock movement AND create journal entries for opening balance AFTER the transaction succeeds
-      if (!_isEditMode && savedProductId != null) {
-        final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
-        if (openingQty > 0 && _trackStock) {
-          try {
-            await dbHelper.logStockMovement(
-              productId: savedProductId!,
-              movementType: 'opening',
-              quantity: openingQty,
-              notes: 'رصيد افتتاحي',
-              unitCost: baseCostPrice,
-            );
-
-            // Create journal entries for opening balance: Debit Inventory / Credit Opening Balance
-            final totalValue = openingQty * baseCostPrice;
-            if (totalValue > 0) {
-              final codeOffset = _defaultCurrencyCode == 'SAR' ? 1 : (_defaultCurrencyCode == 'USD' ? 2 : 0);
-              final currency = _defaultCurrencyCode ?? 'YER';
-              final dbInstance = await dbHelper.database;
+        // ── Opening balance: stock movement + journal entries INSIDE the transaction ──
+        // This ensures atomicity — if journal entry fails, the product insert is rolled back too.
+        if (!_isEditMode && savedProductId != null) {
+          final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
+          if (openingQty > 0 && _trackStock) {
+            try {
               final now = DateTime.now().toIso8601String();
+              // Log stock movement directly via txn
+              await txn.insert('stock_movements', {
+                'product_id': savedProductId!,
+                'movement_type': 'opening',
+                'quantity': openingQty,
+                'reference_type': null,
+                'reference_id': null,
+                'notes': 'رصيد افتتاحي',
+                'unit_cost': baseCostPrice,
+                'created_at': now,
+              });
 
-              // Find inventory account (1300 + offset)
-              final inventoryAccount = await dbInstance.query(
-                'accounts',
-                where: 'account_code = ? AND currency = ?',
-                whereArgs: [(1300 + codeOffset).toString(), currency],
-                limit: 1,
-              );
-              // Find opening balance account (3900 + offset)
-              final openingBalanceAccount = await dbInstance.query(
-                'accounts',
-                where: 'account_code = ? AND currency = ?',
-                whereArgs: [(3900 + codeOffset).toString(), currency],
-                limit: 1,
-              );
+              // Create journal entries for opening balance: Debit Inventory / Credit Opening Balance
+              final totalValue = openingQty * baseCostPrice;
+              if (totalValue > 0) {
+                final codeOffset = _defaultCurrencyCode == 'SAR' ? 1 : (_defaultCurrencyCode == 'USD' ? 2 : 0);
+                final currency = _defaultCurrencyCode ?? 'YER';
 
-              if (inventoryAccount.isNotEmpty && openingBalanceAccount.isNotEmpty) {
-                final inventoryAccountId = inventoryAccount.first['id'] as int;
-                final openingBalanceAccountId = openingBalanceAccount.first['id'] as int;
+                // Find inventory account (1300 + offset)
+                final inventoryAccount = await txn.query(
+                  'accounts',
+                  where: 'account_code = ? AND currency = ?',
+                  whereArgs: [(1300 + codeOffset).toString(), currency],
+                  limit: 1,
+                );
+                // Find opening balance account (3900 + offset)
+                final openingBalanceAccount = await txn.query(
+                  'accounts',
+                  where: 'account_code = ? AND currency = ?',
+                  whereArgs: [(3900 + codeOffset).toString(), currency],
+                  limit: 1,
+                );
 
-                // Journal entry: Debit Inventory / Credit Opening Balance
-                await dbInstance.insert('transactions', {
-                  'account_id': inventoryAccountId,
-                  'debit': totalValue,
-                  'credit': 0.0,
-                  'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
-                  'date': now,
-                  'created_at': now,
-                });
-                await dbInstance.insert('transactions', {
-                  'account_id': openingBalanceAccountId,
-                  'debit': 0.0,
-                  'credit': totalValue,
-                  'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
-                  'date': now,
-                  'created_at': now,
-                });
+                if (inventoryAccount.isNotEmpty && openingBalanceAccount.isNotEmpty) {
+                  final inventoryAccountId = inventoryAccount.first['id'] as int;
+                  final openingBalanceAccountId = openingBalanceAccount.first['id'] as int;
 
-                // Update account balances
-                await dbHelper.updateAccountBalance(inventoryAccountId, totalValue, isDebit: true);
-                await dbHelper.updateAccountBalance(openingBalanceAccountId, totalValue, isDebit: false);
+                  // Journal entry: Debit Inventory / Credit Opening Balance
+                  await txn.insert('transactions', {
+                    'account_id': inventoryAccountId,
+                    'debit': totalValue,
+                    'credit': 0.0,
+                    'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
+                    'date': now,
+                    'created_at': now,
+                  });
+                  await txn.insert('transactions', {
+                    'account_id': openingBalanceAccountId,
+                    'debit': 0.0,
+                    'credit': totalValue,
+                    'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
+                    'date': now,
+                    'created_at': now,
+                  });
+
+                  // Update account balances within the transaction
+                  // Inventory account (debit-balance / ASSET): balance += debit - credit
+                  final invBal = (inventoryAccount.first['balance'] as num?)?.toDouble() ?? 0.0;
+                  final invBt = inventoryAccount.first['balance_type'] as String? ?? 'debit';
+                  final newInvBal = invBt == 'credit' ? invBal - totalValue : invBal + totalValue;
+                  await txn.update('accounts', {'balance': newInvBal, 'updated_at': now}, where: 'id = ?', whereArgs: [inventoryAccountId]);
+
+                  // Opening balance account (credit-balance / EQUITY): balance += credit - debit
+                  final obBal = (openingBalanceAccount.first['balance'] as num?)?.toDouble() ?? 0.0;
+                  final obBt = openingBalanceAccount.first['balance_type'] as String? ?? 'credit';
+                  final newObBal = obBt == 'credit' ? obBal + totalValue : obBal - totalValue;
+                  await txn.update('accounts', {'balance': newObBal, 'updated_at': now}, where: 'id = ?', whereArgs: [openingBalanceAccountId]);
+                }
               }
+            } catch (e) {
+              debugPrint('Opening balance journal entry error (non-critical): $e');
             }
-          } catch (e) {
-            debugPrint('Opening balance journal entry error (non-critical): $e');
           }
         }
-      }
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -1724,12 +1744,21 @@ class _AddProductSheetState extends State<AddProductSheet> {
         ],
         const SizedBox(height: 14),
 
-        // أقل سعر بيع
+        // أقل سعر بيع (سعر الجملة الخاصة)
         _priceField(
           controller: _specialWholesalePriceController,
           label: hasMulti
-              ? 'أقل سعر بيع للـ ${_unitNameById(_effectiveSaleUnitId)}'
-              : 'أقل سعر بيع',
+              ? 'سعر الجملة الخاصة للـ ${_unitNameById(_effectiveSaleUnitId)}'
+              : 'سعر الجملة الخاصة',
+        ),
+        const SizedBox(height: 14),
+
+        // سعر البيع الأدنى
+        _priceField(
+          controller: _minimumSalePriceController,
+          label: hasMulti
+              ? 'سعر البيع الأدنى للـ ${_unitNameById(_effectiveSaleUnitId)}'
+              : 'سعر البيع الأدنى',
         ),
         const SizedBox(height: 14),
 

@@ -111,21 +111,40 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
     }
 
     // التحقق من الكمية المتاحة
-    final sourceProduct = _products.where((p) => p['id'] == _selectedProductId).toList();
-    if (sourceProduct.isNotEmpty) {
-      final currentStock = (sourceProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-      if (quantity > currentStock) {
+    // Check warehouse-specific stock if source warehouse is selected
+    final db = DatabaseHelper();
+    if (_fromWarehouseId != null) {
+      // Query stock in the specific source warehouse
+      final warehouseStock = await db.getProductStockInWarehouse(_selectedProductId!, _fromWarehouseId!);
+      if (warehouseStock == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('الكمية المتاحة $currentStock فقط'), backgroundColor: AppColors.warning),
+          const SnackBar(content: Text('المنتج غير موجود في مخزن المصدر'), backgroundColor: AppColors.warning),
         );
         return;
+      }
+      if (quantity > warehouseStock) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('الكمية المتاحة في المخزن $warehouseStock فقط'), backgroundColor: AppColors.warning),
+        );
+        return;
+      }
+    } else {
+      // Fallback: check total stock (no specific warehouse selected)
+      final sourceProduct = _products.where((p) => p['id'] == _selectedProductId).toList();
+      if (sourceProduct.isNotEmpty) {
+        final currentStock = (sourceProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+        if (quantity > currentStock) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('الكمية المتاحة $currentStock فقط (إجمالي المخزون)'), backgroundColor: AppColors.warning),
+          );
+          return;
+        }
       }
     }
 
     setState(() => _isSaving = true);
 
     final now = DateTime.now();
-    final db = DatabaseHelper();
 
     // توليد رقم التحويل
     final existingTransfers = await db.getAllStockTransfers();
@@ -318,6 +337,10 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                   final product = _filteredProducts[index];
                                   final isSelected = product['id'] == _selectedProductId;
                                   final stock = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
+                                  final productWarehouseId = product['warehouse_id'] as int?;
+                                  // Show warehouse-specific stock if source warehouse is selected
+                                  final displayStock = (_fromWarehouseId != null && productWarehouseId == _fromWarehouseId) ? stock : stock;
+                                  final isInSourceWarehouse = _fromWarehouseId == null || productWarehouseId == _fromWarehouseId;
                                   return ListTile(
                                     dense: true,
                                     selected: isSelected,
@@ -332,7 +355,7 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                       style: theme.textTheme.bodySmall,
                                     ),
                                     trailing: Text(
-                                      'المخزون: $stock',
+                                      'المخزون: $stock${!isInSourceWarehouse ? " *" : ""}',
                                       style: theme.textTheme.labelSmall?.copyWith(
                                         color: stock > 0 ? AppColors.success : AppColors.error,
                                       ),
