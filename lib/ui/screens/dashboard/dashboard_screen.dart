@@ -33,7 +33,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   double _monthSales = 0.0;
   double _monthPurchases = 0.0;
   int _customerCount = 0;
-  double _cashBalance = 0.0;
   double _yesterdaySales = 0.0;
   List<Map<String, dynamic>> _recentInvoices = [];
   bool _isLoading = true;
@@ -103,7 +102,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         db.getTotalSalesThisMonth(),
         db.getTotalPurchasesThisMonth(),
         db.getCustomerCount(),
-        db.getCashBalance(),
         db.getRecentInvoices(limit: 5),
         db.getTotalSalesForDate(yesterday),
       ]);
@@ -115,11 +113,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           _monthSales = (results[2] as num?)?.toDouble() ?? 0.0;
           _monthPurchases = (results[3] as num?)?.toDouble() ?? 0.0;
           _customerCount = (results[4] as num?)?.toInt() ?? 0;
-          _cashBalance = (results[5] as num?)?.toDouble() ?? 0.0;
           _recentInvoices =
-              (results[6] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+              (results[5] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
                   [];
-          _yesterdaySales = (results[7] as num?)?.toDouble() ?? 0.0;
+          _yesterdaySales = (results[6] as num?)?.toDouble() ?? 0.0;
           _isLoading = false;
         });
 
@@ -691,14 +688,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  TransactionStatus _mapInvoiceStatus(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid': return TransactionStatus.paid;
-      case 'unpaid': return TransactionStatus.unpaid;
-      case 'partial': return TransactionStatus.pending;
-      default: return TransactionStatus.pending;
-    }
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
