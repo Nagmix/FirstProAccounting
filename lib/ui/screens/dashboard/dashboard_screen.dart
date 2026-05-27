@@ -13,12 +13,16 @@ import '../../widgets/animated_entry.dart';
 
 /// The main dashboard screen – the first thing the user sees.
 ///
-/// Modern professional design v4:
+/// Modern professional design v5:
 /// 1. Premium Header – gradient accent bar + greeting + date/time + avatar
 /// 2. Hero Sales Card – deep dark professional gradient with rich details
-/// 3. Unified Action Grid – 3×3 paged grid with compact cards
-/// 4. Statistics Box – data-panel style (different from action cards)
-/// 5. Recent Transactions – professional card-based list
+/// 3. Unified Action Grid – 3×3 paged with manual Row/Column layout
+/// 4. Recent Transactions – professional card-based list
+// Fixed card height for the action grid — guarantees no cutoff
+const double _kCardHeight = 88.0;
+const double _kRowSpacing = 10.0;
+const double _kColSpacing = 10.0;
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -30,9 +34,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   double _todaySales = 0.0;
   int _todayInvoiceCount = 0;
-  double _monthSales = 0.0;
-  double _monthPurchases = 0.0;
-  int _customerCount = 0;
   double _yesterdaySales = 0.0;
   List<Map<String, dynamic>> _recentInvoices = [];
   bool _isLoading = true;
@@ -99,9 +100,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       final results = await Future.wait([
         db.getTotalSalesForDate(now),
         db.getInvoiceCountForDate(now),
-        db.getTotalSalesThisMonth(),
-        db.getTotalPurchasesThisMonth(),
-        db.getCustomerCount(),
         db.getRecentInvoices(limit: 5),
         db.getTotalSalesForDate(yesterday),
       ]);
@@ -110,13 +108,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         setState(() {
           _todaySales = (results[0] as num?)?.toDouble() ?? 0.0;
           _todayInvoiceCount = (results[1] as num?)?.toInt() ?? 0;
-          _monthSales = (results[2] as num?)?.toDouble() ?? 0.0;
-          _monthPurchases = (results[3] as num?)?.toDouble() ?? 0.0;
-          _customerCount = (results[4] as num?)?.toInt() ?? 0;
           _recentInvoices =
-              (results[5] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+              (results[2] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
                   [];
-          _yesterdaySales = (results[6] as num?)?.toDouble() ?? 0.0;
+          _yesterdaySales = (results[3] as num?)?.toDouble() ?? 0.0;
           _isLoading = false;
         });
 
@@ -174,19 +169,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   int get _totalPages => (_allActions.length / 9).ceil();
 
-  /// Calculate the required grid height dynamically based on screen width
-  /// to prevent the third row from being cut off on any device.
-  double _calculateGridHeight(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = 40.0; // 20 left + 20 right
-    final crossAxisSpacing = 10.0;
-    final cardWidth = (screenWidth - horizontalPadding - crossAxisSpacing * 2) / 3;
-    final cardHeight = cardWidth / _cardAspectRatio;
-    final mainAxisSpacing = 10.0;
-    return (cardHeight * 3) + (mainAxisSpacing * 2) + 4; // +4 safety buffer
-  }
-
-  static const double _cardAspectRatio = 0.95;
+  /// Total grid height = 3 rows × card height + 2 spacing between rows
+  double get _gridHeight => (_kCardHeight * 3) + (_kRowSpacing * 2);
 
   @override
   Widget build(BuildContext context) {
@@ -219,14 +203,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               child: AnimatedEntry(
                 delay: const Duration(milliseconds: 150),
                 child: _buildActionGrid(context, isDark),
-              ),
-            ),
-
-            // ── Statistics Box ───────────────────────────────────
-            SliverToBoxAdapter(
-              child: AnimatedEntry(
-                delay: const Duration(milliseconds: 220),
-                child: _buildStatisticsBox(context, isDark),
               ),
             ),
 
@@ -523,22 +499,22 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  UNIFIED 3×3 PAGED ACTION GRID – with inline page indicators
+  //  UNIFIED 3×3 PAGED ACTION GRID – manual Row/Column layout
+  //  (No GridView — fixed card height guarantees no cutoff ever)
   // ══════════════════════════════════════════════════════════════════
   Widget _buildActionGrid(BuildContext context, bool isDark) {
-    final gridHeight = _calculateGridHeight(context);
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Section header with page indicators on left side
           _buildActionGridHeader(context, isDark),
           const SizedBox(height: 12),
 
-          // 3×3 paged grid — dynamic height to prevent 3rd row cutoff
+          // 3×3 paged grid — fixed height, manual layout
           SizedBox(
-            height: gridHeight,
+            height: _gridHeight,
             child: PageView.builder(
               controller: _actionPageController,
               physics: const BouncingScrollPhysics(),
@@ -549,39 +525,50 @@ class _DashboardScreenState extends State<DashboardScreen>
                 final endIdx = math.min(startIdx + 9, _allActions.length);
                 final pageItems = _allActions.sublist(startIdx, endIdx);
 
-                // Pad to 9 items so the grid stays consistent
-                while (pageItems.length < 9) {
-                  pageItems.add(const _ActionItem(label: '', icon: null, color: Colors.transparent, route: ''));
-                }
-
-                return GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: _cardAspectRatio,
-                  ),
-                  itemCount: 9,
-                  itemBuilder: (context, index) {
-                    final item = pageItems[index];
-                    if (item.icon == null) return const SizedBox.shrink();
-                    return _GridActionCard(
-                      label: item.label,
-                      icon: item.icon!,
-                      color: item.color,
-                      bgColor: item.bgColor,
-                      isDark: isDark,
-                      onTap: () => _navigateTo(item.route),
-                    );
-                  },
-                );
+                return _buildGridPage(pageItems, isDark);
               },
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Build a single 3×3 page using manual Row/Column layout.
+  /// Each card has a FIXED height of [_cardHeight] — no aspect ratio tricks,
+  /// no GridView internal padding surprises. The third row WILL fit.
+  Widget _buildGridPage(List<_ActionItem> items, bool isDark) {
+    // Pad to 9 items so the grid stays consistent
+    final padded = List<_ActionItem>.from(items);
+    while (padded.length < 9) {
+      padded.add(const _ActionItem(label: '', icon: null, color: Colors.transparent, route: ''));
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Row 1
+        _buildGridRow(padded[0], padded[1], padded[2], isDark),
+        SizedBox(height: _kRowSpacing),
+        // Row 2
+        _buildGridRow(padded[3], padded[4], padded[5], isDark),
+        SizedBox(height: _kRowSpacing),
+        // Row 3 — same height, same treatment, guaranteed visible
+        _buildGridRow(padded[6], padded[7], padded[8], isDark),
+      ],
+    );
+  }
+
+  /// Build a single row of 3 action cards.
+  Widget _buildGridRow(_ActionItem a, _ActionItem b, _ActionItem c, bool isDark) {
+    return Row(
+      children: [
+        Expanded(child: a.icon != null ? _GridActionCard(item: a, isDark: isDark, onTap: () => _navigateTo(a.route)) : const SizedBox()),
+        SizedBox(width: _kColSpacing),
+        Expanded(child: b.icon != null ? _GridActionCard(item: b, isDark: isDark, onTap: () => _navigateTo(b.route)) : const SizedBox()),
+        SizedBox(width: _kColSpacing),
+        Expanded(child: c.icon != null ? _GridActionCard(item: c, isDark: isDark, onTap: () => _navigateTo(c.route)) : const SizedBox()),
+      ],
     );
   }
 
@@ -640,177 +627,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               }),
             ),
         ],
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════
-  //  STATISTICS BOX – data-panel style (distinctly different from
-  //  action cards: horizontal rows with accent indicators, not
-  //  vertical icon-on-top cards)
-  // ══════════════════════════════════════════════════════════════════
-  Widget _buildStatisticsBox(BuildContext context, bool isDark) {
-    final theme = Theme.of(context);
-    final metrics = [
-      _MetricData(label: 'مبيعات الشهر', value: _monthSales, icon: Icons.auto_graph_rounded, color: const Color(0xFF22C55E), isCount: false),
-      _MetricData(label: 'مشتريات الشهر', value: _monthPurchases, icon: Icons.local_mall_rounded, color: const Color(0xFFF97316), isCount: false),
-      _MetricData(label: 'العملاء', value: _customerCount.toDouble(), icon: Icons.groups_rounded, color: const Color(0xFF4F6AF0), isCount: true),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : const Color(0xFF4F6AF0).withValues(alpha: 0.12),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isDark ? Colors.black.withValues(alpha: 0.2) : const Color(0xFF4F6AF0).withValues(alpha: 0.06),
-              offset: const Offset(0, 4), blurRadius: 16,
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Box header: title + shortcut button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 4, height: 18,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)]),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text('إحصائيات الشهر',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
-                      ),
-                    ),
-                  ],
-                ),
-                // Shortcut button
-                InkWell(
-                  onTap: () => _navigateTo(AppConstants.statistics),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [const Color(0xFF4F6AF0).withValues(alpha: 0.1), const Color(0xFF7C3AED).withValues(alpha: 0.08)],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF4F6AF0).withValues(alpha: 0.15)),
-                    ),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Text('عرض التقارير',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                          color: isDark ? const Color(0xFF8B9CF7) : const Color(0xFF4F6AF0),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_back_ios_rounded, size: 10, color: isDark ? const Color(0xFF8B9CF7) : const Color(0xFF4F6AF0)),
-                    ]),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            // Metric rows — horizontal data-panel style
-            ...metrics.asMap().entries.map((entry) {
-              final m = entry.value;
-              final isLast = entry.key == metrics.length - 1;
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        // Thin colored accent bar on the right side (RTL)
-                        Container(
-                          width: 3, height: 36,
-                          decoration: BoxDecoration(
-                            color: m.color,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Small circular icon
-                        Container(
-                          width: 34, height: 34,
-                          decoration: BoxDecoration(
-                            color: m.color.withValues(alpha: isDark ? 0.12 : 0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(m.icon, color: m.color, size: 16),
-                        ),
-                        const SizedBox(width: 12),
-                        // Label + Value
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(m.label,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary,
-                                  fontWeight: FontWeight.w500, fontSize: 11,
-                                ),
-                                maxLines: 1, overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                m.isCount ? m.value.toInt().toString() : CurrencyFormatter.formatCompactWithSymbol(m.value),
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                                  fontSize: 16, height: 1.2,
-                                ),
-                                maxLines: 1, overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Subtle arrow indicator
-                        Icon(Icons.chevron_left_rounded,
-                          size: 18,
-                          color: m.color.withValues(alpha: 0.5),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Thin divider between rows (not after last)
-                  if (!isLast)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 14),
-                      child: Divider(
-                        height: 1,
-                        thickness: 0.5,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : const Color(0xFF4F6AF0).withValues(alpha: 0.08),
-                      ),
-                    ),
-                ],
-              );
-            }),
-          ],
-        ),
       ),
     );
   }
@@ -992,15 +808,6 @@ class _ActionItem {
   final String route;
 }
 
-class _MetricData {
-  const _MetricData({required this.label, required this.value, required this.icon, required this.color, required this.isCount});
-  final String label;
-  final double value;
-  final IconData icon;
-  final Color color;
-  final bool isCount;
-}
-
 // ── Sparkle icon decoration for sales card ──────────────────────
 class _SparkleIcon extends StatelessWidget {
   const _SparkleIcon({required this.size, required this.color});
@@ -1044,75 +851,72 @@ class _HeaderActionIcon extends StatelessWidget {
   }
 }
 
-// ── Grid Action Card (3×3 items) — compact version ──────────────
+// ── Grid Action Card — fixed height, compact design ────────────────
 class _GridActionCard extends StatelessWidget {
   const _GridActionCard({
-    required this.label,
-    required this.icon,
-    required this.color,
-    this.bgColor,
+    required this.item,
     required this.isDark,
     required this.onTap,
   });
 
-  final String label;
-  final IconData icon;
-  final Color color;
-  final Color? bgColor;
+  final _ActionItem item;
   final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveBg = bgColor ?? color.withValues(alpha: 0.1);
+    final effectiveBg = item.bgColor ?? item.color.withValues(alpha: 0.1);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
-            offset: const Offset(0, 2), blurRadius: 6,
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
+    return SizedBox(
+      height: _kCardHeight,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          splashColor: color.withValues(alpha: 0.1),
-          highlightColor: color.withValues(alpha: 0.05),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Icon container — compact
-                Container(
-                  width: 42, height: 42,
-                  decoration: BoxDecoration(
-                    color: isDark ? color.withValues(alpha: 0.12) : effectiveBg,
-                    borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.black.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
+              offset: const Offset(0, 2), blurRadius: 6,
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            splashColor: item.color.withValues(alpha: 0.1),
+            highlightColor: item.color.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icon container — compact
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? item.color.withValues(alpha: 0.12) : effectiveBg,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(item.icon, color: item.color, size: 20),
                   ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(height: 6),
-                // Label
-                Text(label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                    height: 1.2,
-                    fontSize: 10,
+                  const SizedBox(height: 5),
+                  // Label
+                  Text(item.label,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                      height: 1.2,
+                      fontSize: 10,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
