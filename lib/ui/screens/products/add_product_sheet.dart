@@ -1449,8 +1449,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
             child: Row(
               children: [
                 const Expanded(flex: 3, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                Expanded(flex: 3, child: Text('كم تساوي بالوحدة الأساسية؟', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                const Expanded(flex: 3, child: Text('معامل التحويل', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
                 const Expanded(flex: 2, child: Text('سعر البيع', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                const Expanded(flex: 2, child: Text('سعر التكلفة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
                 const SizedBox(width: 40),
               ],
             ),
@@ -1616,23 +1617,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
           ),
           const SizedBox(width: 6),
 
-          // Cost price
+          // Cost price — auto-calculated from Step3 purchase unit cost price
           Expanded(
             flex: 2,
-            child: TextFormField(
-              initialValue: row.costPrice > 0 ? row.costPrice.toStringAsFixed(2) : '',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-              ],
-              decoration: InputDecoration(
-                isDense: true,
-                labelText: 'سعر التكلفة',
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              onChanged: (v) => row.costPrice = double.tryParse(v) ?? 0.0,
-            ),
+            child: _buildAutoCostPriceField(row),
           ),
 
           // Delete
@@ -1644,6 +1632,59 @@ class _AddProductSheetState extends State<AddProductSheet> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Build auto-calculated cost price field for conversion row.
+  /// The cost price is derived from Step3's cost price (purchase unit wholesale)
+  /// divided by the conversion factor.
+  /// For the purchase unit row: costPrice = costPriceController value (same as wholesale).
+  /// For other units: costPrice = (purchaseUnitCostPrice / purchaseUnitFactor) * thisRowFactor.
+  Widget _buildAutoCostPriceField(_UnitConversionRow row) {
+    final purchaseUnitCost = double.tryParse(_costPriceController.text) ?? 0.0;
+    final baseUnitName = _unitNameById(_selectedBaseUnitId);
+
+    double autoCost = 0.0;
+    if (_hasMultiUnits && purchaseUnitCost > 0 && row.factor > 0) {
+      if (row.unitId == _selectedPurchaseUnitId) {
+        // This IS the purchase unit — cost = what user entered in Step3
+        autoCost = purchaseUnitCost;
+      } else {
+        // Other unit: cost per this unit = base unit cost * factor
+        // base unit cost = purchaseUnitCost / purchaseUnitFactor
+        final purchaseFactor = _purchaseUnitFactor;
+        if (purchaseFactor > 0) {
+          final baseUnitCost = purchaseUnitCost / purchaseFactor;
+          autoCost = baseUnitCost * row.factor;
+        }
+      }
+    }
+
+    // Update the row's costPrice with auto-calculated value
+    if (autoCost > 0) {
+      row.costPrice = autoCost;
+    }
+
+    return TextFormField(
+      initialValue: autoCost > 0 ? autoCost.toStringAsFixed(2) : (row.costPrice > 0 ? row.costPrice.toStringAsFixed(2) : ''),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+      ],
+      decoration: InputDecoration(
+        isDense: true,
+        labelText: row.unitId == _selectedPurchaseUnitId && _hasMultiUnits
+            ? 'تكلفة $baseUnitName'
+            : 'سعر التكلفة',
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        suffixIcon: autoCost > 0
+            ? Tooltip(
+                message: 'محسوب تلقائياً من سعر تكلفة وحدة الشراء',
+                child: Icon(Icons.auto_fix_high, size: 16, color: AppColors.success.withValues(alpha: 0.7)),
+              )
+            : null,
+      ),
+      onChanged: (v) => row.costPrice = double.tryParse(v) ?? 0.0,
     );
   }
 

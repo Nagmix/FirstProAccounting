@@ -4551,6 +4551,10 @@ class DatabaseHelper {
   /// Save expense with journal entry.
   /// Supports operation_type: 'صرف' (disburse - debit expense, credit cash) or 'قبض' (receive - debit cash, credit expense).
   Future<void> saveExpenseWithJournalEntry(Map<String, dynamic> expenseMap) async {
+    // Check if fiscal period is closed before creating expense
+    final expenseDate = expenseMap['expense_date'] as String? ?? DateTime.now().toIso8601String();
+    await _checkFiscalPeriodOpen(expenseDate);
+
     final db = await database;
     final amountBase = (expenseMap['amount_base'] as num?)?.toDouble() ?? 0.0;
     final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
@@ -4732,51 +4736,125 @@ class DatabaseHelper {
       newCode = (5000 + codeOffset).toString();
     }
 
-    // Create the account
-    final accountId = await db.insert('accounts', {
-      'name_ar': '$nameAr ($currencySymbol)',
-      'name_en': nameAr,
-      'account_code': newCode,
-      'account_type': 'EXPENSE',
-      'balance': openingBalance,
-      'currency': currency,
-      'is_active': 1,
-      'is_system': 0,
-      'debt_ceiling': debtCeiling ?? 0.0,
-      'balance_type': balanceType,
-      'created_at': now,
-      'updated_at': now,
-    });
+    // Create the account inside a transaction for atomicity
+    final db = await database;
+    return await db.transaction((txn) async {
+      // Create account with initial balance = 0 (will be updated via journal)
+      final accountId = await txn.insert('accounts', {
+        'name_ar': '$nameAr ($currencySymbol)',
+        'name_en': nameAr,
+        'account_code': newCode,
+        'account_type': 'EXPENSE',
+        'balance': 0.0,  // Start at 0, will be updated via _updateAccountBalanceWithJournal
+        'currency': currency,
+        'is_active': 1,
+        'is_system': 0,
+        'debt_ceiling': debtCeiling ?? 0.0,
+        'balance_type': balanceType,
+        'created_at': now,
+        'updated_at': now,
+      });
 
-    // Create opening balance transaction if > 0
-    if (openingBalance > 0) {
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-      if (balanceType == 'credit') {
-        // له (credit) - the account has credit balance
-        await db.insert('transactions', {
-          'account_id': accountId,
-          'journal_id': journalId,
-          'debit': 0.0,
-          'credit': openingBalance,
-          'description': 'رصيد افتتاحي - $nameAr',
-          'date': now,
-          'created_at': now,
-        });
-      } else {
-        // عليه (debit) - the account has debit balance
-        await db.insert('transactions', {
-          'account_id': accountId,
-          'journal_id': journalId,
-          'debit': openingBalance,
-          'credit': 0.0,
-          'description': 'رصيد افتتاحي - $nameAr',
-          'date': now,
-          'created_at': now,
-        });
+      // Create double-entry opening balance transaction if > 0
+      // Must include contra-entry to Opening Balance Equity account (3900+offset)
+      if (openingBalance > 0) {
+        final journalId = DateTime.now().millisecondsSinceEpoch;
+
+        // Find the Opening Balance Equity account for this currency
+        final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[currency] ?? 0;
+        final obCode = (3900 + codeOffset).toString();
+        final obAccounts = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [obCode, currency],
+          limit: 1,
+        );
+
+        if (obAccounts.isNotEmpty) {
+          final obAccountId = obAccounts.first['id'] as int;
+
+          if (balanceType == 'credit') {
+            // Expense account has credit balance (unlikely but possible)
+            // Credit the expense account, Debit the Opening Balance Equity
+            await txn.insert('transactions', {
+              'account_id': accountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': openingBalance,
+              'description': 'رصيد افتتاحي - $nameAr',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': obAccountId,
+              'journal_id': journalId,
+              'debit': openingBalance,
+              'credit': 0.0,
+              'description': 'مقابل رصيد افتتاحي - $nameAr',
+              'date': now,
+              'created_at': now,
+            });
+            // Update both account balances
+            await _updateAccountBalanceWithJournal(txn, accountId, 0.0, openingBalance, now);
+            await _updateAccountBalanceWithJournal(txn, obAccountId, openingBalance, 0.0, now);
+          } else {
+            // Expense account has debit balance (normal for expenses)
+            // Debit the expense account, Credit the Opening Balance Equity
+            await txn.insert('transactions', {
+              'account_id': accountId,
+              'journal_id': journalId,
+              'debit': openingBalance,
+              'credit': 0.0,
+              'description': 'رصيد افتتاحي - $nameAr',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': obAccountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': openingBalance,
+              'description': 'مقابل رصيد افتتاحي - $nameAr',
+              'date': now,
+              'created_at': now,
+            });
+            // Update both account balances
+            await _updateAccountBalanceWithJournal(txn, accountId, openingBalance, 0.0, now);
+            await _updateAccountBalanceWithJournal(txn, obAccountId, 0.0, openingBalance, now);
+          }
+        } else {
+          // Fallback: if no Opening Balance Equity account found, create single-sided entry
+          // but log a warning since this means the double-entry is incomplete
+          debugPrint('WARNING: No Opening Balance Equity account found for currency $currency. Creating single-sided entry for $nameAr.');
+          if (balanceType == 'credit') {
+            await txn.insert('transactions', {
+              'account_id': accountId,
+              'journal_id': journalId,
+              'debit': 0.0,
+              'credit': openingBalance,
+              'description': 'رصيد افتتاحي - $nameAr',
+              'date': now,
+              'created_at': now,
+            });
+          } else {
+            await txn.insert('transactions', {
+              'account_id': accountId,
+              'journal_id': journalId,
+              'debit': openingBalance,
+              'credit': 0.0,
+              'description': 'رصيد افتتاحي - $nameAr',
+              'date': now,
+              'created_at': now,
+            });
+          }
+          await _updateAccountBalanceWithJournal(txn, accountId,
+            balanceType == 'debit' ? openingBalance : 0.0,
+            balanceType == 'credit' ? openingBalance : 0.0, now);
+        }
       }
-    }
 
-    return accountId;
+      return accountId;
+    });
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -5402,6 +5480,10 @@ class DatabaseHelper {
   /// - إذا كان هناك أرباح صرافة: دائن حساب أرباح الصرافة
   /// - إذا كان هناك خسائر صرافة: مدين حساب خسائر الصرافة
   Future<int> insertCurrencyExchange(Map<String, dynamic> exchangeMap) async {
+    // Check if fiscal period is closed before currency exchange
+    final exchangeDate = exchangeMap['date'] as String? ?? DateTime.now().toIso8601String();
+    await _checkFiscalPeriodOpen(exchangeDate);
+
     final db = await database;
     final fromCurrency = (exchangeMap['from_currency'] as String?) ?? 'YER';
     final toCurrency = (exchangeMap['to_currency'] as String?) ?? 'YER';
@@ -5585,6 +5667,10 @@ class DatabaseHelper {
   /// - مدين: حساب الصناديق والبنوك المرتبط بصندوق الوجهة
   /// - دائن: حساب الصناديق والبنوك المرتبط بصندوق المصدر
   Future<int> insertCashTransfer(Map<String, dynamic> transferMap) async {
+    // Check if fiscal period is closed before cash transfer
+    final transferDate = transferMap['date'] as String? ?? DateTime.now().toIso8601String();
+    await _checkFiscalPeriodOpen(transferDate);
+
     final db = await database;
     final fromCashBoxId = (transferMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
     final toCashBoxId = (transferMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
@@ -6182,6 +6268,13 @@ class DatabaseHelper {
   Future<int> deleteVoucher(int voucherId) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
+
+    // Pre-check: verify the voucher's date is not in a closed fiscal period
+    final voucherPreCheck = await db.query('vouchers', where: 'id = ?', whereArgs: [voucherId], limit: 1);
+    if (voucherPreCheck.isNotEmpty) {
+      final preCheckDate = voucherPreCheck.first['date'] as String? ?? now;
+      await _checkFiscalPeriodOpen(preCheckDate);
+    }
 
     await db.transaction((txn) async {
       // جلب بيانات السند
@@ -6861,6 +6954,13 @@ class DatabaseHelper {
   /// إكمال جلسة الجرد وتحديث المخزون الفعلي مع تسجيل الفرق والتدقيق + قيود يومية + حركات مخزون
   Future<void> completeStocktakingSession(int sessionId) async {
     final db = await database;
+    // Check if fiscal period is closed before completing stocktaking
+    final sessionRows = await db.query('stocktaking_sessions', where: 'id = ?', whereArgs: [sessionId], limit: 1);
+    if (sessionRows.isNotEmpty) {
+      final sessionDate = sessionRows.first['date'] as String? ?? DateTime.now().toIso8601String();
+      await _checkFiscalPeriodOpen(sessionDate);
+    }
+
     await db.transaction((txn) async {
       // جلب عناصر الجرد
       final items = await txn.query(
@@ -7334,6 +7434,10 @@ class DatabaseHelper {
     Map<String, dynamic> voucherMap,
     List<Map<String, dynamic>> items,
   ) async {
+    // Check if fiscal period is closed before creating inventory voucher
+    final ivDate = voucherMap['date'] as String? ?? DateTime.now().toIso8601String();
+    await _checkFiscalPeriodOpen(ivDate);
+
     final db = await database;
     final now = DateTime.now().toIso8601String();
 
@@ -7574,6 +7678,13 @@ class DatabaseHelper {
   Future<void> deleteInventoryVoucher(int id) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
+
+    // Pre-check: verify the inventory voucher's date is not in a closed fiscal period
+    final ivPreCheck = await db.query('inventory_vouchers', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (ivPreCheck.isNotEmpty) {
+      final preCheckDate = ivPreCheck.first['date'] as String? ?? now;
+      await _checkFiscalPeriodOpen(preCheckDate);
+    }
 
     await db.transaction((txn) async {
       // Fetch the voucher to check its status
@@ -8107,28 +8218,32 @@ class DatabaseHelper {
     final yearStart = '$year-01-01';
     final yearEnd = '$year-12-31';
 
-    // Sum revenue accounts balance
+    // Calculate from transactions table instead of cached accounts.balance (BUG FIX)
     final revenueResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(balance), 0.0) as total
-      FROM accounts
-      WHERE account_type = 'REVENUE' AND is_active = 1
-    ''');
+      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE a.account_type = 'REVENUE' AND a.is_active = 1
+      AND t.date >= ? AND t.date <= ?
+    ''', [yearStart, yearEnd]);
     final totalRevenue = (revenueResult.first['total'] as num?)?.toDouble() ?? 0.0;
 
-    // Sum cost accounts balance
     final costResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(balance), 0.0) as total
-      FROM accounts
-      WHERE account_type = 'COST' AND is_active = 1
-    ''');
+      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE a.account_type = 'COST' AND a.is_active = 1
+      AND t.date >= ? AND t.date <= ?
+    ''', [yearStart, yearEnd]);
     final totalCosts = (costResult.first['total'] as num?)?.toDouble() ?? 0.0;
 
-    // Sum expense accounts balance
     final expenseResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(balance), 0.0) as total
-      FROM accounts
-      WHERE account_type = 'EXPENSE' AND is_active = 1
-    ''');
+      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE a.account_type = 'EXPENSE' AND a.is_active = 1
+      AND t.date >= ? AND t.date <= ?
+    ''', [yearStart, yearEnd]);
     final totalExpenses = (expenseResult.first['total'] as num?)?.toDouble() ?? 0.0;
 
     final netProfit = totalRevenue - totalCosts - totalExpenses;
@@ -8145,6 +8260,8 @@ class DatabaseHelper {
     final db = await database;
     final now = DateTime.now().toIso8601String();
     final journalId = DateTime.now().millisecondsSinceEpoch;
+    final yearStart = '$year-01-01';
+    final yearEnd = '$year-12-31';
 
     await db.transaction((txn) async {
       // Check if already closed
@@ -8165,26 +8282,41 @@ class DatabaseHelper {
       // Get retained earnings accounts (one per currency)
       final retainedEarningsAccounts = await txn.query('accounts', where: 'account_code LIKE ? AND is_active = 1', whereArgs: ['290%']);
 
-      // Calculate net profit per currency
+      /// Calculate account balance from transactions table for the fiscal year
+      /// instead of reading the cached accounts.balance (BUG FIX)
+      Future<double> calcBalanceFromTransactions(int accountId) async {
+        final result = await txn.rawQuery(
+          "SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS balance "
+          "FROM transactions "
+          "WHERE account_id = ? AND date >= ? AND date <= ?",
+          [accountId, yearStart, yearEnd],
+        );
+        return (result.first['balance'] as num?)?.toDouble() ?? 0.0;
+      }
+
+      // Calculate net profit per currency using transaction-derived balances
       final Map<String, double> revenuePerCurrency = {};
       final Map<String, double> costPerCurrency = {};
       final Map<String, double> expensePerCurrency = {};
 
       for (final acc in revenueAccounts) {
         final currency = acc['currency'] as String? ?? 'YER';
-        final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+        final accId = acc['id'] as int;
+        final balance = await calcBalanceFromTransactions(accId);
         revenuePerCurrency[currency] = (revenuePerCurrency[currency] ?? 0.0) + balance;
       }
 
       for (final acc in costAccounts) {
         final currency = acc['currency'] as String? ?? 'YER';
-        final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+        final accId = acc['id'] as int;
+        final balance = await calcBalanceFromTransactions(accId);
         costPerCurrency[currency] = (costPerCurrency[currency] ?? 0.0) + balance;
       }
 
       for (final acc in expenseAccounts) {
         final currency = acc['currency'] as String? ?? 'YER';
-        final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+        final accId = acc['id'] as int;
+        final balance = await calcBalanceFromTransactions(accId);
         expensePerCurrency[currency] = (expensePerCurrency[currency] ?? 0.0) + balance;
       }
 
@@ -8207,7 +8339,7 @@ class DatabaseHelper {
         // Close revenue accounts: Debit Revenue, Credit Retained Earnings
         for (final acc in revenueAccounts.where((a) => a['currency'] == currency)) {
           final accId = acc['id'] as int;
-          final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+          final balance = await calcBalanceFromTransactions(accId);
           if (balance == 0.0) continue;
 
           // Revenue accounts have credit balance, to close we debit them
@@ -8238,7 +8370,7 @@ class DatabaseHelper {
         // Close cost accounts: Debit Retained Earnings, Credit Cost
         for (final acc in costAccounts.where((a) => a['currency'] == currency)) {
           final accId = acc['id'] as int;
-          final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+          final balance = await calcBalanceFromTransactions(accId);
           if (balance == 0.0) continue;
 
           // Cost accounts have debit balance, to close we credit them
@@ -8269,7 +8401,7 @@ class DatabaseHelper {
         // Close expense accounts: Debit Retained Earnings, Credit Expense
         for (final acc in expenseAccounts.where((a) => a['currency'] == currency)) {
           final accId = acc['id'] as int;
-          final balance = (acc['balance'] as num?)?.toDouble() ?? 0.0;
+          final balance = await calcBalanceFromTransactions(accId);
           if (balance == 0.0) continue;
 
           // Expense accounts have debit balance, to close we credit them

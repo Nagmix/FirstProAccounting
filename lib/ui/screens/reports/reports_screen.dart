@@ -502,9 +502,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final netSales = revenue - salesReturns;
     final netPurchases = purchases - purchaseReturns;
 
-    // COGS = صافي المشتريات (ك approximation حتى يتوفر تتبع تكلفة البضاعة المباعة الفعلي)
-    // في النظام الحالي لا يوجد تتبع تكلفة مباعة منفصل، لذا نستخدم صافي المشتريات كتقريب
-    final cogs = netPurchases;
+    // COGS = مخزون أول المدة + صافي المشتريات - مخزون آخر المدة
+    // Calculate inventory values from stock movements and product cost prices
+    double beginningInventory = 0.0;
+    double endingInventory = 0.0;
+    try {
+      // Beginning inventory: total value of products at start of period
+      if (_dateFrom != null) {
+        final begArgs = <dynamic>[_dateFrom!.toIso8601String()];
+        begArgs.addAll(_currencyArgs());
+        final begRes = await database.rawQuery(
+          "SELECT COALESCE(SUM(p.current_stock * p.cost_price), 0) AS total_value "
+          "FROM products p WHERE p.track_stock = 1$cf", begArgs);
+        beginningInventory = (begRes.first['total_value'] as num?)?.toDouble() ?? 0;
+      }
+      // Ending inventory: current total value of in-stock products
+      final endArgs = <dynamic>[];
+      endArgs.addAll(_currencyArgs());
+      final endRes = await database.rawQuery(
+        "SELECT COALESCE(SUM(p.current_stock * p.cost_price), 0) AS total_value "
+        "FROM products p WHERE p.track_stock = 1$cf", endArgs);
+      endingInventory = (endRes.first['total_value'] as num?)?.toDouble() ?? 0;
+    } catch (e) {
+      // Fallback if inventory calculation fails
+      debugPrint('Inventory value calculation error: $e');
+    }
+
+    final cogs = beginningInventory + netPurchases - endingInventory;
     final grossProfit = netSales - cogs;
     final netProfit = grossProfit - expenses;
 
@@ -512,7 +536,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       {'البند': 'إجمالي المبيعات', 'المبلغ': revenue, 'ملاحظة': 'فواتير البيع'},
       {'البند': 'مرتجعات المبيعات', 'المبلغ': -salesReturns, 'ملاحظة': 'فواتير المرتجع'},
       {'البند': 'صافي المبيعات', 'المبلغ': netSales, 'ملاحظة': ''},
-      {'البند': 'تكلفة البضاعة المباعة', 'المبلغ': cogs, 'ملاحظة': 'صافي المشتريات (تقريبي)'},
+      {'البند': 'مخزون أول المدة', 'المبلغ': beginningInventory, 'ملاحظة': beginningInventory > 0 ? 'قيمة المخزون عند بداية الفترة' : 'غير متاح'},
+      {'البند': 'صافي المشتريات', 'المبلغ': netPurchases, 'ملاحظة': 'المشتريات - المرتجعات'},
+      {'البند': 'مخزون آخر المدة', 'المبلغ': -endingInventory, 'ملاحظة': endingInventory > 0 ? 'قيمة المخزون عند نهاية الفترة' : 'غير متاح'},
+      {'البند': 'تكلفة البضاعة المباعة', 'المبلغ': cogs, 'ملاحظة': 'مخزون أول + مشتريات - مخزون آخر'},
       {'البند': 'مجمل الربح', 'المبلغ': grossProfit, 'ملاحظة': 'صافي المبيعات - تكلفة البضاعة'},
       {'البند': 'المصاريف التشغيلية', 'المبلغ': -expenses, 'ملاحظة': ''},
       {'البند': 'صافي الربح', 'المبلغ': netProfit, 'ملاحظة': 'مجمل الربح - المصاريف'},
@@ -620,7 +647,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _loadAccountMovementReport(DatabaseHelper db) async {
     if (_selectedAccountId == null) return;
-    final transactions = await db.getAccountTransactions(_selectedAccountId!);
+    // Use raw query with date filter instead of getAccountTransactions
+    // which ignores date range completely (BUG FIX)
+    final database = await db.database;
+    final args = <dynamic>[_selectedAccountId!];
+    args.addAll(_dateArgs());
+    final transactions = await database.rawQuery(
+      "SELECT id, account_id, debit, credit, description, date, created_at "
+      "FROM transactions "
+      "WHERE account_id = ?${_dateFilter(column: 'date')}"
+      " ORDER BY date ASC, created_at ASC",
+      args,
+    );
     double running = 0;
     double totalDebit = 0, totalCredit = 0;
     _reportRows = [];
@@ -676,10 +714,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _loadTrialBalanceReport(DatabaseHelper db) async {
+    final database = await db.database;
     final accounts = await db.getAllAccounts();
     final cc = _currencyCode();
     double totalDebit = 0, totalCredit = 0;
     _reportRows = [];
+
+    // Build date filter for trial balance query
+    final dateFilter = _dateFilter(column: 'date');
+    final dateArgs = _dateArgs();
+
     for (final account in accounts) {
       if (cc != null && account['currency'] != cc) continue;
       if (_selectedAccountType != 'الكل') {
@@ -687,7 +731,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (typeCode != 'الكل' && account['account_type'] != typeCode) continue;
       }
       final accountId = account['id'] as int;
-      final balance = await db.getAccountBalance(accountId);
+
+      // Calculate balance from transactions with date filter
+      // instead of using cached accounts.balance or getAccountBalance
+      // which ignores date range (BUG FIX)
+      final balanceArgs = <dynamic>[accountId];
+      balanceArgs.addAll(dateArgs);
+      final result = await database.rawQuery(
+        "SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS balance "
+        "FROM transactions "
+        "WHERE account_id = ?$dateFilter",
+        balanceArgs,
+      );
+      final balance = (result.first['balance'] as num?)?.toDouble() ?? 0.0;
+
       if (balance == 0.0) continue;
       final isDebit = balance > 0;
       final debit = isDebit ? balance.abs() : 0.0;
