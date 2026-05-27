@@ -13,11 +13,11 @@ import '../../widgets/animated_entry.dart';
 
 /// The main dashboard screen – the first thing the user sees.
 ///
-/// Modern professional design v3:
+/// Modern professional design v4:
 /// 1. Premium Header – gradient accent bar + greeting + date/time + avatar
-/// 2. Hero Sales Card – vibrant multi-gradient with sparkle decorations
-/// 3. Unified Action Grid – 3×3 paged grid with inline page indicators
-/// 4. Statistics Box – elegant bordered container with title + shortcut
+/// 2. Hero Sales Card – deep dark professional gradient with rich details
+/// 3. Unified Action Grid – 3×3 paged grid with compact cards
+/// 4. Statistics Box – data-panel style (different from action cards)
 /// 5. Recent Transactions – professional card-based list
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -173,6 +173,20 @@ class _DashboardScreenState extends State<DashboardScreen>
       ];
 
   int get _totalPages => (_allActions.length / 9).ceil();
+
+  /// Calculate the required grid height dynamically based on screen width
+  /// to prevent the third row from being cut off on any device.
+  double _calculateGridHeight(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalPadding = 40.0; // 20 left + 20 right
+    final crossAxisSpacing = 10.0;
+    final cardWidth = (screenWidth - horizontalPadding - crossAxisSpacing * 2) / 3;
+    final cardHeight = cardWidth / _cardAspectRatio;
+    final mainAxisSpacing = 10.0;
+    return (cardHeight * 3) + (mainAxisSpacing * 2) + 4; // +4 safety buffer
+  }
+
+  static const double _cardAspectRatio = 0.95;
 
   @override
   Widget build(BuildContext context) {
@@ -361,7 +375,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  HERO SALES CARD – vibrant multi-color gradient
+  //  HERO SALES CARD – deep dark professional gradient
   // ══════════════════════════════════════════════════════════════════
   Widget _buildHeroSalesCard(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
@@ -374,14 +388,17 @@ class _DashboardScreenState extends State<DashboardScreen>
       trendPercent = trendPercent.abs();
     }
 
+    // Average invoice value
+    final avgInvoiceValue = _todayInvoiceCount > 0 ? _todaySales / _todayInvoiceCount : 0.0;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isDark
-                ? [const Color(0xFF1A1A2E), const Color(0xFF262640), const Color(0xFF1E1E38)]
-                : [const Color(0xFF4F6AF0), const Color(0xFF7C3AED), const Color(0xFFEC4899)],
+                ? [const Color(0xFF0D0F1A), const Color(0xFF131629), const Color(0xFF0E0F1C)]
+                : [const Color(0xFF0F1B3D), const Color(0xFF1A1145), const Color(0xFF2A1052)],
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
             stops: const [0.0, 0.5, 1.0],
@@ -389,11 +406,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF7C3AED).withValues(alpha: isDark ? 0.2 : 0.35),
-              offset: const Offset(0, 8), blurRadius: 28,
+              color: const Color(0xFF1A1145).withValues(alpha: isDark ? 0.3 : 0.45),
+              offset: const Offset(0, 10), blurRadius: 32,
             ),
             BoxShadow(
-              color: const Color(0xFF4F6AF0).withValues(alpha: isDark ? 0.1 : 0.2),
+              color: const Color(0xFF0F1B3D).withValues(alpha: isDark ? 0.15 : 0.25),
               offset: const Offset(0, 4), blurRadius: 16,
             ),
           ],
@@ -401,22 +418,23 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Stack(
           children: [
             // Decorative shapes
-            Positioned(left: -30, top: -30, child: Container(width: 120, height: 120, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.07)))),
-            Positioned(right: -20, bottom: -40, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.05)))),
+            Positioned(left: -30, top: -30, child: Container(width: 120, height: 120, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.04)))),
+            Positioned(right: -20, bottom: -40, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.03)))),
             // Sparkle decorations
-            Positioned(right: 60, top: 30, child: _SparkleIcon(size: 14, color: Colors.white.withValues(alpha: 0.3))),
-            Positioned(left: 80, top: 60, child: _SparkleIcon(size: 10, color: Colors.white.withValues(alpha: 0.2))),
-            Positioned(right: 30, top: 80, child: _SparkleIcon(size: 8, color: Colors.white.withValues(alpha: 0.25))),
+            Positioned(right: 60, top: 30, child: _SparkleIcon(size: 14, color: Colors.white.withValues(alpha: 0.2))),
+            Positioned(left: 80, top: 60, child: _SparkleIcon(size: 10, color: Colors.white.withValues(alpha: 0.12))),
+            Positioned(right: 30, top: 80, child: _SparkleIcon(size: 8, color: Colors.white.withValues(alpha: 0.15))),
             // Mini chart
             Positioned(left: 20, bottom: 16, right: 20,
-              child: SizedBox(height: 50, child: CustomPaint(painter: _MiniChartPainter(progress: _chartDrawController, lineColor: Colors.white.withValues(alpha: 0.35), fillColor: Colors.white.withValues(alpha: 0.1)))),
+              child: SizedBox(height: 45, child: CustomPaint(painter: _MiniChartPainter(progress: _chartDrawController, lineColor: Colors.white.withValues(alpha: 0.25), fillColor: Colors.white.withValues(alpha: 0.06)))),
             ),
             // Content
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 70),
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 68),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Top row: title + invoice count badge
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -424,53 +442,77 @@ class _DashboardScreenState extends State<DashboardScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 28, height: 28,
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.trending_up_rounded, color: Colors.white.withValues(alpha: 0.9), size: 16),
+                            width: 30, height: 30,
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
+                            child: Icon(Icons.sell_rounded, color: Colors.white.withValues(alpha: 0.9), size: 16),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Text('إجمالي مبيعات اليوم',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85), fontWeight: FontWeight.w600)),
+                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.w600, letterSpacing: 0.2)),
                         ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.2), Colors.white.withValues(alpha: 0.1)]),
+                          gradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.12), Colors.white.withValues(alpha: 0.06)]),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text('$_todayInvoiceCount', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                          Icon(Icons.receipt_long_rounded, color: Colors.white.withValues(alpha: 0.7), size: 13),
                           const SizedBox(width: 4),
-                          Text('فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.7))),
+                          Text('$_todayInvoiceCount', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                          const SizedBox(width: 3),
+                          Text('فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.6))),
                         ]),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
+                  // Main amount
                   _CountUpText(value: _todaySales,
                     style: theme.textTheme.displaySmall!.copyWith(color: Colors.white, fontWeight: FontWeight.w900, height: 1.1, letterSpacing: -0.5),
                     isLoading: _isLoading),
-                  const SizedBox(height: 14),
-                  if (_yesterdaySales > 0 || _todaySales > 0)
-                    Row(children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.2) : const Color(0xFFFCA5A5).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.3) : const Color(0xFFFCA5A5).withValues(alpha: 0.2)),
+                  const SizedBox(height: 12),
+                  // Bottom info row: trend + average
+                  Row(
+                    children: [
+                      // Trend indicator
+                      if (_yesterdaySales > 0 || _todaySales > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.15) : const Color(0xFFFCA5A5).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.2) : const Color(0xFFFCA5A5).withValues(alpha: 0.15)),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(isTrendUp ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), size: 13),
+                            const SizedBox(width: 4),
+                            Text('${trendPercent.toStringAsFixed(1)}%', style: theme.textTheme.labelSmall?.copyWith(color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), fontWeight: FontWeight.w700)),
+                          ]),
                         ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(isTrendUp ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), size: 14),
-                          const SizedBox(width: 4),
-                          Text('${trendPercent.toStringAsFixed(1)}%', style: theme.textTheme.labelSmall?.copyWith(color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), fontWeight: FontWeight.w700)),
-                        ]),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(isTrendUp ? 'أكثر من أمس' : 'أقل من أمس', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.65), fontWeight: FontWeight.w500)),
-                    ]),
+                      if (_yesterdaySales > 0 || _todaySales > 0)
+                        const SizedBox(width: 8),
+                      // Average sale value
+                      if (_todayInvoiceCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF60A5FA).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF60A5FA).withValues(alpha: 0.15)),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.analytics_outlined, color: const Color(0xFF60A5FA), size: 13),
+                            const SizedBox(width: 4),
+                            Text('متوسط ${CurrencyFormatter.formatCompact(avgInvoiceValue)}', style: theme.textTheme.labelSmall?.copyWith(color: const Color(0xFF60A5FA), fontWeight: FontWeight.w600)),
+                          ]),
+                        ),
+                      const Spacer(),
+                      Text(isTrendUp ? 'أكثر من أمس' : 'أقل من أمس', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.5), fontWeight: FontWeight.w400)),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -484,17 +526,19 @@ class _DashboardScreenState extends State<DashboardScreen>
   //  UNIFIED 3×3 PAGED ACTION GRID – with inline page indicators
   // ══════════════════════════════════════════════════════════════════
   Widget _buildActionGrid(BuildContext context, bool isDark) {
+    final gridHeight = _calculateGridHeight(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Column(
         children: [
           // Section header with page indicators on left side
           _buildActionGridHeader(context, isDark),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // 3×3 paged grid — height increased to prevent 3rd row cutoff
+          // 3×3 paged grid — dynamic height to prevent 3rd row cutoff
           SizedBox(
-            height: 336,
+            height: gridHeight,
             child: PageView.builder(
               controller: _actionPageController,
               physics: const BouncingScrollPhysics(),
@@ -515,9 +559,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                   padding: EdgeInsets.zero,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.88,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: _cardAspectRatio,
                   ),
                   itemCount: 9,
                   itemBuilder: (context, index) {
@@ -543,8 +587,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   /// Action grid header with title on right and page indicators on left
   Widget _buildActionGridHeader(BuildContext context, bool isDark) {
-    final theme = Theme.of(context);
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
       child: Row(
@@ -603,20 +645,22 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  STATISTICS BOX – elegant bordered container
+  //  STATISTICS BOX – data-panel style (distinctly different from
+  //  action cards: horizontal rows with accent indicators, not
+  //  vertical icon-on-top cards)
   // ══════════════════════════════════════════════════════════════════
   Widget _buildStatisticsBox(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
     final metrics = [
-      _MetricData(label: 'مبيعات الشهر', value: _monthSales, icon: Icons.trending_up_rounded, color: const Color(0xFF22C55E), isCount: false),
-      _MetricData(label: 'مشتريات الشهر', value: _monthPurchases, icon: Icons.shopping_bag_rounded, color: const Color(0xFFF97316), isCount: false),
-      _MetricData(label: 'العملاء', value: _customerCount.toDouble(), icon: Icons.people_rounded, color: const Color(0xFF4F6AF0), isCount: true),
+      _MetricData(label: 'مبيعات الشهر', value: _monthSales, icon: Icons.auto_graph_rounded, color: const Color(0xFF22C55E), isCount: false),
+      _MetricData(label: 'مشتريات الشهر', value: _monthPurchases, icon: Icons.local_mall_rounded, color: const Color(0xFFF97316), isCount: false),
+      _MetricData(label: 'العملاء', value: _customerCount.toDouble(), icon: Icons.groups_rounded, color: const Color(0xFF4F6AF0), isCount: true),
     ];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkSurface : Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -687,50 +731,84 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            // Metric cards row
-            Row(
-              children: metrics.asMap().entries.map((entry) {
-                final m = entry.value;
-                return Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(left: entry.key == 0 ? 0 : 8, right: entry.key == metrics.length - 1 ? 0 : 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? m.color.withValues(alpha: 0.06)
-                          : m.color.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: m.color.withValues(alpha: isDark ? 0.1 : 0.12),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 14),
+            // Metric rows — horizontal data-panel style
+            ...metrics.asMap().entries.map((entry) {
+              final m = entry.value;
+              final isLast = entry.key == metrics.length - 1;
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
                       children: [
+                        // Thin colored accent bar on the right side (RTL)
                         Container(
-                          width: 28, height: 28,
-                          decoration: BoxDecoration(color: m.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                          child: Icon(m.icon, color: m.color, size: 14),
+                          width: 3, height: 36,
+                          decoration: BoxDecoration(
+                            color: m.color,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          m.isCount ? m.value.toInt().toString() : CurrencyFormatter.formatCompactWithSymbol(m.value),
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary, fontSize: 15),
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        const SizedBox(width: 12),
+                        // Small circular icon
+                        Container(
+                          width: 34, height: 34,
+                          decoration: BoxDecoration(
+                            color: m.color.withValues(alpha: isDark ? 0.12 : 0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(m.icon, color: m.color, size: 16),
                         ),
-                        const SizedBox(height: 2),
-                        Text(m.label,
-                          style: theme.textTheme.labelSmall?.copyWith(color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary, fontWeight: FontWeight.w500, fontSize: 10),
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        const SizedBox(width: 12),
+                        // Label + Value
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(m.label,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary,
+                                  fontWeight: FontWeight.w500, fontSize: 11,
+                                ),
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                m.isCount ? m.value.toInt().toString() : CurrencyFormatter.formatCompactWithSymbol(m.value),
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                                  fontSize: 16, height: 1.2,
+                                ),
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Subtle arrow indicator
+                        Icon(Icons.chevron_left_rounded,
+                          size: 18,
+                          color: m.color.withValues(alpha: 0.5),
                         ),
                       ],
                     ),
                   ),
-                );
-              }).toList(),
-            ),
+                  // Thin divider between rows (not after last)
+                  if (!isLast)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 14),
+                      child: Divider(
+                        height: 1,
+                        thickness: 0.5,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.06)
+                            : const Color(0xFF4F6AF0).withValues(alpha: 0.08),
+                      ),
+                    ),
+                ],
+              );
+            }),
           ],
         ),
       ),
@@ -966,7 +1044,7 @@ class _HeaderActionIcon extends StatelessWidget {
   }
 }
 
-// ── Grid Action Card (3×3 items) ──────────────────────────────────
+// ── Grid Action Card (3×3 items) — compact version ──────────────
 class _GridActionCard extends StatelessWidget {
   const _GridActionCard({
     required this.label,
@@ -992,11 +1070,11 @@ class _GridActionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.04),
-            offset: const Offset(0, 2), blurRadius: 8,
+            color: isDark ? Colors.black.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
+            offset: const Offset(0, 2), blurRadius: 6,
           ),
         ],
       ),
@@ -1004,24 +1082,24 @@ class _GridActionCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           splashColor: color.withValues(alpha: 0.1),
           highlightColor: color.withValues(alpha: 0.05),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon container with solid background
+                // Icon container — compact
                 Container(
-                  width: 48, height: 48,
+                  width: 42, height: 42,
                   decoration: BoxDecoration(
-                    color: isDark ? color.withValues(alpha: 0.15) : effectiveBg,
-                    borderRadius: BorderRadius.circular(14),
+                    color: isDark ? color.withValues(alpha: 0.12) : effectiveBg,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: color, size: 22),
+                  child: Icon(icon, color: color, size: 20),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 // Label
                 Text(label,
                   textAlign: TextAlign.center,
@@ -1031,7 +1109,7 @@ class _GridActionCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                     height: 1.2,
-                    fontSize: 11,
+                    fontSize: 10,
                   ),
                 ),
               ],
