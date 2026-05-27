@@ -30,3 +30,15 @@ local-*
 
 # Coverage
 /coverage
+
+# Next.js / Node
+.next/
+node_modules/
+next-env.d.ts
+
+# Temp repos
+repo-restructure/
+FirstProAccounting/
+
+# Uploads
+upload/

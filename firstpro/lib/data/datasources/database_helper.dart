@@ -11,7 +11,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 32;
+  static const int _databaseVersion = 33;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -887,6 +887,24 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_stock_movements_product ON stock_movements (product_id)');
     await db.execute('CREATE INDEX idx_stock_movements_type ON stock_movements (movement_type)');
     await db.execute('CREATE INDEX idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
+
+    // Held Orders (POS) - v33
+    await db.execute('''
+      CREATE TABLE held_orders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        shift_id INTEGER,
+        cart_data TEXT NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
+        payments_data TEXT NOT NULL DEFAULT '[]',
+        discount REAL NOT NULL DEFAULT 0.0,
+        discount_type TEXT NOT NULL DEFAULT 'none',
+        customer_id INTEGER,
+        customer_name TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (shift_id) REFERENCES shifts (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_held_orders_shift ON held_orders (shift_id)');
 
     // Seed default data
     await _seedCurrencies(db);
@@ -2198,6 +2216,26 @@ class DatabaseHelper {
       } catch (_) {
         // Column already exists, ignore
       }
+    }
+
+    // v33: Add held_orders table for POS held orders persistence
+    if (oldVersion < 33) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS held_orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          shift_id INTEGER,
+          cart_data TEXT NOT NULL,
+          payment_method TEXT NOT NULL DEFAULT 'cash',
+          payments_data TEXT NOT NULL DEFAULT '[]',
+          discount REAL NOT NULL DEFAULT 0.0,
+          discount_type TEXT NOT NULL DEFAULT 'none',
+          customer_id INTEGER,
+          customer_name TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (shift_id) REFERENCES shifts (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_held_orders_shift ON held_orders (shift_id)');
     }
   }
 
@@ -8288,5 +8326,36 @@ class DatabaseHelper {
         });
       }
     });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  v33: Held Orders (POS) CRUD methods
+  // ══════════════════════════════════════════════════════════════
+
+  Future<int> insertHeldOrder(Map<String, dynamic> order) async {
+    final db = await database;
+    return await db.insert('held_orders', order);
+  }
+
+  Future<List<Map<String, dynamic>>> getHeldOrders({int? shiftId}) async {
+    final db = await database;
+    if (shiftId != null) {
+      return await db.query('held_orders', where: 'shift_id = ?', whereArgs: [shiftId], orderBy: 'created_at DESC');
+    }
+    return await db.query('held_orders', orderBy: 'created_at DESC');
+  }
+
+  Future<int> deleteHeldOrder(int id) async {
+    final db = await database;
+    return await db.delete('held_orders', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> clearHeldOrders({int? shiftId}) async {
+    final db = await database;
+    if (shiftId != null) {
+      await db.delete('held_orders', where: 'shift_id = ?', whereArgs: [shiftId]);
+    } else {
+      await db.delete('held_orders');
+    }
   }
 }

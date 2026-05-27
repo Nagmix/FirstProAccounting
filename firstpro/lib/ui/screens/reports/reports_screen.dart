@@ -61,7 +61,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // Filters
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  String _selectedCurrency = 'الكل';
+  String _selectedCurrency = 'ر.ي';
   int? _selectedAccountId;
   int? _selectedCustomerId;
   int? _selectedSupplierId;
@@ -74,7 +74,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<Map<String, dynamic>> _reportRows = [];
   Map<String, double> _reportTotals = {};
 
-  static const _currencyOptions = ['الكل', 'ر.ي', 'ر.س', r'$'];
+  static const _currencyOptions = ['ر.ي', 'ر.س', r'$'];
   static const _accountTypes = [
     MapEntry('الكل', 'الكل'),
     MapEntry('أصول', 'ASSET'),
@@ -302,7 +302,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() {
       _dateFrom = null;
       _dateTo = null;
-      _selectedCurrency = 'الكل';
+      _selectedCurrency = 'ر.ي';
       _selectedAccountId = null;
       _selectedCustomerId = null;
       _selectedSupplierId = null;

@@ -976,8 +976,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         tableName: 'invoices',
         recordId: int.tryParse(widget.invoiceId),
         recordType: _invoice?['type'] as String?,
-        oldValues: jsonEncode({'status': _invoice?['status']}),
-        newValues: jsonEncode({'status': 'cancelled'}),
+        oldValues: jsonEncode({'status': _invoice?['status'], 'invoiceId': widget.invoiceId}),
+        newValues: jsonEncode({'status': 'cancelled', 'invoiceId': widget.invoiceId}),
       );
       if (mounted) {
         context.showSuccessSnackBar('تم إلغاء الفاتورة بنجاح');

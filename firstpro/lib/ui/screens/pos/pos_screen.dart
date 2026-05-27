@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -192,7 +193,46 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       });
     }
     await _loadActiveShift();
+    await _loadHeldOrdersFromDb();
     await _loadTopSellers();
+  }
+
+  Future<void> _loadHeldOrdersFromDb() async {
+    try {
+      final db = DatabaseHelper();
+      final dbOrders = await db.getHeldOrders(shiftId: _activeShift?['id']);
+      for (final row in dbOrders) {
+        final cartData = jsonDecode(row['cart_data'] as String) as List;
+        final paymentsData = jsonDecode(row['payments_data'] as String) as List;
+        final cartItems = cartData.map((item) => _CartItem(
+          productId: item['productId'] as int,
+          name: item['productName'] as String,
+          quantity: (item['quantity'] as num).toInt(),
+          unitPrice: (item['unitPrice'] as num).toDouble(),
+          unitName: item['unitName'] as String? ?? 'قطعة',
+          conversionFactor: (item['conversionFactor'] as num?)?.toDouble() ?? 1.0,
+        )).toList();
+        final payments = paymentsData.map((p) => _PaymentEntry(
+          amount: (p['amount'] as num).toDouble(),
+          method: p['method'] as String? ?? 'cash',
+        )).toList();
+        final discountTypeStr = row['discount_type'] as String? ?? 'fixed';
+        _heldOrders.add(_HeldOrder(
+          items: cartItems,
+          paymentMethod: row['payment_method'] as String? ?? 'cash',
+          payments: payments,
+          discount: (row['discount'] as num?)?.toDouble() ?? 0.0,
+          discountType: DiscountType.values.firstWhere((e) => e.name == discountTypeStr, orElse: () => DiscountType.fixed),
+          customerId: row['customer_id'] as int?,
+          customerName: row['customer_name'] as String? ?? '',
+          createdAt: DateTime.tryParse(row['created_at'] as String? ?? '') ?? DateTime.now(),
+          dbId: row['id'] as int?,
+        ));
+      }
+      if (_heldOrders.isNotEmpty && mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Warning: Could not load held orders from DB: $e');
+    }
   }
 
   Future<void> _loadActiveShift() async {
@@ -3820,6 +3860,36 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       customerName: _selectedCustomerName,
       createdAt: DateTime.now(),
     ));
+
+    // Persist to database
+    try {
+      final db = DatabaseHelper();
+      final cartJson = _cart.map((item) => {
+        'productId': item.productId,
+        'productName': item.name,
+        'quantity': item.quantity,
+        'unitPrice': item.unitPrice,
+        'unitName': item.unitName,
+        'conversionFactor': item.conversionFactor,
+      }).toList();
+      final paymentsJson = _payments.map((p) => {
+        'amount': p.amount,
+        'method': p.method,
+      }).toList();
+      await db.insertHeldOrder({
+        'shift_id': _activeShift?['id'],
+        'cart_data': jsonEncode(cartJson),
+        'payment_method': _activePaymentMethod,
+        'payments_data': jsonEncode(paymentsJson),
+        'discount': _orderDiscount,
+        'discount_type': _discountType.name,
+        'customer_id': _selectedCustomerId,
+        'customer_name': _selectedCustomerName,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Warning: Could not persist held order to DB: $e');
+    }
     setState(() {
       _cart.clear();
       _payments.clear();
@@ -3871,6 +3941,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     children: [
                       IconButton(
                         onPressed: () {
+                          // Delete from DB if persisted
+                          if (order.dbId != null) {
+                            DatabaseHelper().deleteHeldOrder(order.dbId!);
+                          }
                           setState(() {
                             _cart.clear();
                             _cart.addAll(order.items);
@@ -3893,6 +3967,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       ),
                       IconButton(
                         onPressed: () {
+                          // Delete from DB if persisted
+                          if (order.dbId != null) {
+                            DatabaseHelper().deleteHeldOrder(order.dbId!);
+                          }
                           setState(() => _heldOrders.removeAt(idx));
                           Navigator.pop(ctx);
                         },
@@ -4048,6 +4126,7 @@ class _HeldOrder {
   final int? customerId;
   final String customerName;
   final DateTime createdAt;
+  final int? dbId; // Database row ID for persistence
 
   _HeldOrder({
     required this.items,
@@ -4058,6 +4137,7 @@ class _HeldOrder {
     required this.customerId,
     required this.customerName,
     required this.createdAt,
+    this.dbId,
   });
 }
 

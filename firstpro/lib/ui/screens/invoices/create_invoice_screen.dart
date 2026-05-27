@@ -1523,6 +1523,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       context.showErrorSnackBar('المبلغ المدفوع لا يمكن أن يتجاوز الإجمالي');
       return;
     }
+    // Return invoices must be linked to an original invoice
+    if (_isReturn && _originalInvoiceId == null) {
+      context.showErrorSnackBar('يجب ربط الفاتورة المرتجعة بالفاتورة الأصلية');
+      return;
+    }
 
     // Check return limits if this is a return invoice with an original invoice linked
     if (_isReturn && _originalInvoiceId != null) {
@@ -1626,6 +1631,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       transportCharges: _transportCharges,
       paidAmount: effectivePaidAmount,
     );
+
+    // Update shift totals if this is a return invoice and a shift is active
+    if (_isReturn && _selectedCashBoxId != null) {
+      try {
+        final activeShift = await db.getActiveShift(_selectedCashBoxId!);
+        if (activeShift != null) {
+          final shiftId = activeShift['id'] as int;
+          await db.updateShiftTotals(shiftId, 0.0, _total, 0.0);
+        }
+      } catch (e) {
+        debugPrint('Warning: Could not update shift totals for return: $e');
+      }
+    }
 
     if (mounted) {
       context.showSuccessSnackBar('تم حفظ الفاتورة بنجاح');
