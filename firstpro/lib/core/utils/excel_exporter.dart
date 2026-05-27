@@ -166,6 +166,66 @@ class ExcelExporter {
     return await _saveAndShare(excel, 'كشف_حساب_${entityName.replaceAll(' ', '_')}');
   }
 
+  /// تصدير تقرير عام (يُستخدم من واجهة التقارير الجديدة)
+  static Future<String> exportGenericReport({
+    required String reportName,
+    required List<Map<String, dynamic>> rows,
+    required Map<String, double> totals,
+  }) async {
+    if (rows.isEmpty) throw Exception('لا توجد بيانات للتصدير');
+
+    final excel = Excel.createExcel();
+    final sheetName = reportName.length > 31 ? reportName.substring(0, 31) : reportName;
+    final sheet = excel[sheetName];
+    excel.delete('Sheet1');
+
+    // Get column headers from first row
+    final columns = rows.first.keys.toList();
+    _addHeaders(sheet, columns);
+
+    // Data rows
+    for (var i = 0; i < rows.length; i++) {
+      final row = rows[i];
+      final excelRow = i + 2;
+      for (var colIdx = 0; colIdx < columns.length; colIdx++) {
+        final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: colIdx, rowIndex: excelRow - 1));
+        final value = row[columns[colIdx]];
+        if (value == null) {
+          cell.value = TextCellValue('-');
+        } else if (value is double) {
+          cell.value = DoubleCellValue(value);
+        } else if (value is int) {
+          cell.value = DoubleCellValue(value.toDouble());
+        } else {
+          final str = value.toString();
+          // Try to format date-like strings
+          if (columns[colIdx] == 'التاريخ' || columns[colIdx].contains('تاريخ')) {
+            cell.value = TextCellValue(_formatDate(str));
+          } else {
+            cell.value = TextCellValue(str);
+          }
+        }
+      }
+    }
+
+    // Totals row
+    if (totals.isNotEmpty) {
+      final totalRowIdx = rows.length + 2;
+      for (var colIdx = 0; colIdx < columns.length; colIdx++) {
+        final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: colIdx, rowIndex: totalRowIdx - 1));
+        final colName = columns[colIdx];
+        if (totals.containsKey(colName)) {
+          cell.value = DoubleCellValue(totals[colName]!);
+        } else if (colIdx == 0) {
+          cell.value = const TextCellValue('الإجمالي');
+        }
+        cell.cellStyle = CellStyle(bold: true, backgroundColorHex: ExcelColor.fromHexString('E8EAF6'));
+      }
+    }
+
+    return await _saveAndShare(excel, reportName.replaceAll(' ', '_'));
+  }
+
   // ══════════════════════════════════════════════════════════════
   //  مساعدات خاصة
   // ══════════════════════════════════════════════════════════════
