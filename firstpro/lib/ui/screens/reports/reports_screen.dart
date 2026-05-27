@@ -501,21 +501,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final netSales = revenue - salesReturns;
     final netPurchases = purchases - purchaseReturns;
-    final grossProfit = netSales - netPurchases;
+
+    // COGS = صافي المشتريات (ك approximation حتى يتوفر تتبع تكلفة البضاعة المباعة الفعلي)
+    // في النظام الحالي لا يوجد تتبع تكلفة مباعة منفصل، لذا نستخدم صافي المشتريات كتقريب
+    final cogs = netPurchases;
+    final grossProfit = netSales - cogs;
     final netProfit = grossProfit - expenses;
 
     _reportRows = [
       {'البند': 'إجمالي المبيعات', 'المبلغ': revenue, 'ملاحظة': 'فواتير البيع'},
       {'البند': 'مرتجعات المبيعات', 'المبلغ': -salesReturns, 'ملاحظة': 'فواتير المرتجع'},
       {'البند': 'صافي المبيعات', 'المبلغ': netSales, 'ملاحظة': ''},
-      {'البند': 'إجمالي المشتريات', 'المبلغ': purchases, 'ملاحظة': 'فواتير الشراء'},
-      {'البند': 'مرتجعات المشتريات', 'المبلغ': -purchaseReturns, 'ملاحظة': ''},
-      {'البند': 'صافي المشتريات', 'المبلغ': netPurchases, 'ملاحظة': ''},
-      {'البند': 'مجمل الربح', 'المبلغ': grossProfit, 'ملاحظة': 'صافي المبيعات - صافي المشتريات'},
+      {'البند': 'تكلفة البضاعة المباعة', 'المبلغ': cogs, 'ملاحظة': 'صافي المشتريات (تقريبي)'},
+      {'البند': 'مجمل الربح', 'المبلغ': grossProfit, 'ملاحظة': 'صافي المبيعات - تكلفة البضاعة'},
       {'البند': 'المصاريف التشغيلية', 'المبلغ': -expenses, 'ملاحظة': ''},
       {'البند': 'صافي الربح', 'المبلغ': netProfit, 'ملاحظة': 'مجمل الربح - المصاريف'},
     ];
-    _reportTotals = {'صافي المبيعات': netSales, 'صافي المشتريات': netPurchases, 'صافي الربح': netProfit};
+    _reportTotals = {'صافي المبيعات': netSales, 'تكلفة البضاعة': cogs, 'صافي الربح': netProfit};
   }
 
   Future<void> _loadInvoiceProfitReport(DatabaseHelper db) async {

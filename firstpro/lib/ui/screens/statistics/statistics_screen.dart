@@ -20,6 +20,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   double _monthSales = 0.0;
   double _monthPurchases = 0.0;
   double _monthExpenses = 0.0;
+  double _monthCOGS = 0.0;
   double _cashBalance = 0.0;
   List<Map<String, dynamic>> _topCustomers = [];
   List<Map<String, dynamic>> _recentActivity = [];
@@ -77,10 +78,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
 
       if (mounted) {
         setState(() {
-          _monthSales = results[0] as double;
-          _monthPurchases = results[1] as double;
-          _monthExpenses = results[2] as double;
-          _cashBalance = results[4] as double;
+          _monthSales = (results[0] as num?)?.toDouble() ?? 0.0;
+          _monthPurchases = (results[1] as num?)?.toDouble() ?? 0.0;
+          _monthExpenses = (results[2] as num?)?.toDouble() ?? 0.0;
+          _monthCOGS = (results[1] as num?)?.toDouble() ?? 0.0; // TODO: replace with actual COGS query
+          _cashBalance = (results[4] as num?)?.toDouble() ?? 0.0;
           _recentActivity = results[5] as List<Map<String, dynamic>>;
           _topCustomers = topCustomersResult;
           _currencyBreakdown = currencyBreakdownResult;
@@ -96,7 +98,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     }
   }
 
-  double get _netProfit => _monthSales - _monthPurchases - _monthExpenses;
+  double get _netProfit => _monthSales - _monthCOGS - _monthExpenses;
 
   @override
   Widget build(BuildContext context) {

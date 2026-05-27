@@ -95,18 +95,20 @@ class _DebtsScreenState extends State<DebtsScreen>
     }).toList();
   }
 
-  /// Suppliers with debit balance (balance_type = 'debit' && balance > 0)
+  /// Suppliers with credit balance (balance_type = 'credit' && balance > 0)
   /// means the business owes the supplier money (payable / ديون صاحب العمل)
+  /// In double-entry: supplier is a LIABILITY account, credit balance = business owes supplier
   List<Map<String, dynamic>> get _debtSuppliers {
     return _allSuppliers.where((s) {
       final balance = (s['balance'] as num?)?.toDouble() ?? 0.0;
-      final balanceType = s['balance_type'] as String? ?? 'debit';
+      final balanceType = s['balance_type'] as String? ?? 'credit';
       final matchesCurrency = _selectedCurrency == 'الكل' ||
           (s['currency'] as String? ?? 'YER') == _selectedCurrency;
       final matchesSearch = _searchQuery.isEmpty ||
           ((s['name'] as String? ?? '').contains(_searchQuery) ||
               (s['phone'] as String? ?? '').contains(_searchQuery));
-      return balance > 0 && balanceType == 'debit' && matchesCurrency && matchesSearch;
+      // Credit balance on supplier = business owes money to supplier (debt)
+      return balance > 0 && balanceType == 'credit' && matchesCurrency && matchesSearch;
     }).toList();
   }
 

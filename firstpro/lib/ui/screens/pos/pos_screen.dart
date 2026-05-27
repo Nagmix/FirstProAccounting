@@ -2209,12 +2209,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         }
                       }
 
-                      // Update shift totals
+                      // Update shift totals — cash in/out are operational, not sales/discounts
                       if (isCashIn) {
                         await dbInstance.update(
                           'shifts',
                           {
-                            'total_sales': (( _activeShift!['total_sales'] as num?)?.toDouble() ?? 0.0) + amount,
+                            'transaction_count': ((_activeShift!['transaction_count'] as int?) ?? 0) + 1,
                             'updated_at': now.toIso8601String(),
                           },
                           where: 'id = ?',
@@ -2224,7 +2224,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         await dbInstance.update(
                           'shifts',
                           {
-                            'total_discounts': ((_activeShift!['total_discounts'] as num?)?.toDouble() ?? 0.0) + amount,
+                            'transaction_count': ((_activeShift!['transaction_count'] as int?) ?? 0) + 1,
                             'updated_at': now.toIso8601String(),
                           },
                           where: 'id = ?',

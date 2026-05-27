@@ -7044,15 +7044,19 @@ class DatabaseHelper {
   ) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
+
+    // Determine if stock & journal entries should be applied immediately.
+    // Draft vouchers defer stock changes and journal entries until confirmed.
+    final status = voucherMap['status'] as String? ?? 'approved';
+    final applyStockAndJournal = status == 'approved';
 
     int voucherId = 0;
     await db.transaction((txn) async {
       // Insert voucher header
       voucherId = await txn.insert('inventory_vouchers', {
         ...voucherMap,
-        'created_at': now,
-        'updated_at': now,
+        'created_at': voucherMap['created_at'] as String? ?? now,
+        'updated_at': voucherMap['updated_at'] as String? ?? now,
       });
 
       double totalIncreaseValue = 0.0;
@@ -7076,14 +7080,28 @@ class DatabaseHelper {
           'notes': item['notes'] as String?,
         });
 
-        // Update product stock
-        final product = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-        if (product.isNotEmpty) {
-          final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-          await txn.update('products', {
-            'current_stock': currentStock + difference,
-            'updated_at': now,
-          }, where: 'id = ?', whereArgs: [productId]);
+        // Only update product stock when voucher is approved
+        if (applyStockAndJournal) {
+          final product = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+          if (product.isNotEmpty) {
+            final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+            await txn.update('products', {
+              'current_stock': currentStock + difference,
+              'updated_at': now,
+            }, where: 'id = ?', whereArgs: [productId]);
+          }
+
+          // Log stock movement
+          await txn.insert('stock_movements', {
+            'product_id': productId,
+            'movement_type': 'adjustment',
+            'quantity': difference,
+            'reference_type': 'inventory_voucher',
+            'reference_id': voucherId.toString(),
+            'notes': 'سند جرد - تعديل المخزون',
+            'unit_cost': unitCost,
+            'created_at': now,
+          });
         }
 
         if (difference > 0) {
@@ -7099,14 +7117,17 @@ class DatabaseHelper {
         'updated_at': now,
       }, where: 'id = ?', whereArgs: [voucherId]);
 
-      // Get currency for this voucher
-      final currency = voucherMap['currency'] as String? ?? 'YER';
+      // Only create journal entries when voucher is approved
+      if (applyStockAndJournal) {
+        final journalId = DateTime.now().millisecondsSinceEpoch;
+        // Get currency for this voucher
+        final currency = voucherMap['currency'] as String? ?? 'YER';
 
-      // Find accounts by code and currency
-      // Inventory account code = 1300 + offset
-      final inventoryAccount = await _findAccountByCodeAndCurrency(txn, '1300', currency);
-      // COGS account code = 3200 + offset
-      final cogsAccount = await _findAccountByCodeAndCurrency(txn, '3200', currency);
+        // Find accounts by code and currency
+        // Inventory account code = 1300 + offset
+        final inventoryAccount = await _findAccountByCodeAndCurrency(txn, '1300', currency);
+        // COGS account code = 3200 + offset
+        final cogsAccount = await _findAccountByCodeAndCurrency(txn, '3200', currency);
 
       // Journal entries for inventory increase (difference > 0)
       if (totalIncreaseValue > 0) {
@@ -7171,6 +7192,7 @@ class DatabaseHelper {
           await _updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
         }
       }
+      } // end if (applyStockAndJournal)
     });
 
     return voucherId;
@@ -7229,6 +7251,315 @@ class DatabaseHelper {
       ...voucherResult.first,
       'items': items,
     };
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Inventory Voucher CRUD — getAll / delete / confirm
+  // ══════════════════════════════════════════════════════════════
+
+  /// Get all inventory vouchers with warehouse name and item count.
+  /// Returns aliases `voucher_date` → iv.date, `total_diff_value` → iv.total_value
+  /// so callers can use either the raw column names or the aliases.
+  Future<List<Map<String, dynamic>>> getAllInventoryVouchers() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT
+        iv.*,
+        iv.date AS voucher_date,
+        iv.total_value AS total_diff_value,
+        w.name AS warehouse_name,
+        (SELECT COUNT(*) FROM inventory_voucher_items ivi WHERE ivi.voucher_id = iv.id) AS item_count
+      FROM inventory_vouchers iv
+      LEFT JOIN warehouses w ON iv.warehouse_id = w.id
+      ORDER BY iv.created_at DESC
+    ''');
+  }
+
+  /// Delete an inventory voucher and its items.
+  /// If the voucher was previously approved, the stock changes are reversed
+  /// (product current_stock is adjusted back) and a reversal stock movement
+  /// is logged for each item.
+  Future<void> deleteInventoryVoucher(int id) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+
+    await db.transaction((txn) async {
+      // Fetch the voucher to check its status
+      final voucherRows = await txn.query(
+        'inventory_vouchers',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (voucherRows.isEmpty) return;
+
+      final status = voucherRows.first['status'] as String? ?? 'draft';
+
+      // If the voucher was approved, reverse all stock changes
+      if (status == 'approved') {
+        final items = await txn.query(
+          'inventory_voucher_items',
+          where: 'voucher_id = ?',
+          whereArgs: [id],
+        );
+
+        for (final item in items) {
+          final productId = item['product_id'] as int;
+          final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
+          final unitCost = (item['unit_cost'] as num?)?.toDouble() ?? 0.0;
+
+          // Reverse: subtract the difference that was added
+          final product = await txn.query(
+            'products',
+            where: 'id = ?',
+            whereArgs: [productId],
+            limit: 1,
+          );
+          if (product.isNotEmpty) {
+            final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+            await txn.update(
+              'products',
+              {
+                'current_stock': currentStock - difference,
+                'updated_at': now,
+              },
+              where: 'id = ?',
+              whereArgs: [productId],
+            );
+          }
+
+          // Log a reversal stock movement
+          await txn.insert('stock_movements', {
+            'product_id': productId,
+            'movement_type': 'adjustment',
+            'quantity': -difference, // reverse the original adjustment
+            'reference_type': 'inventory_voucher',
+            'reference_id': id.toString(),
+            'notes': 'حذف سند جرد - عكس تعديل المخزون',
+            'unit_cost': unitCost,
+            'created_at': now,
+          });
+        }
+
+        // Reverse journal entries for this voucher
+        // Find transactions that were created with a journal_id pattern from this voucher
+        final voucherDate = voucherRows.first['date'] as String? ?? now.substring(0, 10);
+        final voucherCurrency = voucherRows.first['currency'] as String? ?? 'YER';
+        final voucherDesc = 'سند جرد';
+
+        // Find and reverse related transactions by description pattern and date
+        final relatedTxns = await txn.rawQuery(
+          '''SELECT * FROM transactions
+             WHERE date = ? AND description LIKE ?
+             ORDER BY id DESC''',
+          [voucherDate, '%$voucherDesc%'],
+        );
+
+        // Only reverse the exact number of transactions this voucher created (max 4)
+        // Insertions were: up to 2 for increase, up to 2 for decrease
+        final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
+        final exactTxns = relatedTxns.where((t) {
+          final desc = (t['description'] as String?) ?? '';
+          return desc.contains(voucherNumber) || desc.contains('سند جرد');
+        }).take(4).toList();
+
+        for (final txnRow in exactTxns) {
+          final accId = txnRow['account_id'] as int;
+          final debit = (txnRow['debit'] as num?)?.toDouble() ?? 0.0;
+          final credit = (txnRow['credit'] as num?)?.toDouble() ?? 0.0;
+
+          // Reverse: swap debit and credit
+          await txn.insert('transactions', {
+            'account_id': accId,
+            'journal_id': DateTime.now().millisecondsSinceEpoch,
+            'debit': credit,
+            'credit': debit,
+            'description': 'عكس قيد - حذف سند جرد رقم $voucherNumber',
+            'date': now.substring(0, 10),
+            'created_at': now,
+          });
+
+          // Reverse the account balance
+          await _updateAccountBalanceWithJournal(txn, accId, credit, debit, now);
+        }
+      }
+
+      // Delete items first (though CASCADE should handle it)
+      await txn.delete(
+        'inventory_voucher_items',
+        where: 'voucher_id = ?',
+        whereArgs: [id],
+      );
+
+      // Delete the voucher
+      await txn.delete(
+        'inventory_vouchers',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+  }
+
+  /// Confirm (approve) a draft inventory voucher.
+  /// Updates status to 'approved', adjusts product stock quantities,
+  /// creates stock movements, and generates journal entries.
+  Future<void> confirmInventoryVoucher(int id) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final journalId = DateTime.now().millisecondsSinceEpoch;
+
+    await db.transaction((txn) async {
+      // Fetch the voucher
+      final voucherRows = await txn.query(
+        'inventory_vouchers',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (voucherRows.isEmpty) {
+        throw Exception('سند الجرد غير موجود');
+      }
+
+      final currentStatus = voucherRows.first['status'] as String?;
+      if (currentStatus != 'draft') {
+        throw Exception('لا يمكن تأكيد سند جرد بحالة "$currentStatus" — يجب أن يكون مسودة');
+      }
+
+      final currency = voucherRows.first['currency'] as String? ?? 'YER';
+      final voucherDate = voucherRows.first['date'] as String? ?? now.substring(0, 10);
+
+      // Fetch items
+      final items = await txn.query(
+        'inventory_voucher_items',
+        where: 'voucher_id = ?',
+        whereArgs: [id],
+      );
+
+      double totalIncreaseValue = 0.0;
+      double totalDecreaseValue = 0.0;
+
+      for (final item in items) {
+        final productId = item['product_id'] as int;
+        final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
+        final unitCost = (item['unit_cost'] as num?)?.toDouble() ?? 0.0;
+        final totalValue = difference.abs() * unitCost;
+
+        // Update product stock
+        final product = await txn.query(
+          'products',
+          where: 'id = ?',
+          whereArgs: [productId],
+          limit: 1,
+        );
+        if (product.isNotEmpty) {
+          final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+          await txn.update(
+            'products',
+            {
+              'current_stock': currentStock + difference,
+              'updated_at': now,
+            },
+            where: 'id = ?',
+            whereArgs: [productId],
+          );
+        }
+
+        // Create stock movement
+        await txn.insert('stock_movements', {
+          'product_id': productId,
+          'movement_type': 'adjustment',
+          'quantity': difference,
+          'reference_type': 'inventory_voucher',
+          'reference_id': id.toString(),
+          'notes': 'تأكيد سند جرد - تعديل المخزون',
+          'unit_cost': unitCost,
+          'created_at': now,
+        });
+
+        if (difference > 0) {
+          totalIncreaseValue += totalValue;
+        } else if (difference < 0) {
+          totalDecreaseValue += totalValue;
+        }
+      }
+
+      // Find accounts by code and currency
+      final inventoryAccount = await _findAccountByCodeAndCurrency(txn, '1300', currency);
+      final cogsAccount = await _findAccountByCodeAndCurrency(txn, '3200', currency);
+
+      final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
+
+      // Journal entries for inventory increase (difference > 0)
+      if (totalIncreaseValue > 0) {
+        if (inventoryAccount != null) {
+          final invAccId = inventoryAccount['id'] as int;
+          await txn.insert('transactions', {
+            'account_id': invAccId,
+            'journal_id': journalId,
+            'debit': totalIncreaseValue,
+            'credit': 0.0,
+            'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
+            'date': voucherDate,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
+        }
+        if (cogsAccount != null) {
+          final cogsAccId = cogsAccount['id'] as int;
+          await txn.insert('transactions', {
+            'account_id': cogsAccId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': totalIncreaseValue,
+            'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
+            'date': voucherDate,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, cogsAccId, 0.0, totalIncreaseValue, now);
+        }
+      }
+
+      // Journal entries for inventory decrease (difference < 0)
+      if (totalDecreaseValue > 0) {
+        if (cogsAccount != null) {
+          final cogsAccId = cogsAccount['id'] as int;
+          await txn.insert('transactions', {
+            'account_id': cogsAccId,
+            'journal_id': journalId,
+            'debit': totalDecreaseValue,
+            'credit': 0.0,
+            'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
+            'date': voucherDate,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, cogsAccId, totalDecreaseValue, 0.0, now);
+        }
+        if (inventoryAccount != null) {
+          final invAccId = inventoryAccount['id'] as int;
+          await txn.insert('transactions', {
+            'account_id': invAccId,
+            'journal_id': journalId,
+            'debit': 0.0,
+            'credit': totalDecreaseValue,
+            'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
+            'date': voucherDate,
+            'created_at': now,
+          });
+          await _updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
+        }
+      }
+
+      // Update voucher status to approved
+      await txn.update(
+        'inventory_vouchers',
+        {
+          'status': 'approved',
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 
   // ══════════════════════════════════════════════════════════════

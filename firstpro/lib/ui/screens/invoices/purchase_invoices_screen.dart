@@ -53,9 +53,21 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     });
   }
 
-  double get _totalPurchases => _invoices.fold(0.0, (sum, i) => sum + ((i['total'] as num?)?.toDouble() ?? 0.0));
-  double get _totalPaid => _invoices.fold(0.0, (sum, i) => sum + ((i['paid_amount'] as num?)?.toDouble() ?? 0.0));
-  double get _totalRemaining => _invoices.fold(0.0, (sum, i) => sum + ((i['remaining'] as num?)?.toDouble() ?? 0.0));
+  double get _totalPurchases => _invoices.fold(0.0, (sum, i) {
+    final total = (i['total'] as num?)?.toDouble() ?? 0.0;
+    final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
+    return sum + (isReturn ? -total : total);
+  });
+  double get _totalPaid => _invoices.fold(0.0, (sum, i) {
+    final paid = (i['paid_amount'] as num?)?.toDouble() ?? 0.0;
+    final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
+    return sum + (isReturn ? -paid : paid);
+  });
+  double get _totalRemaining => _invoices.fold(0.0, (sum, i) {
+    final remaining = (i['remaining'] as num?)?.toDouble() ?? 0.0;
+    final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
+    return sum + (isReturn ? -remaining : remaining);
+  });
   int get _paidCount => _invoices.where((i) => i['status'] == 'paid').length;
   int get _unpaidCount => _invoices.where((i) => i['status'] == 'unpaid' || i['status'] == 'partial').length;
 

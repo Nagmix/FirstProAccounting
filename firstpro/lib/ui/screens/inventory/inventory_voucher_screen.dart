@@ -406,34 +406,21 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
 
                         items.add({
                           'product_id': pid,
-                          'product_name': p['name_ar'] as String,
                           'system_quantity': systemQty,
-                          'counted_quantity': countedQty,
+                          'actual_quantity': countedQty,
                           'difference': difference,
                           'unit_cost': costPrice,
-                          'diff_value': diffValue,
                         });
                       }
 
-                      final voucherId = await _db.insertInventoryVoucher({
+                      await _db.insertInventoryVoucher({
                         'voucher_number': voucherNumber,
                         'warehouse_id': selectedWarehouseId,
-                        'voucher_date': '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+                        'date': '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
                         'status': 'draft',
-                        'total_diff_value': totalDiffValue,
                         'currency': selectedCurrency,
-                        'notes': notes,
-                        'created_at': now,
-                        'updated_at': now,
-                      });
-
-                      // Insert items
-                      for (final item in items) {
-                        await _db.database.then((db) => db.insert('inventory_voucher_items', {
-                          ...item,
-                          'voucher_id': voucherId,
-                        }));
-                      }
+                        'description': notes,
+                      }, items);
 
                       if (mounted) {
                         Navigator.pop(ctx);

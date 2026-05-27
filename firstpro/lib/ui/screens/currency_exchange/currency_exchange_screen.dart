@@ -30,6 +30,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   int? _fromCashBoxId;
   int? _toCashBoxId;
   bool _isRateManual = false;
+  bool _isProgrammaticRateUpdate = false;
 
   // ── Data from DB ──────────────────────────────────────────────────
   List<Map<String, dynamic>> _currencies = [];
@@ -144,8 +145,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   /// Update exchange rate field when currencies change (unless manually edited).
   void _updateExchangeRate() {
     if (_isRateManual) return;
+    _isProgrammaticRateUpdate = true;
     final crossRate = _calculateCrossRate();
     _exchangeRateController.text = _formatRate(crossRate);
+    _isProgrammaticRateUpdate = false;
     _recalcToAmount();
   }
 
@@ -163,6 +166,11 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   }
 
   void _onRateChanged() {
+    // Skip marking as manual when the change is programmatic
+    if (_isProgrammaticRateUpdate) {
+      _recalcToAmount();
+      return;
+    }
     // If user edits rate manually, mark as manual
     if (!_isRateManual) {
       _isRateManual = true;
@@ -317,9 +325,11 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
         _showJournalEntry = true;
       });
 
-      // Refresh history
+      // Refresh history and cash boxes (balances changed)
       await _loadExchanges();
+      await _loadCashBoxes();
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('تمت عملية الصرافة بنجاح - $exchangeNumber'),

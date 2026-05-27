@@ -383,6 +383,16 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
       return;
     }
 
+    // التحقق من المخزون المتاح للبيع (وليس المرتجع)
+    if (widget.invoiceType == 'sale' && _selectedProduct!.currentStock > 0) {
+      if (_baseQuantity > _selectedProduct!.currentStock && !_selectedProduct!.allowNegative) {
+        context.showErrorSnackBar(
+          'الكمية المطلوبة ($_baseQuantity) تتجاوز المخزون المتاح (${_selectedProduct!.currentStock.toStringAsFixed(1)})',
+        );
+        return;
+      }
+    }
+
     final item = InvoiceItem(
       invoiceId: '',
       productId: _selectedProduct!.id!,

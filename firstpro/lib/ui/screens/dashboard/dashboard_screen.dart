@@ -105,13 +105,13 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       if (mounted) {
         setState(() {
-          _todaySales = results[0] as double;
-          _todayInvoiceCount = results[1] as int;
-          _monthSales = results[2] as double;
-          _monthPurchases = results[3] as double;
-          _customerCount = results[4] as int;
-          _cashBalance = results[5] as double;
-          _recentInvoices = results[6] as List<Map<String, dynamic>>;
+          _todaySales = (results[0] as num?)?.toDouble() ?? 0.0;
+          _todayInvoiceCount = (results[1] as num?)?.toInt() ?? 0;
+          _monthSales = (results[2] as num?)?.toDouble() ?? 0.0;
+          _monthPurchases = (results[3] as num?)?.toDouble() ?? 0.0;
+          _customerCount = (results[4] as num?)?.toInt() ?? 0;
+          _cashBalance = (results[5] as num?)?.toDouble() ?? 0.0;
+          _recentInvoices = (results[6] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
           _isLoading = false;
         });
       }

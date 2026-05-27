@@ -62,10 +62,18 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
   double get _totalSales => _invoices
       .where((i) => i['type'] == 'sale' || i['type'] == 'sale_return')
-      .fold(0.0, (sum, i) => sum + ((i['total'] as num?)?.toDouble() ?? 0.0));
+      .fold(0.0, (sum, i) {
+        final total = (i['total'] as num?)?.toDouble() ?? 0.0;
+        final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'sale_return';
+        return sum + (isReturn ? -total : total);
+      });
   double get _totalPurchases => _invoices
       .where((i) => i['type'] == 'purchase' || i['type'] == 'purchase_return')
-      .fold(0.0, (sum, i) => sum + ((i['total'] as num?)?.toDouble() ?? 0.0));
+      .fold(0.0, (sum, i) {
+        final total = (i['total'] as num?)?.toDouble() ?? 0.0;
+        final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
+        return sum + (isReturn ? -total : total);
+      });
   double get _totalPOS => _invoices
       .where((i) => i['type'] == 'pos')
       .fold(0.0, (sum, i) => sum + ((i['total'] as num?)?.toDouble() ?? 0.0));

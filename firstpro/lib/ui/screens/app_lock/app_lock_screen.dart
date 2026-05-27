@@ -161,7 +161,7 @@ class _AppLockScreenState extends State<AppLockScreen>
       }
       input = '$hash$salt$pin';
     }
-    return 'h2\$hash';
+    return 'h2\$$hash';
   }
 
   /// Old hash function for backward-compatible PIN verification.
@@ -172,7 +172,7 @@ class _AppLockScreenState extends State<AppLockScreen>
       hash = ((hash << 5) - hash) + pin.codeUnitAt(i);
       hash = hash & 0x7fffffff;
     }
-    return 'h\$hash';
+    return 'h\$$hash';
   }
 
   /// Verify a PIN against a stored hash, supporting both old and new formats.
