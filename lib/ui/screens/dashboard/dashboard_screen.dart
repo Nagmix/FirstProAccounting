@@ -13,11 +13,11 @@ import '../../widgets/animated_entry.dart';
 
 /// The main dashboard screen – the first thing the user sees.
 ///
-/// Modern professional design inspired by best-flutter-ui-templates:
-/// 1. Clean Header – greeting + date + action icons
-/// 2. Hero Sales Card – large prominent card with daily sales & trend
-/// 3. Unified Action Grid – 3×3 paged grid for ALL shortcuts
-/// 4. Secondary Metrics – 3 horizontal metric pills
+/// Modern professional design v3:
+/// 1. Premium Header – gradient accent bar + greeting + date/time + avatar
+/// 2. Hero Sales Card – vibrant multi-gradient with sparkle decorations
+/// 3. Unified Action Grid – 3×3 paged grid with inline page indicators
+/// 4. Statistics Box – elegant bordered container with title + shortcut
 /// 5. Recent Transactions – professional card-based list
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -189,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // ── Clean Header ─────────────────────────────────────
+            // ── Premium Header ────────────────────────────────────
             SliverToBoxAdapter(child: _buildHeader(context, isDark)),
 
             // ── Hero Sales Card ──────────────────────────────────
@@ -208,11 +208,11 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
 
-            // ── Secondary Metrics (3 horizontal cards) ───────────
+            // ── Statistics Box ───────────────────────────────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
                 delay: const Duration(milliseconds: 220),
-                child: _buildSecondaryMetrics(context, isDark),
+                child: _buildStatisticsBox(context, isDark),
               ),
             ),
 
@@ -241,7 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  CLEAN HEADER
+  //  PREMIUM HEADER – gradient accent + greeting + time + avatar
   // ══════════════════════════════════════════════════════════════════
   Widget _buildHeader(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
@@ -249,54 +249,119 @@ class _DashboardScreenState extends State<DashboardScreen>
     final greeting = DateFormatter.getGreeting();
     final dateStr =
         '${DateFormatter.dayName(now)}، ${DateFormatter.formatDateLong(now)}';
+    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        20, MediaQuery.of(context).padding.top + 12, 20, 16,
+        0, MediaQuery.of(context).padding.top + 4, 0, 0,
       ),
-      color: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
-      child: FadeTransition(
-        opacity: CurvedAnimation(parent: _entryController, curve: Curves.fastOutSlowIn),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
+      ),
+      child: Column(
+        children: [
+          // Top gradient accent line
+          Container(
+            height: 3,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF4F6AF0), const Color(0xFF8B5CF6), const Color(0xFFEC4899)]
+                    : [const Color(0xFF4F6AF0), const Color(0xFF6C8CFF), const Color(0xFF22C55E)],
+                begin: Alignment.centerRight,
+                end: Alignment.centerLeft,
+              ),
+            ),
+          ),
+          // Header content
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+            child: FadeTransition(
+              opacity: CurvedAnimation(parent: _entryController, curve: Curves.fastOutSlowIn),
+              child: Row(
                 children: [
-                  Text(greeting,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                      fontWeight: FontWeight.w800, fontSize: 22,
+                  // Avatar circle with gradient
+                  Container(
+                    width: 46, height: 46,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [const Color(0xFF4F6AF0), const Color(0xFF8B5CF6)]
+                            : [const Color(0xFF4F6AF0), const Color(0xFF6C8CFF)],
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4F6AF0).withValues(alpha: 0.25),
+                          offset: const Offset(0, 3), blurRadius: 10,
+                        ),
+                      ],
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    child: const Center(
+                      child: Icon(Icons.person_rounded, color: Colors.white, size: 24),
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(dateStr,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                      fontWeight: FontWeight.w400,
+                  const SizedBox(width: 14),
+                  // Greeting + date
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(greeting,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                            fontWeight: FontWeight.w800, fontSize: 20, height: 1.2,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today_rounded, size: 12,
+                              color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
+                            const SizedBox(width: 4),
+                            Text(dateStr,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                                fontWeight: FontWeight.w400, fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(Icons.access_time_rounded, size: 12,
+                              color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
+                            const SizedBox(width: 4),
+                            Text(timeStr,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                                fontWeight: FontWeight.w500, fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
+                  ),
+                  // Action icons
+                  Row(
+                    children: [
+                      _HeaderActionIcon(icon: Icons.notifications_none_rounded, isDark: isDark, onTap: () => _navigateTo(AppConstants.notifications)),
+                      const SizedBox(width: 8),
+                      _HeaderActionIcon(icon: Icons.menu_rounded, isDark: isDark, onTap: () => Scaffold.of(context).openEndDrawer()),
+                    ],
                   ),
                 ],
               ),
             ),
-            Row(
-              children: [
-                _HeaderActionIcon(icon: Icons.notifications_none_rounded, isDark: isDark, onTap: () => _navigateTo(AppConstants.notifications)),
-                const SizedBox(width: 8),
-                _HeaderActionIcon(icon: Icons.menu_rounded, isDark: isDark, onTap: () => Scaffold.of(context).openEndDrawer()),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  HERO SALES CARD
+  //  HERO SALES CARD – vibrant multi-color gradient
   // ══════════════════════════════════════════════════════════════════
   Widget _buildHeroSalesCard(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
@@ -315,26 +380,36 @@ class _DashboardScreenState extends State<DashboardScreen>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isDark
-                ? [const Color(0xFF1A1A2E), const Color(0xFF262640)]
-                : [const Color(0xFF4F6AF0), const Color(0xFF6C8CFF)],
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
+                ? [const Color(0xFF1A1A2E), const Color(0xFF262640), const Color(0xFF1E1E38)]
+                : [const Color(0xFF4F6AF0), const Color(0xFF7C3AED), const Color(0xFFEC4899)],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            stops: const [0.0, 0.5, 1.0],
           ),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4F6AF0).withValues(alpha: isDark ? 0.2 : 0.3),
-              offset: const Offset(0, 8), blurRadius: 24,
+              color: const Color(0xFF7C3AED).withValues(alpha: isDark ? 0.2 : 0.35),
+              offset: const Offset(0, 8), blurRadius: 28,
+            ),
+            BoxShadow(
+              color: const Color(0xFF4F6AF0).withValues(alpha: isDark ? 0.1 : 0.2),
+              offset: const Offset(0, 4), blurRadius: 16,
             ),
           ],
         ),
         child: Stack(
           children: [
-            // Decorative circles
-            Positioned(left: -30, top: -30, child: Container(width: 120, height: 120, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.06)))),
-            Positioned(right: -20, bottom: -40, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.04)))),
+            // Decorative shapes
+            Positioned(left: -30, top: -30, child: Container(width: 120, height: 120, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.07)))),
+            Positioned(right: -20, bottom: -40, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.05)))),
+            // Sparkle decorations
+            Positioned(right: 60, top: 30, child: _SparkleIcon(size: 14, color: Colors.white.withValues(alpha: 0.3))),
+            Positioned(left: 80, top: 60, child: _SparkleIcon(size: 10, color: Colors.white.withValues(alpha: 0.2))),
+            Positioned(right: 30, top: 80, child: _SparkleIcon(size: 8, color: Colors.white.withValues(alpha: 0.25))),
             // Mini chart
             Positioned(left: 20, bottom: 16, right: 20,
-              child: SizedBox(height: 50, child: CustomPaint(painter: _MiniChartPainter(progress: _chartDrawController, lineColor: Colors.white.withValues(alpha: 0.3), fillColor: Colors.white.withValues(alpha: 0.08)))),
+              child: SizedBox(height: 50, child: CustomPaint(painter: _MiniChartPainter(progress: _chartDrawController, lineColor: Colors.white.withValues(alpha: 0.35), fillColor: Colors.white.withValues(alpha: 0.1)))),
             ),
             // Content
             Padding(
@@ -345,11 +420,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('إجمالي مبيعات اليوم',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.w500)),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 28, height: 28,
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.trending_up_rounded, color: Colors.white.withValues(alpha: 0.9), size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text('إجمالي مبيعات اليوم',
+                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85), fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.2), Colors.white.withValues(alpha: 0.1)]),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                        ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           Text('$_todayInvoiceCount', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                           const SizedBox(width: 4),
@@ -358,16 +448,20 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _CountUpText(value: _todaySales,
                     style: theme.textTheme.displaySmall!.copyWith(color: Colors.white, fontWeight: FontWeight.w900, height: 1.1, letterSpacing: -0.5),
                     isLoading: _isLoading),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   if (_yesterdaySales > 0 || _todaySales > 0)
                     Row(children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: isTrendUp ? Colors.white.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.2) : const Color(0xFFFCA5A5).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.3) : const Color(0xFFFCA5A5).withValues(alpha: 0.2)),
+                        ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           Icon(isTrendUp ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), size: 14),
                           const SizedBox(width: 4),
@@ -375,7 +469,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ]),
                       ),
                       const SizedBox(width: 8),
-                      Text(isTrendUp ? 'أكثر من أمس' : 'أقل من أمس', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.6))),
+                      Text(isTrendUp ? 'أكثر من أمس' : 'أقل من أمس', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.65), fontWeight: FontWeight.w500)),
                     ]),
                 ],
               ),
@@ -387,20 +481,20 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  UNIFIED 3×3 PAGED ACTION GRID
+  //  UNIFIED 3×3 PAGED ACTION GRID – with inline page indicators
   // ══════════════════════════════════════════════════════════════════
   Widget _buildActionGrid(BuildContext context, bool isDark) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Column(
         children: [
-          // Section header
-          _buildSectionHeader(context, 'الخدمات'),
+          // Section header with page indicators on left side
+          _buildActionGridHeader(context, isDark),
           const SizedBox(height: 14),
 
-          // 3×3 paged grid
+          // 3×3 paged grid — height increased to prevent 3rd row cutoff
           SizedBox(
-            height: 310,
+            height: 336,
             child: PageView.builder(
               controller: _actionPageController,
               physics: const BouncingScrollPhysics(),
@@ -421,9 +515,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                   padding: EdgeInsets.zero,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    childAspectRatio: 0.92,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 0.88,
                   ),
                   itemCount: 9,
                   itemBuilder: (context, index) {
@@ -442,30 +536,66 @@ class _DashboardScreenState extends State<DashboardScreen>
               },
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          // Page indicators
-          if (_totalPages > 1)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_totalPages, (index) {
-                  final isActive = index == _currentActionPage;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.fastOutSlowIn,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: isActive ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? const Color(0xFF4F6AF0)
-                          : (isDark ? AppColors.darkTextTertiary : AppColors.textTertiary).withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  );
-                }),
+  /// Action grid header with title on right and page indicators on left
+  Widget _buildActionGridHeader(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Title on the right (RTL: first visually)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Accent bar
+              Container(
+                width: 4, height: 20,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)],
+                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
+              const SizedBox(width: 10),
+              Text('الخدمات',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  letterSpacing: 0.3,
+                  color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          // Page indicators on the left (RTL: opposite side)
+          if (_totalPages > 1)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(_totalPages, (index) {
+                final isActive = index == _currentActionPage;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.fastOutSlowIn,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: isActive ? 20 : 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? const Color(0xFF4F6AF0)
+                        : (isDark ? AppColors.darkTextTertiary : AppColors.textTertiary).withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                );
+              }),
             ),
         ],
       ),
@@ -473,9 +603,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  SECONDARY METRICS (3 horizontal cards)
+  //  STATISTICS BOX – elegant bordered container
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildSecondaryMetrics(BuildContext context, bool isDark) {
+  Widget _buildStatisticsBox(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
     final metrics = [
       _MetricData(label: 'مبيعات الشهر', value: _monthSales, icon: Icons.trending_up_rounded, color: const Color(0xFF22C55E), isCount: false),
@@ -485,53 +615,130 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      child: Row(
-        children: metrics.asMap().entries.map((entry) {
-          final m = entry.value;
-          return Expanded(
-            child: Container(
-              margin: EdgeInsets.only(left: entry.key == 0 ? 0 : 6, right: entry.key == metrics.length - 1 ? 0 : 6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.04),
-                    offset: const Offset(0, 2), blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 32, height: 32,
-                    decoration: BoxDecoration(color: m.color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                    child: Icon(m.icon, color: m.color, size: 16),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    m.isCount ? m.value.toInt().toString() : CurrencyFormatter.formatCompactWithSymbol(m.value),
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(m.label,
-                    style: theme.textTheme.labelSmall?.copyWith(color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary, fontWeight: FontWeight.w500),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : const Color(0xFF4F6AF0).withValues(alpha: 0.12),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.black.withValues(alpha: 0.2) : const Color(0xFF4F6AF0).withValues(alpha: 0.06),
+              offset: const Offset(0, 4), blurRadius: 16,
             ),
-          );
-        }).toList(),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Box header: title + shortcut button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 4, height: 18,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)]),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text('إحصائيات الشهر',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
+                      ),
+                    ),
+                  ],
+                ),
+                // Shortcut button
+                InkWell(
+                  onTap: () => _navigateTo(AppConstants.statistics),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [const Color(0xFF4F6AF0).withValues(alpha: 0.1), const Color(0xFF7C3AED).withValues(alpha: 0.08)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF4F6AF0).withValues(alpha: 0.15)),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text('عرض التقارير',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: isDark ? const Color(0xFF8B9CF7) : const Color(0xFF4F6AF0),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_back_ios_rounded, size: 10, color: isDark ? const Color(0xFF8B9CF7) : const Color(0xFF4F6AF0)),
+                    ]),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Metric cards row
+            Row(
+              children: metrics.asMap().entries.map((entry) {
+                final m = entry.value;
+                return Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(left: entry.key == 0 ? 0 : 8, right: entry.key == metrics.length - 1 ? 0 : 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? m.color.withValues(alpha: 0.06)
+                          : m.color.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: m.color.withValues(alpha: isDark ? 0.1 : 0.12),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 28, height: 28,
+                          decoration: BoxDecoration(color: m.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                          child: Icon(m.icon, color: m.color, size: 14),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          m.isCount ? m.value.toInt().toString() : CurrencyFormatter.formatCompactWithSymbol(m.value),
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary, fontSize: 15),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(m.label,
+                          style: theme.textTheme.labelSmall?.copyWith(color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary, fontWeight: FontWeight.w500, fontSize: 10),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  SECTION HEADER — Professional with accent + action link
+  //  SECTION HEADER — Professional with accent bar + action link
   // ══════════════════════════════════════════════════════════════════
   Widget _buildSectionHeader(BuildContext context, String title, {String? actionLabel, VoidCallback? onAction}) {
     final theme = Theme.of(context);
@@ -541,12 +748,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
       child: Row(
         children: [
-          // Accent dot
+          // Accent bar
           Container(
-            width: 8, height: 8,
+            width: 4, height: 18,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF6C8CFF)]),
-              borderRadius: BorderRadius.circular(4),
+              gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)]),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(width: 10),
@@ -554,10 +761,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           Expanded(
             child: Text(title,
               style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
                 letterSpacing: 0.3,
-                color: isDark ? AppColors.darkTextPrimary : const Color(0xFF2D3436),
+                color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
               ),
             ),
           ),
@@ -565,19 +772,23 @@ class _DashboardScreenState extends State<DashboardScreen>
           if (actionLabel != null && onAction != null)
             InkWell(
               onTap: onAction,
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F6AF0).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(actionLabel,
                     style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
                       color: const Color(0xFF4F6AF0),
                     ),
                   ),
                   const SizedBox(width: 2),
-                  const Icon(Icons.arrow_back_ios_rounded, size: 12, color: Color(0xFF4F6AF0)),
+                  const Icon(Icons.arrow_back_ios_rounded, size: 10, color: Color(0xFF4F6AF0)),
                 ]),
               ),
             ),
@@ -655,7 +866,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               width: double.infinity,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF6C8CFF)], begin: Alignment.centerRight, end: Alignment.centerLeft),
+                  gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)], begin: Alignment.centerRight, end: Alignment.centerLeft),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(color: const Color(0xFF4F6AF0).withValues(alpha: 0.25), offset: const Offset(0, 4), blurRadius: 12),
@@ -712,6 +923,21 @@ class _MetricData {
   final bool isCount;
 }
 
+// ── Sparkle icon decoration for sales card ──────────────────────
+class _SparkleIcon extends StatelessWidget {
+  const _SparkleIcon({required this.size, required this.color});
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: 0.7,
+      child: Icon(Icons.auto_awesome_rounded, size: size, color: color),
+    );
+  }
+}
+
 // ── Header action icon ─────────────────────────────────────────────
 class _HeaderActionIcon extends StatelessWidget {
   const _HeaderActionIcon({required this.icon, required this.isDark, required this.onTap});
@@ -766,7 +992,7 @@ class _GridActionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
             color: isDark ? Colors.black.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.04),
@@ -778,24 +1004,24 @@ class _GridActionCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           splashColor: color.withValues(alpha: 0.1),
           highlightColor: color.withValues(alpha: 0.05),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Icon container with solid background
                 Container(
-                  width: 50, height: 50,
+                  width: 48, height: 48,
                   decoration: BoxDecoration(
                     color: isDark ? color.withValues(alpha: 0.15) : effectiveBg,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(icon, color: color, size: 22),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 // Label
                 Text(label,
                   textAlign: TextAlign.center,
@@ -805,6 +1031,7 @@ class _GridActionCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                     height: 1.2,
+                    fontSize: 11,
                   ),
                 ),
               ],
