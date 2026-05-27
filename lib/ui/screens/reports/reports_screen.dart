@@ -50,9 +50,21 @@ class _ReportItem {
   });
 }
 
+// ── Date Preset ─────────────────────────────────────────────────
+
+enum _DatePreset {
+  today,
+  thisWeek,
+  thisMonth,
+  thisQuarter,
+  thisYear,
+  custom,
+}
+
 // ── State ───────────────────────────────────────────────────────
 
-class _ReportsScreenState extends State<ReportsScreen> {
+class _ReportsScreenState extends State<ReportsScreen>
+    with SingleTickerProviderStateMixin {
   late List<_ReportGroup> _groups;
   String? _selectedReportKey;
   bool _isLoading = false;
@@ -74,6 +86,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<Map<String, dynamic>> _reportRows = [];
   Map<String, double> _reportTotals = {};
 
+  // New UI state
+  late TabController _tabController;
+  _DatePreset _selectedDatePreset = _DatePreset.thisMonth;
+  int? _sortColumnIndex;
+  bool _sortAscending = true;
+  String _searchQuery = '';
+
   static const _currencyOptions = ['ر.ي', 'ر.س', r'$'];
   static const _accountTypes = [
     MapEntry('الكل', 'الكل'),
@@ -88,6 +107,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
   void initState() {
     super.initState();
     _initGroups();
+    _tabController = TabController(length: _groups.length, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      setState(() {});
+    });
+    _applyDatePreset(_selectedDatePreset);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _initGroups() {
@@ -156,6 +187,40 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ],
       ),
     ];
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Date Preset Helpers
+  // ══════════════════════════════════════════════════════════════
+
+  void _applyDatePreset(_DatePreset preset) {
+    final now = DateTime.now();
+    setState(() {
+      _selectedDatePreset = preset;
+      switch (preset) {
+        case _DatePreset.today:
+          _dateFrom = DateTime(now.year, now.month, now.day);
+          _dateTo = DateTime(now.year, now.month, now.day);
+        case _DatePreset.thisWeek:
+          final weekday = now.weekday;
+          final weekStart = now.subtract(Duration(days: weekday - 1));
+          _dateFrom = DateTime(weekStart.year, weekStart.month, weekStart.day);
+          _dateTo = DateTime(now.year, now.month, now.day);
+        case _DatePreset.thisMonth:
+          _dateFrom = DateTime(now.year, now.month, 1);
+          _dateTo = DateTime(now.year, now.month, now.day);
+        case _DatePreset.thisQuarter:
+          final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
+          _dateFrom = DateTime(now.year, quarterStartMonth, 1);
+          _dateTo = DateTime(now.year, now.month, now.day);
+        case _DatePreset.thisYear:
+          _dateFrom = DateTime(now.year, 1, 1);
+          _dateTo = DateTime(now.year, now.month, now.day);
+        case _DatePreset.custom:
+          // Don't change dates – let user pick
+          break;
+      }
+    });
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -285,7 +350,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) setState(() => _dateFrom = picked);
+    if (picked != null) {
+      setState(() {
+        _dateFrom = picked;
+        _selectedDatePreset = _DatePreset.custom;
+      });
+    }
   }
 
   Future<void> _pickDateTo() async {
@@ -295,7 +365,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) setState(() => _dateTo = picked);
+    if (picked != null) {
+      setState(() {
+        _dateTo = picked;
+        _selectedDatePreset = _DatePreset.custom;
+      });
+    }
   }
 
   void _clearFilters() {
@@ -310,6 +385,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _selectedWarehouseId = null;
       _selectedCategoryId = null;
       _selectedAccountType = 'الكل';
+      _selectedDatePreset = _DatePreset.custom;
+      _searchQuery = '';
+      _sortColumnIndex = null;
+      _sortAscending = true;
     });
   }
 
@@ -1229,227 +1308,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  Build
+  //  Dropdown Helpers (preserved)
   // ══════════════════════════════════════════════════════════════
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('التقارير'),
-        ),
-        body: Column(
-          children: [
-            // ── Report Selector + Filters ──
-            _buildReportSelectorAndFilters(theme, isDark),
-            const Divider(height: 1),
-            // ── Results ──
-            Expanded(child: _buildResultsArea(theme, isDark)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  Report Selector & Filters
-  // ══════════════════════════════════════════════════════════════
-
-  Widget _buildReportSelectorAndFilters(ThemeData theme, bool isDark) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 250),
-      alignment: Alignment.topCenter,
-      child: Container(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Category accordion
-            ..._groups.map((group) => _buildGroupSection(theme, isDark, group)),
-            // Filters
-            if (_selectedReportKey != null) ...[
-              _buildFiltersRow(theme, isDark),
-              // Action buttons
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _isLoading ? null : _loadReport,
-                        icon: _isLoading
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.search, size: 20),
-                        label: Text(_isLoading ? 'جاري التحميل...' : 'عرض التقرير'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ),
-                    if (_hasData && _reportRows.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: _exportToExcel,
-                        icon: const Icon(Icons.file_download, size: 20),
-                        label: const Text('تصدير Excel'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.success,
-                          side: const BorderSide(color: AppColors.success),
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGroupSection(ThemeData theme, bool isDark, _ReportGroup group) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => setState(() => group.isExpanded = !group.isExpanded),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Icon(group.icon, size: 20, color: group.color),
-                const SizedBox(width: 10),
-                Expanded(child: Text(group.name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: group.color))),
-                Icon(group.isExpanded ? Icons.expand_less : Icons.expand_more, size: 22, color: AppColors.textHint),
-              ],
-            ),
-          ),
-        ),
-        if (group.isExpanded)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: group.items.map((item) {
-                final isSelected = _selectedReportKey == item.key;
-                return ChoiceChip(
-                  avatar: Icon(item.icon, size: 16, color: isSelected ? Colors.white : item.color),
-                  label: Text(item.name, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isSelected ? Colors.white : null)),
-                  selected: isSelected,
-                  selectedColor: item.color,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedReportKey = item.key;
-                      _hasData = false;
-                      _reportRows = [];
-                      _reportTotals = {};
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-          ),
-        const SizedBox(height: 4),
-      ],
-    );
-  }
-
-  Widget _buildFiltersRow(ThemeData theme, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          // Row 1: Date range + Currency
-          if (_needsDateFilter() || _needsCurrencyFilter())
-            Row(
-              children: [
-                if (_needsDateFilter()) ...[
-                  _buildFilterChip(theme, Icons.calendar_today, _dateFrom != null ? _fmtDate(_dateFrom!.toIso8601String()) : 'من', _pickDateFrom),
-                  const SizedBox(width: 6),
-                  _buildFilterChip(theme, Icons.calendar_today, _dateTo != null ? _fmtDate(_dateTo!.toIso8601String()) : 'إلى', _pickDateTo),
-                ],
-                if (_needsCurrencyFilter()) ...[
-                  const SizedBox(width: 6),
-                  _buildCurrencyDropdown(theme),
-                ],
-                const Spacer(),
-                if (_dateFrom != null || _dateTo != null || _selectedCurrency != 'الكل')
-                  IconButton(
-                    icon: Icon(Icons.clear, size: 18, color: AppColors.error),
-                    tooltip: 'مسح الفلاتر',
-                    onPressed: _clearFilters,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-              ],
-            ),
-          // Row 2: Entity-specific filters
-          if (_needsAccountFilter() || _needsCustomerFilter() || _needsSupplierFilter() ||
-              _needsCashBoxFilter() || _needsWarehouseFilter() || _needsCategoryFilter() || _needsAccountTypeFilter())
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  if (_needsAccountFilter()) Expanded(child: _buildAccountDropdown(theme)),
-                  if (_needsCustomerFilter()) Expanded(child: _buildCustomerDropdown(theme)),
-                  if (_needsSupplierFilter()) Expanded(child: _buildSupplierDropdown(theme)),
-                  if (_needsCashBoxFilter()) Expanded(child: _buildCashBoxDropdown(theme)),
-                  if (_needsWarehouseFilter()) Expanded(child: _buildWarehouseDropdown(theme)),
-                  if (_needsCategoryFilter()) ...[
-                    const SizedBox(width: 6),
-                    Expanded(child: _buildCategoryDropdown(theme)),
-                  ],
-                  if (_needsAccountTypeFilter()) ...[
-                    const SizedBox(width: 6),
-                    Expanded(child: _buildAccountTypeDropdown(theme)),
-                  ],
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(ThemeData theme, IconData icon, String label, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: AppColors.primary),
-            const SizedBox(width: 4),
-            Text(label, style: theme.textTheme.bodySmall?.copyWith(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildCurrencyDropdown(ThemeData theme) {
     return Container(
@@ -1634,100 +1494,292 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  Results Area
+  //  Build – NEW UI
   // ══════════════════════════════════════════════════════════════
 
-  Widget _buildResultsArea(ThemeData theme, bool isDark) {
-    if (_selectedReportKey == null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.description_outlined, size: 64, color: AppColors.textHint.withValues(alpha: 0.4)),
-            const SizedBox(height: 16),
-            Text('اختر نوع التقرير من الأعلى', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
-            const SizedBox(height: 4),
-            Text('ثم حدد الفلاتر واضغط عرض التقرير', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary)),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            _buildSliverAppBar(theme, isDark),
           ],
+          body: _buildBody(theme, isDark),
         ),
-      );
-    }
-
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (!_hasData) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.filter_list, size: 48, color: AppColors.primary.withValues(alpha: 0.3)),
-            const SizedBox(height: 12),
-            Text('حدد الفلاتر واضغط "عرض التقرير"', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
-          ],
-        ),
-      );
-    }
-
-    if (_reportRows.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.inbox, size: 48, color: AppColors.textHint.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text('لا توجد بيانات لهذا التقرير', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
-          ],
-        ),
-      );
-    }
-
-    // Build table
-    final columns = _reportRows.first.keys.toList();
-    return Column(
-      children: [
-        // Totals bar
-        if (_reportTotals.isNotEmpty) _buildTotalsBar(theme, isDark),
-        // Data table
-        Expanded(child: _buildDataTable(theme, isDark, columns)),
-      ],
+        floatingActionButton: _hasData && _reportRows.isNotEmpty
+            ? _buildExportFab(theme, isDark)
+            : null,
+      ),
     );
   }
 
-  Widget _buildTotalsBar(ThemeData theme, bool isDark) {
-    final entries = _reportTotals.entries.where((e) => e.key != 'العدد' && e.key != 'عدد الحسابات' && e.key != 'عدد الأصناف' && e.key != 'عدد العملاء' && e.key != 'العميل' && e.key != 'المورد').toList();
-    if (entries.isEmpty) return const SizedBox.shrink();
+  // ── SliverAppBar with TabBar ──────────────────────────────────
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+  Widget _buildSliverAppBar(ThemeData theme, bool isDark) {
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: 60,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
+      foregroundColor: Colors.white,
+      title: const Text('التقارير', style: TextStyle(fontWeight: FontWeight.w700)),
+      centerTitle: false,
+      bottom: TabBar(
+        controller: _tabController,
+        isScrollable: true,
+        indicatorColor: AppColors.secondary,
+        indicatorWeight: 3,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        tabAlignment: TabAlignment.start,
+        tabs: _groups.map((g) => Tab(
+          icon: Icon(g.icon, size: 18),
+          text: g.name,
+          height: 52,
+        )).toList(),
       ),
-      child: Row(
-        children: entries.map((e) {
-          final isPositive = e.value >= 0;
-          return Expanded(
-            child: Column(
+    );
+  }
+
+  // ── Body Content ─────────────────────────────────────────────
+
+  Widget _buildBody(ThemeData theme, bool isDark) {
+    return TabBarView(
+      controller: _tabController,
+      children: _groups.asMap().entries.map((entry) {
+        final group = entry.value;
+        return _buildTabContent(theme, isDark, group);
+      }).toList(),
+    );
+  }
+
+  Widget _buildTabContent(ThemeData theme, bool isDark, _ReportGroup group) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Report cards grid
+          _buildReportCardsGrid(theme, isDark, group),
+          // Filters section (only when a report is selected from this group)
+          if (_selectedReportKey != null && group.items.any((i) => i.key == _selectedReportKey)) ...[
+            const SizedBox(height: 12),
+            _buildFiltersSection(theme, isDark),
+            const SizedBox(height: 12),
+            _buildLoadButton(theme, isDark),
+            const SizedBox(height: 16),
+            // Results area
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: _buildResultsArea(theme, isDark),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Report Cards Grid ────────────────────────────────────────
+
+  Widget _buildReportCardsGrid(ThemeData theme, bool isDark, _ReportGroup group) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 2.2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: group.items.length,
+      itemBuilder: (context, index) {
+        final item = group.items[index];
+        final isSelected = _selectedReportKey == item.key;
+        return _buildReportCard(theme, isDark, item, isSelected);
+      },
+    );
+  }
+
+  Widget _buildReportCard(ThemeData theme, bool isDark, _ReportItem item, bool isSelected) {
+    final bgColor = isSelected
+        ? item.color.withValues(alpha: isDark ? 0.25 : 0.1)
+        : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant);
+    final borderColor = isSelected ? item.color : (isDark ? AppColors.darkBorder : AppColors.border);
+    final iconColor = isSelected ? item.color : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary);
+
+    return GestureDetector(
+      onTap: () => _onReportSelected(item),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+          boxShadow: isSelected
+              ? [BoxShadow(color: item.color.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))]
+              : null,
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
               children: [
-                Text(e.key, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-                const SizedBox(height: 2),
-                Text(
-                  _fmtMoney(e.value.abs()),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: e.value == 0 ? AppColors.textPrimary : (e.key.contains('ربح') || e.key.contains('إيرادات') || e.key.contains('مبيعات') || e.key.contains('البيع'))
-                        ? (isPositive ? AppColors.success : AppColors.error)
-                        : (e.key.contains('مشتريات') || e.key.contains('تكلفة') || e.key.contains('مصروف') || e.key.contains('دين'))
-                            ? AppColors.error
-                            : AppColors.primary,
+                Icon(item.icon, size: 28, color: iconColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.name,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: isSelected
+                          ? item.color
+                          : (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.center,
                 ),
+                if (isSelected)
+                  Icon(Icons.check_circle, size: 18, color: item.color),
               ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _getReportDescription(item.key),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 10,
+                color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getReportDescription(String key) {
+    const descriptions = {
+      'sales': 'تفاصيل فواتير المبيعات',
+      'purchases': 'تفاصيل فواتير المشتريات',
+      'sales_returns': 'فواتير المرتجعات للمبيعات',
+      'purchase_returns': 'فواتير المرتجعات للمشتريات',
+      'profit_loss': 'ملخص الأرباح والخسائر',
+      'invoice_profit': 'ربح كل فاتورة بالتفصيل',
+      'sales_by_product': 'ترتيب المنتجات حسب المبيعات',
+      'sales_by_customer': 'ترتيب العملاء حسب المشتريات',
+      'account_movement': 'حركة حساب محدد بالتفصيل',
+      'all_account_movement': 'كل حركات الحسابات',
+      'trial_balance': 'ميزان المراجعة للتحقق',
+      'cash_box': 'أرصدة وحركة الصناديق',
+      'accounts_no_movement': 'حسابات بلا قيود',
+      'customer_statement': 'كشف حساب عميل',
+      'supplier_statement': 'كشف حساب مورد',
+      'expenses': 'تفاصيل المصروفات',
+      'inventory': 'حالة المخزون الحالية',
+      'inventory_movement': 'وارد وصادر المخزون',
+      'inventory_cost': 'تكلفة وقيمة المخزون',
+      'out_of_stock': 'أصناف نفدت من المخزون',
+      'low_stock': 'أصناف تحت الحد الأدنى',
+      'customer_debts': 'ديون العملاء المستحقة',
+      'supplier_debts': 'ديون الموردين المستحقة',
+      'cash_transfers': 'التحويلات بين الصناديق',
+      'currency_exchanges': 'عمليات صرافة العملات',
+      'vouchers': 'سندات القبض والصرف',
+      'shifts': 'تقرير الورديات',
+    };
+    return descriptions[key] ?? 'تقرير';
+  }
+
+  void _onReportSelected(_ReportItem item) {
+    setState(() {
+      _selectedReportKey = item.key;
+      _hasData = false;
+      _reportRows = [];
+      _reportTotals = {};
+      _searchQuery = '';
+      _sortColumnIndex = null;
+      _sortAscending = true;
+    });
+  }
+
+  // ── Filters Section ──────────────────────────────────────────
+
+  Widget _buildFiltersSection(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Quick date presets
+          if (_needsDateFilter()) ...[
+            _buildDatePresetsRow(theme, isDark),
+            const SizedBox(height: 8),
+            // Custom date pickers (show only when custom is selected)
+            if (_selectedDatePreset == _DatePreset.custom)
+              _buildCustomDateRow(theme, isDark),
+          ],
+          // Currency and entity filters
+          if (_needsCurrencyFilter() || _needsAccountFilter() || _needsCustomerFilter() ||
+              _needsSupplierFilter() || _needsCashBoxFilter() || _needsWarehouseFilter() ||
+              _needsCategoryFilter() || _needsAccountTypeFilter()) ...[
+            const SizedBox(height: 8),
+            _buildEntityFiltersRow(theme),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatePresetsRow(ThemeData theme, bool isDark) {
+    final presets = [
+      (_DatePreset.today, 'اليوم'),
+      (_DatePreset.thisWeek, 'هذا الأسبوع'),
+      (_DatePreset.thisMonth, 'هذا الشهر'),
+      (_DatePreset.thisQuarter, 'هذا الربع'),
+      (_DatePreset.thisYear, 'هذا العام'),
+      (_DatePreset.custom, 'مخصص'),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: presets.map((p) {
+          final isSelected = _selectedDatePreset == p.$1;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: ChoiceChip(
+              label: Text(p.$2),
+              selected: isSelected,
+              selectedColor: AppColors.primary.withValues(alpha: 0.2),
+              backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+              side: BorderSide(
+                color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.border),
+              ),
+              labelStyle: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? AppColors.primary : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
+              ),
+              visualDensity: VisualDensity.compact,
+              onSelected: (_) => _applyDatePreset(p.$1),
             ),
           );
         }).toList(),
@@ -1735,8 +1787,412 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildDataTable(ThemeData theme, bool isDark, List<String> columns) {
-    // Identify numeric columns for right-alignment and formatting
+  Widget _buildCustomDateRow(ThemeData theme, bool isDark) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildFilterChip(theme, Icons.calendar_today,
+            _dateFrom != null ? _fmtDate(_dateFrom!.toIso8601String()) : 'من تاريخ', _pickDateFrom),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildFilterChip(theme, Icons.calendar_today,
+            _dateTo != null ? _fmtDate(_dateTo!.toIso8601String()) : 'إلى تاريخ', _pickDateTo),
+        ),
+        if (_dateFrom != null || _dateTo != null) ...[
+          const SizedBox(width: 4),
+          IconButton(
+            icon: Icon(Icons.clear, size: 18, color: AppColors.error),
+            tooltip: 'مسح التاريخ',
+            onPressed: () {
+              setState(() {
+                _dateFrom = null;
+                _dateTo = null;
+              });
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildEntityFiltersRow(ThemeData theme) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (_needsCurrencyFilter())
+          SizedBox(width: 100, child: _buildCurrencyDropdown(theme)),
+        if (_needsAccountFilter())
+          SizedBox(width: 180, child: _buildAccountDropdown(theme)),
+        if (_needsCustomerFilter())
+          SizedBox(width: 180, child: _buildCustomerDropdown(theme)),
+        if (_needsSupplierFilter())
+          SizedBox(width: 180, child: _buildSupplierDropdown(theme)),
+        if (_needsCashBoxFilter())
+          SizedBox(width: 180, child: _buildCashBoxDropdown(theme)),
+        if (_needsWarehouseFilter())
+          SizedBox(width: 140, child: _buildWarehouseDropdown(theme)),
+        if (_needsCategoryFilter())
+          SizedBox(width: 140, child: _buildCategoryDropdown(theme)),
+        if (_needsAccountTypeFilter())
+          SizedBox(width: 140, child: _buildAccountTypeDropdown(theme)),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(ThemeData theme, IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(label, style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600,
+              ), overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Load Button ──────────────────────────────────────────────
+
+  Widget _buildLoadButton(ThemeData theme, bool isDark) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: _isLoading ? null : _loadReport,
+        icon: _isLoading
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Icon(Icons.search, size: 20),
+        label: Text(_isLoading ? 'جاري التحميل...' : 'عرض التقرير'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
+        ),
+      ),
+    );
+  }
+
+  // ── Results Area ─────────────────────────────────────────────
+
+  Widget _buildResultsArea(ThemeData theme, bool isDark) {
+    // No report selected yet
+    if (_selectedReportKey == null || !_groups.any((g) => g.items.any((i) => i.key == _selectedReportKey))) {
+      return _buildEmptyState(
+        icon: Icons.description_outlined,
+        title: 'اختر تقريراً للبدء',
+        subtitle: 'اختر نوع التقرير من البطاقات أعلاه',
+        color: AppColors.textHint,
+      );
+    }
+
+    // Loading state with shimmer
+    if (_isLoading) {
+      return _buildShimmerLoading(theme, isDark);
+    }
+
+    // Report selected but not yet loaded
+    if (!_hasData) {
+      return _buildEmptyState(
+        icon: Icons.filter_list_alt,
+        title: 'حدد الفلاتر واضغط "عرض التقرير"',
+        subtitle: 'اختر الفترة والعملة ثم اضغط العرض',
+        color: AppColors.primary,
+      );
+    }
+
+    // Loaded but no data
+    if (_reportRows.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.inbox_outlined,
+        title: 'لا توجد بيانات',
+        subtitle: 'جرّب تغيير الفلاتر أو اختيار فترة مختلفة',
+        color: AppColors.warning,
+      );
+    }
+
+    // Has data: KPI cards + search + sortable table
+    return Column(
+      key: const ValueKey('results'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // KPI Summary Cards
+        if (_reportTotals.isNotEmpty) ...[
+          _buildKPICards(theme, isDark),
+          const SizedBox(height: 12),
+        ],
+        // Search bar
+        _buildSearchBar(theme, isDark),
+        const SizedBox(height: 8),
+        // Sortable data table
+        _buildSortableDataTable(theme, isDark),
+      ],
+    );
+  }
+
+  // ── Empty / Illustration States ──────────────────────────────
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 40, color: color.withValues(alpha: 0.5)),
+            ),
+            const SizedBox(height: 16),
+            Text(title, style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w700, color: color,
+            )),
+            const SizedBox(height: 4),
+            Text(subtitle, style: TextStyle(
+              fontSize: 13, color: color.withValues(alpha: 0.6),
+            ), textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Shimmer Loading ──────────────────────────────────────────
+
+  Widget _buildShimmerLoading(ThemeData theme, bool isDark) {
+    final baseColor = isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant;
+    final highlightColor = isDark ? AppColors.darkSurface : AppColors.surface;
+
+    return Column(
+      children: [
+        // KPI shimmer cards
+        SizedBox(
+          height: 80,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            itemCount: 4,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, __) => _shimmerBox(baseColor, highlightColor, 140, 80),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Table shimmer rows
+        ...List.generate(6, (_) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: _shimmerBox(baseColor, highlightColor, double.infinity, 36),
+        )),
+      ],
+    );
+  }
+
+  Widget _shimmerBox(Color base, Color highlight, double width, double height) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.3, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeInOut,
+      builder: (context, value, child) {
+        return Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: base.withValues(alpha: 0.3 + value * 0.4),
+            borderRadius: BorderRadius.circular(8),
+          ),
+        );
+      },
+      onEnd: () {}, // Rebuild will restart animation via setState from loading
+    );
+  }
+
+  // ── KPI Summary Cards ────────────────────────────────────────
+
+  Widget _buildKPICards(ThemeData theme, bool isDark) {
+    final entries = _reportTotals.entries
+        .where((e) => e.key != 'العدد' && e.key != 'عدد الحسابات' &&
+                      e.key != 'عدد الأصناف' && e.key != 'عدد العملاء' &&
+                      e.key != 'عدد الصناديق' && e.key != 'العميل' && e.key != 'المورد')
+        .take(4)
+        .toList();
+    if (entries.isEmpty) return const SizedBox.shrink();
+
+    return SizedBox(
+      height: 84,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemCount: entries.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final entry = entries[index];
+          return _buildKPICard(theme, isDark, entry.key, entry.value);
+        },
+      ),
+    );
+  }
+
+  Widget _buildKPICard(ThemeData theme, bool isDark, String label, double value) {
+    // Determine color based on label semantics
+    Color cardColor;
+    IconData cardIcon;
+    if (label.contains('ربح') || label.contains('إيرادات') || label.contains('مبيعات') ||
+        label.contains('البيع') || label.contains('الوارد')) {
+      cardColor = value >= 0 ? AppColors.success : AppColors.error;
+      cardIcon = value >= 0 ? Icons.trending_up : Icons.trending_down;
+    } else if (label.contains('مشتريات') || label.contains('تكلفة') ||
+               label.contains('مصروف') || label.contains('دين') || label.contains('متبقي') ||
+               label.contains('الصادر') || label.contains('خسائر')) {
+      cardColor = AppColors.error;
+      cardIcon = Icons.trending_down;
+    } else {
+      cardColor = AppColors.primary;
+      cardIcon = Icons.analytics_outlined;
+    }
+
+    final bgColor = cardColor.withValues(alpha: isDark ? 0.2 : 0.08);
+    final borderColor = cardColor.withValues(alpha: isDark ? 0.4 : 0.3);
+
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(cardIcon, size: 16, color: cardColor),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(label, style: theme.textTheme.labelSmall?.copyWith(
+                  color: cardColor, fontWeight: FontWeight.w600, fontSize: 10,
+                ), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _fmtMoney(value.abs()),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w900, color: cardColor, fontSize: 16,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Search Bar ───────────────────────────────────────────────
+
+  Widget _buildSearchBar(ThemeData theme, bool isDark) {
+    return TextField(
+      onChanged: (val) => setState(() => _searchQuery = val),
+      decoration: InputDecoration(
+        hintText: 'بحث في النتائج...',
+        hintStyle: TextStyle(color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary, fontSize: 13),
+        prefixIcon: Icon(Icons.search, size: 20, color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
+        suffixIcon: _searchQuery.isNotEmpty
+            ? IconButton(
+                icon: Icon(Icons.clear, size: 18, color: AppColors.textHint),
+                onPressed: () => setState(() => _searchQuery = ''),
+              )
+            : null,
+        filled: true,
+        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ),
+      style: theme.textTheme.bodyMedium,
+    );
+  }
+
+  // ── Sortable Data Table ──────────────────────────────────────
+
+  List<Map<String, dynamic>> get _filteredRows {
+    if (_searchQuery.isEmpty) return _reportRows;
+    final q = _searchQuery.toLowerCase();
+    return _reportRows.where((row) {
+      return row.values.any((v) => v.toString().toLowerCase().contains(q));
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get _sortedRows {
+    final rows = List<Map<String, dynamic>>.from(_filteredRows);
+    if (_sortColumnIndex == null) return rows;
+    final columns = rows.first.keys.toList();
+    final sortCol = columns[_sortColumnIndex!];
+    rows.sort((a, b) {
+      final va = a[sortCol];
+      final vb = b[sortCol];
+      int cmp;
+      if (va is num && vb is num) {
+        cmp = va.compareTo(vb);
+      } else {
+        cmp = va.toString().compareTo(vb.toString());
+      }
+      return _sortAscending ? cmp : -cmp;
+    });
+    return rows;
+  }
+
+  Widget _buildSortableDataTable(ThemeData theme, bool isDark) {
+    final filteredRows = _filteredRows;
+    if (filteredRows.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.search_off,
+        title: 'لا توجد نتائج',
+        subtitle: 'جرّب كلمة بحث مختلفة',
+        color: AppColors.textHint,
+      );
+    }
+
+    final columns = filteredRows.first.keys.toList();
+    final sortedRows = _sortedRows;
+
+    // Identify numeric columns
     final numericKeys = <String>{};
     for (final row in _reportRows) {
       for (final key in columns) {
@@ -1745,27 +2201,52 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
     }
 
-    // Date-like keys for short formatting
     final dateKeys = {'التاريخ', 'تاريخ الفتح', 'تاريخ الإغلاق'};
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.only(bottom: 16),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 16),
+        constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 24),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: EdgeInsets.zero,
           child: DataTable(
-            headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.08)),
-            headingTextStyle: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 11),
+            sortColumnIndex: _sortColumnIndex,
+            sortAscending: _sortAscending,
+            headingRowColor: WidgetStateProperty.all(
+              AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
+            ),
+            headingTextStyle: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 11,
+            ),
             dataTextStyle: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
             columnSpacing: 16,
             horizontalMargin: 12,
-            columns: columns.map((col) => DataColumn(
-              label: Text(col, style: const TextStyle(fontWeight: FontWeight.w800)),
-              numeric: numericKeys.contains(col),
-            )).toList(),
-            rows: _reportRows.map((row) {
+            columns: columns.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final col = entry.value;
+              return DataColumn(
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(col, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    if (_sortColumnIndex == idx)
+                      Icon(
+                        _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                        size: 14, color: AppColors.primary,
+                      ),
+                  ],
+                ),
+                numeric: numericKeys.contains(col),
+                onSort: (columnIndex, ascending) {
+                  setState(() {
+                    _sortColumnIndex = columnIndex;
+                    _sortAscending = ascending;
+                  });
+                },
+              );
+            }).toList(),
+            rows: sortedRows.map((row) {
               return DataRow(cells: columns.map((col) {
                 final v = row[col];
                 String display;
@@ -1789,10 +2270,85 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   final str = v.toString();
                   display = dateKeys.contains(col) ? _fmtDate(str) : str;
                 }
-                return DataCell(Text(display, textAlign: numericKeys.contains(col) ? TextAlign.left : TextAlign.right));
+                // Color negative values in red
+                Color? textColor;
+                if (v is double && v < 0 && numericKeys.contains(col) && !dateKeys.contains(col)) {
+                  textColor = AppColors.error;
+                }
+                return DataCell(Text(
+                  display,
+                  style: textColor != null ? TextStyle(color: textColor) : null,
+                  textAlign: numericKeys.contains(col) ? TextAlign.left : TextAlign.right,
+                ));
               }).toList());
             }).toList(),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Export FAB / PopupMenu ───────────────────────────────────
+
+  Widget _buildExportFab(ThemeData theme, bool isDark) {
+    return PopupMenuButton<String>(
+      offset: const Offset(0, -80),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: isDark ? AppColors.darkSurface : AppColors.surface,
+      onSelected: (value) {
+        switch (value) {
+          case 'excel':
+            _exportToExcel();
+          case 'print':
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('طباعة – قريباً'), backgroundColor: AppColors.info),
+            );
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'excel',
+          child: Row(
+            children: [
+              Icon(Icons.table_chart, size: 20, color: AppColors.success),
+              const SizedBox(width: 8),
+              Text('تصدير Excel', style: theme.textTheme.bodyMedium),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'print',
+          child: Row(
+            children: [
+              Icon(Icons.print, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('طباعة', style: theme.textTheme.bodyMedium),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.file_download, color: Colors.white, size: 22),
+            SizedBox(width: 8),
+            Text('تصدير', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+            SizedBox(width: 4),
+            Icon(Icons.arrow_drop_up, color: Colors.white, size: 18),
+          ],
         ),
       ),
     );
