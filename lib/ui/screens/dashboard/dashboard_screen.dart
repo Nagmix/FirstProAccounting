@@ -19,9 +19,11 @@ import '../../widgets/animated_entry.dart';
 /// 3. Unified Action Grid – 3×3 paged with manual Row/Column layout
 /// 4. Recent Transactions – professional card-based list
 // Fixed card height for the action grid — guarantees no cutoff
-const double _kCardHeight = 88.0;
-const double _kRowSpacing = 10.0;
-const double _kColSpacing = 10.0;
+const double _kCardHeight = 82.0;
+const double _kRowSpacing = 8.0;
+const double _kColSpacing = 8.0;
+// Extra bottom padding to guarantee the 3rd row is never clipped
+const double _kGridBottomPadding = 4.0;
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -169,8 +171,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   int get _totalPages => (_allActions.length / 9).ceil();
 
-  /// Total grid height = 3 rows × card height + 2 spacing between rows
-  double get _gridHeight => (_kCardHeight * 3) + (_kRowSpacing * 2);
+  /// Total grid height = 3 rows × card height + 2 spacing + safety margin
+  double get _gridHeight => (_kCardHeight * 3) + (_kRowSpacing * 2) + _kGridBottomPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -512,12 +514,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           _buildActionGridHeader(context, isDark),
           const SizedBox(height: 12),
 
-          // 3×3 paged grid — fixed height, manual layout
+          // 3×3 paged grid — fixed height, manual layout, NO clip
           SizedBox(
             height: _gridHeight,
             child: PageView.builder(
               controller: _actionPageController,
               physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
               onPageChanged: (page) => setState(() => _currentActionPage = page),
               itemCount: _totalPages,
               itemBuilder: (context, pageIndex) {
@@ -889,20 +892,20 @@ class _GridActionCard extends StatelessWidget {
             splashColor: item.color.withValues(alpha: 0.1),
             highlightColor: item.color.withValues(alpha: 0.05),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Icon container — compact
                   Container(
-                    width: 40, height: 40,
+                    width: 36, height: 36,
                     decoration: BoxDecoration(
                       color: isDark ? item.color.withValues(alpha: 0.12) : effectiveBg,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(item.icon, color: item.color, size: 20),
+                    child: Icon(item.icon, color: item.color, size: 18),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   // Label
                   Text(item.label,
                     textAlign: TextAlign.center,
