@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -16,7 +17,7 @@ import '../../widgets/transaction_tile.dart';
 ///
 /// Modern design with premium animations and glassmorphism effects:
 /// 1. Gradient Header – animated greeting + date + frosted-glass sales summary
-/// 2. Pageable service grid with staggered entry animations on page swipe
+/// 2. Categorized service grid (Quick Ops, Management, Reports)
 /// 3. Redesigned statistics cards (2 × 2) with count-up & progress bars
 /// 4. Recent transactions list with slide-in & dividers
 class DashboardScreen extends StatefulWidget {
@@ -37,9 +38,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _recentInvoices = [];
   bool _isLoading = true;
 
-  // PageView controller for service buttons
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
+  // Periodic refresh timer for auto-updating dashboard data
+  Timer? _refreshTimer;
 
   // Animation controllers for the header
   late AnimationController _pulseController;
@@ -51,6 +51,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     _loadDashboardData();
     WidgetsBinding.instance.addObserver(this);
+
+    // Auto-refresh every 60 seconds
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) => _loadDashboardData(),
+    );
 
     // Pulse animation for chart icon (repeating)
     _pulseController = AnimationController(
@@ -73,7 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _refreshTimer?.cancel();
     _pulseController.dispose();
     _waveController.dispose();
     _headerEntryController.dispose();
@@ -127,30 +133,43 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // ── All service actions combined into one list ────────────────
-  List<_QuickActionData> get _allServices => [
-    _QuickActionData(label: 'فاتورة بيع', icon: Icons.receipt, color: AppColors.accentBlue, route: AppConstants.newSaleInvoice),
-    _QuickActionData(label: 'فاتورة شراء', icon: Icons.shopping_cart, color: AppColors.accentPink, route: AppConstants.newPurchaseInvoice),
-    _QuickActionData(label: 'نقطة البيع', icon: Icons.storefront, color: AppColors.secondaryDark, route: AppConstants.pos),
-    _QuickActionData(label: 'العملاء', icon: Icons.people, color: AppColors.accentGreen, route: AppConstants.customers),
-    _QuickActionData(label: 'الموردون', icon: Icons.local_shipping, color: AppColors.info, route: AppConstants.suppliers),
-    _QuickActionData(label: 'المنتجات', icon: Icons.inventory_2, color: AppColors.accentOrange, route: AppConstants.products),
-    _QuickActionData(label: 'المصروفات', icon: Icons.attach_money, color: AppColors.error, route: AppConstants.expenses),
-    _QuickActionData(label: 'الفواتير', icon: Icons.receipt_long, color: AppColors.primary, route: AppConstants.invoices),
-    _QuickActionData(label: 'الصناديق', icon: Icons.account_balance_wallet, color: AppColors.accentGreen, route: AppConstants.cashBoxes),
-    _QuickActionData(label: 'دليل الحسابات', icon: Icons.pie_chart, color: AppColors.primaryLight, route: AppConstants.chartOfAccounts),
-    _QuickActionData(label: 'التقارير', icon: Icons.bar_chart, color: AppColors.primary, route: AppConstants.reports),
-    _QuickActionData(label: 'الإحصائيات', icon: Icons.show_chart, color: const Color(0xFF7B1FA2), route: AppConstants.statistics),
-    _QuickActionData(label: 'الموظفين', icon: Icons.person, color: AppColors.warning, route: AppConstants.employees),
-    _QuickActionData(label: 'المستودعات', icon: Icons.warehouse, color: AppColors.secondaryDark, route: AppConstants.warehouses),
-    _QuickActionData(label: 'العملات', icon: Icons.monetization_on, color: AppColors.success, route: AppConstants.currencies),
-    _QuickActionData(label: 'الإعدادات', icon: Icons.settings, color: AppColors.textSecondary, route: AppConstants.settings),
-    _QuickActionData(label: 'الدعم الفني', icon: Icons.headset, color: AppColors.warning, route: AppConstants.support),
+  /// Navigate to a route and refresh dashboard data when returning.
+  void _navigateTo(String route) {
+    AppRouter.push(context, route).then((_) => _loadDashboardData());
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  SERVICE DATA — organized into 3 logical categories
+  // ══════════════════════════════════════════════════════════════════
+
+  /// Quick Operations — the 4 most important daily actions.
+  List<_QuickActionData> get _quickOperations => [
+    _QuickActionData(label: 'نقطة البيع', icon: Icons.point_of_sale, color: AppColors.secondaryDark, route: AppConstants.pos),
+    _QuickActionData(label: 'فاتورة بيع', icon: Icons.sell_outlined, color: AppColors.accentBlue, route: AppConstants.newSaleInvoice),
+    _QuickActionData(label: 'فاتورة شراء', icon: Icons.shopping_bag_outlined, color: AppColors.accentPink, route: AppConstants.newPurchaseInvoice),
+    _QuickActionData(label: 'المصروفات', icon: Icons.payments_outlined, color: AppColors.accentOrange, route: AppConstants.expenses),
   ];
 
-  // 6 items per page (3 columns x 2 rows)
-  int get _itemsPerPage => 6;
-  int get _pageCount => (_allServices.length / _itemsPerPage).ceil();
+  /// Management — business entities and records.
+  List<_QuickActionData> get _managementServices => [
+    _QuickActionData(label: 'العملاء', icon: Icons.group_outlined, color: AppColors.accentGreen, route: AppConstants.customers),
+    _QuickActionData(label: 'الموردون', icon: Icons.local_shipping_outlined, color: AppColors.info, route: AppConstants.suppliers),
+    _QuickActionData(label: 'المنتجات', icon: Icons.inventory_2_outlined, color: AppColors.accentOrange, route: AppConstants.products),
+    _QuickActionData(label: 'الفواتير', icon: Icons.receipt_long_outlined, color: AppColors.primary, route: AppConstants.invoices),
+    _QuickActionData(label: 'المستودعات', icon: Icons.warehouse_outlined, color: AppColors.secondaryDark, route: AppConstants.warehouses),
+    _QuickActionData(label: 'الصناديق', icon: Icons.account_balance_wallet_outlined, color: AppColors.accentGreen, route: AppConstants.cashBoxes),
+    _QuickActionData(label: 'الموظفين', icon: Icons.badge_outlined, color: AppColors.warning, route: AppConstants.employees),
+    _QuickActionData(label: 'العملات', icon: Icons.currency_exchange_outlined, color: AppColors.success, route: AppConstants.currencies),
+  ];
+
+  /// Reports & Settings — analysis and configuration.
+  List<_QuickActionData> get _reportsAndSettings => [
+    _QuickActionData(label: 'التقارير', icon: Icons.assessment_outlined, color: AppColors.primary, route: AppConstants.reports),
+    _QuickActionData(label: 'الإحصائيات', icon: Icons.query_stats_outlined, color: AppColors.accentBlue, route: AppConstants.statistics),
+    _QuickActionData(label: 'دليل الحسابات', icon: Icons.account_tree_outlined, color: AppColors.primaryLight, route: AppConstants.chartOfAccounts),
+    _QuickActionData(label: 'الإعدادات', icon: Icons.settings_outlined, color: AppColors.textSecondary, route: AppConstants.settings),
+    _QuickActionData(label: 'الدعم الفني', icon: Icons.support_agent_outlined, color: AppColors.warning, route: AppConstants.support),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -170,11 +189,27 @@ class _DashboardScreenState extends State<DashboardScreen>
             // ── Gradient Header ──────────────────────────────────
             SliverToBoxAdapter(child: _buildHeader(context, isDark)),
 
-            // ── Pageable Services Grid ────────────────────────────
+            // ── Quick Operations (2×2 large cards) ───────────────
             SliverToBoxAdapter(
               child: AnimatedEntry(
                 delay: const Duration(milliseconds: 100),
-                child: _buildPageableServices(context, isDark),
+                child: _buildQuickOperations(context, isDark),
+              ),
+            ),
+
+            // ── Management (4×2 smaller cards) ────────────────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 200),
+                child: _buildManagementServices(context, isDark),
+              ),
+            ),
+
+            // ── Reports & Settings (horizontal scrollable) ────────
+            SliverToBoxAdapter(
+              child: AnimatedEntry(
+                delay: const Duration(milliseconds: 250),
+                child: _buildReportsAndSettings(context, isDark),
               ),
             ),
 
@@ -295,16 +330,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                   ),
 
-                  // Action icons
+                  // Action icons — notifications + drawer only
                   Row(
                     children: [
                       _HeaderIconButton(
-                        icon: Icons.chat,
-                        onTap: () {},
-                      ),
-                      _HeaderIconButton(
-                        icon: Icons.notifications,
-                        onTap: () {},
+                        icon: Icons.notifications_outlined,
+                        onTap: () => _navigateTo(AppConstants.notifications),
                       ),
                       _HeaderIconButton(
                         icon: Icons.list,
@@ -387,7 +418,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ],
                           ),
                           child: const Icon(
-                            Icons.show_chart,
+                            Icons.query_stats_outlined,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -501,9 +532,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  PAGEABLE SERVICES GRID with staggered animations
+  //  QUICK OPERATIONS — 2×2 large action cards
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildPageableServices(BuildContext context, bool isDark) {
+  Widget _buildQuickOperations(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
 
     return Padding(
@@ -514,8 +545,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         0,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Section title with animated page indicator ─────────
+          // Section title
           Row(
             children: [
               Container(
@@ -532,131 +564,178 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               const SizedBox(width: DesignSystem.spacing8),
               Text(
-                'الخدمات',
+                'العمليات السريعة',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const Spacer(),
-              // Animated page indicator dots
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  _pageCount,
-                  (index) => AnimatedContainer(
-                    duration: DesignSystem.animMedium,
-                    curve: Curves.fastOutSlowIn,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: _currentPage == index ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: _currentPage == index
-                          ? AppColors.primary
-                          : (isDark
-                              ? AppColors.darkDivider
-                              : AppColors.divider),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
+              const SizedBox(width: DesignSystem.spacing8),
+              Icon(
+                Icons.bolt_rounded,
+                color: AppColors.secondary,
+                size: 18,
               ),
             ],
           ),
           const SizedBox(height: DesignSystem.spacing12),
 
-          // ── PageView of service buttons with staggered animation
-          SizedBox(
-            height: MediaQuery.of(context).size.width * 0.73,
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: (page) =>
-                  setState(() => _currentPage = page),
-              itemCount: _pageCount,
-              itemBuilder: (context, pageIndex) {
-                  final startIdx = pageIndex * _itemsPerPage;
-                  final endIdx =
-                      (startIdx + _itemsPerPage).clamp(0, _allServices.length);
-                  final pageItems =
-                      _allServices.sublist(startIdx, endIdx);
-                  final row1 = pageItems.take(3).toList();
-                  final row2 = pageItems.skip(3).take(3).toList();
+          // 2×2 grid
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 4,
+            childAspectRatio: 1.15,
+            children: _quickOperations.asMap().entries.map((entry) {
+              return _StaggeredServiceButton(
+                key: ValueKey('quick_${entry.key}'),
+                delay: Duration(milliseconds: 60 * entry.key),
+                label: entry.value.label,
+                icon: entry.value.icon,
+                color: entry.value.color,
+                isLarge: true,
+                onTap: () => _navigateTo(entry.value.route),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
 
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Column(
-                      children: [
-                        // ── Row 1 with staggered entries ───────────
-                        Expanded(
-                          child: Row(
-                            children: row1
-                                .asMap()
-                                .entries
-                                .map((entry) => Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 3,
-                                          vertical: 2,
-                                        ),
-                                        child: _StaggeredServiceButton(
-                                          key: ValueKey(
-                                            'p${pageIndex}_r0_${entry.key}',
-                                          ),
-                                          delay: Duration(
-                                            milliseconds:
-                                                60 * entry.key,
-                                          ),
-                                          label: entry.value.label,
-                                          icon: entry.value.icon,
-                                          color: entry.value.color,
-                                          onTap: () => AppRouter.push(
-                                            context,
-                                            entry.value.route,
-                                          ),
-                                        ),
-                                      ),
-                                    ))
-                                .toList(),
-                          ),
-                        ),
-                        // ── Row 2 with staggered entries ───────────
-                        if (row2.isNotEmpty)
-                          Expanded(
-                            child: Row(
-                              children: row2
-                                  .asMap()
-                                  .entries
-                                  .map((entry) => Expanded(
-                                        child: Padding(
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                            horizontal: 3,
-                                            vertical: 2,
-                                          ),
-                                          child: _StaggeredServiceButton(
-                                            key: ValueKey(
-                                              'p${pageIndex}_r1_${entry.key}',
-                                            ),
-                                            delay: Duration(
-                                              milliseconds:
-                                                  60 * entry.key + 180,
-                                            ),
-                                            label: entry.value.label,
-                                            icon: entry.value.icon,
-                                            color: entry.value.color,
-                                            onTap: () => AppRouter.push(
-                                              context,
-                                              entry.value.route,
-                                            ),
-                                          ),
-                                        ),
-                                      ))
-                                  .toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
+  // ══════════════════════════════════════════════════════════════════
+  //  MANAGEMENT SERVICES — 4×2 smaller cards
+  // ══════════════════════════════════════════════════════════════════
+  Widget _buildManagementServices(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        DesignSystem.spacing16,
+        DesignSystem.spacing16,
+        DesignSystem.spacing16,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryLight],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: DesignSystem.spacing8),
+              Text(
+                'الإدارة',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DesignSystem.spacing8),
+
+          // 4 columns × 2 rows
+          GridView.count(
+            crossAxisCount: 4,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 4,
+            childAspectRatio: 0.78,
+            children: _managementServices.asMap().entries.map((entry) {
+              return _StaggeredServiceButton(
+                key: ValueKey('mgmt_${entry.key}'),
+                delay: Duration(milliseconds: 40 * entry.key + 100),
+                label: entry.value.label,
+                icon: entry.value.icon,
+                color: entry.value.color,
+                isLarge: false,
+                onTap: () => _navigateTo(entry.value.route),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  REPORTS & SETTINGS — horizontal scrollable row
+  // ══════════════════════════════════════════════════════════════════
+  Widget _buildReportsAndSettings(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        DesignSystem.spacing16,
+        DesignSystem.spacing16,
+        0,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryLight],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: DesignSystem.spacing8),
+              Text(
+                'التقارير والإعدادات',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DesignSystem.spacing8),
+
+          // Horizontal scrollable list
+          SizedBox(
+            height: 90,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(
+                right: DesignSystem.spacing16,
+                left: DesignSystem.spacing4,
+              ),
+              itemCount: _reportsAndSettings.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final item = _reportsAndSettings[index];
+                return _StaggeredServiceButton(
+                  key: ValueKey('report_$index'),
+                  delay: Duration(milliseconds: 50 * index + 200),
+                  label: item.label,
+                  icon: item.icon,
+                  color: item.color,
+                  isLarge: false,
+                  onTap: () => _navigateTo(item.route),
+                );
+              },
             ),
           ),
         ],
@@ -669,11 +748,20 @@ class _DashboardScreenState extends State<DashboardScreen>
   //  count-up animation, progress bars & subtle gradient bg
   // ══════════════════════════════════════════════════════════════════
   Widget _buildStatCards(BuildContext context, bool isDark) {
+    // Cash balance progress: compare today's sales to monthly average
+    // If month has sales, progress = (todaySales * 30) / monthSales
+    // This represents "sales pace" — are we above or below the monthly average?
+    final cashProgress = _monthSales > 0
+        ? ((_todaySales * 30) / _monthSales).clamp(0.0, 1.0)
+        : 0.0;
+    // Direction indicator: is today's pace above or below the monthly average?
+    final isCashTrendUp = _monthSales > 0 && _todaySales * 30 > _monthSales;
+
     final stats = <_StatData>[
       _StatData(
         title: 'إجمالي المبيعات',
         value: _monthSales,
-        icon: Icons.show_chart,
+        icon: Icons.query_stats_outlined,
         color: AppColors.accentBlue,
         subtitle: 'هذا الشهر',
         isCount: false,
@@ -682,7 +770,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _StatData(
         title: 'إجمالي المشتريات',
         value: _monthPurchases,
-        icon: Icons.shopping_cart,
+        icon: Icons.shopping_bag_outlined,
         color: AppColors.accentPink,
         subtitle: 'هذا الشهر',
         isCount: false,
@@ -691,7 +779,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _StatData(
         title: 'عدد العملاء',
         value: _customerCount.toDouble(),
-        icon: Icons.people,
+        icon: Icons.group_outlined,
         color: AppColors.accentGreen,
         subtitle: 'إجمالي',
         isCount: true,
@@ -700,11 +788,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       _StatData(
         title: 'رصيد الصندوق',
         value: _cashBalance,
-        icon: Icons.account_balance_wallet,
+        icon: Icons.account_balance_wallet_outlined,
         color: AppColors.accentOrange,
-        subtitle: 'الرصيد الحالي',
+        subtitle: isCashTrendUp ? 'وتيرة فوق المتوسط' : 'وتيرة تحت المتوسط',
         isCount: false,
-        progress: _cashBalance > 0 ? 0.7 : 0.0,
+        progress: cashProgress,
+        isTrendUp: isCashTrendUp,
       ),
     ];
 
@@ -768,7 +857,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.receipt,
+                    Icons.receipt_long_outlined,
                     size: 36,
                     color: AppColors.primary,
                   ),
@@ -864,10 +953,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => AppRouter.push(
-                      context,
-                      AppConstants.invoices,
-                    ),
+                    onTap: () => _navigateTo(AppConstants.invoices),
                     borderRadius: DesignSystem.borderRadius12,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 13),
@@ -947,6 +1033,7 @@ class _StatData {
     required this.subtitle,
     required this.isCount,
     required this.progress,
+    this.isTrendUp,
   });
 
   final String title;
@@ -956,6 +1043,7 @@ class _StatData {
   final String subtitle;
   final bool isCount;
   final double progress;
+  final bool? isTrendUp;
 }
 
 // ── Header icon button ────────────────────────────────────────────
@@ -994,6 +1082,7 @@ class _StaggeredServiceButton extends StatefulWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.isLarge = false,
     this.delay = Duration.zero,
   });
 
@@ -1001,6 +1090,7 @@ class _StaggeredServiceButton extends StatefulWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final bool isLarge;
   final Duration delay;
 
   @override
@@ -1079,6 +1169,7 @@ class _StaggeredServiceButtonState extends State<_StaggeredServiceButton>
         label: widget.label,
         icon: widget.icon,
         color: widget.color,
+        isLarge: widget.isLarge,
         onTap: widget.onTap,
       ),
     );
@@ -1161,6 +1252,7 @@ class _CountUpTextState extends State<_CountUpText>
 /// - Larger icon with gradient background **circle** (fitness-app style)
 /// - Prominent value with count-up animation
 /// - Subtle progress bar showing percentage of target
+/// - Trend indicator for cash balance (up/down arrow)
 /// - Card background with very subtle gradient
 class _RedesignedStatCard extends StatefulWidget {
   const _RedesignedStatCard({
@@ -1269,6 +1361,7 @@ class _RedesignedStatCardState extends State<_RedesignedStatCard>
     final theme = Theme.of(context);
     final d = widget.data;
     final isDark = widget.isDark;
+    final hasTrend = d.isTrendUp != null;
 
     return Container(
       margin: const EdgeInsets.all(2),
@@ -1385,34 +1478,62 @@ class _RedesignedStatCardState extends State<_RedesignedStatCard>
                   ),
                   const SizedBox(height: 6),
 
-                  // ── Subtitle + animated progress bar ──────────
-                  Row(
-                    children: [
-                      Text(
-                        d.subtitle,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.textHint,
-                          fontSize: 10,
+                  // ── Subtitle + progress or trend indicator ────
+                  if (hasTrend)
+                    // Trend indicator (for cash balance)
+                    Row(
+                      children: [
+                        Icon(
+                          d.isTrendUp!
+                              ? Icons.trending_up_rounded
+                              : Icons.trending_down_rounded,
+                          color: d.isTrendUp! ? AppColors.success : AppColors.error,
+                          size: 14,
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: AnimatedBuilder(
-                          animation: _progressController,
-                          builder: (context, _) {
-                            return DesignSystem.progressBar(
-                              progress: _progressAnimation.value,
-                              color: d.color,
-                              width: double.infinity,
-                              height: 3,
-                            );
-                          },
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            d.subtitle,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: d.isTrendUp! ? AppColors.success : AppColors.error,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else
+                    // Standard subtitle + animated progress bar
+                    Row(
+                      children: [
+                        Text(
+                          d.subtitle,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textHint,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: AnimatedBuilder(
+                            animation: _progressController,
+                            builder: (context, _) {
+                              return DesignSystem.progressBar(
+                                progress: _progressAnimation.value,
+                                color: d.color,
+                                width: double.infinity,
+                                height: 3,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
