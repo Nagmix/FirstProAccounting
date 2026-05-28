@@ -276,13 +276,21 @@ class ReportService {
       args.add(toDate.toIso8601String());
     }
 
+    // Use ii.unit_cost (stored at time of sale) for accurate COGS,
+    // falling back to p.cost_price only if unit_cost is 0 (legacy items)
     return await db.rawQuery(
       "SELECT i.id AS invoice_id, i.type, i.total AS sale_total, i.currency, i.created_at, "
       "CASE WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل') "
       "WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد') "
       "ELSE 'بدون عميل' END AS entity_name, "
-      "COALESCE(SUM(ii.quantity * p.cost_price), 0) AS cost_total, "
-      "i.total - COALESCE(SUM(ii.quantity * p.cost_price), 0) AS profit "
+      "COALESCE(SUM("
+      "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+      "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
+      "), 0) AS cost_total, "
+      "i.total - COALESCE(SUM("
+      "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+      "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
+      "), 0) AS profit "
       "FROM invoices i "
       "LEFT JOIN customers c ON i.customer_id = c.id "
       "LEFT JOIN suppliers s ON i.supplier_id = s.id "

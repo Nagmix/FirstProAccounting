@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -501,8 +502,13 @@ class _ReportsScreenState extends State<ReportsScreen>
       _hasData = true;
     } catch (e) {
       if (mounted) {
+        debugPrint('Report error ($_selectedReportKey): $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل التقرير'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('حدث خطأ أثناء تحميل التقرير: ${e.toString().length > 80 ? e.toString().substring(0, 80) + '...' : e.toString()}'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }
@@ -588,33 +594,61 @@ class _ReportsScreenState extends State<ReportsScreen>
     final netSales = revenue - salesReturns;
     final netPurchases = purchases - purchaseReturns;
 
-    // COGS = مخزون أول المدة + صافي المشتريات - مخزون آخر المدة
-    // Calculate inventory values from stock movements and product cost prices
-    double beginningInventory = 0.0;
-    double endingInventory = 0.0;
+    // ── COGS Calculation ──
+    // Method: Calculate COGS directly from invoice_items using stored unit_cost
+    // This is more accurate than the inventory-based formula because:
+    // 1. unit_cost is captured at time of sale (not current cost_price which may have changed)
+    // 2. It handles partial-period correctly without needing beginning inventory
+    // 3. Works even when stock_movements data is incomplete
+    double cogs = 0.0;
     try {
-      // Beginning inventory: total value of products at start of period
-      if (_dateFrom != null) {
-        final begArgs = <dynamic>[_dateFrom!.toIso8601String()];
-        begArgs.addAll(_currencyArgs());
-        final begRes = await database.rawQuery(
-          "SELECT COALESCE(SUM(CAST(ROUND(p.current_stock * p.cost_price) AS INTEGER)), 0) AS total_value "
-          "FROM products p WHERE p.track_stock = 1$cf", begArgs);
-        beginningInventory = MoneyHelper.readMoney(begRes.first['total_value']);
+      // COGS from sales: sum of (base_quantity * unit_cost) for all sale/pos items
+      final cogsSaleArgs = <dynamic>[];
+      String cogsDateF = '';
+      if (_dateFrom != null) { cogsDateF += ' AND i.created_at >= ?'; cogsSaleArgs.add(_dateFrom!.toIso8601String()); }
+      if (_dateTo != null) { cogsDateF += ' AND i.created_at < ?'; cogsSaleArgs.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
+      if (_currencyCode() != null) { cogsDateF += ' AND i.currency = ?'; cogsSaleArgs.add(_currencyCode()!); }
+
+      final cogsRes = await database.rawQuery(
+        "SELECT COALESCE(SUM("
+        "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+        "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+        "), 0) AS total_cogs "
+        "FROM invoice_items ii "
+        "INNER JOIN invoices i ON ii.invoice_id = i.id "
+        "LEFT JOIN products p ON ii.product_id = p.id "
+        "WHERE i.type IN ('sale','pos') AND i.is_return = 0$cogsDateF",
+        cogsSaleArgs,
+      );
+      cogs = MoneyHelper.readMoney(cogsRes.first['total_cogs']);
+
+      // Subtract COGS from sales returns (inventory comes back)
+      if (salesReturns > 0) {
+        final cogsRetArgs = <dynamic>[];
+        String cogsRetF = '';
+        if (_dateFrom != null) { cogsRetF += ' AND i.created_at >= ?'; cogsRetArgs.add(_dateFrom!.toIso8601String()); }
+        if (_dateTo != null) { cogsRetF += ' AND i.created_at < ?'; cogsRetArgs.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
+        if (_currencyCode() != null) { cogsRetF += ' AND i.currency = ?'; cogsRetArgs.add(_currencyCode()!); }
+
+        final cogsRetRes = await database.rawQuery(
+          "SELECT COALESCE(SUM("
+          "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+          "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+          "), 0) AS total_cogs "
+          "FROM invoice_items ii "
+          "INNER JOIN invoices i ON ii.invoice_id = i.id "
+          "LEFT JOIN products p ON ii.product_id = p.id "
+          "WHERE i.type IN ('sale','pos') AND i.is_return = 1$cogsRetF",
+          cogsRetArgs,
+        );
+        cogs -= MoneyHelper.readMoney(cogsRetRes.first['total_cogs']);
       }
-      // Ending inventory: current total value of in-stock products
-      final endArgs = <dynamic>[];
-      endArgs.addAll(_currencyArgs());
-      final endRes = await database.rawQuery(
-        "SELECT COALESCE(SUM(CAST(ROUND(p.current_stock * p.cost_price) AS INTEGER)), 0) AS total_value "
-        "FROM products p WHERE p.track_stock = 1$cf", endArgs);
-      endingInventory = MoneyHelper.readMoney(endRes.first['total_value']);
     } catch (e) {
-      // Fallback if inventory calculation fails
-      debugPrint('Inventory value calculation error: $e');
+      debugPrint('COGS calculation error: $e');
+      // Fallback: use simple purchase-based estimate
+      cogs = netPurchases;
     }
 
-    final cogs = beginningInventory + netPurchases - endingInventory;
     final grossProfit = netSales - cogs;
     final netProfit = grossProfit - expenses;
 
@@ -622,10 +656,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       {'البند': 'إجمالي المبيعات', 'المبلغ': revenue, 'ملاحظة': 'فواتير البيع'},
       {'البند': 'مرتجعات المبيعات', 'المبلغ': -salesReturns, 'ملاحظة': 'فواتير المرتجع'},
       {'البند': 'صافي المبيعات', 'المبلغ': netSales, 'ملاحظة': ''},
-      {'البند': 'مخزون أول المدة', 'المبلغ': beginningInventory, 'ملاحظة': beginningInventory > 0 ? 'قيمة المخزون عند بداية الفترة' : 'غير متاح'},
-      {'البند': 'صافي المشتريات', 'المبلغ': netPurchases, 'ملاحظة': 'المشتريات - المرتجعات'},
-      {'البند': 'مخزون آخر المدة', 'المبلغ': -endingInventory, 'ملاحظة': endingInventory > 0 ? 'قيمة المخزون عند نهاية الفترة' : 'غير متاح'},
-      {'البند': 'تكلفة البضاعة المباعة', 'المبلغ': cogs, 'ملاحظة': 'مخزون أول + مشتريات - مخزون آخر'},
+      {'البند': 'تكلفة البضاعة المباعة', 'المبلغ': cogs, 'ملاحظة': 'محسوبة من تكلفة الأصناف المباعة'},
       {'البند': 'مجمل الربح', 'المبلغ': grossProfit, 'ملاحظة': 'صافي المبيعات - تكلفة البضاعة'},
       {'البند': 'المصاريف التشغيلية', 'المبلغ': -expenses, 'ملاحظة': ''},
       {'البند': 'صافي الربح', 'المبلغ': netProfit, 'ملاحظة': 'مجمل الربح - المصاريف'},
@@ -672,29 +703,42 @@ class _ReportsScreenState extends State<ReportsScreen>
       args.add(_selectedCategoryId!);
     }
 
+    // Include cost and profit per product using unit_cost from invoice_items
     final results = await database.rawQuery(
       "SELECT ii.product_name, SUM(ii.quantity) AS qty, SUM(ii.total_price) AS revenue, "
+      "SUM("
+      "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+      "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
+      ") AS cost_total, "
       "COUNT(DISTINCT ii.invoice_id) AS inv_count "
-      "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id=i.id $catJoin "
+      "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id=i.id "
+      "LEFT JOIN products p ON ii.product_id=p.id $catJoin "
       "WHERE i.type IN ('sale','pos') AND i.is_return=0$dateF$curF$catFilter "
       "GROUP BY ii.product_id ORDER BY revenue DESC",
       args,
     );
-    double totalRevenue = 0;
+    double totalRevenue = 0, totalCost = 0, totalProfit = 0;
     int totalQty = 0;
     _reportRows = results.map((r) {
       final rev = MoneyHelper.readMoney(r['revenue']);
+      final cost = MoneyHelper.readMoney(r['cost_total']);
       final qty = (r['qty'] as num?)?.toDouble() ?? 0;
+      final profit = rev - cost;
       totalRevenue += rev;
+      totalCost += cost;
+      totalProfit += profit;
       totalQty += qty.toInt();
       return {
         'المنتج': r['product_name'] as String? ?? '',
         'الكمية المباعة': qty,
         'إجمالي المبيعات': rev,
+        'تكلفة المبيعات': cost,
+        'الربح': profit,
+        'هامش الربح': rev > 0 ? (profit / rev * 100) : 0.0,
         'عدد الفواتير': (r['inv_count'] as num?)?.toInt() ?? 0,
       };
     }).toList();
-    _reportTotals = {'إجمالي المبيعات': totalRevenue, 'إجمالي الكمية': totalQty.toDouble(), 'عدد الأصناف': _reportRows.length.toDouble()};
+    _reportTotals = {'إجمالي المبيعات': totalRevenue, 'إجمالي التكلفة': totalCost, 'إجمالي الربح': totalProfit, 'إجمالي الكمية': totalQty.toDouble(), 'عدد الأصناف': _reportRows.length.toDouble()};
   }
 
   Future<void> _loadSalesByCustomerReport(DatabaseHelper db) async {
@@ -1032,7 +1076,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
     final results = await database.rawQuery(
       "SELECT p.name_ar, p.barcode, p.item_code, p.current_stock, p.cost_price, p.sell_price, "
-      "p.min_stock, w.name AS warehouse_name, c.name AS category_name, p.currency "
+      "p.min_stock, p.currency, w.name AS warehouse_name, c.name AS category_name "
       "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
       "LEFT JOIN categories c ON p.category_id=c.id "
       "WHERE p.is_active=1$whereExtra ORDER BY p.name_ar", args);
@@ -1049,6 +1093,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         'سعر التكلفة': cost,
         'سعر البيع': MoneyHelper.readMoney(p['sell_price']),
         'قيمة المخزون': value,
+        'العملة': p['currency'] as String? ?? 'YER',
         'المخزن': p['warehouse_name'] as String? ?? '',
         'الفئة': p['category_name'] as String? ?? '',
       };

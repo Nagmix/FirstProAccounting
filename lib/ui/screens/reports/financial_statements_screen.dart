@@ -252,8 +252,13 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       }
     } catch (e) {
       if (mounted) {
+        debugPrint('Financial statements error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('حدث خطأ أثناء تحميل البيانات: ${e.toString().length > 80 ? e.toString().substring(0, 80) + '...' : e.toString()}'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
+          ),
         );
         setState(() => _isLoading = false);
       }

@@ -53,7 +53,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 36;
+  static const int _databaseVersion = 37;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -168,6 +168,7 @@ class DatabaseHelper {
         sell_retail INTEGER NOT NULL DEFAULT 1,
         show_in_pos INTEGER NOT NULL DEFAULT 1,
         supplier_code TEXT,
+        currency TEXT NOT NULL DEFAULT 'YER',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id),
@@ -2360,6 +2361,17 @@ class DatabaseHelper {
     if (oldVersion < 36) {
       // Add unit_cost column for accurate COGS on deferred POS posting
       await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_cost INTEGER NOT NULL DEFAULT 0');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Migration v37: Add currency column to products table
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 37) {
+      try {
+        await db.execute("ALTER TABLE products ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'");
+      } catch (e) {
+        logMigrationError("migration", e);
+      }
     }
   }
 

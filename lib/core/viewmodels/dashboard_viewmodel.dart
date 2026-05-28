@@ -10,6 +10,9 @@ class DashboardViewModel extends ChangeNotifier {
   double totalSales = 0.0;
   double totalPurchases = 0.0;
   double totalExpenses = 0.0;
+  double totalCOGS = 0.0;
+  double grossProfit = 0.0;
+  double netProfit = 0.0;
   double cashBalance = 0.0;
   int invoiceCount = 0;
   int productCount = 0;
@@ -63,6 +66,30 @@ class DashboardViewModel extends ChangeNotifier {
         [currency, startStr, endStr],
       );
       totalExpenses = MoneyHelper.readMoney(expensesResult.first['total']);
+
+      // Today's COGS (cost of goods sold) - calculated from invoice_items
+      try {
+        final cogsResult = await db.rawQuery(
+          "SELECT COALESCE(SUM("
+          "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+          "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
+          "), 0) AS total_cogs "
+          "FROM invoice_items ii "
+          "INNER JOIN invoices i ON ii.invoice_id = i.id "
+          "LEFT JOIN products p ON ii.product_id = p.id "
+          "WHERE i.type IN ('sale','pos') AND i.is_return = 0 "
+          "AND i.currency = ? AND i.created_at >= ? AND i.created_at < ?",
+          [currency, startStr, endStr],
+        );
+        totalCOGS = MoneyHelper.readMoney(cogsResult.first['total_cogs']);
+      } catch (e) {
+        debugPrint('COGS calculation error on dashboard: $e');
+        totalCOGS = 0.0;
+      }
+
+      // Calculate profit
+      grossProfit = totalSales - totalCOGS;
+      netProfit = grossProfit - totalExpenses;
 
       // Cash balance
       final cashResult = await db.rawQuery(

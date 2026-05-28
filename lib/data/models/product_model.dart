@@ -45,6 +45,7 @@ class Product {
   final bool showInPos; // Show in POS screen?
   final String? imagePath;
   final String? supplierCode; // Supplier's code for this product
+  final String currency; // Product's currency
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -93,6 +94,7 @@ class Product {
     this.showInPos = true,
     this.imagePath,
     this.supplierCode,
+    this.currency = 'YER',
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -147,6 +149,7 @@ class Product {
       'show_in_pos': showInPos ? 1 : 0,
       'image_path': imagePath,
       'supplier_code': supplierCode,
+      'currency': currency,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -200,6 +203,7 @@ class Product {
       showInPos: (map['show_in_pos'] ?? 1) == 1,
       imagePath: map['image_path'],
       supplierCode: map['supplier_code'],
+      currency: map['currency'] as String? ?? 'YER',
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
     );
@@ -250,6 +254,7 @@ class Product {
     bool? showInPos,
     String? imagePath,
     String? supplierCode,
+    String? currency,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -298,6 +303,7 @@ class Product {
       showInPos: showInPos ?? this.showInPos,
       imagePath: imagePath ?? this.imagePath,
       supplierCode: supplierCode ?? this.supplierCode,
+      currency: currency ?? this.currency,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
