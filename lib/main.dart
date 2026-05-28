@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'core/constants/app_constants.dart';
@@ -108,16 +109,14 @@ class _FirstProAppState extends State<FirstProApp> {
       debugShowCheckedModeBanner: false,
 
       // ── RTL / Arabic locale setup ───────────────────────────
-      locale: const Locale(AppConstants.defaultLanguage),
-      supportedLocales: const [
-        Locale(AppConstants.localeAr),
-        Locale(AppConstants.localeEn),
-      ],
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      locale: const Locale('ar'),
+      supportedLocales: AppLocalizations.supportedLocales,
 
       // ── Theming ─────────────────────────────────────────────
       theme: AppTheme.lightTheme,
