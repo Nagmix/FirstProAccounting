@@ -25,6 +25,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   final _accountTypes = [
     AccountType.ASSET,
     AccountType.LIABILITY,
+    AccountType.EQUITY,
     AccountType.COST,
     AccountType.REVENUE,
     AccountType.EXPENSE,
@@ -33,6 +34,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   final _typeIcons = {
     AccountType.ASSET: Icons.business,
     AccountType.LIABILITY: Icons.savings,
+    AccountType.EQUITY: Icons.account_balance,
     AccountType.COST: Icons.south_west,
     AccountType.REVENUE: Icons.arrow_outward,
     AccountType.EXPENSE: Icons.arrow_downward,
@@ -41,6 +43,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   final _typeColors = {
     AccountType.ASSET: AppColors.primary,
     AccountType.LIABILITY: AppColors.warning,
+    AccountType.EQUITY: AppColors.accentPurple,
     AccountType.COST: AppColors.info,
     AccountType.REVENUE: AppColors.success,
     AccountType.EXPENSE: AppColors.error,

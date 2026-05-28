@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'money_helper.dart';
 
 /// ESC/POS command generator for 80mm/58mm thermal printers.
 ///
@@ -278,8 +279,8 @@ class EscPosCommands {
     for (final item in items) {
       final name = (item['product_name'] ?? item['name'] ?? '').toString();
       final qty = (item['quantity'] ?? 1).toString();
-      final price = _formatAmount((item['unit_price'] ?? item['price'] ?? 0).toDouble());
-      final itemTotal = _formatAmount((item['total_price'] ?? item['total'] ?? 0).toDouble());
+      final price = _formatAmount(MoneyHelper.readMoney(item['unit_price'] ?? item['price'] ?? 0));
+      final itemTotal = _formatAmount(MoneyHelper.readMoney(item['total_price'] ?? item['total'] ?? 0));
 
       cmds.addAll(printlnArabic(_padColumns(
         [name, qty, price, itemTotal],

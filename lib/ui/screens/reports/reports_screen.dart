@@ -101,6 +101,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     MapEntry('الكل', 'الكل'),
     MapEntry('أصول', 'ASSET'),
     MapEntry('خصوم', 'LIABILITY'),
+    MapEntry('حقوق الملكية', 'EQUITY'),
     MapEntry('تكاليف', 'COST'),
     MapEntry('إيرادات', 'REVENUE'),
     MapEntry('مصاريف', 'EXPENSE'),
@@ -284,6 +285,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     switch (type) {
       case 'ASSET': return 'أصول';
       case 'LIABILITY': return 'خصوم';
+      case 'EQUITY': return 'حقوق الملكية';
       case 'COST': return 'تكاليف';
       case 'REVENUE': return 'إيرادات';
       case 'EXPENSE': return 'مصاريف';

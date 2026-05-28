@@ -42,6 +42,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
     switch (type) {
       case 'ASSET': return 'أصول';
       case 'LIABILITY': return 'خصوم';
+      case 'EQUITY': return 'حقوق الملكية';
       case 'COST': return 'تكاليف';
       case 'REVENUE': return 'إيرادات';
       case 'EXPENSE': return 'مصاريف';
@@ -557,6 +558,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
     switch (type) {
       case 'ASSET': return AppColors.info;
       case 'LIABILITY': return AppColors.error;
+      case 'EQUITY': return AppColors.accentPurple;
       case 'COST': return AppColors.warning;
       case 'REVENUE': return AppColors.success;
       case 'EXPENSE': return AppColors.secondary;

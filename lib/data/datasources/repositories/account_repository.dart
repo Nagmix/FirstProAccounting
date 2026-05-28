@@ -71,6 +71,7 @@ class AccountRepository {
     final prefixMap = {
       'ASSET': '1',
       'LIABILITY': '2',
+      'EQUITY': '2',  // Equity shares the 2xxx range with Liabilities
       'COST': '3',
       'REVENUE': '4',
       'EXPENSE': '5',
@@ -92,7 +93,7 @@ class AccountRepository {
     required String currency,
     double? debtCeiling,
     double openingBalance = 0.0,
-    String balanceType = 'credit', // 'credit' = له, 'debit' = عليه
+    String balanceType = 'debit', // 'debit' = عليه (EXPENSE is debit-nature)
     String? notes,
   }) async {
     final db = await _db;

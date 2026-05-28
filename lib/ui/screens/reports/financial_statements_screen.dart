@@ -42,6 +42,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
   bool _isBalanced = false;
   List<Map<String, dynamic>> _assetAccounts = [];
   List<Map<String, dynamic>> _liabilityAccounts = [];
+  List<Map<String, dynamic>> _equityAccounts = [];
 
   static const _currencyOptions = ['ر.ي', 'ر.س', r'$'];
 
@@ -58,6 +59,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
     switch (type) {
       case 'ASSET': return 'أصول';
       case 'LIABILITY': return 'خصوم';
+      case 'EQUITY': return 'حقوق الملكية';
       case 'COST': return 'تكاليف';
       case 'REVENUE': return 'إيرادات';
       case 'EXPENSE': return 'مصاريف';
@@ -101,7 +103,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       }
 
       // ── Income Statement Data ──
-      final accountTypes = ['REVENUE', 'COST', 'EXPENSE', 'ASSET', 'LIABILITY'];
+      final accountTypes = ['REVENUE', 'COST', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY'];
       final args = <dynamic>[];
       String currencyFilter = '';
       if (cc != null) {
@@ -124,12 +126,13 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       );
 
       double revenue = 0, cost = 0, expenses = 0;
-      double assets = 0, liabilities = 0;
+      double assets = 0, liabilities = 0, equityFromAccounts = 0;
       final revenueAccounts = <Map<String, dynamic>>[];
       final costAccounts = <Map<String, dynamic>>[];
       final expenseAccounts = <Map<String, dynamic>>[];
       final assetAccounts = <Map<String, dynamic>>[];
       final liabilityAccounts = <Map<String, dynamic>>[];
+      final equityAccountsList = <Map<String, dynamic>>[];
 
       for (final row in results) {
         final totalDebitRaw = MoneyHelper.readMoney(row['total_debit']);
@@ -206,12 +209,25 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                 'balance': balanceAmount.abs(),
               });
             }
+          case 'EQUITY':
+            // Equity is credit-type: credit - debit = equity
+            balanceAmount = totalCreditRaw - totalDebitRaw;
+            if (!MoneyHelper.isZero(balanceAmount)) {
+              equityFromAccounts += balanceAmount.abs();
+              equityAccountsList.add({
+                'account_code': row['account_code'] as String? ?? '',
+                'name_ar': row['name_ar'] as String? ?? '',
+                'balance': balanceAmount.abs(),
+              });
+            }
         }
       }
 
       final grossProfit = revenue - cost;
       final netProfit = grossProfit - expenses;
-      final equity = assets - liabilities;
+      // Equity = actual equity accounts + net profit (from income statement)
+      // Balance Sheet equation: Assets = Liabilities + Equity
+      final equity = equityFromAccounts + netProfit;
       final isBalanced = MoneyHelper.isZero(assets - (liabilities + equity));
 
       if (mounted) {
@@ -230,6 +246,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           _isBalanced = isBalanced;
           _assetAccounts = assetAccounts;
           _liabilityAccounts = liabilityAccounts;
+          _equityAccounts = equityAccountsList;
           _isLoading = false;
         });
       }
@@ -613,7 +630,11 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           _buildAccountSection(theme, isDark, 'الخصوم', _liabilityAccounts, AppColors.error, Icons.local_shipping),
           const SizedBox(height: 12),
 
-          // ── Equity ──
+          // ── Equity Section ──
+          _buildAccountSection(theme, isDark, 'حقوق الملكية', _equityAccounts, AppColors.accentPurple, Icons.account_balance),
+          const SizedBox(height: 12),
+
+          // ── Equity Summary (includes net profit) ──
           _buildEquityCard(theme, isDark),
 
           const SizedBox(height: 12),
@@ -810,7 +831,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
 
   Widget _buildAccountSection(ThemeData theme, bool isDark, String title,
       List<Map<String, dynamic>> accounts, Color color, IconData icon) {
-    final total = accounts.fold(0.0, (sum, a) => sum + (a['balance'] as double));
+    final total = accounts.fold(0.0, (sum, a) => sum + MoneyHelper.readMoney(a['balance']));
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -859,7 +880,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                     child: Text(account['name_ar'] as String,
                         style: theme.textTheme.bodySmall),
                   ),
-                  Text(CurrencyFormatter.format(account['balance'] as double, symbol: _selectedCurrency),
+                  Text(CurrencyFormatter.format(MoneyHelper.readMoney(account['balance']), symbol: _selectedCurrency),
                       style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: color)),
                 ],
               ),

@@ -53,7 +53,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 34;
+  static const int _databaseVersion = 35;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -981,8 +981,8 @@ class DatabaseHelper {
     ['المخزون', 'Inventory Account', 1300, 'ASSET'],
     ['حساب الخصوم', 'Liabilities Account', 2000, 'LIABILITY'],
     ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY'],
-    ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'LIABILITY'],
-    ['الأرباح المحتجزة', 'Retained Earnings', 2900, 'LIABILITY'],
+    ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'EQUITY'],
+    ['الأرباح المحتجزة', 'Retained Earnings', 2900, 'EQUITY'],
     ['ضريبة القيمة المضافة', 'VAT Payable', 3300, 'LIABILITY'],
     ['تكلفة البضاعة المباعة', 'COGS Account', 3200, 'COST'],
     ['حساب المشتريات', 'Purchases Account', 3100, 'COST'],
@@ -1008,7 +1008,7 @@ class DatabaseHelper {
         'account_type': type,
         'balance': 0,
         'currency': currency,
-        'balance_type': (type == 'ASSET' || type == 'COST') ? 'debit' : 'credit',
+        'balance_type': (type == 'ASSET' || type == 'COST' || type == 'EXPENSE') ? 'debit' : 'credit',
         'is_active': 1,
         'is_system': 1,
         'created_at': now,
@@ -1069,7 +1069,7 @@ class DatabaseHelper {
         'account_type': accountType,
         'balance': 0,
         'currency': currencyCode,
-        'balance_type': (accountType == 'ASSET' || accountType == 'COST') ? 'debit' : 'credit',
+        'balance_type': (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE') ? 'debit' : 'credit',
         'is_active': 1,
         'is_system': 1,
         'created_at': now,
@@ -2278,6 +2278,79 @@ class DatabaseHelper {
       await _migrateV34RealToInteger(db);
       // M-05: Add unique constraint on (account_code, currency)
       try { await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_code_currency ON accounts (account_code, currency)'); } catch (e) { logMigrationError("migration", e); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v35 Migration: Fix EXPENSE balance_type + Add EQUITY type
+    //  ── EXPENSE accounts should be debit-nature, not credit
+    //  ── Add EQUITY account type (حقوق الملكية) separate from LIABILITY
+    //  ── Move Opening Balance Equity & Retained Earnings to EQUITY
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 35) {
+      // Fix EXPENSE accounts that have incorrect 'credit' balance_type
+      await db.execute(
+        "UPDATE accounts SET balance_type = 'debit' WHERE account_type = 'EXPENSE' AND balance_type != 'debit'",
+      );
+
+      // Recalculate balances for EXPENSE accounts from journal entries
+      final expenseAccounts = await db.query(
+        'accounts',
+        columns: ['id'],
+        where: "account_type = 'EXPENSE'",
+      );
+      for (final row in expenseAccounts) {
+        final accountId = row['id'] as int;
+        final txResult = await db.rawQuery(
+          'SELECT COALESCE(SUM(debit), 0) AS total_debit, COALESCE(SUM(credit), 0) AS total_credit FROM transactions WHERE account_id = ?',
+          [accountId],
+        );
+        final totalDebit = MoneyHelper.readMoney(txResult.first['total_debit']);
+        final totalCredit = MoneyHelper.readMoney(txResult.first['total_credit']);
+        // EXPENSE is debit-nature: balance = debit - credit
+        final correctBalance = totalDebit - totalCredit;
+        await db.update(
+          'accounts',
+          {'balance': MoneyHelper.toCents(correctBalance), 'updated_at': DateTime.now().toIso8601String()},
+          where: 'id = ?',
+          whereArgs: [accountId],
+        );
+      }
+
+      // Move Opening Balance Equity (code 2200/2201/2202) and
+      // Retained Earnings (code 2900/2901/2902) from LIABILITY to EQUITY
+      await db.execute(
+        "UPDATE accounts SET account_type = 'EQUITY' WHERE account_code IN ('2200','2201','2202','2900','2901','2902') AND account_type = 'LIABILITY'",
+      );
+
+      // Fix any existing EQUITY accounts that may have wrong balance_type
+      // EQUITY is credit-nature (like LIABILITY)
+      await db.execute(
+        "UPDATE accounts SET balance_type = 'credit' WHERE account_type = 'EQUITY' AND balance_type != 'credit'",
+      );
+
+      // Recalculate balances for migrated EQUITY accounts
+      final equityAccounts = await db.query(
+        'accounts',
+        columns: ['id'],
+        where: "account_type = 'EQUITY'",
+      );
+      for (final row in equityAccounts) {
+        final accountId = row['id'] as int;
+        final txResult = await db.rawQuery(
+          'SELECT COALESCE(SUM(debit), 0) AS total_debit, COALESCE(SUM(credit), 0) AS total_credit FROM transactions WHERE account_id = ?',
+          [accountId],
+        );
+        final totalDebit = MoneyHelper.readMoney(txResult.first['total_debit']);
+        final totalCredit = MoneyHelper.readMoney(txResult.first['total_credit']);
+        // EQUITY is credit-nature: balance = credit - debit
+        final correctBalance = totalCredit - totalDebit;
+        await db.update(
+          'accounts',
+          {'balance': MoneyHelper.toCents(correctBalance), 'updated_at': DateTime.now().toIso8601String()},
+          where: 'id = ?',
+          whereArgs: [accountId],
+        );
+      }
     }
   }
 

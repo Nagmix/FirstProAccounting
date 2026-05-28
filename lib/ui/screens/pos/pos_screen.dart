@@ -2182,11 +2182,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                             : currentBalance - amount;
                         await dbInstance.update(
                           'cash_boxes',
-                          {
+                          MoneyHelper.toCentsMap({
                             'balance': newBalance.abs(),
                             'balance_type': newBalance >= 0 ? 'credit' : 'debit',
                             'updated_at': now.toIso8601String(),
-                          },
+                          }, MoneyHelper.cashBoxMoneyFields),
                           where: 'id = ?',
                           whereArgs: [cashBoxId],
                         );

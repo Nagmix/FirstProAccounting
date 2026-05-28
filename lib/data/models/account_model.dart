@@ -1,6 +1,6 @@
 import '../../core/utils/money_helper.dart';
 
-enum AccountType { ASSET, LIABILITY, COST, REVENUE, EXPENSE }
+enum AccountType { ASSET, LIABILITY, EQUITY, COST, REVENUE, EXPENSE }
 
 class Account {
   final int? id;
@@ -47,6 +47,7 @@ class Account {
   /// - COST (تكاليف): debit nature (increase with debit)
   /// - EXPENSE (مصاريف): debit nature (increase with debit)
   /// - LIABILITY (خصوم): credit nature (increase with credit)
+  /// - EQUITY (حقوق ملكية): credit nature (increase with credit)
   /// - REVENUE (إيرادات): credit nature (increase with credit)
   String get effectiveBalanceType {
     if (balanceType != 'auto') return balanceType;
@@ -54,13 +55,14 @@ class Account {
             accountType == AccountType.COST ||
             accountType == AccountType.EXPENSE)
         ? 'debit'
-        : 'credit';
+        : 'credit'; // LIABILITY, EQUITY, REVENUE are credit-nature
   }
 
   String get _accountTypeString {
     switch (accountType) {
       case AccountType.ASSET: return 'ASSET';
       case AccountType.LIABILITY: return 'LIABILITY';
+      case AccountType.EQUITY: return 'EQUITY';
       case AccountType.COST: return 'COST';
       case AccountType.REVENUE: return 'REVENUE';
       case AccountType.EXPENSE: return 'EXPENSE';
@@ -70,6 +72,7 @@ class Account {
   static AccountType _accountTypeFromString(String value) {
     switch (value) {
       case 'LIABILITY': return AccountType.LIABILITY;
+      case 'EQUITY': return AccountType.EQUITY;
       case 'COST': return AccountType.COST;
       case 'REVENUE': return AccountType.REVENUE;
       case 'EXPENSE': return AccountType.EXPENSE;
@@ -81,6 +84,7 @@ class Account {
     switch (type) {
       case AccountType.ASSET: return 'الأصول';
       case AccountType.LIABILITY: return 'الخصوم';
+      case AccountType.EQUITY: return 'حقوق الملكية';
       case AccountType.COST: return 'التكاليف';
       case AccountType.REVENUE: return 'الإيرادات';
       case AccountType.EXPENSE: return 'المصاريف';

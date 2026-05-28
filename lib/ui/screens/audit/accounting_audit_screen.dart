@@ -418,6 +418,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     final typeNames = {
       'ASSET': 'الأصول',
       'LIABILITY': 'الخصوم',
+      'EQUITY': 'حقوق الملكية',
       'COST': 'التكاليف',
       'REVENUE': 'الإيرادات',
       'EXPENSE': 'المصاريف',
@@ -425,6 +426,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     final typeColors = {
       'ASSET': AppColors.accentBlue,
       'LIABILITY': AppColors.accentPink,
+      'EQUITY': AppColors.accentPurple,
       'COST': AppColors.accentOrange,
       'REVENUE': AppColors.accentGreen,
       'EXPENSE': AppColors.error,

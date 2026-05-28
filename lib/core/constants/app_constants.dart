@@ -11,7 +11,7 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 33;
+  static const int dbVersion = 35;
 
   // ── Locale & currency ─────────────────────────────────────────
   static const String currency = 'ر.ي';
@@ -45,6 +45,7 @@ class AppConstants {
   // ── Account types ─────────────────────────────────────────────
   static const String assetAccount = 'ASSET';
   static const String liabilityAccount = 'LIABILITY';
+  static const String equityAccount = 'EQUITY';
   static const String costAccount = 'COST';
   static const String revenueAccount = 'REVENUE';
   static const String expenseAccount = 'EXPENSE';
@@ -52,6 +53,7 @@ class AppConstants {
   // ── Account type Arabic names ─────────────────────────────────
   static const String assetAccountAr = 'الأصول';
   static const String liabilityAccountAr = 'الخصوم';
+  static const String equityAccountAr = 'حقوق الملكية';
   static const String costAccountAr = 'التكاليف';
   static const String revenueAccountAr = 'الإيرادات';
   static const String expenseAccountAr = 'المصاريف';

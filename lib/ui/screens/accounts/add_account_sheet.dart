@@ -36,6 +36,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   final _typeOptions = [
     (AccountType.ASSET, 'الأصول', Icons.business),
     (AccountType.LIABILITY, 'الخصوم', Icons.savings),
+    (AccountType.EQUITY, 'حقوق الملكية', Icons.account_balance),
     (AccountType.COST, 'التكاليف', Icons.south_west),
     (AccountType.REVENUE, 'الإيرادات', Icons.arrow_outward),
     (AccountType.EXPENSE, 'المصاريف', Icons.arrow_downward),
@@ -115,7 +116,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
       accountType: _selectedType,
       currency: _currency,
       balance: widget.existing?.balance ?? 0.0,
-      balanceType: widget.existing?.balanceType ?? (_selectedType == 'ASSET' || _selectedType == 'COST' ? 'debit' : 'credit'),
+      balanceType: widget.existing?.balanceType ?? (_selectedType == AccountType.ASSET || _selectedType == AccountType.COST || _selectedType == AccountType.EXPENSE ? 'debit' : 'credit'),
       linkedCashBoxId: _selectedCashBoxId,
       isSystem: widget.existing?.isSystem ?? false,
       isActive: widget.existing?.isActive ?? true,

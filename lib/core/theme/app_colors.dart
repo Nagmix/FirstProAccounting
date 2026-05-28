@@ -23,6 +23,7 @@ class AppColors {
   static const Color accentPink = Color(0xFFF56E98);
   static const Color accentOrange = Color(0xFFF1B440);
   static const Color accentGreen = Color(0xFF4CAF50);
+  static const Color accentPurple = Color(0xFF9C27B0);
 
   // ── Light theme surfaces ─────────────────────────────────────────
   static const Color background = Color(0xFFF2F3F8);

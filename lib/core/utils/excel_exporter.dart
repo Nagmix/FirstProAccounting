@@ -273,6 +273,8 @@ class ExcelExporter {
         return 'أصول';
       case 'LIABILITY':
         return 'خصوم';
+      case 'EQUITY':
+        return 'حقوق الملكية';
       case 'COST':
         return 'تكاليف';
       case 'REVENUE':
