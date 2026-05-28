@@ -7,6 +7,9 @@ import '../../../data/models/invoice_item_model.dart';
 /// A reusable card widget that displays a single [InvoiceItem] inside
 /// the invoice creation screen. Supports inline quantity editing and
 /// swipe-to-delete.
+///
+/// Modern professional design with gradient accents, rounded containers,
+/// and smooth animations — matching the invoice screen redesign.
 class InvoiceItemCard extends StatelessWidget {
   const InvoiceItemCard({
     super.key,
@@ -21,6 +24,9 @@ class InvoiceItemCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
 
+  static const Color _accentBlue = Color(0xFF4F6AF0);
+  static const Color _accentPurple = Color(0xFF7C3AED);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -33,83 +39,166 @@ class InvoiceItemCard extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: AppColors.error,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
-      ),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: InkWell(
-          onTap: onTap,
+          gradient: const LinearGradient(
+            colors: [AppColors.error, Color(0xFFEF4444)],
+            begin: Alignment.centerRight,
+            end: Alignment.centerLeft,
+          ),
           borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                // ── Product icon ──────────────────────────────────
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.inventory_2_outlined,
-                    color: AppColors.primary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // ── Name & price ──────────────────────────────────
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.productName,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
+            const SizedBox(width: 8),
+            Text('حذف', style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white, fontWeight: FontWeight.w700,
+            )),
+          ],
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? AppColors.darkBorder : AppColors.border.withValues(alpha: 0.5),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.08 : 0.03),
+              offset: const Offset(0, 1),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  // ── Product icon with gradient ──────────────────
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [_accentBlue, _accentPurple],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${CurrencyFormatter.formatValue(item.unitPrice)} × ${item.quantity.toStringAsFixed(item.quantity == item.quantity.truncate() ? 0 : 3)}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.textSecondary,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _accentBlue.withValues(alpha: 0.2),
+                          offset: const Offset(0, 2),
+                          blurRadius: 6,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ── Quantity stepper ───────────────────────────────
-                if (onQuantityChanged != null) ...[
-                  _QuantityStepper(
-                    quantity: item.quantity,
-                    onChanged: onQuantityChanged!,
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.inventory_2_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
-                ],
 
-                // ── Total ─────────────────────────────────────────
-                Text(
-                  CurrencyFormatter.format(item.totalPrice),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+                  // ── Name & price ──────────────────────────────────
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.productName,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Text(
+                              '${CurrencyFormatter.formatValue(item.unitPrice)} × ${item.quantity.toStringAsFixed(item.quantity == item.quantity.truncate() ? 0 : 3)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                            if (item.unitName != null && item.unitName!.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: _accentBlue.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  item.unitName!,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: _accentBlue,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(width: 8),
+
+                  // ── Quantity stepper ───────────────────────────────
+                  if (onQuantityChanged != null) ...[
+                    _QuantityStepper(
+                      quantity: item.quantity,
+                      onChanged: onQuantityChanged!,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+
+                  // ── Total ─────────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          _accentBlue.withValues(alpha: isDark ? 0.15 : 0.08),
+                          _accentPurple.withValues(alpha: isDark ? 0.08 : 0.04),
+                        ],
+                        begin: Alignment.centerRight,
+                        end: Alignment.centerLeft,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _accentBlue.withValues(alpha: 0.12)),
+                    ),
+                    child: Text(
+                      CurrencyFormatter.format(item.totalPrice),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: _accentBlue,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -119,16 +208,20 @@ class InvoiceItemCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  QUANTITY STEPPER (inline +/-)
+//  QUANTITY STEPPER (inline +/-) — Modern pill design
 // ═══════════════════════════════════════════════════════════════════════════
 class _QuantityStepper extends StatelessWidget {
   const _QuantityStepper({
     required this.quantity,
     required this.onChanged,
+    required this.isDark,
   });
 
   final double quantity;
   final ValueChanged<double> onChanged;
+  final bool isDark;
+
+  static const Color _accentBlue = Color(0xFF4F6AF0);
 
   @override
   Widget build(BuildContext context) {
@@ -136,28 +229,33 @@ class _QuantityStepper extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant.withValues(alpha: 0.6),
+        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.border.withValues(alpha: 0.5),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _stepButton(
-            icon: Icons.remove,
+            icon: Icons.remove_rounded,
             onTap: () => onChanged((quantity - 1).clamp(0.001, 99999)),
           ),
           Container(
-            constraints: const BoxConstraints(minWidth: 36),
+            constraints: const BoxConstraints(minWidth: 34),
             alignment: Alignment.center,
             child: Text(
               quantity.toStringAsFixed(quantity == quantity.truncate() ? 0 : 3),
               style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                color: _accentBlue,
               ),
             ),
           ),
           _stepButton(
-            icon: Icons.add,
+            icon: Icons.add_rounded,
             onTap: () => onChanged((quantity + 1).clamp(0.001, 99999)),
           ),
         ],
@@ -169,9 +267,14 @@ class _QuantityStepper extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: 18, color: AppColors.primary),
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: _accentBlue.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 16, color: _accentBlue),
       ),
     );
   }
