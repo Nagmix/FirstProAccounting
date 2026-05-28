@@ -310,7 +310,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                 height: 48,
                                 decoration: BoxDecoration(
                                   color: currency.isDefault
-                                      ? AppColors.primary.withValues(alpha: 0.12)
+                                      ? AppColors.primary.withOpacity(0.12)
                                       : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -347,7 +347,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                               horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
                                             color: currency.isDefault
-                                                ? AppColors.primary.withValues(alpha: 0.1)
+                                                ? AppColors.primary.withOpacity(0.1)
                                                 : AppColors.surfaceVariant,
                                             borderRadius: BorderRadius.circular(6),
                                           ),

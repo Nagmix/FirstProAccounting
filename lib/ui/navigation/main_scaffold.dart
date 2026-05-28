@@ -357,7 +357,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: item.color.withValues(alpha: 0.1),
+                                  color: item.color.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
@@ -682,7 +682,7 @@ class _MoreTile extends StatelessWidget {
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         elevation: 1,
-        shadowColor: isDark ? Colors.black26 : AppColors.primary.withValues(alpha: 0.06),
+        shadowColor: isDark ? Colors.black26 : AppColors.primary.withOpacity(0.06),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
@@ -694,7 +694,7 @@ class _MoreTile extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
+                    color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: color, size: 20),
@@ -767,7 +767,7 @@ class _QuickAddOption extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(icon, color: color, size: 24),

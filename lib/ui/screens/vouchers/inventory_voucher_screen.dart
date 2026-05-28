@@ -343,7 +343,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: AppColors.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Icon(Icons.inventory, size: 40, color: AppColors.primary),
@@ -407,7 +407,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.04),
+            color: isDark ? Colors.black.withOpacity(0.2) : AppColors.primary.withOpacity(0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -424,7 +424,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.brown.withValues(alpha: 0.1),
+                  color: Colors.brown.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.inventory, color: Colors.brown, size: 22),
@@ -441,7 +441,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.1),
+                            color: statusColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(statusAr, style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w700)),

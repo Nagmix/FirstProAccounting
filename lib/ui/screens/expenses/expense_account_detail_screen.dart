@@ -160,9 +160,9 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.06),
+        color: AppColors.error.withOpacity(0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
+        border: Border.all(color: AppColors.error.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +173,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.12),
+                  color: AppColors.error.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.account_balance_wallet, color: AppColors.error, size: 24),
@@ -197,7 +197,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.error.withValues(alpha: 0.1),
+                            color: AppColors.error.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -247,7 +247,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: (isCredit ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+                      color: (isCredit ? AppColors.success : AppColors.error).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -424,7 +424,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
+                  color: AppColors.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -457,7 +457,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (runningBalance >= 0 ? AppColors.primary : AppColors.error).withValues(alpha: 0.08),
+                  color: (runningBalance >= 0 ? AppColors.primary : AppColors.error).withOpacity(0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -501,7 +501,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.08),
+                          color: AppColors.error.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -534,7 +534,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.08),
+                          color: AppColors.success.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -578,7 +578,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.1),
+                color: AppColors.error.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(

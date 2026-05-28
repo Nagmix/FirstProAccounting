@@ -876,7 +876,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   color: Theme.of(context).scaffoldBackgroundColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: Colors.black.withOpacity(0.06),
                       blurRadius: 8,
                       offset: const Offset(0, -2),
                     ),
@@ -962,7 +962,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 child: Icon(
                   Icons.arrow_back_ios,
                   size: 14,
-                  color: isCompleted ? AppColors.success : AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: isCompleted ? AppColors.success : AppColors.textTertiary.withOpacity(0.4),
                 ),
               );
             }
@@ -984,7 +984,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   color: isActive
                       ? AppColors.primary
                       : isCompleted
-                          ? AppColors.success.withValues(alpha: 0.1)
+                          ? AppColors.success.withOpacity(0.1)
                           : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
@@ -1004,7 +1004,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                     else if (isActive)
                       Icon(_steps[i].icon, size: 14, color: Colors.white)
                     else
-                      Icon(_steps[i].icon, size: 14, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                      Icon(_steps[i].icon, size: 14, color: AppColors.textTertiary.withOpacity(0.5)),
                     const SizedBox(width: 4),
                     Text(
                       _steps[i].title,
@@ -1016,7 +1016,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                             : isCompleted
                                 ? AppColors.success
                                 : isFuture
-                                    ? AppColors.textTertiary.withValues(alpha: 0.5)
+                                    ? AppColors.textTertiary.withOpacity(0.5)
                                     : AppColors.textSecondary,
                       ),
                     ),
@@ -1067,10 +1067,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.06),
+                color: AppColors.primary.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.2),
+                  color: AppColors.primary.withOpacity(0.2),
                   style: BorderStyle.solid,
                 ),
               ),
@@ -1085,7 +1085,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                         errorBuilder: (_, __, ___) => Icon(
                           Icons.image,
                           size: 40,
-                          color: AppColors.primary.withValues(alpha: 0.4),
+                          color: AppColors.primary.withOpacity(0.4),
                         ),
                       ),
                     )
@@ -1094,12 +1094,12 @@ class _AddProductSheetState extends State<AddProductSheet> {
                       children: [
                         Icon(Icons.camera_alt,
                             size: 32,
-                            color: AppColors.primary.withValues(alpha: 0.5)),
+                            color: AppColors.primary.withOpacity(0.5)),
                         const SizedBox(height: 6),
                         Text('صورة الصنف',
                             style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.primary.withValues(alpha: 0.7))),
+                                color: AppColors.primary.withOpacity(0.7))),
                       ],
                     ),
             ),
@@ -1396,9 +1396,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
             padding: const EdgeInsets.all(10),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: AppColors.infoLight.withValues(alpha: 0.5),
+              color: AppColors.infoLight.withOpacity(0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+              border: Border.all(color: AppColors.info.withOpacity(0.2)),
             ),
             child: Row(
               children: [
@@ -1424,11 +1424,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
               child: Column(
                 children: [
                   Icon(Icons.add_circle_outline,
-                      size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
+                      size: 40, color: AppColors.textTertiary.withOpacity(0.4)),
                   const SizedBox(height: 8),
                   Text('لا توجد تحويلات',
                       style: TextStyle(
-                          color: AppColors.textTertiary.withValues(alpha: 0.6))),
+                          color: AppColors.textTertiary.withOpacity(0.6))),
                   const SizedBox(height: 4),
                   Text('اضغط "إضافة تحويل" لتحديد وحدة أكبر',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1495,7 +1495,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('وحدة بيع افتراضية',
@@ -1626,7 +1626,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           // Delete
           IconButton(
             icon: Icon(Icons.delete_outline,
-                size: 20, color: AppColors.error.withValues(alpha: 0.7)),
+                size: 20, color: AppColors.error.withOpacity(0.7)),
             onPressed: () =>
                 setState(() => _unitConversions.removeAt(index)),
           ),
@@ -1680,7 +1680,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
         suffixIcon: autoCost > 0
             ? Tooltip(
                 message: 'محسوب تلقائياً من سعر تكلفة وحدة الشراء',
-                child: Icon(Icons.auto_fix_high, size: 16, color: AppColors.success.withValues(alpha: 0.7)),
+                child: Icon(Icons.auto_fix_high, size: 16, color: AppColors.success.withOpacity(0.7)),
               )
             : null,
       ),
@@ -2127,9 +2127,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
           padding: const EdgeInsets.all(10),
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: AppColors.infoLight.withValues(alpha: 0.5),
+            color: AppColors.infoLight.withOpacity(0.5),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+            border: Border.all(color: AppColors.info.withOpacity(0.2)),
           ),
           child: Row(
             children: [
@@ -2154,11 +2154,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
               child: Column(
                 children: [
                   Icon(Icons.qr_code,
-                      size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
+                      size: 40, color: AppColors.textTertiary.withOpacity(0.4)),
                   const SizedBox(height: 8),
                   Text('لا توجد وحدات أخرى',
                       style: TextStyle(
-                          color: AppColors.textTertiary.withValues(alpha: 0.6))),
+                          color: AppColors.textTertiary.withOpacity(0.6))),
                   const SizedBox(height: 4),
                   Text('أضف وحدات أكبر في خطوة الوحدات أولاً',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2333,9 +2333,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
             padding: const EdgeInsets.all(10),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: AppColors.infoLight.withValues(alpha: 0.5),
+              color: AppColors.infoLight.withOpacity(0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
             ),
             child: Row(
               children: [
@@ -2464,9 +2464,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
             padding: const EdgeInsets.all(10),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: AppColors.infoLight.withValues(alpha: 0.5),
+              color: AppColors.infoLight.withOpacity(0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+              border: Border.all(color: AppColors.info.withOpacity(0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2706,7 +2706,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                   ? const Icon(Icons.check, color: AppColors.primary)
                                   : null,
                               selected: isSelected,
-                              selectedTileColor: AppColors.primary.withValues(alpha: 0.05),
+                              selectedTileColor: AppColors.primary.withOpacity(0.05),
                               onTap: () {
                                 onSelected(id);
                                 Navigator.of(dialogContext).pop();
@@ -2933,7 +2933,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               label: const Text('وحدة أساسية'),
                               selected: isBaseUnit,
                               onSelected: (v) => setDialogState(() => isBaseUnit = v),
-                              selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                              selectedColor: AppColors.primaryLight.withOpacity(0.2),
                             ),
                           ],
                         ),
@@ -3226,7 +3226,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                               decoration: BoxDecoration(
                                                 color: balanceType == 'credit'
                                                     ? AppColors.success
-                                                        .withValues(alpha: 0.1)
+                                                        .withOpacity(0.1)
                                                     : Colors.transparent,
                                                 borderRadius: const BorderRadius.only(
                                                   topRight: Radius.circular(9),
@@ -3256,7 +3256,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                               decoration: BoxDecoration(
                                                 color: balanceType == 'debit'
                                                     ? AppColors.error
-                                                        .withValues(alpha: 0.1)
+                                                        .withOpacity(0.1)
                                                     : Colors.transparent,
                                                 borderRadius: const BorderRadius.only(
                                                   topLeft: Radius.circular(9),
@@ -3332,7 +3332,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                     decoration: BoxDecoration(
                                       color: contactMethod == 'whatsapp'
                                           ? const Color(0xFF25D366)
-                                              .withValues(alpha: 0.1)
+                                              .withOpacity(0.1)
                                           : Colors.transparent,
                                       borderRadius: const BorderRadius.only(
                                         topRight: Radius.circular(9),
@@ -3373,7 +3373,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
                                       color: contactMethod == 'phone'
-                                          ? AppColors.primary.withValues(alpha: 0.1)
+                                          ? AppColors.primary.withOpacity(0.1)
                                           : Colors.transparent,
                                       borderRadius: const BorderRadius.only(
                                         topLeft: Radius.circular(9),

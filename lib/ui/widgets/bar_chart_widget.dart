@@ -155,7 +155,7 @@ class _BarChartWidgetState extends State<BarChartWidget>
                             Container(
                               height: barHeight.clamp(0.0, double.infinity),
                               decoration: BoxDecoration(
-                                color: widget.barColor.withValues(alpha: 0.85),
+                                color: widget.barColor.withOpacity(0.85),
                                 borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(6),
                                 ),

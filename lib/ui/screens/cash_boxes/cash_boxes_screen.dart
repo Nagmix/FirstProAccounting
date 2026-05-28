@@ -163,16 +163,16 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
                       margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
+                        color: AppColors.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             width: 48, height: 48,
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.15),
+                              color: AppColors.primary.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.account_balance_wallet, color: AppColors.primary),
@@ -257,8 +257,8 @@ class _CashBoxCard extends StatelessWidget {
                 width: 48, height: 48,
                 decoration: BoxDecoration(
                   color: cashBox.isBank
-                      ? AppColors.info.withValues(alpha: 0.12)
-                      : AppColors.secondaryDark.withValues(alpha: 0.12),
+                      ? AppColors.info.withOpacity(0.12)
+                      : AppColors.secondaryDark.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -279,8 +279,8 @@ class _CashBoxCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: cashBox.isBank
-                                ? AppColors.info.withValues(alpha: 0.1)
-                                : AppColors.secondaryDark.withValues(alpha: 0.1),
+                                ? AppColors.info.withOpacity(0.1)
+                                : AppColors.secondaryDark.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(cashBox.typeAr,

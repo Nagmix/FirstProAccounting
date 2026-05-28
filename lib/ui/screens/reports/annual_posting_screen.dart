@@ -105,9 +105,9 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
+                    color: AppColors.warning.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppColors.warning.withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,12 +241,12 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            netProfit >= 0 ? AppColors.success.withValues(alpha: 0.08) : AppColors.error.withValues(alpha: 0.08),
-            netProfit >= 0 ? AppColors.success.withValues(alpha: 0.03) : AppColors.error.withValues(alpha: 0.03),
+            netProfit >= 0 ? AppColors.success.withOpacity(0.08) : AppColors.error.withOpacity(0.08),
+            netProfit >= 0 ? AppColors.success.withOpacity(0.03) : AppColors.error.withOpacity(0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.2)),
+        border: Border.all(color: (netProfit >= 0 ? AppColors.success : AppColors.error).withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +260,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
               if (isClosed)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: AppColors.error.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -273,7 +273,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
               else
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -300,9 +300,9 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: (netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+              color: (netProfit >= 0 ? AppColors.success : AppColors.error).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: (netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.3)),
+              border: Border.all(color: (netProfit >= 0 ? AppColors.success : AppColors.error).withOpacity(0.3)),
             ),
             child: Column(
               children: [
@@ -343,15 +343,15 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
+        color: color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
+        border: Border.all(color: color.withOpacity(0.15)),
       ),
       child: Row(
         children: [
           Container(
             width: 36, height: 36,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(width: 12),
@@ -388,7 +388,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.calendar_today, size: 48, color: AppColors.textHint.withValues(alpha: 0.5)),
+                    Icon(Icons.calendar_today, size: 48, color: AppColors.textHint.withOpacity(0.5)),
                     const SizedBox(height: 8),
                     Text('لا توجد سنوات مالية مسجلة', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
                   ],
@@ -413,7 +413,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
                       Container(
                         width: 44, height: 44,
                         decoration: BoxDecoration(
-                          color: (isClosed ? AppColors.error : AppColors.success).withValues(alpha: 0.1),
+                          color: (isClosed ? AppColors.error : AppColors.success).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(isClosed ? Icons.lock : Icons.lock_open, color: isClosed ? AppColors.error : AppColors.success, size: 22),
@@ -430,7 +430,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: (isClosed ? AppColors.error : AppColors.success).withValues(alpha: 0.1),
+                                    color: (isClosed ? AppColors.error : AppColors.success).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(

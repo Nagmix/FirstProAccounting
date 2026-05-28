@@ -509,7 +509,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.08),
+                    color: AppColors.error.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -560,10 +560,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               child: Center(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
+                    color: AppColors.primary.withOpacity(0.08),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.3),
+                      color: AppColors.primary.withOpacity(0.3),
                     ),
                   ),
                   child: IconButton(
@@ -586,7 +586,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.08),
+                    color: AppColors.success.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -695,7 +695,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.08),
+                    color: AppColors.error.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -747,10 +747,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.1),
+                        color: AppColors.warning.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: AppColors.warning.withValues(alpha: 0.3),
+                          color: AppColors.warning.withOpacity(0.3),
                         ),
                       ),
                       child: Row(
@@ -778,7 +778,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.08),
+                      color: AppColors.success.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
@@ -854,7 +854,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: AppColors.primary.withOpacity(0.08),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -882,7 +882,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.08),
+                    color: AppColors.success.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -900,10 +900,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.04),
+                color: AppColors.success.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppColors.success.withValues(alpha: 0.2),
+                  color: AppColors.success.withOpacity(0.2),
                 ),
               ),
               child: Row(
@@ -958,9 +958,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
+        color: color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        border: Border.all(color: color.withOpacity(0.25)),
       ),
       child: Row(
         children: [
@@ -1201,10 +1201,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
 
     return Card(
       elevation: 2,
-      color: AppColors.primary.withValues(alpha: 0.03),
+      color: AppColors.primary.withOpacity(0.03),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+        side: BorderSide(color: AppColors.primary.withOpacity(0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1217,7 +1217,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
+                    color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -1331,7 +1331,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.06),
+                color: AppColors.success.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1377,7 +1377,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
       decoration: BoxDecoration(
-        color: rowColor?.withValues(alpha: 0.04),
+        color: rowColor?.withOpacity(0.04),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -1508,7 +1508,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
+                    color: AppColors.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -1543,7 +1543,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                color: AppColors.surfaceVariant.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -1645,11 +1645,11 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: (gainLossType == 'gain' ? AppColors.success : AppColors.error)
-                      .withValues(alpha: 0.08),
+                      .withOpacity(0.08),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: (gainLossType == 'gain' ? AppColors.success : AppColors.error)
-                        .withValues(alpha: 0.2),
+                        .withOpacity(0.2),
                   ),
                 ),
                 child: Row(

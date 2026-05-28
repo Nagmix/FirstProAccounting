@@ -95,8 +95,8 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 2,
         shadowColor: isLight
-            ? AppColors.primary.withValues(alpha: 0.08)
-            : Colors.black.withValues(alpha: 0.3),
+            ? AppColors.primary.withOpacity(0.08)
+            : Colors.black.withOpacity(0.3),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -140,7 +140,7 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor:
             isLight ? AppColors.surface : AppColors.darkSurface,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+        indicatorColor: AppColors.primary.withOpacity(0.12),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return textTheme.labelSmall?.copyWith(
@@ -285,7 +285,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor:
             isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
-        selectedColor: AppColors.primary.withValues(alpha: 0.12),
+        selectedColor: AppColors.primary.withOpacity(0.12),
         labelStyle: textTheme.bodySmall?.copyWith(
           fontWeight: FontWeight.w600,
         ),
@@ -382,7 +382,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.primary.withValues(alpha: 0.5);
+            return AppColors.primary.withOpacity(0.5);
           }
           return isLight ? AppColors.divider : AppColors.darkDivider;
         }),

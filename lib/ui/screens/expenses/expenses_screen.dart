@@ -133,7 +133,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 22),
@@ -146,7 +146,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     Text(
                       'إجمالي المصروفات',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Colors.white.withOpacity(0.85),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -193,12 +193,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Colors.white.withOpacity(0.15),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.9)),
+            Icon(icon, size: 16, color: Colors.white.withOpacity(0.9)),
             const SizedBox(width: 6),
             Expanded(
               child: Column(
@@ -254,7 +254,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.04),
+            color: isDark ? Colors.black.withOpacity(0.2) : AppColors.primary.withOpacity(0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -275,7 +275,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: currencyColor.withValues(alpha: 0.1),
+                      color: currencyColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -301,7 +301,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: currencyColor.withValues(alpha: 0.1),
+                                color: currencyColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -346,7 +346,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: balanceColor.withValues(alpha: 0.1),
+                          color: balanceColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -370,9 +370,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.06),
+                    color: AppColors.warning.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.15)),
+                    border: Border.all(color: AppColors.warning.withOpacity(0.15)),
                   ),
                   child: Row(
                     children: [
@@ -423,7 +423,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: AppColors.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(Icons.account_balance_wallet, size: 40, color: AppColors.primary),
@@ -586,7 +586,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 decoration: BoxDecoration(
                                   color: balanceType == 'credit'
-                                      ? AppColors.success.withValues(alpha: 0.08)
+                                      ? AppColors.success.withOpacity(0.08)
                                       : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
@@ -631,7 +631,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 decoration: BoxDecoration(
                                   color: balanceType == 'debit'
-                                      ? AppColors.error.withValues(alpha: 0.08)
+                                      ? AppColors.error.withOpacity(0.08)
                                       : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(

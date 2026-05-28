@@ -411,7 +411,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.06),
+              color: AppColors.primary.withOpacity(0.06),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -478,7 +478,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: _operationType == 'صرف'
-                          ? AppColors.error.withValues(alpha: 0.08)
+                          ? AppColors.error.withOpacity(0.08)
                           : context.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -524,7 +524,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: _operationType == 'قبض'
-                          ? AppColors.success.withValues(alpha: 0.08)
+                          ? AppColors.success.withOpacity(0.08)
                           : context.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -687,7 +687,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.surfaceColor,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
       ),
       child: SafeArea(
         top: false,

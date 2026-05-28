@@ -117,7 +117,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                             color: isDark ? AppColors.darkSurface : AppColors.surface,
                             borderRadius: BorderRadius.circular(14),
                             elevation: 1,
-                            shadowColor: isDark ? Colors.black26 : AppColors.primary.withValues(alpha: 0.06),
+                            shadowColor: isDark ? Colors.black26 : AppColors.primary.withOpacity(0.06),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(
@@ -129,7 +129,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                                         width: 42,
                                         height: 42,
                                         decoration: BoxDecoration(
-                                          color: isDraft ? AppColors.warning.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
+                                          color: isDraft ? AppColors.warning.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: Icon(
@@ -163,7 +163,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: isDraft ? AppColors.warning.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
+                                          color: isDraft ? AppColors.warning.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(

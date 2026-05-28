@@ -154,7 +154,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.inbox_outlined, size: 56, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                                  Icon(Icons.inbox_outlined, size: 56, color: AppColors.textTertiary.withOpacity(0.5)),
                                   const SizedBox(height: 12),
                                   Text(
                                     _filter == 'open'
@@ -197,7 +197,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
+            color: AppColors.primary.withOpacity(0.25),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -245,7 +245,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.25),
+              color: color.withOpacity(0.25),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: Colors.white, size: 22),
@@ -263,7 +263,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Colors.white.withOpacity(0.8),
               fontSize: 11,
             ),
             textAlign: TextAlign.center,
@@ -307,7 +307,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
             color: isActive ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             boxShadow: isActive
-                ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))]
+                ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))]
                 : null,
           ),
           child: Text(
@@ -363,12 +363,12 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isOpen
-              ? AppColors.success.withValues(alpha: 0.3)
+              ? AppColors.success.withOpacity(0.3)
               : AppColors.divider,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -394,8 +394,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                       height: 42,
                       decoration: BoxDecoration(
                         color: isOpen
-                            ? AppColors.success.withValues(alpha: 0.1)
-                            : AppColors.textTertiary.withValues(alpha: 0.1),
+                            ? AppColors.success.withOpacity(0.1)
+                            : AppColors.textTertiary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -444,7 +444,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: isOpen
-                                  ? AppColors.success.withValues(alpha: 0.08)
+                                  ? AppColors.success.withOpacity(0.08)
                                   : AppColors.surfaceVariant,
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -534,7 +534,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                               : difference > 0
                                   ? AppColors.info
                                   : AppColors.error)
-                          .withValues(alpha: 0.06),
+                          .withOpacity(0.06),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: (difference.abs() < 0.005
@@ -542,7 +542,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                                 : difference > 0
                                     ? AppColors.info
                                     : AppColors.error)
-                            .withValues(alpha: 0.2),
+                            .withOpacity(0.2),
                       ),
                     ),
                     child: Row(
@@ -623,8 +623,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isOpen
-            ? AppColors.success.withValues(alpha: 0.1)
-            : AppColors.textTertiary.withValues(alpha: 0.1),
+            ? AppColors.success.withOpacity(0.1)
+            : AppColors.textTertiary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -649,7 +649,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 3),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.05),
+          color: color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -744,8 +744,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                         height: 44,
                         decoration: BoxDecoration(
                           color: isOpen
-                              ? AppColors.success.withValues(alpha: 0.1)
-                              : AppColors.textTertiary.withValues(alpha: 0.1),
+                              ? AppColors.success.withOpacity(0.1)
+                              : AppColors.textTertiary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -858,9 +858,9 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.04),
+                      color: AppColors.primary.withOpacity(0.04),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.15)),
                     ),
                     child: Column(
                       children: [
@@ -929,9 +929,9 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.04),
+                        color: AppColors.error.withOpacity(0.04),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
+                        border: Border.all(color: AppColors.error.withOpacity(0.15)),
                       ),
                       child: Column(
                         children: [
@@ -1074,7 +1074,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: (isReturn ? AppColors.error : AppColors.success).withValues(alpha: 0.1),
+              color: (isReturn ? AppColors.error : AppColors.success).withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -1189,7 +1189,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.1),
+                          color: AppColors.error.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.lock_outline, color: AppColors.error),
@@ -1212,9 +1212,9 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.04),
+                      color: AppColors.primary.withOpacity(0.04),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.15)),
                     ),
                     child: Column(
                       children: [

@@ -231,7 +231,7 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
+                                color: AppColors.primary.withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -344,7 +344,7 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                   return ListTile(
                                     dense: true,
                                     selected: isSelected,
-                                    selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                                    selectedTileColor: AppColors.primary.withOpacity(0.08),
                                     leading: Icon(
                                       isSelected ? Icons.check_circle : Icons.circle_outlined,
                                       color: isSelected ? AppColors.primary : AppColors.textHint,
@@ -521,7 +521,7 @@ class _TransferCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.info.withValues(alpha: 0.1),
+                color: AppColors.info.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.swap_horiz, color: AppColors.info, size: 22),

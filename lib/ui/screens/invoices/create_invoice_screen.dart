@@ -340,7 +340,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           gradient: _primaryGradient,
           boxShadow: [
             BoxShadow(
-              color: _accentBlue.withValues(alpha: 0.25),
+              color: _accentBlue.withOpacity(0.25),
               offset: const Offset(0, 4),
               blurRadius: 16,
             ),
@@ -354,7 +354,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           icon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
@@ -367,7 +367,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           Container(
             width: 32, height: 32,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -391,7 +391,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text('مرتجع',
@@ -406,7 +406,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           icon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.more_horiz, size: 20, color: Colors.white),
@@ -442,12 +442,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           margin: const EdgeInsets.only(left: 8, top: 12, bottom: 12, right: 4),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.white.withValues(alpha: 0.25), Colors.white.withValues(alpha: 0.1)],
+              colors: [Colors.white.withOpacity(0.25), Colors.white.withOpacity(0.1)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
           ),
           child: Material(
             color: Colors.transparent,
@@ -478,7 +478,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         Container(
           width: 30, height: 30,
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -495,16 +495,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.08),
+        color: AppColors.warning.withOpacity(0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+        border: Border.all(color: AppColors.warning.withOpacity(0.25)),
       ),
       child: Row(
         children: [
           Container(
             width: 32, height: 32,
             decoration: BoxDecoration(
-              color: AppColors.warning.withValues(alpha: 0.12),
+              color: AppColors.warning.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 18),
@@ -533,7 +533,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
+            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -586,7 +586,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _accentBlue.withValues(alpha: 0.06),
+                  color: _accentBlue.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -612,19 +612,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.accentOrange.withValues(alpha: 0.08), AppColors.accentOrange.withValues(alpha: 0.03)],
+                  colors: [AppColors.accentOrange.withOpacity(0.08), AppColors.accentOrange.withOpacity(0.03)],
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.accentOrange.withValues(alpha: 0.2)),
+                border: Border.all(color: AppColors.accentOrange.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
                   Container(
                     width: 26, height: 26,
                     decoration: BoxDecoration(
-                      color: AppColors.accentOrange.withValues(alpha: 0.12),
+                      color: AppColors.accentOrange.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.info_outline_rounded, color: AppColors.accentOrange, size: 14),
@@ -693,7 +693,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
       ),
       items: items,
       onChanged: onChanged,
@@ -711,8 +711,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
         decoration: BoxDecoration(
           color: _isReturn
-              ? AppColors.error.withValues(alpha: isDark ? 0.12 : 0.06)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3)),
+              ? AppColors.error.withOpacity(isDark ? 0.12 : 0.06)
+              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _isReturn ? AppColors.error : (isDark ? AppColors.darkBorder : AppColors.border),
@@ -748,7 +748,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.5),
+        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.5),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -800,14 +800,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? color.withValues(alpha: isDark ? 0.2 : 0.1)
+              ? color.withOpacity(isDark ? 0.2 : 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
           border: isSelected
-              ? Border.all(color: color.withValues(alpha: 0.3), width: 1)
+              ? Border.all(color: color.withOpacity(0.3), width: 1)
               : null,
           boxShadow: isSelected
-              ? [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: color.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
               : null,
         ),
         child: Row(
@@ -849,12 +849,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: _originalInvoiceId != null
-              ? AppColors.error.withValues(alpha: isDark ? 0.08 : 0.04)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3)),
+              ? AppColors.error.withOpacity(isDark ? 0.08 : 0.04)
+              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _originalInvoiceId != null
-                ? AppColors.error.withValues(alpha: 0.4)
+                ? AppColors.error.withOpacity(0.4)
                 : (isDark ? AppColors.darkBorder : AppColors.border),
             width: _originalInvoiceId != null ? 1.5 : 1,
           ),
@@ -864,7 +864,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Container(
               width: 28, height: 28,
               decoration: BoxDecoration(
-                color: (_originalInvoiceId != null ? AppColors.error : AppColors.textHint).withValues(alpha: 0.1),
+                color: (_originalInvoiceId != null ? AppColors.error : AppColors.textHint).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -892,7 +892,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.1),
+                    color: AppColors.error.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.close_rounded, size: 14, color: AppColors.error),
@@ -931,7 +931,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color: _accentBlue.withValues(alpha: 0.1),
+                  color: _accentBlue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.link_rounded, color: _accentBlue, size: 18),
@@ -951,10 +951,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         Container(
                           width: 60, height: 60,
                           decoration: BoxDecoration(
-                            color: _accentBlue.withValues(alpha: 0.06),
+                            color: _accentBlue.withOpacity(0.06),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.receipt_long_rounded, size: 28, color: _accentBlue.withValues(alpha: 0.4)),
+                          child: Icon(Icons.receipt_long_rounded, size: 28, color: _accentBlue.withOpacity(0.4)),
                         ),
                         const SizedBox(height: 12),
                         Text('لا توجد فواتير أصلية', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
@@ -978,11 +978,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       return ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         selected: isSelected,
-                        selectedTileColor: _accentBlue.withValues(alpha: 0.06),
+                        selectedTileColor: _accentBlue.withOpacity(0.06),
                         leading: Container(
                           width: 34, height: 34,
                           decoration: BoxDecoration(
-                            color: (isSelected ? _accentBlue : AppColors.textSecondary).withValues(alpha: 0.1),
+                            color: (isSelected ? _accentBlue : AppColors.textSecondary).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -1006,7 +1006,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                             ? Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: _accentBlue.withValues(alpha: 0.1),
+                                  color: _accentBlue.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(Icons.check_rounded, color: _accentBlue, size: 16),
@@ -1071,7 +1071,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: selected
-                  ? m.$4.withValues(alpha: isDark ? 0.18 : 0.08)
+                  ? m.$4.withOpacity(isDark ? 0.18 : 0.08)
                   : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
@@ -1079,7 +1079,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 width: selected ? 1.5 : 1,
               ),
               boxShadow: selected
-                  ? [BoxShadow(color: m.$4.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))]
+                  ? [BoxShadow(color: m.$4.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 2))]
                   : null,
             ),
             child: Row(
@@ -1110,12 +1110,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.accentGreen.withValues(alpha: 0.06), AppColors.accentGreen.withValues(alpha: 0.02)],
+          colors: [AppColors.accentGreen.withOpacity(0.06), AppColors.accentGreen.withOpacity(0.02)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.accentGreen.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.accentGreen.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1132,7 +1132,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.accentGreen.withValues(alpha: 0.3)),
+                borderSide: BorderSide(color: AppColors.accentGreen.withOpacity(0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1160,12 +1160,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [purpleColor.withValues(alpha: 0.06), purpleColor.withValues(alpha: 0.02)],
+          colors: [purpleColor.withOpacity(0.06), purpleColor.withOpacity(0.02)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: purpleColor.withValues(alpha: 0.2)),
+        border: Border.all(color: purpleColor.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1182,7 +1182,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor.withValues(alpha: 0.3)),
+                borderSide: BorderSide(color: purpleColor.withOpacity(0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1210,7 +1210,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor.withValues(alpha: 0.3)),
+                borderSide: BorderSide(color: purpleColor.withOpacity(0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1266,7 +1266,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _accentBlue.withValues(alpha: 0.3)),
+                  border: Border.all(color: _accentBlue.withOpacity(0.3)),
                 ),
                 child: Material(
                   color: Colors.transparent,
@@ -1295,7 +1295,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _accentBlue.withValues(alpha: 0.3)),
+                  border: Border.all(color: _accentBlue.withOpacity(0.3)),
                 ),
                 child: Material(
                   color: Colors.transparent,
@@ -1373,7 +1373,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   ),
                   disabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.3)),
+                    borderSide: BorderSide(color: AppColors.border.withOpacity(0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1382,7 +1382,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: _autoPay,
                   fillColor: _autoPay
-                      ? (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant).withValues(alpha: 0.5)
+                      ? (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant).withOpacity(0.5)
                       : null,
                 ),
                 onChanged: (_) => setState(() {}),
@@ -1419,7 +1419,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 1))],
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 1))],
                         ),
                       ),
                     ),
@@ -1442,13 +1442,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: _remaining > 0.005
-                  ? AppColors.error.withValues(alpha: 0.06)
-                  : AppColors.success.withValues(alpha: 0.06),
+                  ? AppColors.error.withOpacity(0.06)
+                  : AppColors.success.withOpacity(0.06),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: _remaining > 0.005
-                    ? AppColors.error.withValues(alpha: 0.2)
-                    : AppColors.success.withValues(alpha: 0.2),
+                    ? AppColors.error.withOpacity(0.2)
+                    : AppColors.success.withOpacity(0.2),
               ),
             ),
             child: Row(
@@ -1490,7 +1490,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
+            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -1506,7 +1506,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 ? Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.08),
+                      color: AppColors.error.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text('مطلوب', style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.w700)),
@@ -1520,12 +1520,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: _showEntityDropdown
                       ? _accentBlue
-                      : (_selectedEntityId != null ? _accentBlue.withValues(alpha: 0.3) : (isDark ? AppColors.darkBorder : AppColors.border)),
+                      : (_selectedEntityId != null ? _accentBlue.withOpacity(0.3) : (isDark ? AppColors.darkBorder : AppColors.border)),
                   width: _showEntityDropdown ? 1.5 : 1,
                 ),
               ),
@@ -1554,7 +1554,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.08),
+                          color: AppColors.error.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.close_rounded, size: 14, color: AppColors.error),
@@ -1573,9 +1573,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _accentBlue.withValues(alpha: 0.2)),
+                border: Border.all(color: _accentBlue.withOpacity(0.2)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
+                  BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
@@ -1601,7 +1601,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
                       ),
                       onChanged: _filterEntities,
                     ),
@@ -1664,14 +1664,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            color: isSelected ? _accentBlue.withValues(alpha: 0.06) : null,
+                            color: isSelected ? _accentBlue.withOpacity(0.06) : null,
                             child: Row(
                               children: [
                                 // Avatar circle for entity
                                 Container(
                                   width: 32, height: 32,
                                   decoration: BoxDecoration(
-                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withValues(alpha: 0.1),
+                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Icon(
@@ -1693,7 +1693,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: (bt == 'credit' ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
+                                      color: (bt == 'credit' ? AppColors.success : AppColors.error).withOpacity(0.08),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -1710,7 +1710,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withValues(alpha: 0.1),
+                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -1776,7 +1776,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: (isCustomer ? const Color(0xFF22C55E) : const Color(0xFF3B82F6)).withValues(alpha: 0.25),
+            color: (isCustomer ? const Color(0xFF22C55E) : const Color(0xFF3B82F6)).withOpacity(0.25),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1829,7 +1829,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
+            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -1856,7 +1856,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Container(
               padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isDark ? AppColors.darkBorder : AppColors.border,
@@ -1869,10 +1869,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     Container(
                       width: 56, height: 56,
                       decoration: BoxDecoration(
-                        color: _accentBlue.withValues(alpha: 0.06),
+                        color: _accentBlue.withOpacity(0.06),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.shopping_cart_outlined, size: 28, color: _accentBlue.withValues(alpha: 0.4)),
+                      child: Icon(Icons.shopping_cart_outlined, size: 28, color: _accentBlue.withOpacity(0.4)),
                     ),
                     const SizedBox(height: 10),
                     Text('لم يتم إضافة أصناف بعد',
@@ -1908,7 +1908,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _accentBlue.withValues(alpha: 0.3)),
+                border: Border.all(color: _accentBlue.withOpacity(0.3)),
               ),
               child: Material(
                 color: Colors.transparent,
@@ -1923,7 +1923,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         Container(
                           width: 24, height: 24,
                           decoration: BoxDecoration(
-                            color: _accentBlue.withValues(alpha: 0.1),
+                            color: _accentBlue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(7),
                           ),
                           child: const Icon(Icons.add_rounded, size: 16, color: _accentBlue),
@@ -1956,7 +1956,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
+            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -1971,8 +1971,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  _accentBlue.withValues(alpha: isDark ? 0.15 : 0.08),
-                  _accentPurple.withValues(alpha: isDark ? 0.08 : 0.03),
+                  _accentBlue.withOpacity(isDark ? 0.15 : 0.08),
+                  _accentPurple.withOpacity(isDark ? 0.08 : 0.03),
                 ],
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
@@ -2041,7 +2041,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                             borderSide: const BorderSide(color: _accentBlue, width: 1.5),
                           ),
                           filled: true,
-                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
                         ),
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                         onChanged: (_) {
@@ -2090,7 +2090,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                             borderSide: const BorderSide(color: _accentBlue, width: 1.5),
                           ),
                           filled: true,
-                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
                         ),
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                         onChanged: (_) {
@@ -2107,7 +2107,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   height: 1,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.transparent, _accentBlue.withValues(alpha: 0.2), Colors.transparent],
+                      colors: [Colors.transparent, _accentBlue.withOpacity(0.2), Colors.transparent],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
@@ -2120,14 +2120,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        _accentBlue.withValues(alpha: isDark ? 0.12 : 0.06),
-                        _accentPurple.withValues(alpha: isDark ? 0.06 : 0.02),
+                        _accentBlue.withOpacity(isDark ? 0.12 : 0.06),
+                        _accentPurple.withOpacity(isDark ? 0.06 : 0.02),
                       ],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _accentBlue.withValues(alpha: 0.15)),
+                    border: Border.all(color: _accentBlue.withOpacity(0.15)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2150,9 +2150,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.info.withValues(alpha: 0.06),
+                      color: AppColors.info.withOpacity(0.06),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                      border: Border.all(color: AppColors.info.withOpacity(0.2)),
                     ),
                     child: Column(
                       children: [
@@ -2196,7 +2196,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     filled: true,
-                    fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                    fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
                   ),
                 ),
               ],

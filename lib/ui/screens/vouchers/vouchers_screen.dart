@@ -251,7 +251,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                 children: [
                   Container(
                     width: 44, height: 44,
-                    decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
                     child: Icon(_getVoucherTypeIcon(type), color: typeColor, size: 22),
                   ),
                   const SizedBox(width: 12),
@@ -263,7 +263,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                         const SizedBox(height: 2),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                          decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
                           child: Text(typeAr, style: theme.textTheme.labelSmall?.copyWith(color: typeColor, fontWeight: FontWeight.w700)),
                         ),
                       ],
@@ -325,7 +325,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.darkSurface : AppColors.surface,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.divider.withValues(alpha: 0.3)),
+                          border: Border.all(color: AppColors.divider.withOpacity(0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,7 +491,7 @@ class _VouchersScreenState extends State<VouchersScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: AppColors.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Icon(Icons.receipt_long, size: 40, color: AppColors.primary),
@@ -544,7 +544,7 @@ class _VouchersScreenState extends State<VouchersScreen>
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.04),
+            color: isDark ? Colors.black.withOpacity(0.2) : AppColors.primary.withOpacity(0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -562,7 +562,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: typeColor.withValues(alpha: 0.1),
+                  color: typeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(typeIcon, color: typeColor, size: 22),
@@ -585,7 +585,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: typeColor.withValues(alpha: 0.1),
+                            color: typeColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

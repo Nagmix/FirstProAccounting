@@ -67,7 +67,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Icon(Icons.qr_code, size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
+          Icon(Icons.qr_code, size: 64, color: AppColors.primary.withOpacity(0.3)),
           const SizedBox(height: 20),
           TextField(
             controller: _manualController,

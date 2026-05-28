@@ -510,7 +510,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
+                  color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   border: isSelected ? Border.all(color: color, width: 2) : null,
                 ),
@@ -609,7 +609,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
+            color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: isSelected ? Border.all(color: AppColors.primary, width: 2) : null,
           ),
@@ -762,13 +762,13 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isBalanced
-            ? AppColors.success.withValues(alpha: 0.06)
-            : AppColors.error.withValues(alpha: 0.06),
+            ? AppColors.success.withOpacity(0.06)
+            : AppColors.error.withOpacity(0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isBalanced
-              ? AppColors.success.withValues(alpha: 0.2)
-              : AppColors.error.withValues(alpha: 0.2),
+              ? AppColors.success.withOpacity(0.2)
+              : AppColors.error.withOpacity(0.2),
         ),
       ),
       child: Column(

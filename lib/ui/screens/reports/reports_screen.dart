@@ -1315,9 +1315,9 @@ class _ReportsScreenState extends State<ReportsScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: AppColors.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -1474,9 +1474,9 @@ class _ReportsScreenState extends State<ReportsScreen>
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: AppColors.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -1484,7 +1484,7 @@ class _ReportsScreenState extends State<ReportsScreen>
           isDense: true,
           isExpanded: true,
           icon: const Icon(Icons.arrow_drop_down, size: 16),
-          hint: Text(hint, style: TextStyle(fontSize: 11, color: AppColors.primary.withValues(alpha: 0.6))),
+          hint: Text(hint, style: TextStyle(fontSize: 11, color: AppColors.primary.withOpacity(0.6))),
           style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
           items: items,
           onChanged: onChanged,
@@ -1534,7 +1534,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         indicatorColor: AppColors.secondary,
         indicatorWeight: 3,
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+        unselectedLabelColor: Colors.white.withOpacity(0.6),
         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
         tabAlignment: TabAlignment.start,
@@ -1610,7 +1610,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildReportCard(ThemeData theme, bool isDark, _ReportItem item, bool isSelected) {
     final bgColor = isSelected
-        ? item.color.withValues(alpha: isDark ? 0.25 : 0.1)
+        ? item.color.withOpacity(isDark ? 0.25 : 0.1)
         : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant);
     final borderColor = isSelected ? item.color : (isDark ? AppColors.darkBorder : AppColors.border);
     final iconColor = isSelected ? item.color : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary);
@@ -1625,7 +1625,7 @@ class _ReportsScreenState extends State<ReportsScreen>
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
           boxShadow: isSelected
-              ? [BoxShadow(color: item.color.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: item.color.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))]
               : null,
         ),
         padding: const EdgeInsets.all(12),
@@ -1768,7 +1768,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             child: ChoiceChip(
               label: Text(p.$2),
               selected: isSelected,
-              selectedColor: AppColors.primary.withValues(alpha: 0.2),
+              selectedColor: AppColors.primary.withOpacity(0.2),
               backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
               side: BorderSide(
                 color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.border),
@@ -1850,9 +1850,9 @@ class _ReportsScreenState extends State<ReportsScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
+          color: AppColors.primary.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1967,10 +1967,10 @@ class _ReportsScreenState extends State<ReportsScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
+                color: color.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 40, color: color.withValues(alpha: 0.5)),
+              child: Icon(icon, size: 40, color: color.withOpacity(0.5)),
             ),
             const SizedBox(height: 16),
             Text(title, style: TextStyle(
@@ -1978,7 +1978,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             )),
             const SizedBox(height: 4),
             Text(subtitle, style: TextStyle(
-              fontSize: 13, color: color.withValues(alpha: 0.6),
+              fontSize: 13, color: color.withOpacity(0.6),
             ), textAlign: TextAlign.center),
           ],
         ),
@@ -2025,7 +2025,7 @@ class _ReportsScreenState extends State<ReportsScreen>
           width: width,
           height: height,
           decoration: BoxDecoration(
-            color: base.withValues(alpha: 0.3 + value * 0.4),
+            color: base.withOpacity(0.3 + value * 0.4),
             borderRadius: BorderRadius.circular(8),
           ),
         );
@@ -2078,8 +2078,8 @@ class _ReportsScreenState extends State<ReportsScreen>
       cardIcon = Icons.analytics_outlined;
     }
 
-    final bgColor = cardColor.withValues(alpha: isDark ? 0.2 : 0.08);
-    final borderColor = cardColor.withValues(alpha: isDark ? 0.4 : 0.3);
+    final bgColor = cardColor.withOpacity(isDark ? 0.2 : 0.08);
+    final borderColor = cardColor.withOpacity(isDark ? 0.4 : 0.3);
 
     return Container(
       width: 150,
@@ -2214,7 +2214,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             sortColumnIndex: _sortColumnIndex,
             sortAscending: _sortAscending,
             headingRowColor: WidgetStateProperty.all(
-              AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
+              AppColors.primary.withOpacity(isDark ? 0.15 : 0.08),
             ),
             headingTextStyle: theme.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 11,
@@ -2333,7 +2333,7 @@ class _ReportsScreenState extends State<ReportsScreen>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
+              color: AppColors.primary.withOpacity(0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

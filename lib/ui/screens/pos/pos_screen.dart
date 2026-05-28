@@ -480,7 +480,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildShiftOverlay() {
     return Container(
-      color: Colors.black.withValues(alpha: 0.65),
+      color: Colors.black.withOpacity(0.65),
       child: Center(
         child: Card(
           margin: const EdgeInsets.symmetric(horizontal: 28),
@@ -495,7 +495,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   width: 88,
                   height: 88,
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.12),
+                    color: AppColors.warning.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -561,15 +561,15 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.success.withValues(alpha: 0.06),
-            AppColors.success.withValues(alpha: 0.12),
+            AppColors.success.withOpacity(0.06),
+            AppColors.success.withOpacity(0.12),
           ],
           begin: Alignment.centerRight,
           end: Alignment.centerLeft,
         ),
         border: Border(
           bottom: BorderSide(
-            color: AppColors.success.withValues(alpha: 0.25),
+            color: AppColors.success.withOpacity(0.25),
           ),
         ),
       ),
@@ -588,7 +588,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.success.withValues(alpha: 0.5),
+                      color: AppColors.success.withOpacity(0.5),
                       blurRadius: 6,
                       spreadRadius: 1,
                     ),
@@ -707,7 +707,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          border: Border.all(color: color.withValues(alpha: 0.4)),
+          border: Border.all(color: color.withOpacity(0.4)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -799,7 +799,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               label: const Text('الكل'),
               selected: isSelected,
               onSelected: (_) => setState(() => _selectedCategoryId = null),
-              selectedColor: AppColors.primary.withValues(alpha: 0.15),
+              selectedColor: AppColors.primary.withOpacity(0.15),
               checkmarkColor: AppColors.primary,
             );
           }
@@ -809,7 +809,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             label: Text(cat['name'] as String),
             selected: isSelected,
             onSelected: (_) => setState(() => _selectedCategoryId = cat['id'] as int?),
-            selectedColor: AppColors.primary.withValues(alpha: 0.15),
+            selectedColor: AppColors.primary.withOpacity(0.15),
             checkmarkColor: AppColors.primary,
           );
         },
@@ -929,7 +929,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
+                  color: Colors.black.withOpacity(0.12),
                   blurRadius: 16,
                   offset: const Offset(0, -4),
                 ),
@@ -1037,7 +1037,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -1082,7 +1082,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+          side: BorderSide(color: AppColors.border.withOpacity(0.5)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1135,7 +1135,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1247,7 +1247,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             }
           }),
           style: OutlinedButton.styleFrom(
-            backgroundColor: selected ? AppColors.primary.withValues(alpha: 0.1) : null,
+            backgroundColor: selected ? AppColors.primary.withOpacity(0.1) : null,
             side: BorderSide(
               color: selected ? AppColors.primary : AppColors.border,
               width: selected ? 2 : 1,
@@ -1288,9 +1288,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.info.withValues(alpha: 0.4)),
+            border: Border.all(color: AppColors.info.withOpacity(0.4)),
             borderRadius: BorderRadius.circular(10),
-            color: AppColors.info.withValues(alpha: 0.05),
+            color: AppColors.info.withOpacity(0.05),
           ),
           child: Row(
             children: [
@@ -1320,9 +1320,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4)),
+          border: Border.all(color: AppColors.secondary.withOpacity(0.4)),
           borderRadius: BorderRadius.circular(10),
-          color: AppColors.secondary.withValues(alpha: 0.04),
+          color: AppColors.secondary.withOpacity(0.04),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1399,9 +1399,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.info.withValues(alpha: 0.4)),
+          border: Border.all(color: AppColors.info.withOpacity(0.4)),
           borderRadius: BorderRadius.circular(10),
-          color: AppColors.info.withValues(alpha: 0.04),
+          color: AppColors.info.withOpacity(0.04),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1519,9 +1519,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.04),
+          color: AppColors.primary.withOpacity(0.04),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+          border: Border.all(color: AppColors.primary.withOpacity(0.15)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1873,7 +1873,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.12),
+                        color: AppColors.success.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.lock_open, color: AppColors.success, size: 24),
@@ -2099,7 +2099,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: (isCashIn ? AppColors.success : AppColors.error).withValues(alpha: 0.12),
+                      color: (isCashIn ? AppColors.success : AppColors.error).withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -2353,7 +2353,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.info.withValues(alpha: 0.12),
+                      color: AppColors.info.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.bar_chart, color: AppColors.info, size: 24),
@@ -2379,9 +2379,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.06),
+                  color: AppColors.primary.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                 ),
                 child: Column(
                   children: [
@@ -2465,7 +2465,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.12),
+                        color: AppColors.error.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.logout, color: AppColors.error, size: 24),
@@ -2495,9 +2495,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.06),
+                    color: AppColors.primary.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                   ),
                   child: _reportRow('المتوقع في الصندوق', CurrencyFormatter.format(expectedAmount),
                       valueColor: AppColors.primary, isBold: true),
@@ -2749,7 +2749,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: isSelected
-                                ? AppColors.primary.withValues(alpha: 0.15)
+                                ? AppColors.primary.withOpacity(0.15)
                                 : AppColors.surfaceVariant,
                             child: Icon(
                               isSelected ? Icons.check : Icons.person,
@@ -3519,7 +3519,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       onTap: () {}, // Absorb background taps – do nothing
       behavior: HitTestBehavior.opaque,
       child: Container(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: Colors.black.withOpacity(0.55),
         child: Center(
           child: Card(
             margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -3606,7 +3606,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       onTap: () {}, // Absorb background taps – do nothing
       behavior: HitTestBehavior.opaque,
       child: Container(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: Colors.black.withOpacity(0.55),
         child: Center(
           child: Card(
             margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -3725,7 +3725,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
+                      color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
@@ -3743,7 +3743,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.accentBlue.withValues(alpha: 0.1),
+                      color: AppColors.accentBlue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),
@@ -3927,7 +3927,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 final total = order.items.fold(0.0, (s, i) => s + i.total);
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.secondary.withValues(alpha: 0.15),
+                    backgroundColor: AppColors.secondary.withOpacity(0.15),
                     child: Text('${idx + 1}'),
                   ),
                   title: Text(
@@ -4171,7 +4171,7 @@ class _ProductCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
+                  color: AppColors.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(

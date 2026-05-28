@@ -332,7 +332,7 @@ class _CustomerCard extends StatelessWidget {
               // ── Avatar ───────────────────────────────────────
               CircleAvatar(
                 radius: 26,
-                backgroundColor: avatarColor.withValues(alpha: 0.15),
+                backgroundColor: avatarColor.withOpacity(0.15),
                 child: Text(
                   customer.name.isNotEmpty ? customer.name[0] : '?',
                   style: theme.textTheme.titleMedium?.copyWith(

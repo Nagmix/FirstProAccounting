@@ -405,10 +405,10 @@ class _MonthlyBarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paintSales = Paint()..color = AppColors.accentBlue.withValues(alpha: 0.85);
-    final paintPurchases = Paint()..color = AppColors.accentPink.withValues(alpha: 0.85);
+    final paintSales = Paint()..color = AppColors.accentBlue.withOpacity(0.85);
+    final paintPurchases = Paint()..color = AppColors.accentPink.withOpacity(0.85);
     final gridPaint = Paint()
-      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withValues(alpha: 0.5)
+      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withOpacity(0.5)
       ..strokeWidth = 0.5;
     final textPainter = TextPainter(textDirection: TextDirection.rtl);
 
@@ -665,7 +665,7 @@ class _LineChartPainter extends CustomPainter {
     final chartH = size.height - topPad - bottomPad;
 
     final gridPaint = Paint()
-      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withValues(alpha: 0.5)
+      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withOpacity(0.5)
       ..strokeWidth = 0.5;
 
     final textPainter = TextPainter(textDirection: TextDirection.rtl);
@@ -734,8 +734,8 @@ class _LineChartPainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.primary.withValues(alpha: 0.25),
-            AppColors.primary.withValues(alpha: 0.02),
+            AppColors.primary.withOpacity(0.25),
+            AppColors.primary.withOpacity(0.02),
           ],
         ).createShader(Rect.fromLTWH(leftPad, topPad, chartW, chartH));
       canvas.drawPath(fillPath, fillPaint);
@@ -897,7 +897,7 @@ class _HorizontalBarPainter extends CustomPainter {
           Rect.fromLTWH(leftPad, y, barW, barH),
           const Radius.circular(4),
         );
-        final paint = Paint()..color = color.withValues(alpha: 0.8);
+        final paint = Paint()..color = color.withOpacity(0.8);
         canvas.drawRRect(rrect, paint);
       }
 
@@ -990,7 +990,7 @@ class _CustomerBalancePainter extends CustomPainter {
           Rect.fromLTWH(leftPad, y, barW, barH),
           const Radius.circular(4),
         );
-        final paint = Paint()..color = color.withValues(alpha: 0.8);
+        final paint = Paint()..color = color.withOpacity(0.8);
         canvas.drawRRect(rrect, paint);
       }
 
@@ -1067,10 +1067,10 @@ class _StackedBarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final inflowPaint = Paint()..color = AppColors.success.withValues(alpha: 0.8);
-    final outflowPaint = Paint()..color = AppColors.error.withValues(alpha: 0.8);
+    final inflowPaint = Paint()..color = AppColors.success.withOpacity(0.8);
+    final outflowPaint = Paint()..color = AppColors.error.withOpacity(0.8);
     final gridPaint = Paint()
-      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withValues(alpha: 0.5)
+      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withOpacity(0.5)
       ..strokeWidth = 0.5;
     final textPainter = TextPainter(textDirection: TextDirection.rtl);
 

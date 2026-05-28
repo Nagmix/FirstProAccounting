@@ -207,7 +207,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -290,9 +290,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.04),
+        color: AppColors.info.withOpacity(0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.info.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,7 +323,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               decoration: BoxDecoration(
                 color: context.surfaceColor,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                border: Border.all(color: AppColors.info.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
@@ -361,9 +361,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.04),
+        color: AppColors.error.withOpacity(0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.error.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,7 +380,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.1),
+                  color: AppColors.error.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -423,8 +423,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isCancelled
-                          ? AppColors.textHint.withValues(alpha: 0.3)
-                          : AppColors.error.withValues(alpha: 0.15),
+                          ? AppColors.textHint.withOpacity(0.3)
+                          : AppColors.error.withOpacity(0.15),
                     ),
                   ),
                   child: Row(
@@ -756,7 +756,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.surfaceColor,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
       ),
       child: SafeArea(
         top: false,

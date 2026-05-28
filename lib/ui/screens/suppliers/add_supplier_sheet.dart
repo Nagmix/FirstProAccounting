@@ -284,7 +284,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                                     decoration: BoxDecoration(
                                       color: _balanceType == 'credit'
                                           ? AppColors.success
-                                              .withValues(alpha: 0.1)
+                                              .withOpacity(0.1)
                                           : Colors.transparent,
                                       borderRadius: const BorderRadius.only(
                                         topRight: Radius.circular(9),
@@ -314,7 +314,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                                     decoration: BoxDecoration(
                                       color: _balanceType == 'debit'
                                           ? AppColors.error
-                                              .withValues(alpha: 0.1)
+                                              .withOpacity(0.1)
                                           : Colors.transparent,
                                       borderRadius: const BorderRadius.only(
                                         topLeft: Radius.circular(9),
@@ -343,10 +343,10 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppColors.warning.withValues(alpha: 0.08),
+                            color: AppColors.warning.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: AppColors.warning.withValues(alpha: 0.3),
+                              color: AppColors.warning.withOpacity(0.3),
                             ),
                           ),
                           child: Row(
@@ -412,7 +412,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                           decoration: BoxDecoration(
                             color: _contactMethod == 'whatsapp'
                                 ? const Color(0xFF25D366)
-                                    .withValues(alpha: 0.1)
+                                    .withOpacity(0.1)
                                 : Colors.transparent,
                             borderRadius: const BorderRadius.only(
                               topRight: Radius.circular(9),
@@ -453,7 +453,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
                             color: _contactMethod == 'phone'
-                                ? AppColors.primary.withValues(alpha: 0.1)
+                                ? AppColors.primary.withOpacity(0.1)
                                 : Colors.transparent,
                             borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(9),

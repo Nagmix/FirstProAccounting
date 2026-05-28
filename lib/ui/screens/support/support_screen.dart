@@ -555,7 +555,7 @@ class _ComplaintCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: statusInfo.color.withValues(alpha: 0.12),
+                color: statusInfo.color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -603,7 +603,7 @@ class _ComplaintCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: statusInfo.color.withValues(alpha: 0.1),
+                color: statusInfo.color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(

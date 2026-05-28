@@ -144,7 +144,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -174,7 +174,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                             margin: const EdgeInsets.only(right: 6),
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.error.withValues(alpha: 0.1),
+                              color: AppColors.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text('غير نشط', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10)),
@@ -199,7 +199,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: (isCredit ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+                    color: (isCredit ? AppColors.success : AppColors.error).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Column(
@@ -609,7 +609,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
-                                      color: _balanceType == 'credit' ? AppColors.success.withValues(alpha: 0.1) : Colors.transparent,
+                                      color: _balanceType == 'credit' ? AppColors.success.withOpacity(0.1) : Colors.transparent,
                                       borderRadius: const BorderRadius.only(topRight: Radius.circular(9), bottomRight: Radius.circular(9)),
                                     ),
                                     child: Text(
@@ -629,7 +629,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
-                                      color: _balanceType == 'debit' ? AppColors.error.withValues(alpha: 0.1) : Colors.transparent,
+                                      color: _balanceType == 'debit' ? AppColors.error.withOpacity(0.1) : Colors.transparent,
                                       borderRadius: const BorderRadius.only(topLeft: Radius.circular(9), bottomLeft: Radius.circular(9)),
                                     ),
                                     child: Text(

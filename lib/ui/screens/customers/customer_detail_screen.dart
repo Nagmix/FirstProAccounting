@@ -684,7 +684,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
+                    color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
@@ -702,7 +702,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.accentBlue.withValues(alpha: 0.1),
+                    color: AppColors.accentBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),
@@ -884,7 +884,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        backgroundColor: Colors.white.withOpacity(0.2),
                         child: Text(
                           customer.name.isNotEmpty ? customer.name[0] : '?',
                           style: const TextStyle(
@@ -939,7 +939,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                             decoration: BoxDecoration(
-                              color: isDebit ? AppColors.error.withValues(alpha: 0.9) : AppColors.success.withValues(alpha: 0.9),
+                              color: isDebit ? AppColors.error.withOpacity(0.9) : AppColors.success.withOpacity(0.9),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -1070,7 +1070,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.receipt_long, size: 64, color: AppColors.textHint.withValues(alpha: 0.3)),
+                            Icon(Icons.receipt_long, size: 64, color: AppColors.textHint.withOpacity(0.3)),
                             const SizedBox(height: 16),
                             Text('لا توجد حركات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
                           ],
@@ -1103,7 +1103,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           color: isLight ? AppColors.surface : AppColors.darkSurface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.1),
               offset: const Offset(0, -2),
               blurRadius: 8,
             ),
@@ -1168,7 +1168,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.1),
+                      color: AppColors.success.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.assignment_turned_in, color: AppColors.success),
@@ -1185,7 +1185,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.1),
+                      color: AppColors.error.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.assignment_return, color: AppColors.error),
@@ -1264,7 +1264,7 @@ class _MovementCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 20),
@@ -1290,7 +1290,7 @@ class _MovementCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
+                          color: color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

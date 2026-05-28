@@ -216,7 +216,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                             label: const Text('وحدة أساسية'),
                             selected: isBaseUnit,
                             onSelected: (v) => setDialogState(() => isBaseUnit = v),
-                            selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                            selectedColor: AppColors.primaryLight.withOpacity(0.2),
                           ),
                         ],
                       ),
@@ -396,7 +396,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.straighten, size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
+                              Icon(Icons.straighten, size: 64, color: AppColors.textHint.withOpacity(0.5)),
                               const SizedBox(height: 12),
                               Text('لا توجد وحدات', style: TextStyle(color: AppColors.textSecondary, fontSize: 16)),
                             ],
@@ -459,7 +459,7 @@ class _UnitCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: _typeColor.withValues(alpha: 0.1),
+                  color: _typeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(_typeIcon, color: _typeColor, size: 22),
@@ -478,7 +478,7 @@ class _UnitCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.08),
+                              color: AppColors.primary.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(unit.abbreviation, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary)),
@@ -510,7 +510,7 @@ class _UnitCard extends StatelessWidget {
               ),
               // Actions
               IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: onEdit, tooltip: 'تعديل'),
-              IconButton(icon: Icon(Icons.delete, size: 20, color: AppColors.error.withValues(alpha: 0.7)), onPressed: onDelete, tooltip: 'حذف'),
+              IconButton(icon: Icon(Icons.delete, size: 20, color: AppColors.error.withOpacity(0.7)), onPressed: onDelete, tooltip: 'حذف'),
             ],
           ),
         ),
@@ -544,9 +544,9 @@ class _UnitCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
     );

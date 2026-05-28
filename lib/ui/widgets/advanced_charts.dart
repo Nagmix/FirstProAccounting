@@ -47,7 +47,7 @@ class MonthlyRevenueLineChart extends StatelessWidget {
               drawVerticalLine: false,
               horizontalInterval: _calculateInterval(data),
               getDrawingHorizontalLine: (value) => FlLine(
-                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
                 strokeWidth: 1,
               ),
             ),
@@ -101,7 +101,7 @@ class MonthlyRevenueLineChart extends StatelessWidget {
                 dotData: FlDotData(show: data.length <= 12),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: AppColors.accentBlue.withValues(alpha: 0.1),
+                  color: AppColors.accentBlue.withOpacity(0.1),
                 ),
               ),
               LineChartBarData(
@@ -113,7 +113,7 @@ class MonthlyRevenueLineChart extends StatelessWidget {
                 dotData: FlDotData(show: data.length <= 12),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: AppColors.accentPink.withValues(alpha: 0.1),
+                  color: AppColors.accentPink.withOpacity(0.1),
                 ),
               ),
             ],
@@ -334,7 +334,7 @@ class DailySalesBarChart extends StatelessWidget {
               drawVerticalLine: false,
               horizontalInterval: maxVal / 4,
               getDrawingHorizontalLine: (value) => FlLine(
-                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
                 strokeWidth: 1,
               ),
             ),
@@ -397,7 +397,7 @@ class DailySalesBarChart extends StatelessWidget {
                     backDrawRodData: BackgroundBarChartRodData(
                       show: true,
                       toY: maxVal * 1.2,
-                      color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
+                      color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.04),
                     ),
                   ),
                 ],
@@ -520,7 +520,7 @@ class ProfitTrendChart extends StatelessWidget {
                 dotData: FlDotData(show: data.length <= 12),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: AppColors.success.withValues(alpha: 0.08),
+                  color: AppColors.success.withOpacity(0.08),
                 ),
               ),
             ],

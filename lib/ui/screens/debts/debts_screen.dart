@@ -381,7 +381,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
           color: isOverLimit
-              ? AppColors.error.withValues(alpha: 0.4)
+              ? AppColors.error.withOpacity(0.4)
               : AppColors.border,
         ),
       ),
@@ -397,7 +397,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.08),
+                  color: AppColors.error.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -436,7 +436,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.error.withValues(alpha: 0.1),
+                              color: AppColors.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -499,7 +499,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.08),
+                      color: AppColors.error.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -564,7 +564,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.08),
+                        color: AppColors.warning.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -586,7 +586,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.1),
+                        color: AppColors.warning.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -624,7 +624,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: AppColors.info.withValues(alpha: 0.08),
+                        color: AppColors.info.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -646,7 +646,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.info.withValues(alpha: 0.1),
+                        color: AppColors.info.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -712,7 +712,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.08),
+                  color: AppColors.warning.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -782,7 +782,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.08),
+                      color: AppColors.warning.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -832,7 +832,7 @@ class _DebtsScreenState extends State<DebtsScreen>
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: AppColors.info.withValues(alpha: 0.08),
+                color: AppColors.info.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
@@ -880,7 +880,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.info.withValues(alpha: 0.08),
+                          color: AppColors.info.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -917,7 +917,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.info.withValues(alpha: 0.08),
+                    color: AppColors.info.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -960,15 +960,15 @@ class _DebtsScreenState extends State<DebtsScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            accentColor.withValues(alpha: 0.1),
-            accentColor.withValues(alpha: 0.03),
+            accentColor.withOpacity(0.1),
+            accentColor.withOpacity(0.03),
           ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: accentColor.withValues(alpha: 0.25),
+          color: accentColor.withOpacity(0.25),
         ),
       ),
       child: Column(
@@ -981,7 +981,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
+                  color: accentColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 18, color: accentColor),
@@ -1001,7 +1001,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
+                  color: accentColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1045,7 +1045,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
+                    color: accentColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -1068,10 +1068,10 @@ class _DebtsScreenState extends State<DebtsScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.surface.withValues(alpha: 0.7),
+                    color: AppColors.surface.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: accentColor.withValues(alpha: 0.15),
+                      color: accentColor.withOpacity(0.15),
                     ),
                   ),
                   child: Row(
@@ -1093,7 +1093,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: accentColor.withValues(alpha: 0.7),
+                          color: accentColor.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -1178,7 +1178,7 @@ class _DebtsScreenState extends State<DebtsScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.08),
+                color: AppColors.success.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -1349,7 +1349,7 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.08),
+                        color: AppColors.error.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -1452,12 +1452,12 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isPaid
-            ? AppColors.success.withValues(alpha: 0.04)
+            ? AppColors.success.withOpacity(0.04)
             : AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isPaid
-              ? AppColors.success.withValues(alpha: 0.2)
+              ? AppColors.success.withOpacity(0.2)
               : AppColors.border,
         ),
       ),
@@ -1485,8 +1485,8 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isPaid
-                      ? AppColors.success.withValues(alpha: 0.1)
-                      : AppColors.warning.withValues(alpha: 0.1),
+                      ? AppColors.success.withOpacity(0.1)
+                      : AppColors.warning.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1658,7 +1658,7 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.08),
+                        color: AppColors.warning.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -1761,12 +1761,12 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isPaid
-            ? AppColors.success.withValues(alpha: 0.04)
+            ? AppColors.success.withOpacity(0.04)
             : AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isPaid
-              ? AppColors.success.withValues(alpha: 0.2)
+              ? AppColors.success.withOpacity(0.2)
               : AppColors.border,
         ),
       ),
@@ -1794,8 +1794,8 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isPaid
-                      ? AppColors.success.withValues(alpha: 0.1)
-                      : AppColors.warning.withValues(alpha: 0.1),
+                      ? AppColors.success.withOpacity(0.1)
+                      : AppColors.warning.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(

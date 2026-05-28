@@ -647,7 +647,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
+                    color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
@@ -665,7 +665,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.accentBlue.withValues(alpha: 0.1),
+                    color: AppColors.accentBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),
@@ -1032,7 +1032,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: AppColors.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Icon(Icons.local_shipping,
@@ -1118,9 +1118,9 @@ class _SupplierHeader extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: balanceColor.withValues(alpha: 0.08),
+        color: balanceColor.withOpacity(0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: balanceColor.withValues(alpha: 0.2)),
+        border: Border.all(color: balanceColor.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1131,7 +1131,7 @@ class _SupplierHeader extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: balanceColor.withValues(alpha: 0.15),
+                  color: balanceColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -1177,7 +1177,7 @@ class _SupplierHeader extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: balanceColor.withValues(alpha: 0.12),
+                            color: balanceColor.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -1291,12 +1291,12 @@ class _FilterBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: startDate != null
-                    ? AppColors.primary.withValues(alpha: 0.1)
+                    ? AppColors.primary.withOpacity(0.1)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: startDate != null
-                      ? AppColors.primary.withValues(alpha: 0.3)
+                      ? AppColors.primary.withOpacity(0.3)
                       : Colors.transparent,
                 ),
               ),
@@ -1335,12 +1335,12 @@ class _FilterBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: endDate != null
-                    ? AppColors.primary.withValues(alpha: 0.1)
+                    ? AppColors.primary.withOpacity(0.1)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: endDate != null
-                      ? AppColors.primary.withValues(alpha: 0.3)
+                      ? AppColors.primary.withOpacity(0.3)
                       : Colors.transparent,
                 ),
               ),
@@ -1523,7 +1523,7 @@ class _MovementCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: typeColor.withValues(alpha: 0.1),
+                  color: typeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1563,8 +1563,8 @@ class _MovementCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: isDebit
-                        ? AppColors.error.withValues(alpha: 0.08)
-                        : AppColors.success.withValues(alpha: 0.08),
+                        ? AppColors.error.withOpacity(0.08)
+                        : AppColors.success.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -1679,7 +1679,7 @@ class _MovementCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: typeColor.withValues(alpha: 0.1),
+                  color: typeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1746,8 +1746,8 @@ class _MovementCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: isDebit
-                        ? AppColors.error.withValues(alpha: 0.08)
-                        : AppColors.success.withValues(alpha: 0.08),
+                        ? AppColors.error.withOpacity(0.08)
+                        : AppColors.success.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -1925,7 +1925,7 @@ class _BottomStats extends StatelessWidget {
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
