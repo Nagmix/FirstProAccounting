@@ -128,7 +128,7 @@ class MoneyHelper {
   ];
 
   static const invoiceItemMoneyFields = [
-    'unit_price', 'total_price',
+    'unit_price', 'total_price', 'unit_cost',
   ];
 
   static const productMoneyFields = [

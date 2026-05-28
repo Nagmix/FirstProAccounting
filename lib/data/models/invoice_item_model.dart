@@ -8,6 +8,7 @@ class InvoiceItem {
   final double quantity;
   final double unitPrice;
   final double totalPrice;
+  final double unitCost; // P-06: Cost at time of sale/purchase for accurate COGS on deferred posting
   final String? unitName; // Name of the unit used in this line (e.g., 'كرتون')
   final double conversionFactor; // How many base units = 1 of this unit (e.g., 24 for carton)
   final double baseQuantity; // quantity * conversionFactor (always in base unit for stock deduction)
@@ -21,6 +22,7 @@ class InvoiceItem {
     this.quantity = 1.0,
     this.unitPrice = 0.0,
     this.totalPrice = 0.0,
+    this.unitCost = 0.0,
     this.unitName,
     this.conversionFactor = 1.0,
     this.baseQuantity = 1.0,
@@ -36,6 +38,7 @@ class InvoiceItem {
       'quantity': quantity,
       'unit_price': MoneyHelper.toCents(unitPrice),
       'total_price': MoneyHelper.toCents(totalPrice),
+      'unit_cost': MoneyHelper.toCents(unitCost),
       'unit_name': unitName,
       'conversion_factor': conversionFactor,
       'base_quantity': baseQuantity,
@@ -52,6 +55,7 @@ class InvoiceItem {
       quantity: (map['quantity'] ?? 1.0).toDouble(),
       unitPrice: MoneyHelper.readMoney(map['unit_price']),
       totalPrice: MoneyHelper.readMoney(map['total_price']),
+      unitCost: MoneyHelper.readMoney(map['unit_cost']), // P-06: Read stored cost
       unitName: map['unit_name'],
       conversionFactor: (map['conversion_factor'] ?? 1.0).toDouble(),
       baseQuantity: (map['base_quantity'] ?? map['quantity'] ?? 1.0).toDouble(),
@@ -67,6 +71,7 @@ class InvoiceItem {
     double? quantity,
     double? unitPrice,
     double? totalPrice,
+    double? unitCost,
     String? unitName,
     double? conversionFactor,
     double? baseQuantity,
@@ -80,6 +85,7 @@ class InvoiceItem {
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
       totalPrice: totalPrice ?? this.totalPrice,
+      unitCost: unitCost ?? this.unitCost,
       unitName: unitName ?? this.unitName,
       conversionFactor: conversionFactor ?? this.conversionFactor,
       baseQuantity: baseQuantity ?? this.baseQuantity,

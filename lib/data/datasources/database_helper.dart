@@ -53,7 +53,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 35;
+  static const int _databaseVersion = 36;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -269,6 +269,7 @@ class DatabaseHelper {
         quantity REAL NOT NULL DEFAULT 1.0,
         unit_price INTEGER NOT NULL DEFAULT 0,
         total_price INTEGER NOT NULL DEFAULT 0,
+        unit_cost INTEGER NOT NULL DEFAULT 0,
         unit_name TEXT,
         conversion_factor REAL NOT NULL DEFAULT 1.0,
         base_quantity REAL NOT NULL DEFAULT 1.0,
@@ -1721,10 +1722,10 @@ class DatabaseHelper {
       final newAccountTemplates = [
         // Inventory account (ASSET, code 1300+offset)
         {'baseCode': 1300, 'nameAr': 'المخزون', 'nameEn': 'Inventory Account', 'type': 'ASSET'},
-        // Opening Balance Equity (LIABILITY, code 2200+offset)
-        {'baseCode': 2200, 'nameAr': 'رصيد افتتاحي', 'nameEn': 'Opening Balance Equity', 'type': 'LIABILITY'},
-        // Retained Earnings (LIABILITY, code 2900+offset)
-        {'baseCode': 2900, 'nameAr': 'الأرباح المحتجزة', 'nameEn': 'Retained Earnings', 'type': 'LIABILITY'},
+        // Opening Balance Equity (EQUITY, code 2200+offset) — P-04: was LIABILITY, now EQUITY
+        {'baseCode': 2200, 'nameAr': 'رصيد افتتاحي', 'nameEn': 'Opening Balance Equity', 'type': 'EQUITY'},
+        // Retained Earnings (EQUITY, code 2900+offset) — P-04: was LIABILITY, now EQUITY
+        {'baseCode': 2900, 'nameAr': 'الأرباح المحتجزة', 'nameEn': 'Retained Earnings', 'type': 'EQUITY'},
         // COGS account (COST, code 3200+offset)
         {'baseCode': 3200, 'nameAr': 'تكلفة البضاعة المباعة', 'nameEn': 'COGS Account', 'type': 'COST'},
       ];
@@ -2351,6 +2352,14 @@ class DatabaseHelper {
           whereArgs: [accountId],
         );
       }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Migration v36: P-06 — Add unit_cost column to invoice_items
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 36) {
+      // Add unit_cost column for accurate COGS on deferred POS posting
+      await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_cost INTEGER NOT NULL DEFAULT 0');
     }
   }
 
@@ -3446,6 +3455,9 @@ class DatabaseHelper {
   /// Check if an item_code already exists in the products table.
   /// Optionally exclude a product ID (for edit mode).
   Future<bool> checkItemCodeExists(String code, {int? excludeId}) => products.checkItemCodeExists(code, excludeId: excludeId);
+
+  /// P-07: Check if a barcode already exists on another product.
+  Future<bool> checkBarcodeExists(String barcode, {int? excludeId}) => products.checkBarcodeExists(barcode, excludeId: excludeId);
 
   // ══════════════════════════════════════════════════════════════
   //  Customer CRUD methods — delegated to CustomerRepository

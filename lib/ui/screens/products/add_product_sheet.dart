@@ -529,6 +529,29 @@ class _AddProductSheetState extends State<AddProductSheet> {
       }
     }
 
+    // P-07: Check for duplicate barcode
+    final barcode = _barcodeController.text.trim();
+    if (barcode.isNotEmpty) {
+      try {
+        final exists = await DatabaseHelper().checkBarcodeExists(
+          barcode,
+          excludeId: _isEditMode ? widget.existing!.id : null,
+        );
+        if (exists) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('الباركود موجود مسبقاً على صنف آخر، يرجى استخدام باركود مختلف'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        debugPrint('Barcode duplicate check error (non-critical): $e');
+      }
+    }
+
     setState(() => _isSaving = true);
 
     final now = DateTime.now();
@@ -784,18 +807,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
                     'created_at': now,
                   });
 
-                  // Update account balances within the transaction
-                  // Inventory account (debit-balance / ASSET): balance += debit - credit
-                  final invBal = MoneyHelper.readMoney(inventoryAccount.first['balance']);
-                  final invBt = inventoryAccount.first['balance_type'] as String? ?? 'debit';
-                  final newInvBal = invBt == 'credit' ? invBal - totalValue : invBal + totalValue;
-                  await txn.update('accounts', {'balance': MoneyHelper.toCents(newInvBal), 'updated_at': now}, where: 'id = ?', whereArgs: [inventoryAccountId]);
-
-                  // Opening balance account (credit-balance / EQUITY): balance += credit - debit
-                  final obBal = MoneyHelper.readMoney(openingBalanceAccount.first['balance']);
-                  final obBt = openingBalanceAccount.first['balance_type'] as String? ?? 'credit';
-                  final newObBal = obBt == 'credit' ? obBal + totalValue : obBal - totalValue;
-                  await txn.update('accounts', {'balance': MoneyHelper.toCents(newObBal), 'updated_at': now}, where: 'id = ?', whereArgs: [openingBalanceAccountId]);
+                  // P-03: Use updateAccountBalanceWithJournal for correct balance calculation
+                  // instead of manual balance calculation that doesn't handle EQUITY correctly
+                  final dbHelper = DatabaseHelper();
+                  await dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalValue, 0.0, now);
+                  await dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, totalValue, now);
                 }
               }
             } catch (e) {

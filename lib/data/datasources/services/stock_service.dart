@@ -117,13 +117,22 @@ class StockService {
             'created_at': now,
           });
         } else {
-          // إنشاء نسخة من المنتج في المخزن الهدف
+          // P-08: Create a copy of the product in the destination warehouse
+          // but modify item_code and barcode to avoid duplicates across warehouses
           final newProduct = Map<String, dynamic>.from(sourceProduct.first);
           newProduct.remove('id');
           newProduct['warehouse_id'] = toWarehouseId;
           newProduct['current_stock'] = quantity;
           newProduct['created_at'] = now;
           newProduct['updated_at'] = now;
+          // P-08: Suffix item_code and barcode to avoid conflicts with source warehouse product
+          final whSuffix = '-W$toWarehouseId';
+          if (newProduct['item_code'] != null) {
+            newProduct['item_code'] = '${newProduct['item_code']}$whSuffix';
+          }
+          if (newProduct['barcode'] != null && (newProduct['barcode'] as String).isNotEmpty) {
+            newProduct['barcode'] = '${newProduct['barcode']}$whSuffix';
+          }
           final newProductId = await txn.insert('products', newProduct);
           // ── T16: تسجيل حركة مخزون وارد إلى الوجهة (منتج جديد) ──
           await txn.insert('stock_movements', {
@@ -290,9 +299,10 @@ class StockService {
         final variance = actualQuantity - systemQuantity;
 
         // جلب الكمية الحالية وتكلفة المنتج قبل التحديث (للسجل والقيود)
+        // P-09: Also fetch product-specific inventory account
         final productRows = await txn.query(
           'products',
-          columns: ['current_stock', 'average_cost'],
+          columns: ['current_stock', 'average_cost', 'inventory_account_id'],
           where: 'id = ?',
           whereArgs: [productId],
         );
@@ -353,13 +363,19 @@ class StockService {
           });
 
           // ── T15: إنشاء قيود يومية لتعديلات الجرد ──
+          // P-09: Use product-specific inventory account when available
           final adjustmentAmount = variance * averageCost;
+          // Resolve effective inventory account: product-specific > default
+          final productInventoryAccountId = productRows.isNotEmpty
+              ? productRows.first['inventory_account_id'] as int?
+              : null;
+          final effectiveInventoryAccountId = productInventoryAccountId ?? inventoryAccountId;
           if (adjustmentAmount.abs() >= 0.005) {
             if (variance > 0) {
               // زيادة مخزون: مدين = المخزون، دائن = إيراد تفاوت الجرد
-              if (inventoryAccountId != null) {
+              if (effectiveInventoryAccountId != null) {
                 await txn.insert('transactions', {
-                  'account_id': inventoryAccountId,
+                  'account_id': effectiveInventoryAccountId,
                   'journal_id': journalId,
                   'debit': MoneyHelper.toCents(adjustmentAmount),
                   'credit': 0,
@@ -367,7 +383,7 @@ class StockService {
                   'date': now,
                   'created_at': now,
                 });
-                await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, adjustmentAmount, 0.0, now);
+                await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveInventoryAccountId, adjustmentAmount, 0.0, now);
               }
               if (varianceIncomeAccountId != null) {
                 await txn.insert('transactions', {
@@ -396,9 +412,9 @@ class StockService {
                 });
                 await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, lossAmount, 0.0, now);
               }
-              if (inventoryAccountId != null) {
+              if (effectiveInventoryAccountId != null) {
                 await txn.insert('transactions', {
-                  'account_id': inventoryAccountId,
+                  'account_id': effectiveInventoryAccountId,
                   'journal_id': journalId,
                   'debit': 0,
                   'credit': MoneyHelper.toCents(lossAmount),
@@ -406,7 +422,7 @@ class StockService {
                   'date': now,
                   'created_at': now,
                 });
-                await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, lossAmount, now);
+                await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveInventoryAccountId, 0.0, lossAmount, now);
               }
             }
           }

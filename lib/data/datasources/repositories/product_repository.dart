@@ -67,6 +67,10 @@ class ProductRepository {
     return await db.delete('products', where: 'id = ?', whereArgs: [id]);
   }
 
+  /// P-05: [DEPRECATED] Use inline SQL in invoice_repository.dart instead.
+  /// This method is kept for reference but should not be called directly.
+  /// Stock updates are handled within invoice transactions for atomicity.
+  @Deprecated('Use inline SQL in invoice_repository for atomic stock updates within transactions')
   Future<void> decrementProductStock(int productId, double quantity) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
@@ -86,7 +90,10 @@ class ProductRepository {
     }
   }
 
-  /// Increment product stock (used for purchase invoices and sale return restocking).
+  /// P-05: [DEPRECATED] Use inline SQL in invoice_repository.dart instead.
+  /// This method is kept for reference but should not be called directly.
+  /// Stock updates are handled within invoice transactions for atomicity.
+  @Deprecated('Use inline SQL in invoice_repository for atomic stock updates within transactions')
   Future<void> incrementProductStock(int productId, double quantity) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
@@ -94,6 +101,30 @@ class ProductRepository {
       'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
       [quantity, now, productId],
     );
+  }
+
+  /// P-07: Check if a barcode already exists in the products table.
+  /// Optionally exclude a product ID (for edit mode).
+  Future<bool> checkBarcodeExists(String barcode, {int? excludeId}) async {
+    final db = await _db;
+    if (barcode.trim().isEmpty) return false;
+    List<Map<String, dynamic>> result;
+    if (excludeId != null) {
+      result = await db.query(
+        'products',
+        where: 'barcode = ? AND id != ? AND is_active = 1',
+        whereArgs: [barcode.trim(), excludeId],
+        limit: 1,
+      );
+    } else {
+      result = await db.query(
+        'products',
+        where: 'barcode = ? AND is_active = 1',
+        whereArgs: [barcode.trim()],
+        limit: 1,
+      );
+    }
+    return result.isNotEmpty;
   }
 
   Future<int> getProductCount() async {

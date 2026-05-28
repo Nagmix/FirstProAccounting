@@ -69,7 +69,18 @@ class InvoiceRepository {
       await txn.insert('invoices', dbInvoiceMap);
 
       // Insert invoice items (convert money fields to cents)
+      // P-06: Also store unit_cost (average cost at time of sale) for accurate deferred COGS
       for (final item in items) {
+        // Enrich item with unit_cost from product's average_cost if not already set
+        final productId = (item['product_id'] as num?)?.toInt();
+        if (productId != null && !item.containsKey('unit_cost')) {
+          final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+          if (productRow.isNotEmpty) {
+            final avgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+            final effectiveCost = avgCost > 0 ? avgCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+            item['unit_cost'] = effectiveCost;
+          }
+        }
         final dbItem = MoneyHelper.toCentsMap(item, MoneyHelper.invoiceItemMoneyFields);
         await txn.insert('invoice_items', dbItem);
       }
@@ -453,12 +464,10 @@ class InvoiceRepository {
       }
 
       // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
-      // For sale invoices (not return): Debit COGS, Credit Inventory for average_cost * base_quantity
-      // For sale returns: Debit Inventory, Credit COGS
-      // For purchase invoices (not return): Debit Inventory, Credit Purchases (transfer to inventory)
-      // For purchase returns: Debit Purchases, Credit Inventory (reverse transfer)
+      // P-01: Use product-specific account IDs when available, fall back to default accounts.
+      // Group items by (cogs_account_id, inventory_account_id) to create aggregate entries per group.
       if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
-        // H-10: batch COGS + Inventory account lookup
+        // Resolve default COGS + Inventory account IDs
         final cogsCode = (3200 + codeOffset).toString();
         final inventoryCode = (1300 + codeOffset).toString();
         final cogsInventoryRows = await txn.query(
@@ -466,85 +475,94 @@ class InvoiceRepository {
           where: 'account_code IN (?, ?) AND currency = ?',
           whereArgs: [cogsCode, inventoryCode, journalCurrency],
         );
-        final cogsAccount = cogsInventoryRows.where((r) => r['account_code'] == cogsCode).toList();
-        final inventoryAccount = cogsInventoryRows.where((r) => r['account_code'] == inventoryCode).toList();
-        final cogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
-        final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
+        final defaultCogsAccountId = cogsInventoryRows.where((r) => r['account_code'] == cogsCode).firstOrNull?['id'] as int?;
+        final defaultInventoryAccountId = cogsInventoryRows.where((r) => r['account_code'] == inventoryCode).firstOrNull?['id'] as int?;
 
-        if (cogsAccountId != null && inventoryAccountId != null) {
-          double totalCogs = 0.0;
-          for (final item in items) {
-            final productId = (item['product_id'] as num?)?.toInt();
-            final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
-            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
-            if (productId == null) continue;
+        // Group items by their effective (cogs_account, inventory_account) pair
+        final cogsGroups = <String, double>{};
+        for (final item in items) {
+          final productId = (item['product_id'] as num?)?.toInt();
+          final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
+          if (productId == null) continue;
 
-            // Look up product average cost (weighted average)
-            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            if (productRow.isEmpty) continue;
-            final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-            final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-            // COGS must use base_quantity (not quantity) because average_cost is per base unit
-            totalCogs += effectiveCost * baseQuantity;
-          }
+          final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+          if (productRow.isEmpty) continue;
+          final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+          final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+          final itemCogs = effectiveCost * baseQuantity;
+          if (itemCogs.abs() < 0.005) continue;
 
-          if (totalCogs > 0) {
-            if (!isReturn) {
-              // Sale: Debit COGS, Credit Inventory
-              await txn.insert('transactions', {
-                'account_id': cogsAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalCogs),
-                'credit': 0,
-                'description': 'تكلفة بضاعة مباعة - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalCogs),
-                'description': 'تخفيض مخزون - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              // Update account balances
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
-            } else {
-              // Sale return: Debit Inventory, Credit COGS (reverse)
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalCogs),
-                'credit': 0,
-                'description': 'إعادة مخزون مرتجع - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': cogsAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalCogs),
-                'description': 'عكس تكلفة بضاعة مرتجعة - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              // Update account balances
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
-            }
+          // P-01: Use product-specific accounts when set, otherwise default
+          final prodCogsId = productRow.first['cogs_account_id'] as int?;
+          final prodInvId = productRow.first['inventory_account_id'] as int?;
+          final effectiveCogsId = prodCogsId ?? defaultCogsAccountId;
+          final effectiveInvId = prodInvId ?? defaultInventoryAccountId;
+          final key = '${effectiveCogsId}_${effectiveInvId}';
+          cogsGroups[key] = (cogsGroups[key] ?? 0.0) + itemCogs;
+        }
+
+        for (final entry in cogsGroups.entries) {
+          final totalCogs = entry.value;
+          if (totalCogs.abs() < 0.005) continue;
+          final parts = entry.key.split('_');
+          final cogsAccountId = int.tryParse(parts[0]);
+          final inventoryAccountId = int.tryParse(parts[1]);
+          if (cogsAccountId == null || inventoryAccountId == null) continue;
+
+          if (!isReturn) {
+            // Sale: Debit COGS, Credit Inventory
+            await txn.insert('transactions', {
+              'account_id': cogsAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(totalCogs),
+              'credit': 0,
+              'description': 'تكلفة بضاعة مباعة - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': inventoryAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(totalCogs),
+              'description': 'تخفيض مخزون - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
+          } else {
+            // Sale return: Debit Inventory, Credit COGS (reverse)
+            await txn.insert('transactions', {
+              'account_id': inventoryAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(totalCogs),
+              'credit': 0,
+              'description': 'إعادة مخزون مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': cogsAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(totalCogs),
+              'description': 'عكس تكلفة بضاعة مرتجعة - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
           }
         }
       }
 
       // ── Purchase Inventory Transfer Entries ──
-      // In perpetual inventory: Purchases debit Purchases account, but inventory must also increase.
-      // Add transfer: Debit Inventory, Credit Purchases (for the cost of items purchased)
+      // P-01: Use product-specific account IDs when available, fall back to default accounts.
+      // Group items by (inventory_account_id, purchase_account_id) to create aggregate entries per group.
       if ((invoiceType == 'purchase' || invoiceType == 'purchase_return')) {
-        // H-10: batch Inventory + Purchases account lookup
+        // Resolve default Inventory + Purchases account IDs
         final inventoryCode = (1300 + codeOffset).toString();
         final purchasesCode = (3100 + codeOffset).toString();
         final invPurchRows = await txn.query(
@@ -552,70 +570,204 @@ class InvoiceRepository {
           where: 'account_code IN (?, ?) AND currency = ?',
           whereArgs: [inventoryCode, purchasesCode, journalCurrency],
         );
-        final inventoryAccount = invPurchRows.where((r) => r['account_code'] == inventoryCode).toList();
-        final purchasesAccount = invPurchRows.where((r) => r['account_code'] == purchasesCode).toList();
-        final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
-        final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
+        final defaultInventoryAccountId = invPurchRows.where((r) => r['account_code'] == inventoryCode).firstOrNull?['id'] as int?;
+        final defaultPurchasesAccountId = invPurchRows.where((r) => r['account_code'] == purchasesCode).firstOrNull?['id'] as int?;
 
-        if (inventoryAccountId != null && purchasesAccountId != null) {
-          double totalPurchaseCost = 0.0;
-          for (final item in items) {
-            final productId = (item['product_id'] as num?)?.toInt();
-            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
-            if (productId == null) continue;
-            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            if (productRow.isEmpty) continue;
-            final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-            final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-            totalPurchaseCost += effectiveCost * baseQuantity;
+        // Group items by their effective (inventory_account, purchase_account) pair
+        final purchGroups = <String, double>{};
+        for (final item in items) {
+          final productId = (item['product_id'] as num?)?.toInt();
+          final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          if (productId == null) continue;
+          final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+          if (productRow.isEmpty) continue;
+          final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+          final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+          final itemCost = effectiveCost * baseQuantity;
+          if (itemCost.abs() < 0.005) continue;
+
+          // P-01: Use product-specific accounts when set, otherwise default
+          final prodInvId = productRow.first['inventory_account_id'] as int?;
+          final prodPurchId = productRow.first['purchase_account_id'] as int?;
+          final effectiveInvId = prodInvId ?? defaultInventoryAccountId;
+          final effectivePurchId = prodPurchId ?? defaultPurchasesAccountId;
+          final key = '${effectiveInvId}_${effectivePurchId}';
+          purchGroups[key] = (purchGroups[key] ?? 0.0) + itemCost;
+        }
+
+        for (final entry in purchGroups.entries) {
+          final totalPurchaseCost = entry.value;
+          if (totalPurchaseCost.abs() < 0.005) continue;
+          final parts = entry.key.split('_');
+          final inventoryAccountId = int.tryParse(parts[0]);
+          final purchasesAccountId = int.tryParse(parts[1]);
+          if (inventoryAccountId == null || purchasesAccountId == null) continue;
+
+          if (!isReturn) {
+            // Purchase: Debit Inventory (goods come in), Credit Purchases (transfer from purchases account)
+            await txn.insert('transactions', {
+              'account_id': inventoryAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(totalPurchaseCost),
+              'credit': 0,
+              'description': 'إضافة مخزون مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(totalPurchaseCost),
+              'description': 'تحويل من حساب المشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalPurchaseCost, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, totalPurchaseCost, now);
+          } else {
+            // Purchase return: Debit Purchases, Credit Inventory (reverse)
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(totalPurchaseCost),
+              'credit': 0,
+              'description': 'عكس تحويل مشتريات مرتجعة - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await txn.insert('transactions', {
+              'account_id': inventoryAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(totalPurchaseCost),
+              'description': 'تخفيض مخزون مرتجع مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, totalPurchaseCost, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalPurchaseCost, now);
           }
+        }
+      }
 
-          if (totalPurchaseCost > 0) {
-            if (!isReturn) {
-              // Purchase: Debit Inventory (goods come in), Credit Purchases (transfer from purchases account)
+      // ── P-02: VAT Journal Entries (ضريبة القيمة المضافة) ──
+      // Separate the VAT amount from the total into a VAT control account.
+      // For sales: part of the cash/customer debit is already allocated to total;
+      // we need to split: the sales credit includes VAT, so we reduce sales and credit VAT.
+      // Approach: Debit Sales (reduce by VAT), Credit VAT Payable (for sales)
+      // For purchases: Debit VAT Receivable, Credit Purchases (reduce by VAT)
+      final taxAmount = MoneyHelper.readMoney(invoiceMap['tax_amount']);
+      if (taxAmount.abs() >= 0.005) {
+        // P-01: Use invoice-level VAT account or product-level if all products share the same one
+        // For simplicity, use the default VAT account (3300 + offset)
+        final vatCode = (3300 + codeOffset).toString();
+        final vatRows = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [vatCode, journalCurrency],
+          limit: 1,
+        );
+        final vatAccountId = vatRows.isNotEmpty ? vatRows.first['id'] as int : null;
+
+        if (vatAccountId != null) {
+          final yerTax = needsYerConversion ? taxAmount * exchangeRate : taxAmount;
+          if ((invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
+            // Sales VAT: Debit Sales (reduce revenue by VAT amount), Credit VAT Payable
+            if (salesAccountId != null) {
               await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
+                'account_id': salesAccountId,
                 'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalPurchaseCost),
+                'debit': MoneyHelper.toCents(yerTax),
                 'credit': 0,
-                'description': 'إضافة مخزون مشتريات - ${invoiceMap['id']}',
+                'description': 'ضريبة قيمة مضافة مبيعات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
               });
-              await txn.insert('transactions', {
-                'account_id': purchasesAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalPurchaseCost),
-                'description': 'تحويل من حساب المشتريات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalPurchaseCost, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, totalPurchaseCost, now);
-            } else {
-              // Purchase return: Debit Purchases, Credit Inventory (reverse)
-              await txn.insert('transactions', {
-                'account_id': purchasesAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalPurchaseCost),
-                'credit': 0,
-                'description': 'عكس تحويل مشتريات مرتجعة - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalPurchaseCost),
-                'description': 'تخفيض مخزون مرتجع مشتريات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, totalPurchaseCost, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalPurchaseCost, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, yerTax, 0.0, now);
             }
+            await txn.insert('transactions', {
+              'account_id': vatAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerTax),
+              'description': 'ضريبة قيمة مضافة مستحقة - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, yerTax, now);
+          } else if (invoiceType == 'sale_return' || (invoiceType == 'sale' && isReturn)) {
+            // Sales Return VAT: Debit VAT Payable, Credit Sales (restore revenue)
+            await txn.insert('transactions', {
+              'account_id': vatAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(yerTax),
+              'credit': 0,
+              'description': 'عكس ضريبة مرتجع مبيعات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, yerTax, 0.0, now);
+            if (salesAccountId != null) {
+              await txn.insert('transactions', {
+                'account_id': salesAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(yerTax),
+                'description': 'عكس ضريبة مرتجع مبيعات - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, yerTax, now);
+            }
+          } else if (invoiceType == 'purchase' && !isReturn) {
+            // Purchase VAT: Debit VAT Receivable, Credit Purchases (reduce expense)
+            await txn.insert('transactions', {
+              'account_id': vatAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(yerTax),
+              'credit': 0,
+              'description': 'ضريبة قيمة مضافة مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, yerTax, 0.0, now);
+            if (purchasesAccountId != null) {
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(yerTax),
+                'description': 'ضريبة قيمة مضافة مشتريات - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, yerTax, now);
+            }
+          } else if (invoiceType == 'purchase_return' || (invoiceType == 'purchase' && isReturn)) {
+            // Purchase Return VAT: Debit Purchases, Credit VAT Receivable
+            if (purchasesAccountId != null) {
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(yerTax),
+                'credit': 0,
+                'description': 'عكس ضريبة مرتجع مشتريات - ${invoiceMap['id']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, yerTax, 0.0, now);
+            }
+            await txn.insert('transactions', {
+              'account_id': vatAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerTax),
+              'description': 'عكس ضريبة مرتجع مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, yerTax, now);
           }
         }
       }
