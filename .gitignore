@@ -67,7 +67,6 @@ local-*
 
 # Non-project files
 worklog.md
-AUDIT_REPORT.md
 
 # Next.js / Node (not used in this Flutter project)
 .next/
