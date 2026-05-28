@@ -5,6 +5,8 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
+import 'trial_balance_screen.dart';
+import 'financial_statements_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Reports Screen – Professional Redesign
@@ -148,6 +150,8 @@ class _ReportsScreenState extends State<ReportsScreen>
           const _ReportItem(name: 'حركة حساب', icon: Icons.swap_horiz, color: AppColors.info, key: 'account_movement'),
           const _ReportItem(name: 'حركة جميع الحسابات', icon: Icons.view_list, color: AppColors.info, key: 'all_account_movement'),
           const _ReportItem(name: 'ميزان المراجعة', icon: Icons.balance, color: AppColors.primary, key: 'trial_balance'),
+          const _ReportItem(name: 'ميزان المراجعة (شاشة كاملة)', icon: Icons.balance, color: AppColors.primary, key: 'trial_balance_screen'),
+          const _ReportItem(name: 'القوائم المالية', icon: Icons.account_balance, color: AppColors.info, key: 'financial_statements'),
           const _ReportItem(name: 'حركة الصندوق', icon: Icons.account_balance_wallet, color: AppColors.success, key: 'cash_box'),
           const _ReportItem(name: 'حسابات بدون حركة', icon: Icons.block, color: AppColors.textHint, key: 'accounts_no_movement'),
           const _ReportItem(name: 'كشف حساب عميل', icon: Icons.person, color: AppColors.success, key: 'customer_statement'),
@@ -1684,6 +1688,8 @@ class _ReportsScreenState extends State<ReportsScreen>
       'account_movement': 'حركة حساب محدد بالتفصيل',
       'all_account_movement': 'كل حركات الحسابات',
       'trial_balance': 'ميزان المراجعة للتحقق',
+      'trial_balance_screen': 'شاشة كاملة لميزان المراجعة',
+      'financial_statements': 'قائمة الدخل والمركزية المالي',
       'cash_box': 'أرصدة وحركة الصناديق',
       'accounts_no_movement': 'حسابات بلا قيود',
       'customer_statement': 'كشف حساب عميل',
@@ -1705,6 +1711,15 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   void _onReportSelected(_ReportItem item) {
+    // Navigate to standalone screens for dedicated report views
+    if (item.key == 'trial_balance_screen') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const TrialBalanceScreen()));
+      return;
+    }
+    if (item.key == 'financial_statements') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const FinancialStatementsScreen()));
+      return;
+    }
     setState(() {
       _selectedReportKey = item.key;
       _hasData = false;

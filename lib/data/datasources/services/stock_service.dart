@@ -15,6 +15,10 @@ class StockService {
 
   /// إدراج تحويل مخزني وتحديث المخزون + تسجيل حركات المخزون
   Future<int> insertStockTransfer(Map<String, dynamic> transferMap) async {
+    // H-12: تحقق من الفترة المالية قبل التحويل المخزني
+    final transferDate = transferMap['date'] as String? ?? DateTime.now().toIso8601String();
+    await _dbHelper.journal.checkFiscalPeriodOpen(transferDate);
+
     final db = await _db;
     final productId = transferMap['product_id'] as int;
     final quantity = (transferMap['quantity'] as num).toDouble();

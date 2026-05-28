@@ -14,6 +14,9 @@ class ExpenseRepository {
   // ══════════════════════════════════════════════════════════════
 
   Future<int> insertExpense(Map<String, dynamic> expenseMap) async {
+    // H-12: تحقق من الفترة المالية قبل إدراج مصروف
+    final expenseDate = expenseMap['expense_date'] as String? ?? DateTime.now().toIso8601String();
+    await _dbHelper.journal.checkFiscalPeriodOpen(expenseDate);
     final db = await _db;
     return await db.insert('expenses', expenseMap);
   }

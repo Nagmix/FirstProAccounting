@@ -18,6 +18,9 @@ class InvoiceRepository {
     Map<String, dynamic> invoiceMap,
     List<Map<String, dynamic>> items,
   ) async {
+    // H-12: تحقق من الفترة المالية قبل إدراج فاتورة
+    final invoiceDate = invoiceMap['created_at'] as String? ?? DateTime.now().toIso8601String();
+    await _dbHelper.journal.checkFiscalPeriodOpen(invoiceDate);
     final db = await _db;
     await db.transaction((txn) async {
       await txn.insert('invoices', invoiceMap);

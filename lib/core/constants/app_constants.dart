@@ -136,6 +136,8 @@ class AppConstants {
   static const String stocktaking = '/stocktaking';
   static const String inventoryVoucher = '/vouchers/inventory';
   static const String annualPosting = '/reports/annual-posting';
+  static const String trialBalance = '/reports/trial-balance';
+  static const String financialStatements = '/reports/financial-statements';
   static const String salesInvoices = '/invoices/sales';
   static const String purchaseInvoices = '/invoices/purchases';
   static const String invoiceDetail = '/invoices/detail';
