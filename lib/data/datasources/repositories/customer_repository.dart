@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/utils/money_helper.dart';
+import '../../models/customer_model.dart';
 import '../database_helper.dart';
 
 class CustomerRepository {
@@ -147,5 +148,24 @@ class CustomerRepository {
       ORDER BY balance DESC
       LIMIT ?
     ''', [limit]);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Typed getters (C-09: domain model alternatives to raw maps)
+  // ══════════════════════════════════════════════════════════════
+
+  Future<List<Customer>> getAllCustomerObjects({String orderBy = 'name', int? limit, int offset = 0}) async {
+    final maps = await getAllCustomers(orderBy: orderBy, limit: limit, offset: offset);
+    return maps.map((m) => Customer.fromMap(m)).toList();
+  }
+
+  Future<List<Customer>> searchCustomerObjects(String query) async {
+    final maps = await searchCustomers(query);
+    return maps.map((m) => Customer.fromMap(m)).toList();
+  }
+
+  Future<Customer?> getCustomerObjectById(int id) async {
+    final map = await getCustomerById(id);
+    return map != null ? Customer.fromMap(map) : null;
   }
 }

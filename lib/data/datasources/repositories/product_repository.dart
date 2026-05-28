@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../models/product_model.dart';
 import '../database_helper.dart';
 
 class ProductRepository {
@@ -238,5 +239,24 @@ class ProductRepository {
       whereArgs: [movementType],
       orderBy: 'created_at DESC',
     );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Typed getters (C-09: domain model alternatives to raw maps)
+  // ══════════════════════════════════════════════════════════════
+
+  Future<List<Product>> getAllProductObjects({bool? activeOnly, String orderBy = 'created_at DESC', int? limit, int offset = 0}) async {
+    final maps = await getAllProducts(activeOnly: activeOnly, orderBy: orderBy, limit: limit, offset: offset);
+    return maps.map((m) => Product.fromMap(m)).toList();
+  }
+
+  Future<List<Product>> searchProductObjects(String query, {int? warehouseId}) async {
+    final maps = await searchProducts(query, warehouseId: warehouseId);
+    return maps.map((m) => Product.fromMap(m)).toList();
+  }
+
+  Future<Product?> getProductObjectById(int id) async {
+    final map = await getProductById(id);
+    return map != null ? Product.fromMap(map) : null;
   }
 }

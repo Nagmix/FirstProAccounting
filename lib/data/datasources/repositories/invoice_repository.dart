@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/utils/money_helper.dart';
+import '../../models/invoice_model.dart';
 import '../database_helper.dart';
 
 class InvoiceRepository {
@@ -1557,5 +1558,24 @@ class InvoiceRepository {
     }
     
     return errors;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Typed getters (C-09: domain model alternatives to raw maps)
+  // ══════════════════════════════════════════════════════════════
+
+  Future<List<Invoice>> getAllInvoiceObjects({String orderBy = 'created_at DESC', int? limit, int offset = 0}) async {
+    final maps = await getAllInvoices(orderBy: orderBy, limit: limit, offset: offset);
+    return maps.map((m) => Invoice.fromMap(m)).toList();
+  }
+
+  Future<List<Invoice>> getInvoiceObjectsByType(String type) async {
+    final maps = await getInvoicesByType(type);
+    return maps.map((m) => Invoice.fromMap(m)).toList();
+  }
+
+  Future<Invoice?> getInvoiceObjectById(String invoiceId) async {
+    final map = await getInvoiceById(invoiceId);
+    return map != null ? Invoice.fromMap(map) : null;
   }
 }

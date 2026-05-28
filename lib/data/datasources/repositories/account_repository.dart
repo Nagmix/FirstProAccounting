@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/utils/money_helper.dart';
+import '../../models/account_model.dart';
 import '../database_helper.dart';
 
 class AccountRepository {
@@ -529,6 +530,36 @@ class AccountRepository {
         });
       }
     });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Typed getters (C-09: domain model alternatives to raw maps)
+  // ══════════════════════════════════════════════════════════════
+
+  Future<List<Account>> getAllAccountObjects() async {
+    final maps = await getAllAccounts();
+    return maps.map((m) => Account.fromMap(m)).toList();
+  }
+
+  Future<List<Account>> getAccountObjectsByType(String accountType) async {
+    final maps = await getAccountsByType(accountType);
+    return maps.map((m) => Account.fromMap(m)).toList();
+  }
+
+  Future<List<Account>> getExpenseAccountObjects() async {
+    final maps = await getExpenseAccounts();
+    return maps.map((m) => Account.fromMap(m)).toList();
+  }
+
+  Future<List<Account>> getExpenseAccountObjectsByCurrency(String currency) async {
+    final maps = await getExpenseAccountsByCurrency(currency);
+    return maps.map((m) => Account.fromMap(m)).toList();
+  }
+
+  Future<Account?> getAccountObjectById(int id) async {
+    final db = await _db;
+    final results = await db.query('accounts', where: 'id = ?', whereArgs: [id], limit: 1);
+    return results.isNotEmpty ? Account.fromMap(results.first) : null;
   }
 
   // ══════════════════════════════════════════════════════════════

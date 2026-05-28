@@ -17,6 +17,10 @@ import 'services/shift_service.dart';
 import 'repositories/order_repository.dart';
 import 'services/report_service.dart';
 import 'services/audit_service.dart';
+import '../models/account_model.dart';
+import '../models/customer_model.dart';
+import '../models/product_model.dart';
+import '../models/invoice_model.dart';
 
 class DatabaseHelper {
   /// Log a migration error instead of silently swallowing it (H-07)
@@ -3342,10 +3346,13 @@ class DatabaseHelper {
   Future<int> insertProduct(Map<String, dynamic> productMap) => products.insertProduct(productMap);
 
   Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC', int? limit, int offset = 0}) => products.getAllProducts(activeOnly: activeOnly, orderBy: orderBy, limit: limit, offset: offset);
+  Future<List<Product>> getAllProductObjects({bool? activeOnly, String orderBy = 'created_at DESC', int? limit, int offset = 0}) => products.getAllProductObjects(activeOnly: activeOnly, orderBy: orderBy, limit: limit, offset: offset);
 
   Future<List<Map<String, dynamic>>> searchProducts(String query, {int? warehouseId}) => products.searchProducts(query, warehouseId: warehouseId);
+  Future<List<Product>> searchProductObjects(String query, {int? warehouseId}) => products.searchProductObjects(query, warehouseId: warehouseId);
 
   Future<Map<String, dynamic>?> getProductById(int id) => products.getProductById(id);
+  Future<Product?> getProductObjectById(int id) => products.getProductObjectById(id);
 
   Future<int> updateProduct(int id, Map<String, dynamic> productMap) => products.updateProduct(id, productMap);
 
@@ -3370,8 +3377,11 @@ class DatabaseHelper {
 
   Future<int> insertCustomer(Map<String, dynamic> customerMap) => customers.insertCustomer(customerMap);
   Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'name', int? limit, int offset = 0}) => customers.getAllCustomers(orderBy: orderBy, limit: limit, offset: offset);
+  Future<List<Customer>> getAllCustomerObjects({String orderBy = 'name', int? limit, int offset = 0}) => customers.getAllCustomerObjects(orderBy: orderBy, limit: limit, offset: offset);
   Future<List<Map<String, dynamic>>> searchCustomers(String query) => customers.searchCustomers(query);
+  Future<List<Customer>> searchCustomerObjects(String query) => customers.searchCustomerObjects(query);
   Future<Map<String, dynamic>?> getCustomerById(int id) => customers.getCustomerById(id);
+  Future<Customer?> getCustomerObjectById(int id) => customers.getCustomerObjectById(id);
   Future<int> updateCustomer(int id, Map<String, dynamic> customerMap) => customers.updateCustomer(id, customerMap);
   Future<int> deleteCustomer(int id) => customers.deleteCustomer(id);
   Future<int> getCustomerCount() => customers.getCustomerCount();
@@ -3507,9 +3517,12 @@ class DatabaseHelper {
   );
 
   Future<List<Map<String, dynamic>>> getAllInvoices({String orderBy = 'created_at DESC', int? limit, int offset = 0}) => invoices.getAllInvoices(orderBy: orderBy, limit: limit, offset: offset);
+  Future<List<Invoice>> getAllInvoiceObjects({String orderBy = 'created_at DESC', int? limit, int offset = 0}) => invoices.getAllInvoiceObjects(orderBy: orderBy, limit: limit, offset: offset);
   Future<List<Map<String, dynamic>>> getInvoicesByType(String type) => invoices.getInvoicesByType(type);
+  Future<List<Invoice>> getInvoiceObjectsByType(String type) => invoices.getInvoiceObjectsByType(type);
   Future<List<Map<String, dynamic>>> getInvoiceItems(String invoiceId) => invoices.getInvoiceItems(invoiceId);
   Future<Map<String, dynamic>?> getInvoiceById(String invoiceId) => invoices.getInvoiceById(invoiceId);
+  Future<Invoice?> getInvoiceObjectById(String invoiceId) => invoices.getInvoiceObjectById(invoiceId);
   Future<List<Map<String, dynamic>>> getLinkedReturns(String invoiceId) => invoices.getLinkedReturns(invoiceId);
   Future<int> deleteInvoice(String id) => invoices.deleteInvoice(id);
   /// M-14: Delete invoice with CASCADE (deletes related items, transactions, stock movements).
@@ -3610,8 +3623,10 @@ class DatabaseHelper {
   // ══════════════════════════════════════════════════════════════
 
   Future<List<Map<String, dynamic>>> getAllAccounts() => accounts.getAllAccounts();
+  Future<List<Account>> getAllAccountObjects() => accounts.getAllAccountObjects();
 
   Future<List<Map<String, dynamic>>> getAccountsByType(String accountType) => accounts.getAccountsByType(accountType);
+  Future<List<Account>> getAccountObjectsByType(String accountType) => accounts.getAccountObjectsByType(accountType);
 
   Future<List<Map<String, dynamic>>> getAccountsByCurrency(String currencyCode) => accounts.getAccountsByCurrency(currencyCode);
 
