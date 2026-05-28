@@ -15,7 +15,7 @@ class ProductRepository {
 
   Future<int> insertProduct(Map<String, dynamic> productMap) async {
     final db = await _db;
-    return await db.insert('products', productMap);
+    return await db.insert('products', MoneyHelper.toCentsMap(productMap, MoneyHelper.productMoneyFields));
   }
 
   Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC', int? limit, int offset = 0}) async {
@@ -53,7 +53,7 @@ class ProductRepository {
 
   Future<int> updateProduct(int id, Map<String, dynamic> productMap) async {
     final db = await _db;
-    return await db.update('products', productMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('products', MoneyHelper.toCentsMap(productMap, MoneyHelper.productMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteProduct(int id) async {

@@ -243,14 +243,14 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
 
     await db.transaction((txn) async {
       // 1. إدراج السند
-      final voucherId = await txn.insert('vouchers', voucherMap);
+      final voucherId = await txn.insert('vouchers', MoneyHelper.toCentsMap(voucherMap, MoneyHelper.voucherMoneyFields));
 
       // 2. إدراج بنود السند وإنشاء قيود يومية لكل بند وتحديث رصيد الحساب
       for (final item in items) {
         final itemMap = Map<String, dynamic>.from(item);
         itemMap['voucher_id'] = voucherId;
         itemMap['created_at'] = now;
-        await txn.insert('voucher_items', itemMap);
+        await txn.insert('voucher_items', MoneyHelper.toCentsMap(itemMap, MoneyHelper.transactionMoneyFields));
 
         // إنشاء قيد يومي لكل بند
         final accountId = (item['account_id'] as num?)?.toInt();
@@ -260,8 +260,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
           await txn.insert('transactions', {
             'account_id': accountId,
             'journal_id': journalId,
-            'debit': debit,
-            'credit': credit,
+            'debit': MoneyHelper.toCents(debit),
+            'credit': MoneyHelper.toCents(credit),
             'description': item['description'] ?? voucherMap['description'] ?? 'سند ${voucherMap['voucher_number']}',
             'date': dateStr,
             'created_at': now,
@@ -280,13 +280,13 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
           // سند قبض: زيادة رصيد الصندوق
           await txn.rawUpdate(
             'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
-            [totalAmount, now, cashBoxId],
+            [MoneyHelper.toCents(totalAmount), now, cashBoxId],
           );
         } else if (voucherType == 'payment') {
           // سند صرف: نقص رصيد الصندوق
           await txn.rawUpdate(
             'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
-            [totalAmount, now, cashBoxId],
+            [MoneyHelper.toCents(totalAmount), now, cashBoxId],
           );
         }
       }
@@ -329,7 +329,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
 
     await txn.update(
       'accounts',
-      {'balance': currentBalance, 'updated_at': now},
+      {'balance': MoneyHelper.toCents(currentBalance), 'updated_at': now},
       where: 'id = ?',
       whereArgs: [accountId],
     );

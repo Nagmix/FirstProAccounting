@@ -179,7 +179,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                           'start_date': '$selectedYear-01-01',
                           'end_date': '$selectedYear-12-31',
                           'status': 'open',
-                          'net_profit': 0.0,
+                          'net_profit': 0,
                           'notes': notes.isEmpty ? 'السنة المالية $selectedYear' : notes,
                           'created_at': nowStr,
                           'updated_at': nowStr,

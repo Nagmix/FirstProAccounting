@@ -18,7 +18,8 @@ class ExpenseRepository {
     final expenseDate = expenseMap['expense_date'] as String? ?? DateTime.now().toIso8601String();
     await _dbHelper.journal.checkFiscalPeriodOpen(expenseDate);
     final db = await _db;
-    return await db.insert('expenses', expenseMap);
+    final dbMap = MoneyHelper.toCentsMap(expenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']);
+    return await db.insert('expenses', dbMap);
   }
 
   Future<List<Map<String, dynamic>>> getAllExpenses({String orderBy = 'expense_date DESC'}) async {
@@ -44,7 +45,8 @@ class ExpenseRepository {
 
   Future<int> updateExpense(int id, Map<String, dynamic> expenseMap) async {
     final db = await _db;
-    return await db.update('expenses', expenseMap, where: 'id = ?', whereArgs: [id]);
+    final dbMap = MoneyHelper.toCentsMap(expenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']);
+    return await db.update('expenses', dbMap, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteExpense(int id) async {
@@ -87,8 +89,9 @@ class ExpenseRepository {
     final now = DateTime.now().toIso8601String();
 
     await db.transaction((txn) async {
-      // Insert expense
-      await txn.insert('expenses', expenseMap);
+      // Insert expense (convert money fields to cents)
+      final dbExpenseMap = MoneyHelper.toCentsMap(expenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']);
+      await txn.insert('expenses', dbExpenseMap);
 
       // Post journal entry
       final journalId = DateTime.now().millisecondsSinceEpoch;

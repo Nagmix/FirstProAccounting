@@ -627,7 +627,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           updateMap['current_stock'] = widget.existing!.currentStock;
           updateMap['warehouse_id'] = widget.existing!.warehouseId;
           updateMap['image_path'] = _imagePath;
-          await txn.update('products', updateMap, where: 'id = ?', whereArgs: [widget.existing!.id!]);
+          await txn.update('products', MoneyHelper.toCentsMap(updateMap, MoneyHelper.productMoneyFields), where: 'id = ?', whereArgs: [widget.existing!.id!]);
 
           // Replace unit conversions
           final productId = widget.existing!.id!;
@@ -637,7 +637,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
             final unitName = _unitNameById(uc.unitId);
             final baseUnitName = _unitNameById(_selectedBaseUnitId);
             try {
-              await txn.insert('unit_conversions', {
+              await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
                 'product_id': productId,
                 'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
                 'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
@@ -650,11 +650,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 'is_active': 1,
                 'created_at': DateTime.now().toIso8601String(),
                 'updated_at': DateTime.now().toIso8601String(),
-              });
+              }, ['sell_price', 'cost_price']));
             } catch (e) {
               debugPrint('Unit conversion insert error (edit, non-critical): $e');
               try {
-                await txn.insert('unit_conversions', {
+                await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
                   'product_id': productId,
                   'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
                   'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
@@ -665,7 +665,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   'is_active': 1,
                   'created_at': DateTime.now().toIso8601String(),
                   'updated_at': DateTime.now().toIso8601String(),
-                });
+                }, ['sell_price', 'cost_price']));
               } catch (e2) {
                 debugPrint('Unit conversion insert error (edit, fallback): $e2');
               }
@@ -676,7 +676,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
           // Remove 'id' so SQLite auto-generates it
           map.remove('id');
           map['image_path'] = _imagePath;
-          savedProductId = await txn.insert('products', map);
+          savedProductId = await txn.insert('products', MoneyHelper.toCentsMap(map, MoneyHelper.productMoneyFields));
 
           // Save unit conversions
           if (savedProductId != null && savedProductId! > 0) {
@@ -685,7 +685,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
               final unitName = _unitNameById(uc.unitId);
               final baseUnitName = _unitNameById(_selectedBaseUnitId);
               try {
-                await txn.insert('unit_conversions', {
+                await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
                   'product_id': savedProductId,
                   'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
                   'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
@@ -698,12 +698,12 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   'is_active': 1,
                   'created_at': DateTime.now().toIso8601String(),
                   'updated_at': DateTime.now().toIso8601String(),
-                });
+                }, ['sell_price', 'cost_price']));
               } catch (e) {
                 debugPrint('Unit conversion insert error (non-critical): $e');
                 // Try without from_unit_id / to_unit_id in case DB schema is outdated
                 try {
-                  await txn.insert('unit_conversions', {
+                  await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
                     'product_id': savedProductId,
                     'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
                     'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
@@ -714,7 +714,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                     'is_active': 1,
                     'created_at': DateTime.now().toIso8601String(),
                     'updated_at': DateTime.now().toIso8601String(),
-                  });
+                  }, ['sell_price', 'cost_price']));
                 } catch (e2) {
                   debugPrint('Unit conversion insert error (fallback): $e2');
                 }
@@ -737,7 +737,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 'reference_type': null,
                 'reference_id': null,
                 'notes': 'رصيد افتتاحي',
-                'unit_cost': baseCostPrice,
+                'unit_cost': MoneyHelper.toCents(baseCostPrice),
                 'created_at': now,
               });
 
@@ -769,16 +769,16 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   // Journal entry: Debit Inventory / Credit Opening Balance
                   await txn.insert('transactions', {
                     'account_id': inventoryAccountId,
-                    'debit': totalValue,
-                    'credit': 0.0,
+                    'debit': MoneyHelper.toCents(totalValue),
+                    'credit': 0,
                     'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
                     'date': now,
                     'created_at': now,
                   });
                   await txn.insert('transactions', {
                     'account_id': openingBalanceAccountId,
-                    'debit': 0.0,
-                    'credit': totalValue,
+                    'debit': 0,
+                    'credit': MoneyHelper.toCents(totalValue),
                     'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
                     'date': now,
                     'created_at': now,
@@ -789,13 +789,13 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   final invBal = MoneyHelper.readMoney(inventoryAccount.first['balance']);
                   final invBt = inventoryAccount.first['balance_type'] as String? ?? 'debit';
                   final newInvBal = invBt == 'credit' ? invBal - totalValue : invBal + totalValue;
-                  await txn.update('accounts', {'balance': newInvBal, 'updated_at': now}, where: 'id = ?', whereArgs: [inventoryAccountId]);
+                  await txn.update('accounts', {'balance': MoneyHelper.toCents(newInvBal), 'updated_at': now}, where: 'id = ?', whereArgs: [inventoryAccountId]);
 
                   // Opening balance account (credit-balance / EQUITY): balance += credit - debit
                   final obBal = MoneyHelper.readMoney(openingBalanceAccount.first['balance']);
                   final obBt = openingBalanceAccount.first['balance_type'] as String? ?? 'credit';
                   final newObBal = obBt == 'credit' ? obBal + totalValue : obBal - totalValue;
-                  await txn.update('accounts', {'balance': newObBal, 'updated_at': now}, where: 'id = ?', whereArgs: [openingBalanceAccountId]);
+                  await txn.update('accounts', {'balance': MoneyHelper.toCents(newObBal), 'updated_at': now}, where: 'id = ?', whereArgs: [openingBalanceAccountId]);
                 }
               }
             } catch (e) {

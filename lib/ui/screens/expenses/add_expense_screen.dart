@@ -784,7 +784,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     await db.transaction((txn) async {
       // Insert expense
-      await txn.insert('expenses', expenseMap);
+      await txn.insert('expenses', MoneyHelper.toCentsMap(expenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']));
 
       if (expenseAccountId == null || amountBase <= 0) return;
 
@@ -815,8 +815,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         await txn.insert('transactions', {
           'account_id': expenseAccountId,
           'journal_id': journalId,
-          'debit': amountBase,
-          'credit': 0.0,
+          'debit': MoneyHelper.toCents(amountBase),
+          'credit': 0,
           'description': 'مصروف: $title',
           'date': now,
           'created_at': now,
@@ -827,8 +827,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           await txn.insert('transactions', {
             'account_id': cashBankAccountId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': amountBase,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(amountBase),
             'description': 'مصروف: $title',
             'date': now,
             'created_at': now,
@@ -841,8 +841,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           await txn.insert('transactions', {
             'account_id': cashBankAccountId,
             'journal_id': journalId,
-            'debit': amountBase,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(amountBase),
+            'credit': 0,
             'description': 'قبض: $title',
             'date': now,
             'created_at': now,
@@ -852,8 +852,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         await txn.insert('transactions', {
           'account_id': expenseAccountId,
           'journal_id': journalId,
-          'debit': 0.0,
-          'credit': amountBase,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(amountBase),
           'description': 'قبض: $title',
           'date': now,
           'created_at': now,
@@ -864,9 +864,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       // Update cash box balance
       if (cashBoxId != null && amountBase > 0) {
         if (isSarf) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
         } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
         }
       }
     });
@@ -919,8 +919,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             await txn.insert('transactions', {
               'account_id': oldExpenseAccountId,
               'journal_id': reverseJournalId,
-              'debit': 0.0,
-              'credit': oldAmountBase,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(oldAmountBase),
               'description': 'تعديل/عكس مصروف: $oldTitle',
               'date': now,
               'created_at': now,
@@ -931,8 +931,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               await txn.insert('transactions', {
                 'account_id': oldCashBankAccountId,
                 'journal_id': reverseJournalId,
-                'debit': oldAmountBase,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(oldAmountBase),
+                'credit': 0,
                 'description': 'تعديل/عكس مصروف: $oldTitle',
                 'date': now,
                 'created_at': now,
@@ -945,8 +945,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               await txn.insert('transactions', {
                 'account_id': oldCashBankAccountId,
                 'journal_id': reverseJournalId,
-                'debit': 0.0,
-                'credit': oldAmountBase,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(oldAmountBase),
                 'description': 'تعديل/عكس قبض: $oldTitle',
                 'date': now,
                 'created_at': now,
@@ -956,8 +956,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             await txn.insert('transactions', {
               'account_id': oldExpenseAccountId,
               'journal_id': reverseJournalId,
-              'debit': oldAmountBase,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(oldAmountBase),
+              'credit': 0,
               'description': 'تعديل/عكس قبض: $oldTitle',
               'date': now,
               'created_at': now,
@@ -969,17 +969,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           if (oldCashBoxId != null && oldAmountBase > 0) {
             if (oldIsSarf) {
               // Original decreased cash box → reverse: increase
-              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [oldAmountBase, now, oldCashBoxId]);
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
             } else {
               // Original increased cash box → reverse: decrease
-              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [oldAmountBase, now, oldCashBoxId]);
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
             }
           }
         }
       }
 
       // ── 2. Update expense record ──
-      await txn.update('expenses', newExpenseMap, where: 'id = ?', whereArgs: [expenseId]);
+      await txn.update('expenses', MoneyHelper.toCentsMap(newExpenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']), where: 'id = ?', whereArgs: [expenseId]);
 
       // ── 3. Create new journal entries ──
       final newAmountBase = MoneyHelper.readMoney(newExpenseMap['amount_base']);
@@ -1011,8 +1011,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           await txn.insert('transactions', {
             'account_id': newExpenseAccountId,
             'journal_id': journalId,
-            'debit': newAmountBase,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(newAmountBase),
+            'credit': 0,
             'description': 'مصروف: $title',
             'date': now,
             'created_at': now,
@@ -1023,8 +1023,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             await txn.insert('transactions', {
               'account_id': cashBankAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': newAmountBase,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(newAmountBase),
               'description': 'مصروف: $title',
               'date': now,
               'created_at': now,
@@ -1037,8 +1037,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             await txn.insert('transactions', {
               'account_id': cashBankAccountId,
               'journal_id': journalId,
-              'debit': newAmountBase,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(newAmountBase),
+              'credit': 0,
               'description': 'قبض: $title',
               'date': now,
               'created_at': now,
@@ -1048,8 +1048,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           await txn.insert('transactions', {
             'account_id': newExpenseAccountId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': newAmountBase,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(newAmountBase),
             'description': 'قبض: $title',
             'date': now,
             'created_at': now,
@@ -1060,9 +1060,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         // Update cash box balance for the new entry
         if (cashBoxId != null && newAmountBase > 0) {
           if (isSarf) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [newAmountBase, now, cashBoxId]);
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
           } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [newAmountBase, now, cashBoxId]);
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
           }
         }
       }
@@ -1085,6 +1085,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     } else {
       currentBalance = currentBalance + credit - debit;
     }
-    await txn.update('accounts', {'balance': currentBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
+    await txn.update('accounts', {'balance': MoneyHelper.toCents(currentBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
   }
 }

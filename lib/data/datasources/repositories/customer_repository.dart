@@ -23,7 +23,7 @@ class CustomerRepository {
 
     int? customerId;
     await db.transaction((txn) async {
-      customerId = await txn.insert('customers', customerMap);
+      customerId = await txn.insert('customers', MoneyHelper.toCentsMap(customerMap, MoneyHelper.customerMoneyFields));
 
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
@@ -107,7 +107,7 @@ class CustomerRepository {
 
   Future<int> updateCustomer(int id, Map<String, dynamic> customerMap) async {
     final db = await _db;
-    return await db.update('customers', customerMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('customers', MoneyHelper.toCentsMap(customerMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteCustomer(int id) async {

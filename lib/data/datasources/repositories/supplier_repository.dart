@@ -27,7 +27,7 @@ class SupplierRepository {
 
     int? supplierId;
     await db.transaction((txn) async {
-      supplierId = await txn.insert('suppliers', supplierMap);
+      supplierId = await txn.insert('suppliers', MoneyHelper.toCentsMap(supplierMap, MoneyHelper.supplierMoneyFields));
 
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
@@ -106,7 +106,7 @@ class SupplierRepository {
 
   Future<int> updateSupplier(int id, Map<String, dynamic> supplierMap) async {
     final db = await _db;
-    return await db.update('suppliers', supplierMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('suppliers', MoneyHelper.toCentsMap(supplierMap, MoneyHelper.supplierMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteSupplier(int id) async {

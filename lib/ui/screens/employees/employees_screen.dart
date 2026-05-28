@@ -436,18 +436,18 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
             await (await db.database).transaction((txn) async {
               await txn.insert('transactions', {
                 'account_id': accountId, 'journal_id': journalId,
-                'debit': balance, 'credit': 0.0,
+                'debit': MoneyHelper.toCents(balance), 'credit': 0,
                 'description': 'رصيد افتتاحي موظف - ${_nameController.text}',
                 'date': now, 'created_at': now,
               });
               await txn.insert('transactions', {
                 'account_id': cashAccountId, 'journal_id': journalId,
-                'debit': 0.0, 'credit': balance,
+                'debit': 0, 'credit': MoneyHelper.toCents(balance),
                 'description': 'رصيد افتتاحي موظف - ${_nameController.text}',
                 'date': now, 'created_at': now,
               });
-              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [balance, now, accountId]);
-              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [balance, now, cashAccountId]);
+              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(balance), now, accountId]);
+              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(balance), now, cashAccountId]);
             });
           }
         } else {
@@ -456,18 +456,18 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
             await (await db.database).transaction((txn) async {
               await txn.insert('transactions', {
                 'account_id': cashAccountId, 'journal_id': journalId,
-                'debit': balance, 'credit': 0.0,
+                'debit': MoneyHelper.toCents(balance), 'credit': 0,
                 'description': 'رصيد افتتاحي موظف (عليه) - ${_nameController.text}',
                 'date': now, 'created_at': now,
               });
               await txn.insert('transactions', {
                 'account_id': accountId, 'journal_id': journalId,
-                'debit': 0.0, 'credit': balance,
+                'debit': 0, 'credit': MoneyHelper.toCents(balance),
                 'description': 'رصيد افتتاحي موظف (عليه) - ${_nameController.text}',
                 'date': now, 'created_at': now,
               });
-              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [balance, now, cashAccountId]);
-              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [balance, now, accountId]);
+              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(balance), now, cashAccountId]);
+              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(balance), now, accountId]);
             });
           }
         }

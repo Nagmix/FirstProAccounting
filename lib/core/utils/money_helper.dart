@@ -84,4 +84,102 @@ class MoneyHelper {
   static int compare(double a, double b) {
     return toCents(a).compareTo(toCents(b));
   }
+
+  /// Convert specified money fields in a map from human-readable doubles
+  /// to integer cents for database storage.
+  ///
+  /// This is the central conversion point: screens work with doubles
+  /// (e.g. 2000.00), but the DB stores integers (200000 cents).
+  /// Call this before any `db.insert()` or `db.update()` on maps
+  /// that come from the UI layer.
+  ///
+  /// Non-existent keys are silently skipped, so it's safe to pass
+  /// a superset of field names.
+  static Map<String, dynamic> toCentsMap(
+    Map<String, dynamic> map,
+    List<String> moneyFields,
+  ) {
+    final result = Map<String, dynamic>.from(map);
+    for (final field in moneyFields) {
+      final value = result[field];
+      if (value is double) {
+        result[field] = toCents(value);
+      } else if (value is int) {
+        // Already an int — could be already in cents or a raw int.
+        // If the int came from the UI (e.g. a num field), we need to
+        // convert it. We detect this by checking if it's a "small" value
+        // that looks like it hasn't been scaled yet.
+        // Heuristic: if < 100000, it's likely a raw value, not cents.
+        // But this is unreliable, so we only convert doubles.
+        // Ints are assumed to already be in cents (e.g. from readMoney).
+      } else if (value is num && value.toDouble() != value.toInt()) {
+        // num with decimal part — convert
+        result[field] = toCents(value.toDouble());
+      }
+    }
+    return result;
+  }
+
+  /// Common money field names for each table.
+  /// Use these constants to avoid typos and keep field lists centralized.
+  static const invoiceMoneyFields = [
+    'subtotal', 'discount_amount', 'tax_amount', 'transport_charges',
+    'total', 'paid_amount', 'remaining',
+  ];
+
+  static const invoiceItemMoneyFields = [
+    'unit_price', 'total_price',
+  ];
+
+  static const productMoneyFields = [
+    'sell_price', 'cost_price', 'average_cost', 'min_price', 'max_price',
+  ];
+
+  static const accountMoneyFields = [
+    'balance', 'debt_ceiling',
+  ];
+
+  static const expenseMoneyFields = [
+    'amount',
+  ];
+
+  static const customerMoneyFields = [
+    'balance', 'opening_balance', 'debt_ceiling',
+  ];
+
+  static const supplierMoneyFields = [
+    'balance', 'opening_balance',
+  ];
+
+  static const cashBoxMoneyFields = [
+    'balance', 'opening_balance',
+  ];
+
+  static const voucherMoneyFields = [
+    'amount',
+  ];
+
+  static const shiftMoneyFields = [
+    'opening_amount', 'total_sales', 'total_returns', 'total_discounts', 'closing_amount',
+  ];
+
+  static const transactionMoneyFields = [
+    'debit', 'credit',
+  ];
+
+  static const stockMovementMoneyFields = [
+    'unit_cost',
+  ];
+
+  static const currencyMoneyFields = [
+    'exchange_rate',
+  ];
+
+  static const orderMoneyFields = [
+    'subtotal', 'discount_amount', 'tax_amount', 'total', 'paid_amount', 'remaining',
+  ];
+
+  static const orderItemMoneyFields = [
+    'unit_price', 'total_price',
+  ];
 }

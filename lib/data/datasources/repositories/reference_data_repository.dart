@@ -114,7 +114,7 @@ class ReferenceDataRepository {
   /// Insert a unit conversion for a product (e.g., 1 carton = 24 pieces)
   Future<int> insertUnitConversion(Map<String, dynamic> conversionMap) async {
     final db = await _db;
-    return await db.insert('unit_conversions', conversionMap);
+    return await db.insert('unit_conversions', MoneyHelper.toCentsMap(conversionMap, ['sell_price', 'cost_price']));
   }
 
   /// Get all unit conversions for a product
@@ -131,7 +131,7 @@ class ReferenceDataRepository {
   /// Update a unit conversion
   Future<int> updateUnitConversion(int id, Map<String, dynamic> conversionMap) async {
     final db = await _db;
-    return await db.update('unit_conversions', conversionMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('unit_conversions', MoneyHelper.toCentsMap(conversionMap, ['sell_price', 'cost_price']), where: 'id = ?', whereArgs: [id]);
   }
 
   /// Delete a unit conversion
@@ -277,7 +277,7 @@ class ReferenceDataRepository {
 
   Future<int> insertEmployee(Map<String, dynamic> employeeMap) async {
     final db = await _db;
-    return await db.insert('employees', employeeMap);
+    return await db.insert('employees', MoneyHelper.toCentsMap(employeeMap, ['balance']));
   }
 
   Future<List<Map<String, dynamic>>> getAllEmployees() async {
@@ -293,7 +293,7 @@ class ReferenceDataRepository {
 
   Future<int> updateEmployee(int id, Map<String, dynamic> employeeMap) async {
     final db = await _db;
-    return await db.update('employees', employeeMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('employees', MoneyHelper.toCentsMap(employeeMap, ['balance']), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteEmployee(int id) async {

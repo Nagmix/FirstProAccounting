@@ -49,7 +49,7 @@ class JournalService {
       await db.update(
         'accounts',
         {
-          'balance': newBalance,
+          'balance': MoneyHelper.toCents(newBalance),
           'updated_at': DateTime.now().toIso8601String(),
         },
         where: 'id = ?',

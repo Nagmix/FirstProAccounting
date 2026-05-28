@@ -486,11 +486,11 @@ class StockService {
     int voucherId = 0;
     await db.transaction((txn) async {
       // Insert voucher header
-      voucherId = await txn.insert('inventory_vouchers', {
+      voucherId = await txn.insert('inventory_vouchers', MoneyHelper.toCentsMap({
         ...voucherMap,
         'created_at': voucherMap['created_at'] as String? ?? now,
         'updated_at': voucherMap['updated_at'] as String? ?? now,
-      });
+      }, ['total_value']));
 
       double totalIncreaseValue = 0.0;
       double totalDecreaseValue = 0.0;
@@ -546,7 +546,7 @@ class StockService {
 
       // Update voucher total value
       await txn.update('inventory_vouchers', {
-        'total_value': totalIncreaseValue + totalDecreaseValue,
+        'total_value': MoneyHelper.toCents(totalIncreaseValue + totalDecreaseValue),
         'updated_at': now,
       }, where: 'id = ?', whereArgs: [voucherId]);
 

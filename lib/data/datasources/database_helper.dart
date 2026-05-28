@@ -1818,7 +1818,7 @@ class DatabaseHelper {
         final correctBalance = MoneyHelper.readMoney(txResult.first['net_debit']);
         await db.update(
           'accounts',
-          {'balance': correctBalance, 'updated_at': DateTime.now().toIso8601String()},
+          {'balance': MoneyHelper.toCents(correctBalance), 'updated_at': DateTime.now().toIso8601String()},
           where: 'id = ?',
           whereArgs: [accountId],
         );

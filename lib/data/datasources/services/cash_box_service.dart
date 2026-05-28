@@ -15,7 +15,7 @@ class CashBoxService {
 
   Future<int> insertCashBox(Map<String, dynamic> cashBoxMap) async {
     final db = await _db;
-    return await db.insert('cash_boxes', cashBoxMap);
+    return await db.insert('cash_boxes', MoneyHelper.toCentsMap(cashBoxMap, MoneyHelper.cashBoxMoneyFields));
   }
 
   Future<List<Map<String, dynamic>>> getAllCashBoxes() async {
@@ -36,7 +36,7 @@ class CashBoxService {
 
   Future<int> updateCashBox(int id, Map<String, dynamic> cashBoxMap) async {
     final db = await _db;
-    return await db.update('cash_boxes', cashBoxMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('cash_boxes', MoneyHelper.toCentsMap(cashBoxMap, MoneyHelper.cashBoxMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteCashBox(int id) async {
@@ -87,7 +87,7 @@ class CashBoxService {
     late int exchangeId;
     await db.transaction((txn) async {
       // إدراج سجل الصرافة
-      exchangeId = await txn.insert('currency_exchanges', exchangeMap);
+      exchangeId = await txn.insert('currency_exchanges', MoneyHelper.toCentsMap(exchangeMap, ['from_amount', 'to_amount', 'gain_loss']));
 
       // القيود المحاسبية
       final journalId = DateTime.now().millisecondsSinceEpoch;
@@ -257,7 +257,7 @@ class CashBoxService {
     late int transferId;
     await db.transaction((txn) async {
       // إدراج سجل التحويل
-      transferId = await txn.insert('cash_transfers', transferMap);
+      transferId = await txn.insert('cash_transfers', MoneyHelper.toCentsMap(transferMap, ['amount']));
 
       // القيود المحاسبية
       final journalId = DateTime.now().millisecondsSinceEpoch;
@@ -401,14 +401,14 @@ class CashBoxService {
     int voucherId = 0;
     await db.transaction((txn) async {
       // إدراج السند
-      voucherId = await txn.insert('vouchers', voucherMap);
+      voucherId = await txn.insert('vouchers', MoneyHelper.toCentsMap(voucherMap, MoneyHelper.voucherMoneyFields));
 
       // إدراج بنود السند وإنشاء قيود يومية
       for (final item in items) {
         final itemMap = Map<String, dynamic>.from(item);
         itemMap['voucher_id'] = voucherId;
         itemMap['created_at'] = now;
-        await txn.insert('voucher_items', itemMap);
+        await txn.insert('voucher_items', MoneyHelper.toCentsMap(itemMap, MoneyHelper.transactionMoneyFields));
 
         // إنشاء قيد يومي لكل بند
         final accountId = (item['account_id'] as num?)?.toInt();

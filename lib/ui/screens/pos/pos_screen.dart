@@ -2215,16 +2215,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                           // إيداع: مدين (الصندوق) / دائن (مصاريف متنوعة)
                           await dbInstance.insert('transactions', {
                             'account_id': cashAccountId,
-                            'debit': amount,
-                            'credit': 0.0,
+                            'debit': MoneyHelper.toCents(amount),
+                            'credit': 0,
                             'description': reason,
                             'date': now.toIso8601String(),
                             'created_at': now.toIso8601String(),
                           });
                           await dbInstance.insert('transactions', {
                             'account_id': expenseAccountId,
-                            'debit': 0.0,
-                            'credit': amount,
+                            'debit': 0,
+                            'credit': MoneyHelper.toCents(amount),
                             'description': reason,
                             'date': now.toIso8601String(),
                             'created_at': now.toIso8601String(),
@@ -2236,16 +2236,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                           // سحب: مدين (مصاريف متنوعة) / دائن (الصندوق)
                           await dbInstance.insert('transactions', {
                             'account_id': expenseAccountId,
-                            'debit': amount,
-                            'credit': 0.0,
+                            'debit': MoneyHelper.toCents(amount),
+                            'credit': 0,
                             'description': reason,
                             'date': now.toIso8601String(),
                             'created_at': now.toIso8601String(),
                           });
                           await dbInstance.insert('transactions', {
                             'account_id': cashAccountId,
-                            'debit': 0.0,
-                            'credit': amount,
+                            'debit': 0,
+                            'credit': MoneyHelper.toCents(amount),
                             'description': reason,
                             'date': now.toIso8601String(),
                             'created_at': now.toIso8601String(),

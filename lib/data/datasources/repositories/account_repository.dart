@@ -32,12 +32,12 @@ class AccountRepository {
 
   Future<int> insertAccount(Map<String, dynamic> accountMap) async {
     final db = await _db;
-    return await db.insert('accounts', accountMap);
+    return await db.insert('accounts', MoneyHelper.toCentsMap(accountMap, MoneyHelper.accountMoneyFields));
   }
 
   Future<int> updateAccount(int id, Map<String, dynamic> accountMap) async {
     final db = await _db;
-    return await db.update('accounts', accountMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('accounts', MoneyHelper.toCentsMap(accountMap, MoneyHelper.accountMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteAccount(int id) async {
@@ -122,7 +122,7 @@ class AccountRepository {
     // Create the account inside a transaction for atomicity
     return await db.transaction((txn) async {
       // Create account with initial balance = 0 (will be updated via journal)
-      final accountId = await txn.insert('accounts', {
+      final accountId = await txn.insert('accounts', MoneyHelper.toCentsMap({
         'name_ar': '$nameAr ($currencySymbol)',
         'name_en': nameAr,
         'account_code': newCode,
@@ -135,7 +135,7 @@ class AccountRepository {
         'balance_type': balanceType,
         'created_at': now,
         'updated_at': now,
-      });
+      }, MoneyHelper.accountMoneyFields));
 
       // Create double-entry opening balance transaction if > 0
       // Must include contra-entry to Opening Balance Equity account (3900+offset)
@@ -512,7 +512,7 @@ class AccountRepository {
       if (existingFY.isNotEmpty) {
         await txn.update('fiscal_years', {
           'status': 'closed',
-          'net_profit': totalNetProfitYER,
+          'net_profit': MoneyHelper.toCents(totalNetProfitYER),
           'closed_at': now,
           'updated_at': now,
         }, where: 'year = ?', whereArgs: [year]);
@@ -522,7 +522,7 @@ class AccountRepository {
           'start_date': '$year-01-01',
           'end_date': '$year-12-31',
           'status': 'closed',
-          'net_profit': totalNetProfitYER,
+          'net_profit': MoneyHelper.toCents(totalNetProfitYER),
           'closed_at': now,
           'notes': 'ترحيل سنوي تلقائي',
           'created_at': now,

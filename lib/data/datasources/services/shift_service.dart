@@ -15,7 +15,7 @@ class ShiftService {
 
   Future<int> openShift(Map<String, dynamic> shiftMap) async {
     final db = await _db;
-    return await db.insert('shifts', shiftMap);
+    return await db.insert('shifts', MoneyHelper.toCentsMap(shiftMap, MoneyHelper.shiftMoneyFields));
   }
 
   Future<Map<String, dynamic>?> getActiveShift(int cashBoxId) async {
@@ -33,7 +33,7 @@ class ShiftService {
 
   Future<int> closeShift(int shiftId, Map<String, dynamic> closeData) async {
     final db = await _db;
-    return await db.update('shifts', closeData, where: 'id = ?', whereArgs: [shiftId]);
+    return await db.update('shifts', MoneyHelper.toCentsMap(closeData, MoneyHelper.shiftMoneyFields), where: 'id = ?', whereArgs: [shiftId]);
   }
 
   Future<List<Map<String, dynamic>>> getAllShifts({String orderBy = 'opened_at DESC'}) async {
@@ -388,7 +388,7 @@ class ShiftService {
 
   Future<int> insertHeldOrder(Map<String, dynamic> order) async {
     final db = await _db;
-    return await db.insert('held_orders', order);
+    return await db.insert('held_orders', MoneyHelper.toCentsMap(order, ['discount']));
   }
 
   Future<List<Map<String, dynamic>>> getHeldOrders({int? shiftId}) async {

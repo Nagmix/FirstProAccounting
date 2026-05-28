@@ -24,9 +24,11 @@ class InvoiceRepository {
     await _dbHelper.journal.checkFiscalPeriodOpen(invoiceDate);
     final db = await _db;
     await db.transaction((txn) async {
-      await txn.insert('invoices', invoiceMap);
+      final dbInvoiceMap = MoneyHelper.toCentsMap(invoiceMap, MoneyHelper.invoiceMoneyFields);
+      await txn.insert('invoices', dbInvoiceMap);
       for (final item in items) {
-        await txn.insert('invoice_items', item);
+        final dbItem = MoneyHelper.toCentsMap(item, MoneyHelper.invoiceItemMoneyFields);
+        await txn.insert('invoice_items', dbItem);
       }
     });
   }
@@ -62,12 +64,14 @@ class InvoiceRepository {
     }
 
     await db.transaction((txn) async {
-      // Insert invoice
-      await txn.insert('invoices', invoiceMap);
+      // Convert money fields to cents before inserting (UI sends raw doubles)
+      final dbInvoiceMap = MoneyHelper.toCentsMap(invoiceMap, MoneyHelper.invoiceMoneyFields);
+      await txn.insert('invoices', dbInvoiceMap);
 
-      // Insert invoice items
+      // Insert invoice items (convert money fields to cents)
       for (final item in items) {
-        await txn.insert('invoice_items', item);
+        final dbItem = MoneyHelper.toCentsMap(item, MoneyHelper.invoiceItemMoneyFields);
+        await txn.insert('invoice_items', dbItem);
       }
 
       // ── Stock management ──

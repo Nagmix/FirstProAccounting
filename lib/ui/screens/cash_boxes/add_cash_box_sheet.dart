@@ -200,8 +200,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               await database.insert('transactions', {
                 'account_id': _linkedAccountId,
                 'journal_id': journalId,
-                'debit': openingBalance,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(openingBalance),
+                'credit': 0,
                 'description': 'رصيد افتتاحي صندوق - $name',
                 'date': now,
                 'created_at': now,
@@ -209,8 +209,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               await database.insert('transactions', {
                 'account_id': openingBalanceAccountId,
                 'journal_id': journalId,
-                'debit': 0.0,
-                'credit': openingBalance,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(openingBalance),
                 'description': 'رصيد افتتاحي صندوق - $name',
                 'date': now,
                 'created_at': now,
@@ -222,8 +222,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               await database.insert('transactions', {
                 'account_id': _linkedAccountId,
                 'journal_id': journalId,
-                'debit': 0.0,
-                'credit': openingBalance,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(openingBalance),
                 'description': 'رصيد افتتاحي صندوق - $name',
                 'date': now,
                 'created_at': now,
@@ -231,8 +231,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               await database.insert('transactions', {
                 'account_id': openingBalanceAccountId,
                 'journal_id': journalId,
-                'debit': openingBalance,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(openingBalance),
+                'credit': 0,
                 'description': 'رصيد افتتاحي صندوق - $name',
                 'date': now,
                 'created_at': now,

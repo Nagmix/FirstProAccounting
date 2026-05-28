@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
 
 class OrderRepository {
@@ -15,9 +16,9 @@ class OrderRepository {
   Future<void> insertQuotationWithItems(Map<String, dynamic> quotationMap, List<Map<String, dynamic>> items) async {
     final db = await _db;
     await db.transaction((txn) async {
-      await txn.insert('quotations', quotationMap);
+      await txn.insert('quotations', MoneyHelper.toCentsMap(quotationMap, MoneyHelper.orderMoneyFields));
       for (final item in items) {
-        await txn.insert('quotation_items', item);
+        await txn.insert('quotation_items', MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
       }
     });
   }
@@ -56,7 +57,7 @@ class OrderRepository {
 
   Future<int> updateQuotation(String id, Map<String, dynamic> quotationMap) async {
     final db = await _db;
-    return await db.update('quotations', quotationMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('quotations', MoneyHelper.toCentsMap(quotationMap, MoneyHelper.orderMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteQuotation(String id) async {
@@ -84,9 +85,9 @@ class OrderRepository {
   Future<void> insertPurchaseOrderWithItems(Map<String, dynamic> poMap, List<Map<String, dynamic>> items) async {
     final db = await _db;
     await db.transaction((txn) async {
-      await txn.insert('purchase_orders', poMap);
+      await txn.insert('purchase_orders', MoneyHelper.toCentsMap(poMap, MoneyHelper.orderMoneyFields));
       for (final item in items) {
-        await txn.insert('purchase_order_items', item);
+        await txn.insert('purchase_order_items', MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
       }
     });
   }
@@ -125,7 +126,7 @@ class OrderRepository {
 
   Future<int> updatePurchaseOrder(String id, Map<String, dynamic> poMap) async {
     final db = await _db;
-    return await db.update('purchase_orders', poMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('purchase_orders', MoneyHelper.toCentsMap(poMap, MoneyHelper.orderMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deletePurchaseOrder(String id) async {
@@ -153,9 +154,9 @@ class OrderRepository {
   Future<void> insertSalesOrderWithItems(Map<String, dynamic> soMap, List<Map<String, dynamic>> items) async {
     final db = await _db;
     await db.transaction((txn) async {
-      await txn.insert('sales_orders', soMap);
+      await txn.insert('sales_orders', MoneyHelper.toCentsMap(soMap, MoneyHelper.orderMoneyFields));
       for (final item in items) {
-        await txn.insert('sales_order_items', item);
+        await txn.insert('sales_order_items', MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
       }
     });
   }
@@ -194,7 +195,7 @@ class OrderRepository {
 
   Future<int> updateSalesOrder(String id, Map<String, dynamic> soMap) async {
     final db = await _db;
-    return await db.update('sales_orders', soMap, where: 'id = ?', whereArgs: [id]);
+    return await db.update('sales_orders', MoneyHelper.toCentsMap(soMap, MoneyHelper.orderMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteSalesOrder(String id) async {
