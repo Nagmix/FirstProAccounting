@@ -1431,4 +1431,62 @@ class InvoiceRepository {
     );
     return (result.first['cnt'] as num?)?.toInt() ?? 0;
   }
+
+  /// Check return quantity limits against the original invoice.
+  /// Returns a map of product_id -> error message for items that exceed original quantities.
+  Future<Map<String, String>> checkReturnLimits(String originalInvoiceId, List<Map<String, dynamic>> returnItems) async {
+    final db = await _db;
+    final errors = <String, String>{};
+    
+    // Get original invoice items
+    final originalItems = await db.query(
+      'invoice_items',
+      where: 'invoice_id = ?',
+      whereArgs: [originalInvoiceId],
+    );
+    
+    // Get already returned quantities
+    final returnInvoices = await db.query(
+      'invoices',
+      where: 'original_invoice_id = ? AND is_return = 1 AND status != ?',
+      whereArgs: [originalInvoiceId, 'cancelled'],
+    );
+    
+    final returnedQuantities = <int, double>{};
+    for (final returnInvoice in returnInvoices) {
+      final returnItems2 = await db.query(
+        'invoice_items',
+        where: 'invoice_id = ?',
+        whereArgs: [returnInvoice['id']],
+      );
+      for (final item in returnItems2) {
+        final productId = (item['product_id'] as num?)?.toInt() ?? 0;
+        final qty = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+        returnedQuantities[productId] = (returnedQuantities[productId] ?? 0.0) + qty;
+      }
+    }
+    
+    // Check each return item against original - returned
+    for (final item in returnItems) {
+      final productId = (item['product_id'] as num?)?.toInt() ?? 0;
+      final returnQty = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+      
+      // Find original quantity for this product
+      double originalQty = 0.0;
+      for (final origItem in originalItems) {
+        final origProductId = (origItem['product_id'] as num?)?.toInt() ?? 0;
+        if (origProductId == productId) {
+          originalQty = (origItem['quantity'] as num?)?.toDouble() ?? 0.0;
+          break;
+        }
+      }
+      
+      final alreadyReturned = returnedQuantities[productId] ?? 0.0;
+      if (returnQty > originalQty - alreadyReturned) {
+        errors[productId.toString()] = 'الكمية المرتجعة ($returnQty) تتجاوز الكمية المتبقية (${originalQty - alreadyReturned})';
+      }
+    }
+    
+    return errors;
+  }
 }

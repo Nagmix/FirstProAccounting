@@ -94,7 +94,7 @@ class ReportService {
         });
       }
     } catch (e) {
-      DatabaseHelper._logMigrationError("alter", e);
+      DatabaseHelper.logMigrationError("alter", e);
       // جدول السندات غير موجود بعد
     }
 
@@ -166,7 +166,7 @@ class ReportService {
         });
       }
     } catch (e) {
-      DatabaseHelper._logMigrationError("alter", e);
+      DatabaseHelper.logMigrationError("alter", e);
       // جدول صرافة العملات غير موجود بعد
     }
 
@@ -225,7 +225,7 @@ class ReportService {
         [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
       );
       summary['total_receipts'] = MoneyHelper.readMoney(receiptsResult.first['total']);
-    } catch (e) { DatabaseHelper._logMigrationError("migration", e); }
+    } catch (e) { DatabaseHelper.logMigrationError("migration", e); }
 
     // سندات الصرف
     try {
@@ -236,7 +236,7 @@ class ReportService {
         [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
       );
       summary['total_payments'] = MoneyHelper.readMoney(paymentsResult.first['total']);
-    } catch (e) { DatabaseHelper._logMigrationError("migration", e); }
+    } catch (e) { DatabaseHelper.logMigrationError("migration", e); }
 
     // المصروفات
     final expensesResult = await db.rawQuery(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
@@ -179,7 +180,7 @@ class _AppLockScreenState extends State<AppLockScreen>
         // Generate a random salt using timestamp + random values
         final random = DateTime.now().microsecondsSinceEpoch.toString() +
             DateTime.now().millisecond.toString() +
-            pin.hashCode.toString();
+            Random().nextInt(999999).toString();
         final saltBytes = sha256.convert(utf8.encode(random)).bytes;
         salt = base64Encode(saltBytes);
         await _secureStorage.write(key: 'pin_salt', value: salt);

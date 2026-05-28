@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
-import '../../core/utils/money_helper.dart';
+import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
 
 /// Service responsible for journal-entry operations, account-balance updates,
