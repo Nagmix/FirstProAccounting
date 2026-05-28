@@ -92,7 +92,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e')),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات')),
         );
       }
     } finally {
@@ -235,7 +235,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في التحويل: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء التحويل'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -725,7 +725,7 @@ class _CreateQuotationFormState extends State<_CreateQuotationForm> {
       if (mounted) {
         setState(() => _isLoadingData = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -994,7 +994,7 @@ class _CreateQuotationFormState extends State<_CreateQuotationForm> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في حفظ عرض السعر: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء الحفظ'), backgroundColor: AppColors.error),
         );
       }
     } finally {

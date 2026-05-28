@@ -153,7 +153,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        context.showErrorSnackBar('حدث خطأ أثناء التدقيق: $e');
+        context.showErrorSnackBar('حدث خطأ أثناء التدقيق');
       }
     }
   }

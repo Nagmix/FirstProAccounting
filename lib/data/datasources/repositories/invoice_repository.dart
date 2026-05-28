@@ -221,12 +221,31 @@ class InvoiceRepository {
       final int codeOffset = needsYerConversion ? 0 : (invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0));
       final String journalCurrency = needsYerConversion ? 'YER' : invoiceCurrency;
 
-      // Get account IDs for journal entries (using journalCurrency which is YER when conversion needed)
-      final salesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(4100 + codeOffset).toString(), journalCurrency], limit: 1);
-      final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), journalCurrency], limit: 1);
-      final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), journalCurrency], limit: 1);
-      final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), journalCurrency], limit: 1);
-      final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), journalCurrency], limit: 1);
+      // Batch-fetch all required accounts in a single query (H-10: N+1 optimization)
+      final accountCodes = [
+        (4100 + codeOffset).toString(), // Sales
+        (3100 + codeOffset).toString(), // Purchases
+        (1200 + codeOffset).toString(), // Customers
+        (2100 + codeOffset).toString(), // Suppliers
+        (1100 + codeOffset).toString(), // Cash & Banks
+      ];
+      final placeholders = accountCodes.map((_) => '?').join(',');
+      final accountRows = await txn.query(
+        'accounts',
+        where: 'account_code IN ($placeholders) AND currency = ?',
+        whereArgs: [...accountCodes, journalCurrency],
+      );
+      // Build a lookup map: account_code -> row
+      final accountByCode = <String, Map<String, dynamic>>{};
+      for (final row in accountRows) {
+        final code = row['account_code'] as String?;
+        if (code != null) accountByCode[code] = row;
+      }
+      final salesAccount = accountByCode[accountCodes[0]] != null ? [accountByCode[accountCodes[0]]!] : <Map<String, dynamic>>[];
+      final purchasesAccount = accountByCode[accountCodes[1]] != null ? [accountByCode[accountCodes[1]]!] : <Map<String, dynamic>>[];
+      final customersAccount = accountByCode[accountCodes[2]] != null ? [accountByCode[accountCodes[2]]!] : <Map<String, dynamic>>[];
+      final suppliersAccount = accountByCode[accountCodes[3]] != null ? [accountByCode[accountCodes[3]]!] : <Map<String, dynamic>>[];
+      final cashBanksAccount = accountByCode[accountCodes[4]] != null ? [accountByCode[accountCodes[4]]!] : <Map<String, dynamic>>[];
 
       final salesAccountId = salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
       final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
@@ -432,8 +451,16 @@ class InvoiceRepository {
       // For purchase invoices (not return): Debit Inventory, Credit Purchases (transfer to inventory)
       // For purchase returns: Debit Purchases, Credit Inventory (reverse transfer)
       if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
-        final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), journalCurrency], limit: 1);
-        final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), journalCurrency], limit: 1);
+        // H-10: batch COGS + Inventory account lookup
+        final cogsCode = (3200 + codeOffset).toString();
+        final inventoryCode = (1300 + codeOffset).toString();
+        final cogsInventoryRows = await txn.query(
+          'accounts',
+          where: 'account_code IN (?, ?) AND currency = ?',
+          whereArgs: [cogsCode, inventoryCode, journalCurrency],
+        );
+        final cogsAccount = cogsInventoryRows.where((r) => r['account_code'] == cogsCode).toList();
+        final inventoryAccount = cogsInventoryRows.where((r) => r['account_code'] == inventoryCode).toList();
         final cogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
         final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
 
@@ -510,8 +537,16 @@ class InvoiceRepository {
       // In perpetual inventory: Purchases debit Purchases account, but inventory must also increase.
       // Add transfer: Debit Inventory, Credit Purchases (for the cost of items purchased)
       if ((invoiceType == 'purchase' || invoiceType == 'purchase_return')) {
-        final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), journalCurrency], limit: 1);
-        final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), journalCurrency], limit: 1);
+        // H-10: batch Inventory + Purchases account lookup
+        final inventoryCode = (1300 + codeOffset).toString();
+        final purchasesCode = (3100 + codeOffset).toString();
+        final invPurchRows = await txn.query(
+          'accounts',
+          where: 'account_code IN (?, ?) AND currency = ?',
+          whereArgs: [inventoryCode, purchasesCode, journalCurrency],
+        );
+        final inventoryAccount = invPurchRows.where((r) => r['account_code'] == inventoryCode).toList();
+        final purchasesAccount = invPurchRows.where((r) => r['account_code'] == purchasesCode).toList();
         final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
         final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
 
@@ -682,8 +717,18 @@ class InvoiceRepository {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getAllInvoices({String orderBy = 'created_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllInvoices({String orderBy = 'created_at DESC', int? limit, int offset = 0}) async {
     final db = await _db;
+    String limitClause = '';
+    final args = <dynamic>[];
+    if (limit != null) {
+      limitClause = ' LIMIT ?';
+      args.add(limit);
+      if (offset > 0) {
+        limitClause += ' OFFSET ?';
+        args.add(offset);
+      }
+    }
     return await db.rawQuery('''
       SELECT i.*,
         CASE
@@ -694,8 +739,8 @@ class InvoiceRepository {
       FROM invoices i
       LEFT JOIN customers c ON i.customer_id = c.id
       LEFT JOIN suppliers s ON i.supplier_id = s.id
-      ORDER BY i.$orderBy
-    ''');
+      ORDER BY i.$orderBy$limitClause
+    ''', args);
   }
 
   Future<List<Map<String, dynamic>>> getInvoicesByType(String type) async {

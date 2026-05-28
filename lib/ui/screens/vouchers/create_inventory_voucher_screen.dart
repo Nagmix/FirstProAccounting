@@ -144,7 +144,7 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في حفظ السند: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء الحفظ'), backgroundColor: AppColors.error),
         );
       }
     } finally {

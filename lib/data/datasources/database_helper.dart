@@ -965,6 +965,26 @@ class DatabaseHelper {
     }
   }
 
+  /// Shared account templates: [nameAr, nameEn, baseCode, accountType]
+  /// Used by both _seedDefaultAccounts and _seedAccountsForCurrency.
+  static const List<List<dynamic>> _defaultAccountTemplates = [
+    ['حساب الأصول', 'Assets Account', 1000, 'ASSET'],
+    ['حساب الصناديق والبنوك', 'Cash & Banks Account', 1100, 'ASSET'],
+    ['حساب العملاء', 'Customers Account', 1200, 'ASSET'],
+    ['المخزون', 'Inventory Account', 1300, 'ASSET'],
+    ['حساب الخصوم', 'Liabilities Account', 2000, 'LIABILITY'],
+    ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY'],
+    ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'LIABILITY'],
+    ['الأرباح المحتجزة', 'Retained Earnings', 2900, 'LIABILITY'],
+    ['ضريبة القيمة المضافة', 'VAT Payable', 3300, 'LIABILITY'],
+    ['تكلفة البضاعة المباعة', 'COGS Account', 3200, 'COST'],
+    ['حساب المشتريات', 'Purchases Account', 3100, 'COST'],
+    ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE'],
+    ['حساب المصاريف', 'Expenses Account', 5000, 'EXPENSE'],
+    ['اجور النقل', 'Transport Charges', 5200, 'EXPENSE'],
+    ['حساب الموظفين', 'Employees Account', 5100, 'EXPENSE'],
+  ];
+
   Future<void> _seedDefaultAccounts(Database db) async {
     // Only seed if accounts don't already exist
     final existing = await db.query('accounts', where: 'account_code = ?', whereArgs: ['1000'], limit: 1);
@@ -989,27 +1009,8 @@ class DatabaseHelper {
       };
     }
 
-    // Account templates: [nameAr, nameEn, baseCode, accountType]
-    // Removed: حساب الإيرادات (4000), حساب التكاليف (3000)
-    // These duplicate the parent category name and are no longer needed
-    // Kept: حساب المصاريف (5000), اجور النقل (5200) — required for expense/transport journal entries
-    final templates = [
-      ['حساب الأصول', 'Assets Account', '1000', 'ASSET'],
-      ['حساب الصناديق والبنوك', 'Cash & Banks Account', '1100', 'ASSET'],
-      ['حساب العملاء', 'Customers Account', '1200', 'ASSET'],
-      ['المخزون', 'Inventory Account', '1300', 'ASSET'],
-      ['حساب الخصوم', 'Liabilities Account', '2000', 'LIABILITY'],
-      ['حساب الموردين', 'Suppliers Account', '2100', 'LIABILITY'],
-      ['رصيد افتتاحي', 'Opening Balance Equity', '2200', 'LIABILITY'],
-      ['الأرباح المحتجزة', 'Retained Earnings', '2900', 'LIABILITY'],
-      ['ضريبة القيمة المضافة', 'VAT Payable', '3300', 'LIABILITY'],
-      ['تكلفة البضاعة المباعة', 'COGS Account', '3200', 'COST'],
-      ['حساب المشتريات', 'Purchases Account', '3100', 'COST'],
-      ['حساب المبيعات', 'Sales Account', '4100', 'REVENUE'],
-      ['حساب المصاريف', 'Expenses Account', '5000', 'EXPENSE'],
-      ['اجور النقل', 'Transport Charges', '5200', 'EXPENSE'],
-      ['حساب الموظفين', 'Employees Account', '5100', 'EXPENSE'],
-    ];
+    // Use shared account templates (M-07)
+    final templates = _defaultAccountTemplates;
 
     // Currency configurations: [currencyCode, symbol, codeOffset]
     final currencyConfigs = [
@@ -1024,13 +1025,13 @@ class DatabaseHelper {
       final codeOffset = config[2] as int;
 
       for (final template in templates) {
-        final baseCode = int.parse(template[2]);
+        final baseCode = template[2] as int;
         final actualCode = (baseCode + codeOffset).toString();
         final account = makeAccount(
-          template[0],
-          template[1],
+          template[0] as String,
+          template[1] as String,
           actualCode,
-          template[3],
+          template[3] as String,
           currencyCode,
           currencySymbol,
         );
@@ -1048,26 +1049,8 @@ class DatabaseHelper {
     final existing = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [baseCode.toString(), currencyCode], limit: 1);
     if (existing.isNotEmpty) return;
 
-    // Account templates: [nameAr, nameEn, baseCode, accountType]
-    // Removed: حساب الإيرادات (4000), حساب التكاليف (3000)
-    // Kept: حساب المصاريف (5000), اجور النقل (5200) — required for expense/transport journal entries
-    final templates = [
-      ['حساب الأصول', 'Assets Account', 1000, 'ASSET'],
-      ['حساب الصناديق والبنوك', 'Cash & Banks Account', 1100, 'ASSET'],
-      ['حساب العملاء', 'Customers Account', 1200, 'ASSET'],
-      ['المخزون', 'Inventory Account', 1300, 'ASSET'],
-      ['حساب الخصوم', 'Liabilities Account', 2000, 'LIABILITY'],
-      ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY'],
-      ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'LIABILITY'],
-      ['الأرباح المحتجزة', 'Retained Earnings', 2900, 'LIABILITY'],
-      ['ضريبة القيمة المضافة', 'VAT Payable', 3300, 'LIABILITY'],
-      ['تكلفة البضاعة المباعة', 'COGS Account', 3200, 'COST'],
-      ['حساب المشتريات', 'Purchases Account', 3100, 'COST'],
-      ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE'],
-      ['حساب المصاريف', 'Expenses Account', 5000, 'EXPENSE'],
-      ['اجور النقل', 'Transport Charges', 5200, 'EXPENSE'],
-      ['حساب الموظفين', 'Employees Account', 5100, 'EXPENSE'],
-    ];
+    // Use shared account templates (M-07)
+    final templates = _defaultAccountTemplates;
 
     for (final template in templates) {
       final actualCode = ((template[2] as int) + codeOffset).toString();
@@ -2286,6 +2269,8 @@ class DatabaseHelper {
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 34) {
       await _migrateV34RealToInteger(db);
+      // M-05: Add unique constraint on (account_code, currency)
+      try { await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_code_currency ON accounts (account_code, currency)'); } catch (e) { logMigrationError("migration", e); }
     }
   }
 
@@ -3356,7 +3341,7 @@ class DatabaseHelper {
 
   Future<int> insertProduct(Map<String, dynamic> productMap) => products.insertProduct(productMap);
 
-  Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC'}) => products.getAllProducts(activeOnly: activeOnly, orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC', int? limit, int offset = 0}) => products.getAllProducts(activeOnly: activeOnly, orderBy: orderBy, limit: limit, offset: offset);
 
   Future<List<Map<String, dynamic>>> searchProducts(String query, {int? warehouseId}) => products.searchProducts(query, warehouseId: warehouseId);
 
@@ -3384,7 +3369,7 @@ class DatabaseHelper {
   // ══════════════════════════════════════════════════════════════
 
   Future<int> insertCustomer(Map<String, dynamic> customerMap) => customers.insertCustomer(customerMap);
-  Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'name'}) => customers.getAllCustomers(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'name', int? limit, int offset = 0}) => customers.getAllCustomers(orderBy: orderBy, limit: limit, offset: offset);
   Future<List<Map<String, dynamic>>> searchCustomers(String query) => customers.searchCustomers(query);
   Future<Map<String, dynamic>?> getCustomerById(int id) => customers.getCustomerById(id);
   Future<int> updateCustomer(int id, Map<String, dynamic> customerMap) => customers.updateCustomer(id, customerMap);
@@ -3521,7 +3506,7 @@ class DatabaseHelper {
     paidAmount: paidAmount,
   );
 
-  Future<List<Map<String, dynamic>>> getAllInvoices({String orderBy = 'created_at DESC'}) => invoices.getAllInvoices(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getAllInvoices({String orderBy = 'created_at DESC', int? limit, int offset = 0}) => invoices.getAllInvoices(orderBy: orderBy, limit: limit, offset: offset);
   Future<List<Map<String, dynamic>>> getInvoicesByType(String type) => invoices.getInvoicesByType(type);
   Future<List<Map<String, dynamic>>> getInvoiceItems(String invoiceId) => invoices.getInvoiceItems(invoiceId);
   Future<Map<String, dynamic>?> getInvoiceById(String invoiceId) => invoices.getInvoiceById(invoiceId);

@@ -55,6 +55,7 @@ dependencies:
   flutter_blue_plus: ^1.32.0
   fl_chart: ^0.69.0
   crypto: ^3.0.6
+  get_it: ^7.7.0
 
 dev_dependencies:
   flutter_test:

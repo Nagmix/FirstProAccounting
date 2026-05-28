@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -41,9 +40,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _recentInvoices = [];
   bool _isLoading = true;
 
-  // Faster periodic refresh timer (15s)
-  Timer? _refreshTimer;
-
   // Animation controllers
   late AnimationController _entryController;
   late AnimationController _chartDrawController;
@@ -57,12 +53,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     _loadDashboardData();
     WidgetsBinding.instance.addObserver(this);
-
-    // Auto-refresh every 15 seconds for near-real-time updates
-    _refreshTimer = Timer.periodic(
-      const Duration(seconds: 15),
-      (_) => _loadDashboardData(),
-    );
 
     // Entry animation
     _entryController = AnimationController(
@@ -79,7 +69,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     _entryController.dispose();
     _chartDrawController.dispose();
     _actionPageController.dispose();
@@ -123,13 +112,14 @@ class _DashboardScreenState extends State<DashboardScreen>
         }
       }
     } catch (e) {
+      debugPrint('Dashboard load error: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('خطأ في تحميل البيانات: $e'),
+          const SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
               backgroundColor: AppColors.error),
         );
       }

@@ -81,7 +81,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطأ في تحميل البيانات: $e'),
+            content: Text('حدث خطأ أثناء تحميل البيانات'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -1303,7 +1303,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('خطأ في إقفال الوردية: $e'),
+                              content: Text('حدث خطأ أثناء إقفال الوردية'),
                               backgroundColor: AppColors.error,
                             ),
                           );

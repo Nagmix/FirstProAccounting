@@ -74,7 +74,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ في الإقفال: $e'), backgroundColor: AppColors.error),
+            SnackBar(content: Text('حدث خطأ أثناء الإقفال'), backgroundColor: AppColors.error),
           );
         }
       }
@@ -195,7 +195,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('خطأ في الإنشاء: $e'), backgroundColor: AppColors.error),
+                            SnackBar(content: Text('حدث خطأ أثناء الإنشاء'), backgroundColor: AppColors.error),
                           );
                         }
                       }

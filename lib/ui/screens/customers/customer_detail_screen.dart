@@ -741,7 +741,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في إنشاء كشف الحساب: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء إنشاء كشف الحساب'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -802,7 +802,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: const Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -822,7 +822,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تصدير إكسل: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error),
         );
       }
     }

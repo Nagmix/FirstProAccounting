@@ -500,7 +500,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل التقرير: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل التقرير'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -1296,7 +1296,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في التصدير: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error),
         );
       }
     }

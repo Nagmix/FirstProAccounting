@@ -222,7 +222,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
       }
     } catch (e) {
       if (mounted) {
-        context.showErrorSnackBar('حدث خطأ أثناء الحفظ: $e');
+        context.showErrorSnackBar('حدث خطأ أثناء الحفظ');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

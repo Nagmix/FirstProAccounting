@@ -9,6 +9,47 @@ import '../screens/customers/customers_screen.dart';
 import '../screens/invoices/invoices_screen.dart';
 import '../widgets/custom_bottom_bar.dart';
 
+/// LazyIndexedStack — only builds tabs when they are first selected.
+class LazyIndexedStack extends StatefulWidget {
+  final int index;
+  final List<Widget> children;
+  const LazyIndexedStack({super.key, required this.index, required this.children});
+
+  @override
+  State<LazyIndexedStack> createState() => _LazyIndexedStackState();
+}
+
+class _LazyIndexedStackState extends State<LazyIndexedStack> {
+  late final Set<int> _builtIndices;
+
+  @override
+  void initState() {
+    super.initState();
+    _builtIndices = {widget.index};
+  }
+
+  @override
+  void didUpdateWidget(LazyIndexedStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index) {
+      setState(() {
+        _builtIndices.add(widget.index);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IndexedStack(
+      index: widget.index,
+      children: [
+        for (int i = 0; i < widget.children.length; i++)
+          _builtIndices.contains(i) ? widget.children[i] : const SizedBox.shrink(),
+      ],
+    );
+  }
+}
+
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
 
@@ -147,7 +188,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
               ],
             ),
       endDrawer: _buildDrawer(theme, isDark),
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: LazyIndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: CustomBottomBar(
         selectedIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),

@@ -348,11 +348,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: _buildAppBar(),
-        body: _isLoading
+    return Scaffold(
+      appBar: _buildAppBar(),
+      body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : Stack(
                 children: [
@@ -406,7 +404,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 child: const Icon(Icons.qr_code),
               )
             : null,
-      ),
     );
   }
 
@@ -887,24 +884,29 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 120), // bottom padding for cart sheet
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          childAspectRatio: 0.75,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-        ),
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          return _ProductCard(
-            product: products[index],
-            onTap: () => _addToCartWithUnit(products[index]),
-          );
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = (constraints.maxWidth / 150).floor().clamp(2, 6);
+        return RefreshIndicator(
+          onRefresh: _loadData,
+          child: GridView.builder(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 120), // bottom padding for cart sheet
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: 0.75,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              return _ProductCard(
+                product: products[index],
+                onTap: () => _addToCartWithUnit(products[index]),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -914,7 +916,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   Widget _buildDraggableCartSheet() {
     return NotificationListener<DraggableScrollableNotification>(
       onNotification: (notification) {
-        setState(() => _sheetExtent = notification.extent);
+        // Don't rebuild the entire screen on every pixel — just track the extent.
+        // The UI reads _sheetExtent inside the DraggableScrollableSheet builder
+        // which already rebuilds when the sheet size changes.
+        _sheetExtent = notification.extent;
         return false;
       },
       child: DraggableScrollableSheet(
@@ -2285,7 +2290,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       );
                     } catch (e) {
                       if (mounted) {
-                        context.showErrorSnackBar('خطأ في تسجيل العملية: $e');
+                        context.showErrorSnackBar('حدث خطأ أثناء تسجيل العملية');
                       }
                     }
                   },
@@ -3496,7 +3501,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         setState(() => _checkoutPhase = _CheckoutPhase.idle);
-        context.showErrorSnackBar('خطأ في حفظ الفاتورة: $e');
+        context.showErrorSnackBar('حدث خطأ أثناء حفظ الفاتورة');
       }
     }
   }
@@ -3777,7 +3782,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       final itemsData = await db.getInvoiceItems(invoiceId);
       await InvoicePdfGenerator.printInvoice(invoiceData, itemsData);
     } catch (e) {
-      if (mounted) context.showErrorSnackBar('خطأ في طباعة PDF: $e');
+      if (mounted) context.showErrorSnackBar('حدث خطأ أثناء الطباعة');
     }
   }
 
@@ -3838,7 +3843,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       }
     } catch (e) {
       if (mounted) {
-        context.showErrorSnackBar('خطأ في الطباعة الحرارية: $e');
+        context.showErrorSnackBar('حدث خطأ أثناء الطباعة الحرارية');
       }
     }
   }

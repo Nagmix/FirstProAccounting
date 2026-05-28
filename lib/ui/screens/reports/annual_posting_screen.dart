@@ -72,7 +72,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في الترحيل: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء الترحيل'), backgroundColor: AppColors.error),
         );
       }
     } finally {

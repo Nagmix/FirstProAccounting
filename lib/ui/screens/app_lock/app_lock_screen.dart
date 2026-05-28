@@ -465,50 +465,44 @@ class _AppLockScreenState extends State<AppLockScreen>
       return _buildLoadingScreen();
     }
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: AnimatedBuilder(
-            animation: _successAnimation,
-            builder: (context, child) {
-              return Opacity(
-                opacity: 1.0 - _successAnimation.value,
-                child: Transform.scale(
-                  scale: 1.0 - (_successAnimation.value * 0.05),
-                  child: child,
-                ),
-              );
-            },
-            child: _buildLockContent(),
-          ),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: AnimatedBuilder(
+          animation: _successAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: 1.0 - _successAnimation.value,
+              child: Transform.scale(
+                scale: 1.0 - (_successAnimation.value * 0.05),
+                child: child,
+              ),
+            );
+          },
+          child: _buildLockContent(),
         ),
       ),
     );
   }
 
   Widget _buildLoadingScreen() {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildAppLogo(size: 80),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildAppLogo(size: 80),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

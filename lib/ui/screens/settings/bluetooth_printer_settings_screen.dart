@@ -77,7 +77,7 @@ class _BluetoothPrinterSettingsScreenState
       if (mounted) {
         setState(() {
           _isScanning = false;
-          _statusMessage = 'خطأ في البحث: $e';
+          _statusMessage = 'حدث خطأ أثناء البحث';
         });
       }
     }
@@ -126,7 +126,7 @@ class _BluetoothPrinterSettingsScreenState
       if (mounted) {
         setState(() {
           _isConnecting = false;
-          _statusMessage = 'خطأ: $e';
+          _statusMessage = 'حدث خطأ غير متوقع';
         });
       }
     }
@@ -176,7 +176,7 @@ class _BluetoothPrinterSettingsScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: const Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
         );
       }
     }

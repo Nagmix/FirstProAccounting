@@ -341,7 +341,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      _showError('حدث خطأ أثناء حفظ العملية: $e');
+      _showError('حدث خطأ أثناء حفظ العملية');
     }
   }
 

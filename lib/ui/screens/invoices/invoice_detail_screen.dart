@@ -1040,7 +1040,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       };
       await InvoicePdfGenerator.printInvoice(invoiceMap, _items);
     } catch (e) {
-      if (mounted) context.showErrorSnackBar('خطأ في الطباعة: $e');
+      if (mounted) context.showErrorSnackBar('حدث خطأ أثناء الطباعة');
     }
   }
 }

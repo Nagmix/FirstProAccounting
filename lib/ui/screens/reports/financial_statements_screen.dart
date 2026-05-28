@@ -236,7 +236,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
         );
         setState(() => _isLoading = false);
       }

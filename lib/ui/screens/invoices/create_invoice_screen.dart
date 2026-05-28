@@ -294,12 +294,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDarkMode;
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
-        appBar: _buildAppBar(isDark),
-        body: _isLoading
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
+      appBar: _buildAppBar(isDark),
+      body: _isLoading
             ? Center(child: CircularProgressIndicator(color: _accentBlue))
             : Form(
                 key: _formKey,
@@ -327,7 +325,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   ),
                 ),
               ),
-      ),
     );
   }
 
@@ -2287,7 +2284,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'unit_price': item.unitPrice,
         'total_price': item.totalPrice,
       }).toList();
-      final limitErrors = await db.checkReturnLimits(_originalInvoiceId, itemsMaps);
+      final limitErrors = await db.checkReturnLimits(_originalInvoiceId!, itemsMaps);
       if (limitErrors.isNotEmpty && mounted) {
         final errorMessages = limitErrors.values.join('\n');
         showDialog(
@@ -2496,7 +2493,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
       await InvoicePdfGenerator.printInvoice(invoiceMap, itemsMap);
     } catch (e) {
-      if (mounted) context.showErrorSnackBar('خطأ في الطباعة: $e');
+      if (mounted) context.showErrorSnackBar('حدث خطأ أثناء الطباعة');
     }
   }
 
@@ -2566,7 +2563,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     } on PrinterException catch (e) {
       if (mounted) context.showErrorSnackBar(e.message);
     } catch (e) {
-      if (mounted) context.showErrorSnackBar('خطأ في الطباعة الحرارية: $e');
+      if (mounted) context.showErrorSnackBar('حدث خطأ أثناء الطباعة الحرارية');
     }
   }
 }

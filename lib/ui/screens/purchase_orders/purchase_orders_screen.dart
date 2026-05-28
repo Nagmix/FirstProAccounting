@@ -87,7 +87,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -134,7 +134,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ في الحذف: $e'), backgroundColor: AppColors.error),
+            SnackBar(content: Text('حدث خطأ أثناء الحذف'), backgroundColor: AppColors.error),
           );
         }
       }
@@ -151,7 +151,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحديث الحالة: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء التحديث'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -679,7 +679,7 @@ class _CreatePurchaseOrderFormState extends State<_CreatePurchaseOrderForm> {
       if (mounted) {
         setState(() => _isLoadingData = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -939,7 +939,7 @@ class _CreatePurchaseOrderFormState extends State<_CreatePurchaseOrderForm> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في حفظ طلب الشراء: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء الحفظ'), backgroundColor: AppColors.error),
         );
       }
     } finally {

@@ -3,14 +3,16 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'core/constants/app_constants.dart';
+import 'core/di/service_locator.dart';
 import 'core/theme/app_theme.dart';
 import 'data/datasources/database_helper.dart';
 import 'ui/navigation/app_router.dart';
 import 'ui/navigation/main_scaffold.dart';
 import 'ui/screens/app_lock/app_lock_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await setupLocator();
 
   // TODO: Implement user authentication/login system before app launch.
   // Currently the app has no login screen — any user with the device can access all data.
@@ -117,14 +119,6 @@ class _FirstProAppState extends State<FirstProApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      // ── Force RTL direction ─────────────────────────────────
-      builder: (context, child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: child!,
-        );
-      },
-
       // ── Theming ─────────────────────────────────────────────
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
@@ -141,29 +135,26 @@ class _FirstProAppState extends State<FirstProApp> {
   Widget _buildHome() {
     // Still checking the pin_enabled setting
     if (_pinEnabled == null) {
-      return Directionality(
-        textDirection: TextDirection.rtl,
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          body: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.calculate_outlined,
-                  size: 64,
-                  color: AppConstants.appName.isNotEmpty
-                      ? const Color(0xFF1A73E8)
-                      : Colors.blue,
-                ),
-                const SizedBox(height: 24),
-                const SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(strokeWidth: 3),
-                ),
-              ],
-            ),
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.calculate_outlined,
+                size: 64,
+                color: AppConstants.appName.isNotEmpty
+                    ? const Color(0xFF1A73E8)
+                    : Colors.blue,
+              ),
+              const SizedBox(height: 24),
+              const SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+            ],
           ),
         ),
       );

@@ -17,12 +17,12 @@ class ProductRepository {
     return await db.insert('products', productMap);
   }
 
-  Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC', int? limit, int offset = 0}) async {
     final db = await _db;
     if (activeOnly == true) {
-      return await db.query('products', where: 'is_active = ?', whereArgs: [1], orderBy: orderBy);
+      return await db.query('products', where: 'is_active = ?', whereArgs: [1], orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
     }
-    return await db.query('products', orderBy: orderBy);
+    return await db.query('products', orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
   }
 
   Future<List<Map<String, dynamic>>> searchProducts(String query, {int? warehouseId}) async {

@@ -66,7 +66,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -704,7 +704,7 @@ class _InvoiceCard extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في الطباعة: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء الطباعة'), backgroundColor: AppColors.error),
         );
       }
     }

@@ -87,9 +87,9 @@ class CustomerRepository {
     return customerId!;
   }
 
-  Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'name'}) async {
+  Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'name', int? limit, int offset = 0}) async {
     final db = await _db;
-    return await db.query('customers', orderBy: orderBy);
+    return await db.query('customers', orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
   }
 
   Future<List<Map<String, dynamic>>> searchCustomers(String query) async {

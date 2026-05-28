@@ -51,7 +51,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -284,7 +284,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -346,7 +346,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
         );
       }
     }

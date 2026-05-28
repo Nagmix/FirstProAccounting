@@ -1516,7 +1516,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في النسخ الاحتياطي: $e')),
+          SnackBar(content: Text('حدث خطأ أثناء النسخ الاحتياطي')),
         );
       }
     }
@@ -1673,7 +1673,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       } on PlatformException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ في فتح ملف: $e')),
+            SnackBar(content: Text('حدث خطأ أثناء فتح الملف')),
           );
         }
         return;
@@ -1790,7 +1790,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطأ في استعادة البيانات: $e'),
+            content: Text('حدث خطأ أثناء استعادة البيانات'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -1870,7 +1870,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في قراءة النسخ الاحتياطية: $e')),
+          SnackBar(content: Text('حدث خطأ أثناء قراءة النسخ الاحتياطية')),
         );
       }
       return null;
@@ -1959,7 +1959,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تصدير التقرير: $e')),
+          SnackBar(content: Text('حدث خطأ أثناء التصدير')),
         );
       }
     }

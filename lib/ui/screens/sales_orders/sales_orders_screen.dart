@@ -89,7 +89,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -136,7 +136,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ في الحذف: $e'), backgroundColor: AppColors.error),
+            SnackBar(content: Text('حدث خطأ أثناء الحذف'), backgroundColor: AppColors.error),
           );
         }
       }
@@ -153,7 +153,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحديث الحالة: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء التحديث'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -249,7 +249,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في التحويل: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء التحويل'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -824,7 +824,7 @@ class _CreateSalesOrderFormState extends State<_CreateSalesOrderForm> {
       if (mounted) {
         setState(() => _isLoadingData = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في تحميل البيانات: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -1085,7 +1085,7 @@ class _CreateSalesOrderFormState extends State<_CreateSalesOrderForm> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في حفظ طلب البيع: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('حدث خطأ أثناء الحفظ'), backgroundColor: AppColors.error),
         );
       }
     } finally {
