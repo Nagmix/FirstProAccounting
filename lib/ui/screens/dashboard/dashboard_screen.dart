@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../navigation/app_router.dart';
 import '../../widgets/animated_entry.dart';
@@ -108,12 +109,12 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       if (mounted) {
         setState(() {
-          _todaySales = (results[0] as num?)?.toDouble() ?? 0.0;
+          _todaySales = MoneyHelper.readMoney(results[0]);
           _todayInvoiceCount = (results[1] as num?)?.toInt() ?? 0;
           _recentInvoices =
               (results[2] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
                   [];
-          _yesterdaySales = (results[3] as num?)?.toDouble() ?? 0.0;
+          _yesterdaySales = MoneyHelper.readMoney(results[3]);
           _isLoading = false;
         });
 
@@ -734,7 +735,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           if (index < _recentInvoices.length) {
             final invoice = _recentInvoices[index];
             final entityName = invoice['entity_name'] as String? ?? '—';
-            final amount = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+            final amount = MoneyHelper.readMoney(invoice['total']);
             final date = DateTime.tryParse(invoice['created_at'] as String? ?? '') ?? DateTime.now();
             final statusStr = invoice['status'] as String? ?? 'pending';
             final invoiceType = invoice['type'] as String? ?? 'sale';

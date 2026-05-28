@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 /// شاشة إدارة الموظفين مع رصيد افتتاحي وربط بدليل الحسابات
@@ -117,7 +118,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final name = employee['name'] as String? ?? '';
     final phone = employee['phone'] as String? ?? '';
     final jobTitle = employee['job_title'] as String? ?? '';
-    final balance = (employee['balance'] as num?)?.toDouble() ?? 0.0;
+    final balance = MoneyHelper.readMoney(employee['balance']);
     final balanceType = employee['balance_type'] as String? ?? 'credit';
     final currency = employee['currency'] as String? ?? 'YER';
     final isActive = (employee['is_active'] as int?) == 1;
@@ -367,7 +368,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
       _nameController.text = e['name'] as String? ?? '';
       _phoneController.text = e['phone'] as String? ?? '';
       _jobTitleController.text = e['job_title'] as String? ?? '';
-      _balanceController.text = ((e['balance'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+      _balanceController.text = MoneyHelper.readMoney(e['balance']).toStringAsFixed(2);
       _balanceType = e['balance_type'] as String? ?? 'credit';
       _currency = e['currency'] as String? ?? 'YER';
       _notesController.text = e['notes'] as String? ?? '';

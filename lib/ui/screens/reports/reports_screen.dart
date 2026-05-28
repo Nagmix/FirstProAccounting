@@ -3,6 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/excel_exporter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -528,9 +529,9 @@ class _ReportsScreenState extends State<ReportsScreen>
 
     double totalAmount = 0, totalPaid = 0, totalRemaining = 0;
     _reportRows = results.map((r) {
-      final total = (r['total'] as num?)?.toDouble() ?? 0;
-      final paid = (r['paid_amount'] as num?)?.toDouble() ?? 0;
-      final remaining = (r['remaining'] as num?)?.toDouble() ?? 0;
+      final total = MoneyHelper.readMoney(r['total']);
+      final paid = MoneyHelper.readMoney(r['paid_amount']);
+      final remaining = MoneyHelper.readMoney(r['remaining']);
       totalAmount += total;
       totalPaid += paid;
       totalRemaining += remaining;
@@ -556,19 +557,19 @@ class _ReportsScreenState extends State<ReportsScreen>
 
     final revRes = await database.rawQuery(
       "SELECT COALESCE(SUM(total),0) AS t FROM invoices WHERE type IN ('sale','pos') AND is_return=0$df$cf", allArgs);
-    final revenue = (revRes.first['t'] as num?)?.toDouble() ?? 0;
+    final revenue = MoneyHelper.readMoney(revRes.first['t']);
 
     final purRes = await database.rawQuery(
       "SELECT COALESCE(SUM(total),0) AS t FROM invoices WHERE type='purchase' AND is_return=0$df$cf", allArgs);
-    final purchases = (purRes.first['t'] as num?)?.toDouble() ?? 0;
+    final purchases = MoneyHelper.readMoney(purRes.first['t']);
 
     final retSaleRes = await database.rawQuery(
       "SELECT COALESCE(SUM(total),0) AS t FROM invoices WHERE type IN ('sale','pos') AND is_return=1$df$cf", allArgs);
-    final salesReturns = (retSaleRes.first['t'] as num?)?.toDouble() ?? 0;
+    final salesReturns = MoneyHelper.readMoney(retSaleRes.first['t']);
 
     final retPurRes = await database.rawQuery(
       "SELECT COALESCE(SUM(total),0) AS t FROM invoices WHERE type='purchase' AND is_return=1$df$cf", allArgs);
-    final purchaseReturns = (retPurRes.first['t'] as num?)?.toDouble() ?? 0;
+    final purchaseReturns = MoneyHelper.readMoney(retPurRes.first['t']);
 
     final expArgs = <dynamic>[];
     if (_dateFrom != null) expArgs.add(_dateFrom!.toIso8601String());
@@ -576,7 +577,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     expArgs.addAll(_currencyArgs());
     final expRes = await database.rawQuery(
       "SELECT COALESCE(SUM(amount),0) AS t FROM expenses WHERE 1=1${_dateFilter(column: 'expense_date')}$cf", expArgs);
-    final expenses = (expRes.first['t'] as num?)?.toDouble() ?? 0;
+    final expenses = MoneyHelper.readMoney(expRes.first['t']);
 
     final netSales = revenue - salesReturns;
     final netPurchases = purchases - purchaseReturns;
@@ -593,7 +594,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         final begRes = await database.rawQuery(
           "SELECT COALESCE(SUM(p.current_stock * p.cost_price), 0) AS total_value "
           "FROM products p WHERE p.track_stock = 1$cf", begArgs);
-        beginningInventory = (begRes.first['total_value'] as num?)?.toDouble() ?? 0;
+        beginningInventory = MoneyHelper.readMoney(begRes.first['total_value']);
       }
       // Ending inventory: current total value of in-stock products
       final endArgs = <dynamic>[];
@@ -601,7 +602,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       final endRes = await database.rawQuery(
         "SELECT COALESCE(SUM(p.current_stock * p.cost_price), 0) AS total_value "
         "FROM products p WHERE p.track_stock = 1$cf", endArgs);
-      endingInventory = (endRes.first['total_value'] as num?)?.toDouble() ?? 0;
+      endingInventory = MoneyHelper.readMoney(endRes.first['total_value']);
     } catch (e) {
       // Fallback if inventory calculation fails
       debugPrint('Inventory value calculation error: $e');
@@ -630,9 +631,9 @@ class _ReportsScreenState extends State<ReportsScreen>
     final items = await db.getInvoiceProfitReport(startDate: _dateFrom, endDate: _dateTo);
     double totalProfit = 0, totalRevenue = 0, totalCost = 0;
     _reportRows = items.map((item) {
-      final profit = (item['profit'] as num?)?.toDouble() ?? 0;
-      final total = (item['total'] as num?)?.toDouble() ?? 0;
-      final cost = (item['total_cost'] as num?)?.toDouble() ?? 0;
+      final profit = MoneyHelper.readMoney(item['profit']);
+      final total = MoneyHelper.readMoney(item['total']);
+      final cost = MoneyHelper.readMoney(item['total_cost']);
       totalProfit += profit;
       totalRevenue += total;
       totalCost += cost;
@@ -676,7 +677,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     double totalRevenue = 0;
     int totalQty = 0;
     _reportRows = results.map((r) {
-      final rev = (r['revenue'] as num?)?.toDouble() ?? 0;
+      final rev = MoneyHelper.readMoney(r['revenue']);
       final qty = (r['qty'] as num?)?.toDouble() ?? 0;
       totalRevenue += rev;
       totalQty += qty.toInt();
@@ -710,15 +711,15 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
     double totalSales = 0;
     _reportRows = results.map((r) {
-      final sales = (r['total_sales'] as num?)?.toDouble() ?? 0;
+      final sales = MoneyHelper.readMoney(r['total_sales']);
       totalSales += sales;
       return {
         'العميل': r['customer_name'] as String,
         'العملة': r['currency'] as String? ?? 'YER',
         'عدد الفواتير': (r['inv_count'] as num?)?.toInt() ?? 0,
         'إجمالي المبيعات': sales,
-        'المدفوع': (r['total_paid'] as num?)?.toDouble() ?? 0,
-        'المتبقي': (r['total_remaining'] as num?)?.toDouble() ?? 0,
+        'المدفوع': MoneyHelper.readMoney(r['total_paid']),
+        'المتبقي': MoneyHelper.readMoney(r['total_remaining']),
       };
     }).toList();
     _reportTotals = {'إجمالي المبيعات': totalSales, 'عدد العملاء': _reportRows.length.toDouble()};
@@ -742,8 +743,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     double totalDebit = 0, totalCredit = 0;
     _reportRows = [];
     for (final tx in transactions) {
-      final debit = (tx['debit'] as num?)?.toDouble() ?? 0;
-      final credit = (tx['credit'] as num?)?.toDouble() ?? 0;
+      final debit = MoneyHelper.readMoney(tx['debit']);
+      final credit = MoneyHelper.readMoney(tx['credit']);
       running += (debit - credit);
       totalDebit += debit;
       totalCredit += credit;
@@ -775,8 +776,8 @@ class _ReportsScreenState extends State<ReportsScreen>
       "ORDER BY t.date DESC, t.created_at DESC", args);
     double totalDebit = 0, totalCredit = 0;
     _reportRows = allTx.map((tx) {
-      final debit = (tx['debit'] as num?)?.toDouble() ?? 0;
-      final credit = (tx['credit'] as num?)?.toDouble() ?? 0;
+      final debit = MoneyHelper.readMoney(tx['debit']);
+      final credit = MoneyHelper.readMoney(tx['credit']);
       totalDebit += debit;
       totalCredit += credit;
       return {
@@ -822,7 +823,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         "WHERE account_id = ?$dateFilter",
         balanceArgs,
       );
-      final balance = (result.first['balance'] as num?)?.toDouble() ?? 0.0;
+      final balance = MoneyHelper.readMoney(result.first['balance']);
 
       if (balance == 0.0) continue;
       final isDebit = balance > 0;
@@ -852,7 +853,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       if (cc != null && cb['currency'] != cc) continue;
       if (_selectedCashBoxId != null && cb['id'] != _selectedCashBoxId) continue;
       final cbId = cb['id'] as int;
-      final balance = (cb['balance'] as num?)?.toDouble() ?? 0;
+      final balance = MoneyHelper.readMoney(cb['balance']);
       final isCredit = (cb['balance_type'] as String? ?? 'credit') == 'credit';
       final signedBalance = isCredit ? balance : -balance;
       totalBalance += signedBalance;
@@ -863,7 +864,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       double salesTotal = 0, purchaseTotal = 0;
       for (final inv in invRes) {
         final t = inv['type'] as String? ?? '';
-        final tot = (inv['total'] as num?)?.toDouble() ?? 0;
+        final tot = MoneyHelper.readMoney(inv['total']);
         if (t == 'sale' || t == 'pos') salesTotal = tot;
         else if (t == 'purchase') purchaseTotal = tot;
       }
@@ -878,7 +879,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         'المشتريات': purchaseTotal,
       });
     }
-    _reportTotals = {'إجمالي الأرصدة': totalBalance.abs(), 'عدد الصناديق': _reportRows.length.toDouble()};
+    _reportTotals = {'إجمالي الأرصدة': totalBalance.abs(), 'عدد الصناديق': _reportRows.length.toDouble()}; // totalBalance is computed from already-converted values
   }
 
   Future<void> _loadAccountsWithoutMovementReport(DatabaseHelper db) async {
@@ -927,8 +928,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
     double running = 0, totalDebit = 0, totalCredit = 0;
     _reportRows = txs.map((tx) {
-      final debit = (tx['debit'] as num?)?.toDouble() ?? 0;
-      final credit = (tx['credit'] as num?)?.toDouble() ?? 0;
+      final debit = MoneyHelper.readMoney(tx['debit']);
+      final credit = MoneyHelper.readMoney(tx['credit']);
       running += (debit - credit);
       totalDebit += debit;
       totalCredit += credit;
@@ -972,8 +973,8 @@ class _ReportsScreenState extends State<ReportsScreen>
       "FROM transactions t WHERE t.account_id=?$dateF ORDER BY t.date ASC, t.created_at ASC", args);
     double running = 0, totalDebit = 0, totalCredit = 0;
     _reportRows = txs.map((tx) {
-      final debit = (tx['debit'] as num?)?.toDouble() ?? 0;
-      final credit = (tx['credit'] as num?)?.toDouble() ?? 0;
+      final debit = MoneyHelper.readMoney(tx['debit']);
+      final credit = MoneyHelper.readMoney(tx['credit']);
       running += (debit - credit);
       totalDebit += debit;
       totalCredit += credit;
@@ -1001,7 +1002,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       "FROM expenses WHERE $whereClause ORDER BY expense_date DESC", args);
     double totalAmount = 0;
     _reportRows = results.map((r) {
-      final amount = (r['amount'] as num?)?.toDouble() ?? 0;
+      final amount = MoneyHelper.readMoney(r['amount']);
       totalAmount += amount;
       return {
         'العنوان': r['title'] as String? ?? '',
@@ -1032,7 +1033,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     double totalValue = 0;
     _reportRows = results.map((p) {
       final stock = (p['current_stock'] as num?)?.toDouble() ?? 0;
-      final cost = (p['cost_price'] as num?)?.toDouble() ?? 0;
+      final cost = MoneyHelper.readMoney(p['cost_price']);
       final value = stock * cost;
       totalValue += value;
       return {
@@ -1040,7 +1041,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         'الباركود': p['barcode'] as String? ?? '',
         'الكمية': stock,
         'سعر التكلفة': cost,
-        'سعر البيع': (p['sell_price'] as num?)?.toDouble() ?? 0,
+        'سعر البيع': MoneyHelper.readMoney(p['sell_price']),
         'قيمة المخزون': value,
         'المخزن': p['warehouse_name'] as String? ?? '',
         'الفئة': p['category_name'] as String? ?? '',
@@ -1070,14 +1071,14 @@ class _ReportsScreenState extends State<ReportsScreen>
     final items = await db.getInventoryCostReport();
     double totalCost = 0, totalSell = 0;
     _reportRows = items.map((item) {
-      final costVal = (item['stock_cost_value'] as num?)?.toDouble() ?? 0;
-      final sellVal = (item['stock_sell_value'] as num?)?.toDouble() ?? 0;
+      final costVal = MoneyHelper.readMoney(item['stock_cost_value']);
+      final sellVal = MoneyHelper.readMoney(item['stock_sell_value']);
       totalCost += costVal;
       totalSell += sellVal;
       return {
         'الصنف': item['product_name'] as String? ?? '',
         'الكمية': (item['current_stock'] as num?)?.toDouble() ?? 0,
-        'سعر التكلفة': (item['cost_price'] as num?)?.toDouble() ?? 0,
+        'سعر التكلفة': MoneyHelper.readMoney(item['cost_price']),
         'تكلفة المخزون': costVal,
         'قيمة البيع': sellVal,
       };
@@ -1101,8 +1102,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportRows = results.map((p) => {
       'الصنف': p['name_ar'] as String? ?? '',
       'الباركود': p['barcode'] as String? ?? '',
-      'سعر التكلفة': (p['cost_price'] as num?)?.toDouble() ?? 0,
-      'سعر البيع': (p['sell_price'] as num?)?.toDouble() ?? 0,
+      'سعر التكلفة': MoneyHelper.readMoney(p['cost_price']),
+      'سعر البيع': MoneyHelper.readMoney(p['sell_price']),
       'المخزن': p['warehouse_name'] as String? ?? '',
       'الفئة': p['category_name'] as String? ?? '',
     }).toList();
@@ -1130,8 +1131,8 @@ class _ReportsScreenState extends State<ReportsScreen>
         'الباركود': p['barcode'] as String? ?? '',
         'الكمية الحالية': stock,
         'الحد الأدنى': min,
-        'سعر التكلفة': (p['cost_price'] as num?)?.toDouble() ?? 0,
-        'سعر البيع': (p['sell_price'] as num?)?.toDouble() ?? 0,
+        'سعر التكلفة': MoneyHelper.readMoney(p['cost_price']),
+        'سعر البيع': MoneyHelper.readMoney(p['sell_price']),
         'المخزن': p['warehouse_name'] as String? ?? '',
         'الفئة': p['category_name'] as String? ?? '',
       };
@@ -1145,7 +1146,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     if (isCustomer) {
       final customers = await db.getAllCustomers();
       for (final c in customers) {
-        final balance = (c['balance'] as num?)?.toDouble() ?? 0;
+        final balance = MoneyHelper.readMoney(c['balance']);
         if (balance > 0) {
           totalBalance += balance;
           _reportRows.add({
@@ -1154,14 +1155,14 @@ class _ReportsScreenState extends State<ReportsScreen>
             'نوع الرصيد': (c['balance_type'] as String? ?? 'credit') == 'credit' ? 'له (علينا)' : 'عليه (لنا)',
             'العملة': c['currency'] as String? ?? 'YER',
             'الهاتف': c['phone'] as String? ?? '',
-            'سقف الدين': (c['debt_ceiling'] as num?)?.toDouble() ?? 0,
+            'سقف الدين': MoneyHelper.readMoney(c['debt_ceiling']),
           });
         }
       }
     } else {
       final suppliers = await db.getAllSuppliers();
       for (final s in suppliers) {
-        final balance = (s['balance'] as num?)?.toDouble() ?? 0;
+        final balance = MoneyHelper.readMoney(s['balance']);
         if (balance > 0) {
           totalBalance += balance;
           _reportRows.add({
@@ -1170,7 +1171,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             'نوع الرصيد': (s['balance_type'] as String? ?? 'debit') == 'debit' ? 'عليه (لنا)' : 'له (علينا)',
             'العملة': s['currency'] as String? ?? 'YER',
             'الهاتف': s['phone'] as String? ?? '',
-            'سقف الدين': (s['debt_ceiling'] as num?)?.toDouble() ?? 0,
+            'سقف الدين': MoneyHelper.readMoney(s['debt_ceiling']),
           });
         }
       }
@@ -1188,7 +1189,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       "WHERE 1=1${_dateFilter(column: 'ct.created_at')} ORDER BY ct.created_at DESC", args);
     double totalAmount = 0;
     _reportRows = results.map((r) {
-      final amount = (r['amount'] as num?)?.toDouble() ?? 0;
+      final amount = MoneyHelper.readMoney(r['amount']);
       totalAmount += amount;
       return {
         'من صندوق': r['from_name'] as String? ?? '',
@@ -1213,8 +1214,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportRows = results.map((r) => {
       'من عملة': r['from_currency'] as String? ?? '',
       'إلى عملة': r['to_currency'] as String? ?? '',
-      'المبلغ المصروف': (r['from_amount'] as num?)?.toDouble() ?? 0,
-      'المبلغ المستلم': (r['to_amount'] as num?)?.toDouble() ?? 0,
+      'المبلغ المصروف': MoneyHelper.readMoney(r['from_amount']),
+      'المبلغ المستلم': MoneyHelper.readMoney(r['to_amount']),
       'سعر الصرف': (r['exchange_rate'] as num?)?.toDouble() ?? 0,
       'من صندوق': r['from_name'] as String? ?? '',
       'إلى صندوق': r['to_name'] as String? ?? '',
@@ -1232,7 +1233,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       "WHERE 1=1${_dateFilter(column: 'v.created_at')} ORDER BY v.created_at DESC", args);
     double totalAmount = 0;
     _reportRows = results.map((r) {
-      final amount = (r['total_amount'] as num?)?.toDouble() ?? 0;
+      final amount = MoneyHelper.readMoney(r['total_amount']);
       totalAmount += amount;
       final vType = r['voucher_type'] as String? ?? '';
       String typeAr;
@@ -1261,9 +1262,9 @@ class _ReportsScreenState extends State<ReportsScreen>
       'رقم الوردية': r['shift_number'] as String? ?? '',
       'الكاشير': r['cashier_name'] as String? ?? '',
       'الصندوق': '', // would need join
-      'المبيعات': (r['total_sales'] as num?)?.toDouble() ?? 0,
-      'المرتجعات': (r['total_returns'] as num?)?.toDouble() ?? 0,
-      'الخصومات': (r['total_discounts'] as num?)?.toDouble() ?? 0,
+      'المبيعات': MoneyHelper.readMoney(r['total_sales']),
+      'المرتجعات': MoneyHelper.readMoney(r['total_returns']),
+      'الخصومات': MoneyHelper.readMoney(r['total_discounts']),
       'الحالة': (r['status'] as String? ?? '') == 'open' ? 'مفتوحة' : 'مغلقة',
       'تاريخ الفتح': r['opened_at'] as String? ?? '',
       'تاريخ الإغلاق': r['closed_at'] as String? ?? '',

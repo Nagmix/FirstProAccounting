@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/account_model.dart';
 import 'package:intl/intl.dart' as intl;
@@ -115,8 +116,8 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     double totalDebit = 0;
     double totalCredit = 0;
     for (final tx in filteredTx) {
-      totalDebit += (tx['debit'] as num?)?.toDouble() ?? 0.0;
-      totalCredit += (tx['credit'] as num?)?.toDouble() ?? 0.0;
+      totalDebit += MoneyHelper.readMoney(tx['debit']);
+      totalCredit += MoneyHelper.readMoney(tx['credit']);
     }
     final netBalance = totalDebit - totalCredit;
 
@@ -135,12 +136,12 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
         DateTime? txDate;
         try { txDate = DateTime.parse(dateStr); } catch (_) { txDate = null; }
         if (txDate != null && _fromDate != null && txDate.isBefore(_fromDate!)) {
-          preFilterDebit += (tx['debit'] as num?)?.toDouble() ?? 0.0;
-          preFilterCredit += (tx['credit'] as num?)?.toDouble() ?? 0.0;
+          preFilterDebit += MoneyHelper.readMoney(tx['debit']);
+          preFilterCredit += MoneyHelper.readMoney(tx['credit']);
         }
       }
       openingBalance = (widget.account.balance - (_transactions.fold<double>(0, (sum, tx) =>
-        sum + ((tx['debit'] as num?)?.toDouble() ?? 0.0) - ((tx['credit'] as num?)?.toDouble() ?? 0.0))))
+        sum + (MoneyHelper.readMoney(tx['debit'])) - (MoneyHelper.readMoney(tx['credit'])))))
         + preFilterDebit - preFilterCredit;
     }
     final runningBalances = <double>[];
@@ -148,8 +149,8 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     // Transactions are ordered date DESC, so reverse for running balance
     final reversed = filteredTx.reversed.toList();
     for (final tx in reversed) {
-      final debit = (tx['debit'] as num?)?.toDouble() ?? 0.0;
-      final credit = (tx['credit'] as num?)?.toDouble() ?? 0.0;
+      final debit = MoneyHelper.readMoney(tx['debit']);
+      final credit = MoneyHelper.readMoney(tx['credit']);
       running += debit - credit;
       runningBalances.add(running);
     }
@@ -631,8 +632,8 @@ class _TransactionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final debit = (transaction['debit'] as num?)?.toDouble() ?? 0.0;
-    final credit = (transaction['credit'] as num?)?.toDouble() ?? 0.0;
+    final debit = MoneyHelper.readMoney(transaction['debit']);
+    final credit = MoneyHelper.readMoney(transaction['credit']);
     final description = (transaction['description'] as String?) ?? 'بدون وصف';
     final dateStr = transaction['date'] as String? ?? '';
     final createdAt = transaction['created_at'] as String? ?? '';

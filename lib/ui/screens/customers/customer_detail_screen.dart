@@ -6,6 +6,7 @@ import '../../../core/theme/design_system.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/customer_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
@@ -105,7 +106,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     for (final inv in invoices) {
       final type = inv['type'] as String? ?? 'sale';
       final isReturn = (inv['is_return'] as int? ?? 0) == 1;
-      final total = (inv['total'] as num?)?.toDouble() ?? 0.0;
+      final total = MoneyHelper.readMoney(inv['total']);
       final currency = inv['currency'] as String? ?? 'YER';
       final createdAt = inv['created_at'] as String? ?? DateTime.now().toIso8601String();
 
@@ -157,7 +158,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         filterKey = 'all';
       }
 
-      final remaining = (inv['remaining'] as num?)?.toDouble() ?? 0.0;
+      final remaining = MoneyHelper.readMoney(inv['remaining']);
       final desc = '$typeAr - ${inv['id'] ?? ''}${remaining > 0 ? ' (متبقي: ${remaining.toStringAsFixed(2)})' : ''}';
 
       movements.add({
@@ -219,7 +220,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
     for (final v in voucherRows) {
       final voucherType = v['voucher_type'] as String? ?? '';
-      final totalAmount = (v['total_amount'] as num?)?.toDouble() ?? 0.0;
+      final totalAmount = MoneyHelper.readMoney(v['total_amount']);
       final currency = v['currency'] as String? ?? 'YER';
       final dateStr = v['date'] as String? ?? v['created_at'] as String? ?? DateTime.now().toIso8601String();
 
@@ -306,9 +307,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     // Apply tab filter
     final filterKey = _filterTabs[_selectedFilterIndex].key;
     if (filterKey == 'debit') {
-      filtered = filtered.where((m) => ((m['debit'] as num?)?.toDouble() ?? 0.0) > 0).toList();
+      filtered = filtered.where((m) => (MoneyHelper.readMoney(m['debit'])) > 0).toList();
     } else if (filterKey == 'credit') {
-      filtered = filtered.where((m) => ((m['credit'] as num?)?.toDouble() ?? 0.0) > 0).toList();
+      filtered = filtered.where((m) => (MoneyHelper.readMoney(m['credit'])) > 0).toList();
     } else if (filterKey != 'all') {
       filtered = filtered.where((m) => m['filter_key'] == filterKey).toList();
     }
@@ -340,8 +341,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       double allDebit = 0.0;
       double allCredit = 0.0;
       for (final m in _allMovements) {
-        allDebit += (m['debit'] as num?)?.toDouble() ?? 0.0;
-        allCredit += (m['credit'] as num?)?.toDouble() ?? 0.0;
+        allDebit += MoneyHelper.readMoney(m['debit']);
+        allCredit += MoneyHelper.readMoney(m['credit']);
       }
       // Running balance convention: positive = credit (له), negative = debit (عليه)
       final customerBalance = customer.balanceType == 'credit'
@@ -357,8 +358,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     double totalCredit = 0.0;
 
     for (final m in filtered) {
-      final debit = (m['debit'] as num?)?.toDouble() ?? 0.0;
-      final credit = (m['credit'] as num?)?.toDouble() ?? 0.0;
+      final debit = MoneyHelper.readMoney(m['debit']);
+      final credit = MoneyHelper.readMoney(m['credit']);
       runningBalance += credit - debit; // positive = له (credit), negative = عليه (debit)
       totalDebit += debit;
       totalCredit += credit;
@@ -1232,9 +1233,9 @@ class _MovementCard extends StatelessWidget {
     final color = movement['color'] as Color;
     final typeAr = movement['type_ar'] as String;
     final description = movement['description'] as String;
-    final debit = (movement['debit'] as num?)?.toDouble() ?? 0.0;
-    final credit = (movement['credit'] as num?)?.toDouble() ?? 0.0;
-    final runningBalance = (movement['running_balance'] as num?)?.toDouble() ?? 0.0;
+    final debit = MoneyHelper.readMoney(movement['debit']);
+    final credit = MoneyHelper.readMoney(movement['credit']);
+    final runningBalance = MoneyHelper.readMoney(movement['running_balance']);
     final dateStr = movement['date'] as String;
 
     // Format date

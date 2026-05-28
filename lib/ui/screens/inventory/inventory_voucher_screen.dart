@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 
@@ -107,7 +108,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                       itemBuilder: (context, index) {
                         final v = _vouchers[index];
                         final isDraft = (v['status'] as String?) == 'draft';
-                        final totalDiff = (v['total_diff_value'] as num?)?.toDouble() ?? 0.0;
+                        final totalDiff = MoneyHelper.readMoney(v['total_diff_value']);
                         final currency = (v['currency'] as String?) ?? 'YER';
                         final currencySymbol = currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
 
@@ -338,7 +339,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                             final p = products[idx];
                             final pid = p['id'] as int;
                             final systemQty = (p['current_stock'] as num?)?.toDouble() ?? 0.0;
-                            final costPrice = (p['cost_price'] as num?)?.toDouble() ?? 0.0;
+                            final costPrice = MoneyHelper.readMoney(p['cost_price']);
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8),
@@ -398,7 +399,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                       for (final p in products) {
                         final pid = p['id'] as int;
                         final systemQty = (p['current_stock'] as num?)?.toDouble() ?? 0.0;
-                        final costPrice = (p['cost_price'] as num?)?.toDouble() ?? 0.0;
+                        final costPrice = MoneyHelper.readMoney(p['cost_price']);
                         final countedQty = double.tryParse(qtyControllers[pid]?.text ?? '0') ?? 0.0;
                         final difference = countedQty - systemQty;
                         final diffValue = difference * costPrice;

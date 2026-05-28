@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'money_helper.dart';
 
 /// أداة تصدير البيانات إلى ملفات Excel
 class ExcelExporter {
@@ -27,7 +28,7 @@ class ExcelExporter {
       sheet.cell(CellIndex.indexByString('B$row')).value = TextCellValue(account['name_ar'] as String? ?? '');
       sheet.cell(CellIndex.indexByString('C$row')).value = TextCellValue(_accountTypeAr(account['account_type'] as String? ?? ''));
       sheet.cell(CellIndex.indexByString('D$row')).value = TextCellValue(account['currency'] as String? ?? 'YER');
-      sheet.cell(CellIndex.indexByString('E$row')).value = DoubleCellValue((account['balance'] as num?)?.toDouble() ?? 0.0);
+      sheet.cell(CellIndex.indexByString('E$row')).value = DoubleCellValue(MoneyHelper.readMoney(account['balance']));
       sheet.cell(CellIndex.indexByString('F$row')).value = TextCellValue((account['is_active'] as int?) == 1 ? 'نشط' : 'غير نشط');
     }
 
@@ -50,12 +51,12 @@ class ExcelExporter {
       sheet.cell(CellIndex.indexByString('A$row')).value = TextCellValue(inv['id'] as String? ?? '');
       sheet.cell(CellIndex.indexByString('B$row')).value = TextCellValue(_invoiceTypeAr(inv['type'] as String? ?? ''));
       sheet.cell(CellIndex.indexByString('C$row')).value = TextCellValue(_formatDate(inv['created_at'] as String?));
-      sheet.cell(CellIndex.indexByString('D$row')).value = DoubleCellValue((inv['subtotal'] as num?)?.toDouble() ?? 0.0);
-      sheet.cell(CellIndex.indexByString('E$row')).value = DoubleCellValue((inv['discount_amount'] as num?)?.toDouble() ?? 0.0);
-      sheet.cell(CellIndex.indexByString('F$row')).value = DoubleCellValue((inv['tax_amount'] as num?)?.toDouble() ?? 0.0);
-      sheet.cell(CellIndex.indexByString('G$row')).value = DoubleCellValue((inv['total'] as num?)?.toDouble() ?? 0.0);
-      sheet.cell(CellIndex.indexByString('H$row')).value = DoubleCellValue((inv['paid_amount'] as num?)?.toDouble() ?? 0.0);
-      sheet.cell(CellIndex.indexByString('I$row')).value = DoubleCellValue((inv['remaining'] as num?)?.toDouble() ?? 0.0);
+      sheet.cell(CellIndex.indexByString('D$row')).value = DoubleCellValue(MoneyHelper.readMoney(inv['subtotal']));
+      sheet.cell(CellIndex.indexByString('E$row')).value = DoubleCellValue(MoneyHelper.readMoney(inv['discount_amount']));
+      sheet.cell(CellIndex.indexByString('F$row')).value = DoubleCellValue(MoneyHelper.readMoney(inv['tax_amount']));
+      sheet.cell(CellIndex.indexByString('G$row')).value = DoubleCellValue(MoneyHelper.readMoney(inv['total']));
+      sheet.cell(CellIndex.indexByString('H$row')).value = DoubleCellValue(MoneyHelper.readMoney(inv['paid_amount']));
+      sheet.cell(CellIndex.indexByString('I$row')).value = DoubleCellValue(MoneyHelper.readMoney(inv['remaining']));
       sheet.cell(CellIndex.indexByString('J$row')).value = TextCellValue(inv['status'] as String? ?? '');
       sheet.cell(CellIndex.indexByString('K$row')).value = TextCellValue(inv['currency'] as String? ?? 'YER');
     }
@@ -79,8 +80,8 @@ class ExcelExporter {
       sheet.cell(CellIndex.indexByString('A$row')).value = TextCellValue(p['item_code'] as String? ?? '');
       sheet.cell(CellIndex.indexByString('B$row')).value = TextCellValue(p['name_ar'] as String? ?? '');
       sheet.cell(CellIndex.indexByString('C$row')).value = TextCellValue(p['barcode'] as String? ?? '');
-      sheet.cell(CellIndex.indexByString('D$row')).value = DoubleCellValue((p['cost_price'] as num?)?.toDouble() ?? 0.0);
-      sheet.cell(CellIndex.indexByString('E$row')).value = DoubleCellValue((p['sell_price'] as num?)?.toDouble() ?? 0.0);
+      sheet.cell(CellIndex.indexByString('D$row')).value = DoubleCellValue(MoneyHelper.readMoney(p['cost_price']));
+      sheet.cell(CellIndex.indexByString('E$row')).value = DoubleCellValue(MoneyHelper.readMoney(p['sell_price']));
       sheet.cell(CellIndex.indexByString('F$row')).value = DoubleCellValue((p['current_stock'] as num?)?.toDouble() ?? 0.0);
       sheet.cell(CellIndex.indexByString('G$row')).value = DoubleCellValue((p['min_stock'] as num?)?.toDouble() ?? 0.0);
       sheet.cell(CellIndex.indexByString('H$row')).value = TextCellValue(p['warehouse_name'] as String? ?? '');
@@ -105,8 +106,8 @@ class ExcelExporter {
       final row = i + 2;
       sheet.cell(CellIndex.indexByString('A$row')).value = TextCellValue(_formatDate(t['date'] as String?));
       sheet.cell(CellIndex.indexByString('B$row')).value = TextCellValue(t['account_name'] as String? ?? t['account_id']?.toString() ?? '');
-      sheet.cell(CellIndex.indexByString('C$row')).value = DoubleCellValue((t['debit'] as num?)?.toDouble() ?? 0.0);
-      sheet.cell(CellIndex.indexByString('D$row')).value = DoubleCellValue((t['credit'] as num?)?.toDouble() ?? 0.0);
+      sheet.cell(CellIndex.indexByString('C$row')).value = DoubleCellValue(MoneyHelper.readMoney(t['debit']));
+      sheet.cell(CellIndex.indexByString('D$row')).value = DoubleCellValue(MoneyHelper.readMoney(t['credit']));
       sheet.cell(CellIndex.indexByString('E$row')).value = TextCellValue(t['description'] as String? ?? '');
     }
 
@@ -139,8 +140,8 @@ class ExcelExporter {
       final row = i + 2;
       final dateStr = m['date'] as String? ?? '';
       final description = m['description'] as String? ?? (m['type_ar'] as String? ?? '');
-      final debit = (m['debit'] as num?)?.toDouble() ?? 0.0;
-      final credit = (m['credit'] as num?)?.toDouble() ?? 0.0;
+      final debit = MoneyHelper.readMoney(m['debit']);
+      final credit = MoneyHelper.readMoney(m['credit']);
       runningBalance += credit - debit;
 
       sheet.cell(CellIndex.indexByString('A$row')).value = TextCellValue(_formatDate(dateStr));

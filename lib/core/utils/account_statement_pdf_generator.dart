@@ -8,6 +8,7 @@ import 'package:printing/printing.dart';
 
 import '../../data/datasources/database_helper.dart';
 import 'currency_formatter.dart';
+import 'money_helper.dart';
 
 /// Generates PDF account statements for customers and suppliers.
 class AccountStatementPdfGenerator {
@@ -218,8 +219,8 @@ class AccountStatementPdfGenerator {
         ...movements.map((m) {
           final dateStr = m['date'] as String? ?? '';
           final description = m['description'] as String? ?? (m['type_ar'] as String? ?? '');
-          final debit = (m['debit'] as num?)?.toDouble() ?? 0.0;
-          final credit = (m['credit'] as num?)?.toDouble() ?? 0.0;
+          final debit = MoneyHelper.readMoney(m['debit']);
+          final credit = MoneyHelper.readMoney(m['credit']);
           runningBalance += credit - debit;
 
           return pw.TableRow(

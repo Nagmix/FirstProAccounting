@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../../data/datasources/database_helper.dart';
+import '../utils/money_helper.dart';
 
 /// Service for Bluetooth thermal printer (80mm) integration.
 /// Uses flutter_blue_plus for Bluetooth connectivity and manual ESC/POS
@@ -199,8 +200,8 @@ class ThermalPrinterService {
       for (final item in items) {
         final name = _normalizeArabic((item['product_name'] as String?) ?? '');
         final qty = (item['quantity'] as num?)?.toDouble() ?? 0;
-        final price = (item['unit_price'] as num?)?.toDouble() ?? 0;
-        final itemTotal = (item['total_price'] as num?)?.toDouble() ?? 0;
+        final price = MoneyHelper.readMoney(item['unit_price']);
+        final itemTotal = MoneyHelper.readMoney(item['total_price']);
         bytes += cText('$name\n');
         bytes += cText('     $qty    $price    $itemTotal\n');
       }

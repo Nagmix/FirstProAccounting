@@ -1,4 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
+import '../../core/utils/money_helper.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
@@ -32,8 +33,8 @@ class MonthlyRevenueLineChart extends StatelessWidget {
     final purchasesSpots = <FlSpot>[];
 
     for (int i = 0; i < data.length; i++) {
-      salesSpots.add(FlSpot(i.toDouble(), (data[i]['sales'] as num?)?.toDouble() ?? 0.0));
-      purchasesSpots.add(FlSpot(i.toDouble(), (data[i]['purchases'] as num?)?.toDouble() ?? 0.0));
+      salesSpots.add(FlSpot(i.toDouble(), MoneyHelper.readMoney(data[i]['sales'])));
+      purchasesSpots.add(FlSpot(i.toDouble(), MoneyHelper.readMoney(data[i]['purchases'])));
     }
 
     return SizedBox(
@@ -144,8 +145,8 @@ class MonthlyRevenueLineChart extends StatelessWidget {
   double _calculateInterval(List data) {
     double maxVal = 0;
     for (final d in data) {
-      final s = (d['sales'] as num?)?.toDouble() ?? 0;
-      final p = (d['purchases'] as num?)?.toDouble() ?? 0;
+      final s = MoneyHelper.readMoney(d['sales']);
+      final p = MoneyHelper.readMoney(d['purchases']);
       if (s > maxVal) maxVal = s;
       if (p > maxVal) maxVal = p;
     }
@@ -196,7 +197,7 @@ class SalesByCategoryPieChart extends StatelessWidget {
       );
     }
 
-    final total = data.fold<double>(0, (sum, item) => sum + ((item['total'] as num?)?.toDouble() ?? 0));
+    final total = data.fold<double>(0, (sum, item) => sum + (MoneyHelper.readMoney(item['total'])));
     if (total <= 0) {
       return const SizedBox(
         height: 200,
@@ -218,7 +219,7 @@ class SalesByCategoryPieChart extends StatelessWidget {
                 sections: data.asMap().entries.map((entry) {
                   final idx = entry.key;
                   final item = entry.value;
-                  final value = (item['total'] as num?)?.toDouble() ?? 0;
+                  final value = MoneyHelper.readMoney(item['total']);
                   final percentage = total > 0 ? (value / total * 100) : 0;
                   final color = _chartColors[idx % _chartColors.length];
 
@@ -250,7 +251,7 @@ class SalesByCategoryPieChart extends StatelessWidget {
                 final idx = entry.key;
                 final item = entry.value;
                 final category = item['category'] as String? ?? '';
-                final value = (item['total'] as num?)?.toDouble() ?? 0;
+                final value = MoneyHelper.readMoney(item['total']);
                 final color = _chartColors[idx % _chartColors.length];
                 final percentage = total > 0 ? (value / total * 100) : 0;
 
@@ -317,7 +318,7 @@ class DailySalesBarChart extends StatelessWidget {
     final filledData = _fillMissingDays(data);
     double maxVal = 0;
     for (final d in filledData) {
-      final v = (d['total'] as num?)?.toDouble() ?? 0;
+      final v = MoneyHelper.readMoney(d['total']);
       if (v > maxVal) maxVal = v;
     }
     if (maxVal <= 0) maxVal = 1000;
@@ -382,7 +383,7 @@ class DailySalesBarChart extends StatelessWidget {
             borderData: FlBorderData(show: false),
             barGroups: filledData.asMap().entries.map((entry) {
               final idx = entry.key;
-              final value = (entry.value['total'] as num?)?.toDouble() ?? 0;
+              final value = MoneyHelper.readMoney(entry.value['total']);
               return BarChartGroupData(
                 x: idx,
                 barRods: [
@@ -470,8 +471,8 @@ class ProfitTrendChart extends StatelessWidget {
 
     final profitSpots = <FlSpot>[];
     for (int i = 0; i < data.length; i++) {
-      final sales = (data[i]['sales'] as num?)?.toDouble() ?? 0;
-      final purchases = (data[i]['purchases'] as num?)?.toDouble() ?? 0;
+      final sales = MoneyHelper.readMoney(data[i]['sales']);
+      final purchases = MoneyHelper.readMoney(data[i]['purchases']);
       profitSpots.add(FlSpot(i.toDouble(), sales - purchases));
     }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 /// Helper class for sales order line items in the creation form.
@@ -196,13 +197,13 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
         'is_return': 0,
         'cash_box_id': null,
         'customer_id': order['customer_id'],
-        'subtotal': (order['subtotal'] as num?)?.toDouble() ?? 0.0,
+        'subtotal': MoneyHelper.readMoney(order['subtotal']),
         'discount_rate': (order['discount_rate'] as num?)?.toDouble() ?? 0.0,
-        'discount_amount': (order['discount_amount'] as num?)?.toDouble() ?? 0.0,
-        'tax_amount': (order['tax_amount'] as num?)?.toDouble() ?? 0.0,
-        'total': (order['total'] as num?)?.toDouble() ?? 0.0,
+        'discount_amount': MoneyHelper.readMoney(order['discount_amount']),
+        'tax_amount': MoneyHelper.readMoney(order['tax_amount']),
+        'total': MoneyHelper.readMoney(order['total']),
         'paid_amount': 0.0,
-        'remaining': (order['total'] as num?)?.toDouble() ?? 0.0,
+        'remaining': MoneyHelper.readMoney(order['total']),
         'status': 'pending',
         'currency': order['currency'] ?? 'YER',
         'exchange_rate': (order['exchange_rate'] as num?)?.toDouble() ?? 1.0,
@@ -215,8 +216,8 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
         'product_id': item['product_id'],
         'product_name': item['product_name'] ?? '',
         'quantity': (item['quantity'] as num?)?.toDouble() ?? 1.0,
-        'unit_price': (item['unit_price'] as num?)?.toDouble() ?? 0.0,
-        'total_price': (item['total_price'] as num?)?.toDouble() ?? 0.0,
+        'unit_price': MoneyHelper.readMoney(item['unit_price']),
+        'total_price': MoneyHelper.readMoney(item['total_price']),
       }).toList();
 
       // Save invoice with journal entries
@@ -301,7 +302,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
                           _detailRow('رقم الطلب', order['order_number'] ?? ''),
                           _detailRow('العميل', order['customer_name'] ?? 'بدون عميل'),
                           _detailRow('العملة', order['currency'] ?? 'YER'),
-                          _detailRow('الإجمالي', CurrencyFormatter.format((order['total'] as num?)?.toDouble() ?? 0)),
+                          _detailRow('الإجمالي', CurrencyFormatter.format(MoneyHelper.readMoney(order['total']))),
                           if (order['expected_date'] != null)
                             _detailRow('تاريخ التسليم المتوقع', DateFormatter.formatDate(DateTime.tryParse(order['expected_date']) ?? DateTime.now())),
                           if (order['notes'] != null && (order['notes'] as String).isNotEmpty)
@@ -389,7 +390,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
           Expanded(
             flex: 2,
             child: Text(
-              CurrencyFormatter.format((item['total_price'] as num?)?.toDouble() ?? 0),
+              CurrencyFormatter.format(MoneyHelper.readMoney(item['total_price'])),
               textAlign: TextAlign.end,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
@@ -555,7 +556,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
   }
 
   Widget _buildSummaryCard(ThemeData theme, bool isDark) {
-    final totalValue = _filteredOrders.fold<double>(0, (sum, o) => sum + ((o['total'] as num?)?.toDouble() ?? 0));
+    final totalValue = _filteredOrders.fold<double>(0, (sum, o) => sum + (MoneyHelper.readMoney(o['total'])));
     final confirmedCount = _filteredOrders.where((o) => o['status'] == 'confirmed').length;
 
     return Container(
@@ -612,7 +613,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
   Widget _buildOrderCard(BuildContext ctx, Map<String, dynamic> o, bool isDark, ThemeData theme) {
     final status = o['status'] ?? 'draft';
     final statusColor = _statusColors[status] ?? Colors.grey;
-    final total = (o['total'] as num?)?.toDouble() ?? 0;
+    final total = MoneyHelper.readMoney(o['total']);
     final currency = o['currency'] ?? 'YER';
     final createdAt = o['created_at'] != null ? DateTime.tryParse(o['created_at']) : null;
     final canConvert = status == 'confirmed' || status == 'shipped';
@@ -951,7 +952,7 @@ class _CreateSalesOrderFormState extends State<_CreateSalesOrderForm> {
                               itemCount: filtered.length,
                               itemBuilder: (ctx, i) {
                                 final p = filtered[i];
-                                final sellPrice = (p['sell_price'] as num?)?.toDouble() ?? 0;
+                                final sellPrice = MoneyHelper.readMoney(p['sell_price']);
                                 return ListTile(
                                   title: Text(p['name_ar'] ?? ''),
                                   subtitle: Text(CurrencyFormatter.formatValue(sellPrice) + ' ${_currencySymbol[_selectedCurrency] ?? ''}'),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -148,7 +149,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
       (cb) => cb['id'] == _fromCashBoxId,
       orElse: () => <String, dynamic>{},
     );
-    final fromBoxBalance = (fromBox['balance'] as num?)?.toDouble() ?? 0.0;
+    final fromBoxBalance = MoneyHelper.readMoney(fromBox['balance']);
     if (amount > fromBoxBalance) {
       _showError(
           'رصيد الصندوق غير كافي (الرصيد: ${CurrencyFormatter.format(fromBoxBalance)} ${_currencySymbol(_selectedCurrency)})');
@@ -501,7 +502,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                 final id = cb['id'] as int;
                 final name = cb['name'] as String;
                 final balance =
-                    (cb['balance'] as num?)?.toDouble() ?? 0.0;
+                    MoneyHelper.readMoney(cb['balance']);
                 final isDisabled = id == _toCashBoxId;
                 return DropdownMenuItem<int>(
                   value: id,
@@ -636,7 +637,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                 final id = cb['id'] as int;
                 final name = cb['name'] as String;
                 final balance =
-                    (cb['balance'] as num?)?.toDouble() ?? 0.0;
+                    MoneyHelper.readMoney(cb['balance']);
                 final isDisabled = id == _fromCashBoxId;
                 return DropdownMenuItem<int>(
                   value: id,
@@ -809,7 +810,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
       (cb) => cb['id'] == _fromCashBoxId,
       orElse: () => <String, dynamic>{},
     );
-    final balance = (fromBox['balance'] as num?)?.toDouble() ?? 0.0;
+    final balance = MoneyHelper.readMoney(fromBox['balance']);
     final enteredAmount = double.tryParse(_amountController.text) ?? 0.0;
     final remaining = balance - enteredAmount;
     final isInsufficient = enteredAmount > 0 && remaining < 0;
@@ -917,7 +918,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
   // ── Journal Entry Card ────────────────────────────────────────────
   Widget _buildJournalEntryCard(ThemeData theme) {
     final t = _lastTransfer!;
-    final amount = (t['amount'] as num?)?.toDouble() ?? 0.0;
+    final amount = MoneyHelper.readMoney(t['amount']);
     final currency = t['currency'] as String? ?? 'YER';
     final fromName = t['from_cash_box_name'] ?? '';
     final toName = t['to_cash_box_name'] ?? '';
@@ -1188,7 +1189,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
     final transferNumber = t['transfer_number'] as String? ?? '';
     final fromName = t['from_cash_box_name'] as String? ?? 'غير معروف';
     final toName = t['to_cash_box_name'] as String? ?? 'غير معروف';
-    final amount = (t['amount'] as num?)?.toDouble() ?? 0.0;
+    final amount = MoneyHelper.readMoney(t['amount']);
     final currency = t['currency'] as String? ?? 'YER';
     final notes = t['notes'] as String?;
     final createdAt = t['created_at'] as String? ?? '';

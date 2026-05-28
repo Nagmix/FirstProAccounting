@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import '../../core/utils/money_helper.dart';
 
 class DatabaseHelper {
   /// Log a migration error instead of silently swallowing it (H-07)
@@ -17,7 +18,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 33;
+  static const int _databaseVersion = 34;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -70,12 +71,12 @@ class DatabaseHelper {
         parent_id INTEGER,
         account_code TEXT NOT NULL,
         account_type TEXT NOT NULL DEFAULT 'ASSET',
-        balance REAL NOT NULL DEFAULT 0.0,
+        balance INTEGER NOT NULL DEFAULT 0,
         currency TEXT NOT NULL DEFAULT 'YER',
         linked_cash_box_id INTEGER,
         is_active INTEGER NOT NULL DEFAULT 1,
         is_system INTEGER NOT NULL DEFAULT 0,
-        debt_ceiling REAL NOT NULL DEFAULT 0.0,
+        debt_ceiling INTEGER NOT NULL DEFAULT 0,
         balance_type TEXT NOT NULL DEFAULT 'credit',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -96,12 +97,12 @@ class DatabaseHelper {
         supplier_id INTEGER,
         group_id TEXT,
         description TEXT,
-        cost_price REAL NOT NULL DEFAULT 0.0,
-        average_cost REAL NOT NULL DEFAULT 0.0,
-        sell_price REAL NOT NULL DEFAULT 0.0,
-        wholesale_price REAL NOT NULL DEFAULT 0.0,
-        special_wholesale_price REAL NOT NULL DEFAULT 0.0,
-        minimum_sale_price REAL NOT NULL DEFAULT 0.0,
+        cost_price INTEGER NOT NULL DEFAULT 0,
+        average_cost INTEGER NOT NULL DEFAULT 0,
+        sell_price INTEGER NOT NULL DEFAULT 0,
+        wholesale_price INTEGER NOT NULL DEFAULT 0,
+        special_wholesale_price INTEGER NOT NULL DEFAULT 0,
+        minimum_sale_price INTEGER NOT NULL DEFAULT 0,
         tax_rate REAL NOT NULL DEFAULT 0.0,
         tax_inclusive INTEGER NOT NULL DEFAULT 0,
         sales_account_id INTEGER,
@@ -149,10 +150,10 @@ class DatabaseHelper {
         email TEXT,
         contact_method TEXT DEFAULT 'whatsapp',
         notes TEXT,
-        balance REAL NOT NULL DEFAULT 0.0,
+        balance INTEGER NOT NULL DEFAULT 0,
         balance_type TEXT NOT NULL DEFAULT 'credit',
         currency TEXT NOT NULL DEFAULT 'YER',
-        debt_ceiling REAL NOT NULL DEFAULT 0.0,
+        debt_ceiling INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -169,20 +170,20 @@ class DatabaseHelper {
         cash_box_id INTEGER,
         customer_id INTEGER,
         supplier_id INTEGER,
-        subtotal REAL NOT NULL DEFAULT 0.0,
+        subtotal INTEGER NOT NULL DEFAULT 0,
         discount_rate REAL NOT NULL DEFAULT 0.0,
-        discount_amount REAL NOT NULL DEFAULT 0.0,
-        tax_amount REAL NOT NULL DEFAULT 0.0,
-        total REAL NOT NULL DEFAULT 0.0,
-        paid_amount REAL NOT NULL DEFAULT 0.0,
-        remaining REAL NOT NULL DEFAULT 0.0,
+        discount_amount INTEGER NOT NULL DEFAULT 0,
+        tax_amount INTEGER NOT NULL DEFAULT 0,
+        total INTEGER NOT NULL DEFAULT 0,
+        paid_amount INTEGER NOT NULL DEFAULT 0,
+        remaining INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'pending',
         cashier_id INTEGER,
         warehouse_id INTEGER,
         notes TEXT,
         currency TEXT NOT NULL DEFAULT 'YER',
         exchange_rate REAL NOT NULL DEFAULT 1.0,
-        transport_charges REAL NOT NULL DEFAULT 0.0,
+        transport_charges INTEGER NOT NULL DEFAULT 0,
         ewallet_provider TEXT,
         bank_transfer_provider TEXT,
         transfer_number TEXT,
@@ -229,8 +230,8 @@ class DatabaseHelper {
         product_id INTEGER NOT NULL,
         product_name TEXT NOT NULL,
         quantity REAL NOT NULL DEFAULT 1.0,
-        unit_price REAL NOT NULL DEFAULT 0.0,
-        total_price REAL NOT NULL DEFAULT 0.0,
+        unit_price INTEGER NOT NULL DEFAULT 0,
+        total_price INTEGER NOT NULL DEFAULT 0,
         unit_name TEXT,
         conversion_factor REAL NOT NULL DEFAULT 1.0,
         base_quantity REAL NOT NULL DEFAULT 1.0,
@@ -246,8 +247,8 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER NOT NULL,
         journal_id INTEGER,
-        debit REAL NOT NULL DEFAULT 0.0,
-        credit REAL NOT NULL DEFAULT 0.0,
+        debit INTEGER NOT NULL DEFAULT 0,
+        credit INTEGER NOT NULL DEFAULT 0,
         description TEXT,
         date TEXT NOT NULL,
         created_at TEXT NOT NULL,
@@ -265,7 +266,7 @@ class DatabaseHelper {
         bank_name TEXT,
         bank_branch TEXT,
         currency TEXT NOT NULL DEFAULT 'YER',
-        balance REAL NOT NULL DEFAULT 0.0,
+        balance INTEGER NOT NULL DEFAULT 0,
         balance_type TEXT NOT NULL DEFAULT 'credit',
         linked_account_id INTEGER,
         is_active INTEGER NOT NULL DEFAULT 1,
@@ -297,11 +298,11 @@ class DatabaseHelper {
         phone TEXT,
         email TEXT,
         address TEXT,
-        balance REAL NOT NULL DEFAULT 0.0,
+        balance INTEGER NOT NULL DEFAULT 0,
         balance_type TEXT NOT NULL DEFAULT 'credit',
         currency TEXT NOT NULL DEFAULT 'YER',
         notes TEXT,
-        debt_ceiling REAL NOT NULL DEFAULT 0.0,
+        debt_ceiling INTEGER NOT NULL DEFAULT 0,
         contact_method TEXT DEFAULT 'whatsapp',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -378,10 +379,10 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         description TEXT,
-        amount REAL NOT NULL DEFAULT 0.0,
+        amount INTEGER NOT NULL DEFAULT 0,
         currency TEXT NOT NULL DEFAULT 'YER',
         exchange_rate REAL NOT NULL DEFAULT 1.0,
-        amount_base REAL NOT NULL DEFAULT 0.0,
+        amount_base INTEGER NOT NULL DEFAULT 0,
         expense_date TEXT NOT NULL,
         category TEXT,
         payment_method TEXT NOT NULL DEFAULT 'cash',
@@ -410,7 +411,7 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         phone TEXT,
         job_title TEXT,
-        balance REAL NOT NULL DEFAULT 0.0,
+        balance INTEGER NOT NULL DEFAULT 0,
         balance_type TEXT NOT NULL DEFAULT 'credit',
         currency TEXT NOT NULL DEFAULT 'YER',
         account_id INTEGER,
@@ -431,11 +432,11 @@ class DatabaseHelper {
         customer_id INTEGER,
         currency TEXT NOT NULL DEFAULT 'YER',
         exchange_rate REAL NOT NULL DEFAULT 1.0,
-        subtotal REAL NOT NULL DEFAULT 0.0,
+        subtotal INTEGER NOT NULL DEFAULT 0,
         discount_rate REAL NOT NULL DEFAULT 0.0,
-        discount_amount REAL NOT NULL DEFAULT 0.0,
-        tax_amount REAL NOT NULL DEFAULT 0.0,
-        total REAL NOT NULL DEFAULT 0.0,
+        discount_amount INTEGER NOT NULL DEFAULT 0,
+        tax_amount INTEGER NOT NULL DEFAULT 0,
+        total INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'draft',
         valid_until TEXT,
         notes TEXT,
@@ -457,8 +458,8 @@ class DatabaseHelper {
         product_name TEXT NOT NULL,
         description TEXT,
         quantity REAL NOT NULL DEFAULT 1.0,
-        unit_price REAL NOT NULL DEFAULT 0.0,
-        total_price REAL NOT NULL DEFAULT 0.0,
+        unit_price INTEGER NOT NULL DEFAULT 0,
+        total_price INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (quotation_id) REFERENCES quotations (id),
         FOREIGN KEY (product_id) REFERENCES products (id)
       )
@@ -472,11 +473,11 @@ class DatabaseHelper {
         supplier_id INTEGER,
         currency TEXT NOT NULL DEFAULT 'YER',
         exchange_rate REAL NOT NULL DEFAULT 1.0,
-        subtotal REAL NOT NULL DEFAULT 0.0,
+        subtotal INTEGER NOT NULL DEFAULT 0,
         discount_rate REAL NOT NULL DEFAULT 0.0,
-        discount_amount REAL NOT NULL DEFAULT 0.0,
-        tax_amount REAL NOT NULL DEFAULT 0.0,
-        total REAL NOT NULL DEFAULT 0.0,
+        discount_amount INTEGER NOT NULL DEFAULT 0,
+        tax_amount INTEGER NOT NULL DEFAULT 0,
+        total INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'draft',
         expected_date TEXT,
         notes TEXT,
@@ -500,8 +501,8 @@ class DatabaseHelper {
         product_name TEXT NOT NULL,
         description TEXT,
         quantity REAL NOT NULL DEFAULT 1.0,
-        unit_price REAL NOT NULL DEFAULT 0.0,
-        total_price REAL NOT NULL DEFAULT 0.0,
+        unit_price INTEGER NOT NULL DEFAULT 0,
+        total_price INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders (id),
         FOREIGN KEY (product_id) REFERENCES products (id)
       )
@@ -515,11 +516,11 @@ class DatabaseHelper {
         customer_id INTEGER,
         currency TEXT NOT NULL DEFAULT 'YER',
         exchange_rate REAL NOT NULL DEFAULT 1.0,
-        subtotal REAL NOT NULL DEFAULT 0.0,
+        subtotal INTEGER NOT NULL DEFAULT 0,
         discount_rate REAL NOT NULL DEFAULT 0.0,
-        discount_amount REAL NOT NULL DEFAULT 0.0,
-        tax_amount REAL NOT NULL DEFAULT 0.0,
-        total REAL NOT NULL DEFAULT 0.0,
+        discount_amount INTEGER NOT NULL DEFAULT 0,
+        tax_amount INTEGER NOT NULL DEFAULT 0,
+        total INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'draft',
         expected_date TEXT,
         notes TEXT,
@@ -544,8 +545,8 @@ class DatabaseHelper {
         product_name TEXT NOT NULL,
         description TEXT,
         quantity REAL NOT NULL DEFAULT 1.0,
-        unit_price REAL NOT NULL DEFAULT 0.0,
-        total_price REAL NOT NULL DEFAULT 0.0,
+        unit_price INTEGER NOT NULL DEFAULT 0,
+        total_price INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (sales_order_id) REFERENCES sales_orders (id),
         FOREIGN KEY (product_id) REFERENCES products (id)
       )
@@ -560,17 +561,17 @@ class DatabaseHelper {
         cashier_id INTEGER,
         cashier_name TEXT,
         cash_box_id INTEGER NOT NULL,
-        opening_amount REAL NOT NULL DEFAULT 0.0,
-        closing_amount REAL,
-        expected_amount REAL,
-        difference REAL,
+        opening_amount INTEGER NOT NULL DEFAULT 0,
+        closing_amount INTEGER,
+        expected_amount INTEGER,
+        difference INTEGER,
         status TEXT NOT NULL DEFAULT 'open',
         opened_at TEXT NOT NULL,
         closed_at TEXT,
         notes TEXT,
-        total_sales REAL NOT NULL DEFAULT 0.0,
-        total_returns REAL NOT NULL DEFAULT 0.0,
-        total_discounts REAL NOT NULL DEFAULT 0.0,
+        total_sales INTEGER NOT NULL DEFAULT 0,
+        total_returns INTEGER NOT NULL DEFAULT 0,
+        total_discounts INTEGER NOT NULL DEFAULT 0,
         transaction_count INTEGER NOT NULL DEFAULT 0,
         currency TEXT NOT NULL DEFAULT 'YER',
         created_at TEXT NOT NULL,
@@ -587,12 +588,12 @@ class DatabaseHelper {
         exchange_number TEXT NOT NULL,
         from_currency TEXT NOT NULL,
         to_currency TEXT NOT NULL,
-        from_amount REAL NOT NULL,
-        to_amount REAL NOT NULL,
+        from_amount INTEGER NOT NULL,
+        to_amount INTEGER NOT NULL,
         exchange_rate REAL NOT NULL,
         from_cash_box_id INTEGER NOT NULL,
         to_cash_box_id INTEGER NOT NULL,
-        gain_loss REAL NOT NULL DEFAULT 0.0,
+        gain_loss INTEGER NOT NULL DEFAULT 0,
         gain_loss_type TEXT,
         notes TEXT,
         created_at TEXT NOT NULL,
@@ -608,7 +609,7 @@ class DatabaseHelper {
         transfer_number TEXT NOT NULL,
         from_cash_box_id INTEGER NOT NULL,
         to_cash_box_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
+        amount INTEGER NOT NULL,
         currency TEXT NOT NULL DEFAULT 'YER',
         notes TEXT,
         created_at TEXT NOT NULL,
@@ -683,7 +684,7 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         description TEXT,
         currency TEXT NOT NULL DEFAULT 'YER',
-        total_amount REAL NOT NULL DEFAULT 0.0,
+        total_amount INTEGER NOT NULL DEFAULT 0,
         cash_box_id INTEGER,
         customer_id INTEGER,
         supplier_id INTEGER,
@@ -702,8 +703,8 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         voucher_id INTEGER NOT NULL,
         account_id INTEGER NOT NULL,
-        debit REAL NOT NULL DEFAULT 0.0,
-        credit REAL NOT NULL DEFAULT 0.0,
+        debit INTEGER NOT NULL DEFAULT 0,
+        credit INTEGER NOT NULL DEFAULT 0,
         description TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (voucher_id) REFERENCES vouchers (id) ON DELETE CASCADE,
@@ -787,7 +788,7 @@ class DatabaseHelper {
         warehouse_id INTEGER,
         description TEXT,
         currency TEXT NOT NULL DEFAULT 'YER',
-        total_value REAL NOT NULL DEFAULT 0.0,
+        total_value INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'approved',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -804,8 +805,8 @@ class DatabaseHelper {
         system_quantity REAL NOT NULL,
         actual_quantity REAL NOT NULL,
         difference REAL NOT NULL,
-        unit_cost REAL NOT NULL DEFAULT 0.0,
-        total_value REAL NOT NULL DEFAULT 0.0,
+        unit_cost INTEGER NOT NULL DEFAULT 0,
+        total_value INTEGER NOT NULL DEFAULT 0,
         notes TEXT,
         FOREIGN KEY (voucher_id) REFERENCES inventory_vouchers (id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products (id)
@@ -820,7 +821,7 @@ class DatabaseHelper {
         start_date TEXT NOT NULL,
         end_date TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'open',
-        net_profit REAL NOT NULL DEFAULT 0.0,
+        net_profit INTEGER NOT NULL DEFAULT 0,
         closed_at TEXT,
         closed_by TEXT,
         notes TEXT,
@@ -870,8 +871,8 @@ class DatabaseHelper {
         to_unit_id INTEGER,
         conversion_factor REAL NOT NULL,
         barcode TEXT,
-        sell_price REAL NOT NULL DEFAULT 0.0,
-        cost_price REAL NOT NULL DEFAULT 0.0,
+        sell_price INTEGER NOT NULL DEFAULT 0,
+        cost_price INTEGER NOT NULL DEFAULT 0,
         is_active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -890,7 +891,7 @@ class DatabaseHelper {
         reference_type TEXT,
         reference_id TEXT,
         notes TEXT,
-        unit_cost REAL NOT NULL DEFAULT 0.0,
+        unit_cost INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
       )
@@ -907,7 +908,7 @@ class DatabaseHelper {
         cart_data TEXT NOT NULL,
         payment_method TEXT NOT NULL DEFAULT 'cash',
         payments_data TEXT NOT NULL DEFAULT '[]',
-        discount REAL NOT NULL DEFAULT 0.0,
+        discount INTEGER NOT NULL DEFAULT 0,
         discount_type TEXT NOT NULL DEFAULT 'none',
         customer_id INTEGER,
         customer_name TEXT NOT NULL DEFAULT '',
@@ -948,7 +949,7 @@ class DatabaseHelper {
         'name_en': '$nameEn ($currency)',
         'account_code': code,
         'account_type': type,
-        'balance': 0.0,
+        'balance': 0,
         'currency': currency,
         'balance_type': (type == 'ASSET' || type == 'COST') ? 'debit' : 'credit',
         'is_active': 1,
@@ -1046,7 +1047,7 @@ class DatabaseHelper {
         'name_en': '${template[1]} ($currencyCode)',
         'account_code': actualCode,
         'account_type': accountType,
-        'balance': 0.0,
+        'balance': 0,
         'currency': currencyCode,
         'balance_type': (accountType == 'ASSET' || accountType == 'COST') ? 'debit' : 'credit',
         'is_active': 1,
@@ -1546,11 +1547,11 @@ class DatabaseHelper {
             'name_en': acct['name_en'],
             'account_code': acct['account_code'],
             'account_type': acct['account_type'],
-            'balance': 0.0,
+            'balance': 0,
             'currency': acct['currency'],
             'is_active': 1,
             'is_system': 1,
-            'debt_ceiling': 0.0,
+            'debt_ceiling': 0,
             'balance_type': 'credit',
             'created_at': now16,
             'updated_at': now16,
@@ -1725,11 +1726,11 @@ class DatabaseHelper {
               'name_en': '${template['nameEn']} ($currencyCode)',
               'account_code': actualCode,
               'account_type': template['type'],
-              'balance': 0.0,
+              'balance': 0,
               'currency': currencyCode,
               'is_active': 1,
               'is_system': 1,
-              'debt_ceiling': 0.0,
+              'debt_ceiling': 0,
               'balance_type': 'credit',
               'created_at': now20,
               'updated_at': now20,
@@ -1791,10 +1792,10 @@ class DatabaseHelper {
       for (final row in affectedAccounts) {
         final accountId = row['id'] as int;
         final txResult = await db.rawQuery(
-          'SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS net_debit FROM transactions WHERE account_id = ?',
+          'SELECT COALESCE(SUM(debit) - SUM(credit), 0) AS net_debit FROM transactions WHERE account_id = ?',
           [accountId],
         );
-        final correctBalance = (txResult.first['net_debit'] as num?)?.toDouble() ?? 0.0;
+        final correctBalance = MoneyHelper.readMoney(txResult.first['net_debit']);
         await db.update(
           'accounts',
           {'balance': correctBalance, 'updated_at': DateTime.now().toIso8601String()},
@@ -2098,11 +2099,11 @@ class DatabaseHelper {
             'name_en': 'VAT Payable ($currencyCode)',
             'account_code': actualCode,
             'account_type': 'LIABILITY',
-            'balance': 0.0,
+            'balance': 0,
             'currency': currencyCode,
             'is_active': 1,
             'is_system': 1,
-            'debt_ceiling': 0.0,
+            'debt_ceiling': 0,
             'balance_type': 'credit',
             'created_at': now26,
             'updated_at': now26,
@@ -2248,6 +2249,972 @@ class DatabaseHelper {
       ''');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_held_orders_shift ON held_orders (shift_id)');
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  v34 Migration: Convert REAL monetary columns to INTEGER (cents)
+    //  C-06: Store money as integer cents for precision
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 34) {
+      await _migrateV34RealToInteger(db);
+    }
+  }
+
+  /// C-06: Migrate all REAL monetary columns to INTEGER (cents).
+  ///
+  /// SQLite does not support ALTER COLUMN, so we must use the
+  /// table rebuild pattern for each affected table:
+  ///   1. CREATE TABLE temp_xxx with INTEGER columns
+  ///   2. INSERT INTO temp SELECT ... with CAST(ROUND(col*100) AS INTEGER) for money
+  ///   3. DROP TABLE xxx
+  ///   4. ALTER TABLE temp_xxx RENAME TO xxx
+  ///   5. Recreate indexes
+  Future<void> _migrateV34RealToInteger(Database db) async {
+    // Helper: money columns use CAST(ROUND(col*100) AS INTEGER)
+    // Non-money REAL columns (quantities, rates) copy as-is.
+    const m = 'CAST(ROUND(col*100) AS INTEGER)'; // just a comment reminder
+
+    await db.transaction((txn) async {
+      // ── accounts ──
+      await txn.execute('''
+        CREATE TABLE temp_accounts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name_ar TEXT NOT NULL,
+          name_en TEXT NOT NULL DEFAULT '',
+          parent_id INTEGER,
+          account_code TEXT NOT NULL,
+          account_type TEXT NOT NULL DEFAULT 'ASSET',
+          balance INTEGER NOT NULL DEFAULT 0,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          linked_cash_box_id INTEGER,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          is_system INTEGER NOT NULL DEFAULT 0,
+          debt_ceiling INTEGER NOT NULL DEFAULT 0,
+          balance_type TEXT NOT NULL DEFAULT 'credit',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (parent_id) REFERENCES accounts (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_accounts (id, name_ar, name_en, parent_id, account_code, account_type,
+          balance, currency, linked_cash_box_id, is_active, is_system, debt_ceiling, balance_type, created_at, updated_at)
+        SELECT id, name_ar, name_en, parent_id, account_code, account_type,
+          CAST(ROUND(balance*100) AS INTEGER), currency, linked_cash_box_id, is_active, is_system,
+          CAST(ROUND(debt_ceiling*100) AS INTEGER), balance_type, created_at, updated_at
+        FROM accounts
+      ''');
+      await txn.execute('DROP TABLE accounts');
+      await txn.execute('ALTER TABLE temp_accounts RENAME TO accounts');
+      await txn.execute('CREATE INDEX idx_accounts_account_code ON accounts (account_code)');
+      await txn.execute('CREATE INDEX idx_accounts_account_type ON accounts (account_type)');
+
+      // ── products ──
+      await txn.execute('''
+        CREATE TABLE temp_products (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          item_code TEXT,
+          name_ar TEXT NOT NULL,
+          name_en TEXT NOT NULL DEFAULT '',
+          barcode TEXT,
+          category_id INTEGER,
+          unit_id INTEGER,
+          supplier_id INTEGER,
+          group_id TEXT,
+          description TEXT,
+          cost_price INTEGER NOT NULL DEFAULT 0,
+          average_cost INTEGER NOT NULL DEFAULT 0,
+          sell_price INTEGER NOT NULL DEFAULT 0,
+          wholesale_price INTEGER NOT NULL DEFAULT 0,
+          special_wholesale_price INTEGER NOT NULL DEFAULT 0,
+          minimum_sale_price INTEGER NOT NULL DEFAULT 0,
+          tax_rate REAL NOT NULL DEFAULT 0.0,
+          tax_inclusive INTEGER NOT NULL DEFAULT 0,
+          sales_account_id INTEGER,
+          purchase_account_id INTEGER,
+          inventory_account_id INTEGER,
+          cogs_account_id INTEGER,
+          vat_account_id INTEGER,
+          current_stock REAL NOT NULL DEFAULT 0.0,
+          min_stock REAL NOT NULL DEFAULT 0.0,
+          warehouse_id INTEGER,
+          expiry_date TEXT,
+          expiry_tracking INTEGER NOT NULL DEFAULT 0,
+          weight REAL NOT NULL DEFAULT 0.0,
+          notes TEXT,
+          include_in_reports INTEGER NOT NULL DEFAULT 1,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          image_path TEXT,
+          has_variants INTEGER NOT NULL DEFAULT 0,
+          base_unit_id INTEGER,
+          purchase_unit_id INTEGER,
+          sale_unit_id INTEGER,
+          track_stock INTEGER NOT NULL DEFAULT 1,
+          is_sellable INTEGER NOT NULL DEFAULT 1,
+          is_purchasable INTEGER NOT NULL DEFAULT 1,
+          allow_negative INTEGER NOT NULL DEFAULT 0,
+          sell_retail INTEGER NOT NULL DEFAULT 1,
+          show_in_pos INTEGER NOT NULL DEFAULT 1,
+          supplier_code TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (category_id) REFERENCES categories (id),
+          FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
+          FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_products SELECT
+          id, item_code, name_ar, name_en, barcode, category_id, unit_id, supplier_id, group_id, description,
+          CAST(ROUND(cost_price*100) AS INTEGER),
+          CAST(ROUND(average_cost*100) AS INTEGER),
+          CAST(ROUND(sell_price*100) AS INTEGER),
+          CAST(ROUND(wholesale_price*100) AS INTEGER),
+          CAST(ROUND(special_wholesale_price*100) AS INTEGER),
+          CAST(ROUND(minimum_sale_price*100) AS INTEGER),
+          tax_rate, tax_inclusive, sales_account_id, purchase_account_id, inventory_account_id, cogs_account_id, vat_account_id,
+          current_stock, min_stock, warehouse_id, expiry_date, expiry_tracking, weight, notes,
+          include_in_reports, is_active, image_path, has_variants, base_unit_id, purchase_unit_id, sale_unit_id,
+          track_stock, is_sellable, is_purchasable, allow_negative, sell_retail, show_in_pos, supplier_code,
+          created_at, updated_at
+        FROM products
+      ''');
+      await txn.execute('DROP TABLE products');
+      await txn.execute('ALTER TABLE temp_products RENAME TO products');
+      await txn.execute('CREATE INDEX idx_products_barcode ON products (barcode)');
+      await txn.execute('CREATE INDEX idx_products_item_code ON products (item_code)');
+      await txn.execute('CREATE INDEX idx_products_category_id ON products (category_id)');
+
+      // ── customers ──
+      await txn.execute('''
+        CREATE TABLE temp_customers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT,
+          address TEXT,
+          address2 TEXT,
+          email TEXT,
+          contact_method TEXT DEFAULT 'whatsapp',
+          notes TEXT,
+          balance INTEGER NOT NULL DEFAULT 0,
+          balance_type TEXT NOT NULL DEFAULT 'credit',
+          currency TEXT NOT NULL DEFAULT 'YER',
+          debt_ceiling INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_customers SELECT
+          id, name, phone, address, address2, email, contact_method, notes,
+          CAST(ROUND(balance*100) AS INTEGER), balance_type, currency,
+          CAST(ROUND(debt_ceiling*100) AS INTEGER), created_at, updated_at
+        FROM customers
+      ''');
+      await txn.execute('DROP TABLE customers');
+      await txn.execute('ALTER TABLE temp_customers RENAME TO customers');
+
+      // ── invoices ──
+      await txn.execute('''
+        CREATE TABLE temp_invoices (
+          id TEXT PRIMARY KEY,
+          type TEXT NOT NULL,
+          payment_mechanism TEXT NOT NULL DEFAULT 'cash',
+          payment_method TEXT NOT NULL DEFAULT 'cash',
+          is_return INTEGER NOT NULL DEFAULT 0,
+          cash_box_id INTEGER,
+          customer_id INTEGER,
+          supplier_id INTEGER,
+          subtotal INTEGER NOT NULL DEFAULT 0,
+          discount_rate REAL NOT NULL DEFAULT 0.0,
+          discount_amount INTEGER NOT NULL DEFAULT 0,
+          tax_amount INTEGER NOT NULL DEFAULT 0,
+          total INTEGER NOT NULL DEFAULT 0,
+          paid_amount INTEGER NOT NULL DEFAULT 0,
+          remaining INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'pending',
+          cashier_id INTEGER,
+          warehouse_id INTEGER,
+          notes TEXT,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          exchange_rate REAL NOT NULL DEFAULT 1.0,
+          transport_charges INTEGER NOT NULL DEFAULT 0,
+          ewallet_provider TEXT,
+          bank_transfer_provider TEXT,
+          transfer_number TEXT,
+          attachment_path TEXT,
+          shift_id INTEGER,
+          cashier_name TEXT,
+          is_posted INTEGER NOT NULL DEFAULT 0,
+          original_invoice_id TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES customers (id),
+          FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
+          FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id),
+          FOREIGN KEY (original_invoice_id) REFERENCES invoices (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_invoices SELECT
+          id, type, payment_mechanism, payment_method, is_return, cash_box_id, customer_id, supplier_id,
+          CAST(ROUND(subtotal*100) AS INTEGER), discount_rate,
+          CAST(ROUND(discount_amount*100) AS INTEGER),
+          CAST(ROUND(tax_amount*100) AS INTEGER),
+          CAST(ROUND(total*100) AS INTEGER),
+          CAST(ROUND(paid_amount*100) AS INTEGER),
+          CAST(ROUND(remaining*100) AS INTEGER),
+          status, cashier_id, warehouse_id, notes, currency, exchange_rate,
+          CAST(ROUND(transport_charges*100) AS INTEGER),
+          ewallet_provider, bank_transfer_provider, transfer_number, attachment_path,
+          shift_id, cashier_name, is_posted, original_invoice_id, created_at
+        FROM invoices
+      ''');
+      await txn.execute('DROP TABLE invoices');
+      await txn.execute('ALTER TABLE temp_invoices RENAME TO invoices');
+      await txn.execute('CREATE INDEX idx_invoices_customer_id ON invoices (customer_id)');
+      await txn.execute('CREATE INDEX idx_invoices_created_at ON invoices (created_at)');
+      await txn.execute('CREATE INDEX idx_invoices_status ON invoices (status)');
+      await txn.execute('CREATE INDEX idx_invoices_shift_id ON invoices (shift_id)');
+      await txn.execute('CREATE INDEX idx_invoices_is_posted ON invoices (is_posted)');
+      await txn.execute('CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
+
+      // ── invoice_items ──
+      await txn.execute('''
+        CREATE TABLE temp_invoice_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_id TEXT NOT NULL,
+          product_id INTEGER NOT NULL,
+          product_name TEXT NOT NULL,
+          quantity REAL NOT NULL DEFAULT 1.0,
+          unit_price INTEGER NOT NULL DEFAULT 0,
+          total_price INTEGER NOT NULL DEFAULT 0,
+          unit_name TEXT,
+          conversion_factor REAL NOT NULL DEFAULT 1.0,
+          base_quantity REAL NOT NULL DEFAULT 1.0,
+          notes TEXT,
+          FOREIGN KEY (invoice_id) REFERENCES invoices (id),
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_invoice_items SELECT
+          id, invoice_id, product_id, product_name, quantity,
+          CAST(ROUND(unit_price*100) AS INTEGER),
+          CAST(ROUND(total_price*100) AS INTEGER),
+          unit_name, conversion_factor, base_quantity, notes
+        FROM invoice_items
+      ''');
+      await txn.execute('DROP TABLE invoice_items');
+      await txn.execute('ALTER TABLE temp_invoice_items RENAME TO invoice_items');
+      await txn.execute('CREATE INDEX idx_invoice_items_invoice_id ON invoice_items (invoice_id)');
+
+      // ── transactions ──
+      await txn.execute('''
+        CREATE TABLE temp_transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          account_id INTEGER NOT NULL,
+          journal_id INTEGER,
+          debit INTEGER NOT NULL DEFAULT 0,
+          credit INTEGER NOT NULL DEFAULT 0,
+          description TEXT,
+          date TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (account_id) REFERENCES accounts (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_transactions SELECT
+          id, account_id, journal_id,
+          CAST(ROUND(debit*100) AS INTEGER),
+          CAST(ROUND(credit*100) AS INTEGER),
+          description, date, created_at
+        FROM transactions
+      ''');
+      await txn.execute('DROP TABLE transactions');
+      await txn.execute('ALTER TABLE temp_transactions RENAME TO transactions');
+      await txn.execute('CREATE INDEX idx_transactions_account_id ON transactions (account_id)');
+      await txn.execute('CREATE INDEX idx_transactions_journal_id ON transactions (journal_id)');
+      await txn.execute('CREATE INDEX idx_transactions_date ON transactions (date)');
+
+      // ── cash_boxes ──
+      await txn.execute('''
+        CREATE TABLE temp_cash_boxes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'cash_box',
+          bank_account_number TEXT,
+          bank_name TEXT,
+          bank_branch TEXT,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          balance INTEGER NOT NULL DEFAULT 0,
+          balance_type TEXT NOT NULL DEFAULT 'credit',
+          linked_account_id INTEGER,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (linked_account_id) REFERENCES accounts (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_cash_boxes SELECT
+          id, name, type, bank_account_number, bank_name, bank_branch, currency,
+          CAST(ROUND(balance*100) AS INTEGER), balance_type, linked_account_id, is_active,
+          created_at, updated_at
+        FROM cash_boxes
+      ''');
+      await txn.execute('DROP TABLE cash_boxes');
+      await txn.execute('ALTER TABLE temp_cash_boxes RENAME TO cash_boxes');
+      await txn.execute('CREATE INDEX idx_cash_boxes_type ON cash_boxes (type)');
+
+      // ── suppliers ──
+      await txn.execute('''
+        CREATE TABLE temp_suppliers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT,
+          email TEXT,
+          address TEXT,
+          balance INTEGER NOT NULL DEFAULT 0,
+          balance_type TEXT NOT NULL DEFAULT 'credit',
+          currency TEXT NOT NULL DEFAULT 'YER',
+          notes TEXT,
+          debt_ceiling INTEGER NOT NULL DEFAULT 0,
+          contact_method TEXT DEFAULT 'whatsapp',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_suppliers SELECT
+          id, name, phone, email, address,
+          CAST(ROUND(balance*100) AS INTEGER), balance_type, currency, notes,
+          CAST(ROUND(debt_ceiling*100) AS INTEGER), contact_method, created_at, updated_at
+        FROM suppliers
+      ''');
+      await txn.execute('DROP TABLE suppliers');
+      await txn.execute('ALTER TABLE temp_suppliers RENAME TO suppliers');
+
+      // ── expenses ──
+      await txn.execute('''
+        CREATE TABLE temp_expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          description TEXT,
+          amount INTEGER NOT NULL DEFAULT 0,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          exchange_rate REAL NOT NULL DEFAULT 1.0,
+          amount_base INTEGER NOT NULL DEFAULT 0,
+          expense_date TEXT NOT NULL,
+          category TEXT,
+          payment_method TEXT NOT NULL DEFAULT 'cash',
+          cash_box_id INTEGER,
+          account_id INTEGER,
+          beneficiary TEXT,
+          reference_number TEXT,
+          notes TEXT,
+          is_recurring INTEGER NOT NULL DEFAULT 0,
+          recurring_period TEXT,
+          attachment_path TEXT,
+          operation_type TEXT NOT NULL DEFAULT 'صرف',
+          expense_account_id INTEGER,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id),
+          FOREIGN KEY (account_id) REFERENCES accounts (id),
+          FOREIGN KEY (expense_account_id) REFERENCES accounts (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_expenses SELECT
+          id, title, description,
+          CAST(ROUND(amount*100) AS INTEGER), currency, exchange_rate,
+          CAST(ROUND(amount_base*100) AS INTEGER),
+          expense_date, category, payment_method, cash_box_id, account_id,
+          beneficiary, reference_number, notes, is_recurring, recurring_period,
+          attachment_path, operation_type, expense_account_id, created_at, updated_at
+        FROM expenses
+      ''');
+      await txn.execute('DROP TABLE expenses');
+      await txn.execute('ALTER TABLE temp_expenses RENAME TO expenses');
+      await txn.execute('CREATE INDEX idx_expenses_category ON expenses (category)');
+      await txn.execute('CREATE INDEX idx_expenses_expense_date ON expenses (expense_date)');
+      await txn.execute('CREATE INDEX idx_expenses_account_id ON expenses (account_id)');
+      await txn.execute('CREATE INDEX idx_expenses_expense_account_id ON expenses (expense_account_id)');
+
+      // ── employees ──
+      await txn.execute('''
+        CREATE TABLE temp_employees (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT,
+          job_title TEXT,
+          balance INTEGER NOT NULL DEFAULT 0,
+          balance_type TEXT NOT NULL DEFAULT 'credit',
+          currency TEXT NOT NULL DEFAULT 'YER',
+          account_id INTEGER,
+          notes TEXT,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (account_id) REFERENCES accounts (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_employees SELECT
+          id, name, phone, job_title,
+          CAST(ROUND(balance*100) AS INTEGER), balance_type, currency, account_id, notes,
+          is_active, created_at, updated_at
+        FROM employees
+      ''');
+      await txn.execute('DROP TABLE employees');
+      await txn.execute('ALTER TABLE temp_employees RENAME TO employees');
+      await txn.execute('CREATE INDEX idx_employees_name ON employees (name)');
+      await txn.execute('CREATE INDEX idx_employees_is_active ON employees (is_active)');
+
+      // ── quotations ──
+      await txn.execute('''
+        CREATE TABLE temp_quotations (
+          id TEXT PRIMARY KEY,
+          quotation_number TEXT NOT NULL,
+          customer_id INTEGER,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          exchange_rate REAL NOT NULL DEFAULT 1.0,
+          subtotal INTEGER NOT NULL DEFAULT 0,
+          discount_rate REAL NOT NULL DEFAULT 0.0,
+          discount_amount INTEGER NOT NULL DEFAULT 0,
+          tax_amount INTEGER NOT NULL DEFAULT 0,
+          total INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'draft',
+          valid_until TEXT,
+          notes TEXT,
+          terms_conditions TEXT,
+          converted_to_sales_order INTEGER NOT NULL DEFAULT 0,
+          sales_order_id TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES customers (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_quotations SELECT
+          id, quotation_number, customer_id, currency, exchange_rate,
+          CAST(ROUND(subtotal*100) AS INTEGER), discount_rate,
+          CAST(ROUND(discount_amount*100) AS INTEGER),
+          CAST(ROUND(tax_amount*100) AS INTEGER),
+          CAST(ROUND(total*100) AS INTEGER),
+          status, valid_until, notes, terms_conditions,
+          converted_to_sales_order, sales_order_id, created_at, updated_at
+        FROM quotations
+      ''');
+      await txn.execute('DROP TABLE quotations');
+      await txn.execute('ALTER TABLE temp_quotations RENAME TO quotations');
+      await txn.execute('CREATE INDEX idx_quotations_customer_id ON quotations (customer_id)');
+      await txn.execute('CREATE INDEX idx_quotations_status ON quotations (status)');
+
+      // ── quotation_items ──
+      await txn.execute('''
+        CREATE TABLE temp_quotation_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          quotation_id TEXT NOT NULL,
+          product_id INTEGER,
+          product_name TEXT NOT NULL,
+          description TEXT,
+          quantity REAL NOT NULL DEFAULT 1.0,
+          unit_price INTEGER NOT NULL DEFAULT 0,
+          total_price INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (quotation_id) REFERENCES quotations (id),
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_quotation_items SELECT
+          id, quotation_id, product_id, product_name, description, quantity,
+          CAST(ROUND(unit_price*100) AS INTEGER),
+          CAST(ROUND(total_price*100) AS INTEGER)
+        FROM quotation_items
+      ''');
+      await txn.execute('DROP TABLE quotation_items');
+      await txn.execute('ALTER TABLE temp_quotation_items RENAME TO quotation_items');
+      await txn.execute('CREATE INDEX idx_quotation_items_quotation_id ON quotation_items (quotation_id)');
+
+      // ── purchase_orders ──
+      await txn.execute('''
+        CREATE TABLE temp_purchase_orders (
+          id TEXT PRIMARY KEY,
+          order_number TEXT NOT NULL,
+          supplier_id INTEGER,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          exchange_rate REAL NOT NULL DEFAULT 1.0,
+          subtotal INTEGER NOT NULL DEFAULT 0,
+          discount_rate REAL NOT NULL DEFAULT 0.0,
+          discount_amount INTEGER NOT NULL DEFAULT 0,
+          tax_amount INTEGER NOT NULL DEFAULT 0,
+          total INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'draft',
+          expected_date TEXT,
+          notes TEXT,
+          terms_conditions TEXT,
+          warehouse_id INTEGER,
+          converted_to_invoice INTEGER NOT NULL DEFAULT 0,
+          invoice_id TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
+          FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_purchase_orders SELECT
+          id, order_number, supplier_id, currency, exchange_rate,
+          CAST(ROUND(subtotal*100) AS INTEGER), discount_rate,
+          CAST(ROUND(discount_amount*100) AS INTEGER),
+          CAST(ROUND(tax_amount*100) AS INTEGER),
+          CAST(ROUND(total*100) AS INTEGER),
+          status, expected_date, notes, terms_conditions, warehouse_id,
+          converted_to_invoice, invoice_id, created_at, updated_at
+        FROM purchase_orders
+      ''');
+      await txn.execute('DROP TABLE purchase_orders');
+      await txn.execute('ALTER TABLE temp_purchase_orders RENAME TO purchase_orders');
+      await txn.execute('CREATE INDEX idx_purchase_orders_supplier_id ON purchase_orders (supplier_id)');
+      await txn.execute('CREATE INDEX idx_purchase_orders_status ON purchase_orders (status)');
+
+      // ── purchase_order_items ──
+      await txn.execute('''
+        CREATE TABLE temp_purchase_order_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          purchase_order_id TEXT NOT NULL,
+          product_id INTEGER,
+          product_name TEXT NOT NULL,
+          description TEXT,
+          quantity REAL NOT NULL DEFAULT 1.0,
+          unit_price INTEGER NOT NULL DEFAULT 0,
+          total_price INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders (id),
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_purchase_order_items SELECT
+          id, purchase_order_id, product_id, product_name, description, quantity,
+          CAST(ROUND(unit_price*100) AS INTEGER),
+          CAST(ROUND(total_price*100) AS INTEGER)
+        FROM purchase_order_items
+      ''');
+      await txn.execute('DROP TABLE purchase_order_items');
+      await txn.execute('ALTER TABLE temp_purchase_order_items RENAME TO purchase_order_items');
+      await txn.execute('CREATE INDEX idx_purchase_order_items_po_id ON purchase_order_items (purchase_order_id)');
+
+      // ── sales_orders ──
+      await txn.execute('''
+        CREATE TABLE temp_sales_orders (
+          id TEXT PRIMARY KEY,
+          order_number TEXT NOT NULL,
+          customer_id INTEGER,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          exchange_rate REAL NOT NULL DEFAULT 1.0,
+          subtotal INTEGER NOT NULL DEFAULT 0,
+          discount_rate REAL NOT NULL DEFAULT 0.0,
+          discount_amount INTEGER NOT NULL DEFAULT 0,
+          tax_amount INTEGER NOT NULL DEFAULT 0,
+          total INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'draft',
+          expected_date TEXT,
+          notes TEXT,
+          terms_conditions TEXT,
+          warehouse_id INTEGER,
+          converted_to_invoice INTEGER NOT NULL DEFAULT 0,
+          invoice_id TEXT,
+          quotation_id TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES customers (id),
+          FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_sales_orders SELECT
+          id, order_number, customer_id, currency, exchange_rate,
+          CAST(ROUND(subtotal*100) AS INTEGER), discount_rate,
+          CAST(ROUND(discount_amount*100) AS INTEGER),
+          CAST(ROUND(tax_amount*100) AS INTEGER),
+          CAST(ROUND(total*100) AS INTEGER),
+          status, expected_date, notes, terms_conditions, warehouse_id,
+          converted_to_invoice, invoice_id, quotation_id, created_at, updated_at
+        FROM sales_orders
+      ''');
+      await txn.execute('DROP TABLE sales_orders');
+      await txn.execute('ALTER TABLE temp_sales_orders RENAME TO sales_orders');
+      await txn.execute('CREATE INDEX idx_sales_orders_customer_id ON sales_orders (customer_id)');
+      await txn.execute('CREATE INDEX idx_sales_orders_status ON sales_orders (status)');
+
+      // ── sales_order_items ──
+      await txn.execute('''
+        CREATE TABLE temp_sales_order_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sales_order_id TEXT NOT NULL,
+          product_id INTEGER,
+          product_name TEXT NOT NULL,
+          description TEXT,
+          quantity REAL NOT NULL DEFAULT 1.0,
+          unit_price INTEGER NOT NULL DEFAULT 0,
+          total_price INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (sales_order_id) REFERENCES sales_orders (id),
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_sales_order_items SELECT
+          id, sales_order_id, product_id, product_name, description, quantity,
+          CAST(ROUND(unit_price*100) AS INTEGER),
+          CAST(ROUND(total_price*100) AS INTEGER)
+        FROM sales_order_items
+      ''');
+      await txn.execute('DROP TABLE sales_order_items');
+      await txn.execute('ALTER TABLE temp_sales_order_items RENAME TO sales_order_items');
+      await txn.execute('CREATE INDEX idx_sales_order_items_so_id ON sales_order_items (sales_order_id)');
+
+      // ── shifts ──
+      await txn.execute('''
+        CREATE TABLE temp_shifts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          shift_number TEXT NOT NULL,
+          cashier_id INTEGER,
+          cashier_name TEXT,
+          cash_box_id INTEGER NOT NULL,
+          opening_amount INTEGER NOT NULL DEFAULT 0,
+          closing_amount INTEGER,
+          expected_amount INTEGER,
+          difference INTEGER,
+          status TEXT NOT NULL DEFAULT 'open',
+          opened_at TEXT NOT NULL,
+          closed_at TEXT,
+          notes TEXT,
+          total_sales INTEGER NOT NULL DEFAULT 0,
+          total_returns INTEGER NOT NULL DEFAULT 0,
+          total_discounts INTEGER NOT NULL DEFAULT 0,
+          transaction_count INTEGER NOT NULL DEFAULT 0,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (cashier_id) REFERENCES users (id),
+          FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_shifts SELECT
+          id, shift_number, cashier_id, cashier_name, cash_box_id,
+          CAST(ROUND(opening_amount*100) AS INTEGER),
+          CAST(ROUND(COALESCE(closing_amount,0)*100) AS INTEGER),
+          CAST(ROUND(COALESCE(expected_amount,0)*100) AS INTEGER),
+          CAST(ROUND(COALESCE(difference,0)*100) AS INTEGER),
+          status, opened_at, closed_at, notes,
+          CAST(ROUND(total_sales*100) AS INTEGER),
+          CAST(ROUND(total_returns*100) AS INTEGER),
+          CAST(ROUND(total_discounts*100) AS INTEGER),
+          transaction_count, currency, created_at, updated_at
+        FROM shifts
+      ''');
+      await txn.execute('DROP TABLE shifts');
+      await txn.execute('ALTER TABLE temp_shifts RENAME TO shifts');
+      await txn.execute('CREATE INDEX idx_shifts_cashier_id ON shifts (cashier_id)');
+      await txn.execute('CREATE INDEX idx_shifts_cash_box_id ON shifts (cash_box_id)');
+      await txn.execute('CREATE INDEX idx_shifts_status ON shifts (status)');
+
+      // ── currency_exchanges ──
+      await txn.execute('''
+        CREATE TABLE temp_currency_exchanges (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          exchange_number TEXT NOT NULL,
+          from_currency TEXT NOT NULL,
+          to_currency TEXT NOT NULL,
+          from_amount INTEGER NOT NULL,
+          to_amount INTEGER NOT NULL,
+          exchange_rate REAL NOT NULL,
+          from_cash_box_id INTEGER NOT NULL,
+          to_cash_box_id INTEGER NOT NULL,
+          gain_loss INTEGER NOT NULL DEFAULT 0,
+          gain_loss_type TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (from_cash_box_id) REFERENCES cash_boxes (id),
+          FOREIGN KEY (to_cash_box_id) REFERENCES cash_boxes (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_currency_exchanges SELECT
+          id, exchange_number, from_currency, to_currency,
+          CAST(ROUND(from_amount*100) AS INTEGER),
+          CAST(ROUND(to_amount*100) AS INTEGER),
+          exchange_rate, from_cash_box_id, to_cash_box_id,
+          CAST(ROUND(gain_loss*100) AS INTEGER),
+          gain_loss_type, notes, created_at
+        FROM currency_exchanges
+      ''');
+      await txn.execute('DROP TABLE currency_exchanges');
+      await txn.execute('ALTER TABLE temp_currency_exchanges RENAME TO currency_exchanges');
+      await txn.execute('CREATE INDEX idx_currency_exchanges_number ON currency_exchanges (exchange_number)');
+      await txn.execute('CREATE INDEX idx_currency_exchanges_created_at ON currency_exchanges (created_at)');
+
+      // ── cash_transfers ──
+      await txn.execute('''
+        CREATE TABLE temp_cash_transfers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          transfer_number TEXT NOT NULL,
+          from_cash_box_id INTEGER NOT NULL,
+          to_cash_box_id INTEGER NOT NULL,
+          amount INTEGER NOT NULL,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (from_cash_box_id) REFERENCES cash_boxes (id),
+          FOREIGN KEY (to_cash_box_id) REFERENCES cash_boxes (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_cash_transfers SELECT
+          id, transfer_number, from_cash_box_id, to_cash_box_id,
+          CAST(ROUND(amount*100) AS INTEGER), currency, notes, created_at
+        FROM cash_transfers
+      ''');
+      await txn.execute('DROP TABLE cash_transfers');
+      await txn.execute('ALTER TABLE temp_cash_transfers RENAME TO cash_transfers');
+      await txn.execute('CREATE INDEX idx_cash_transfers_number ON cash_transfers (transfer_number)');
+      await txn.execute('CREATE INDEX idx_cash_transfers_created_at ON cash_transfers (created_at)');
+
+      // ── vouchers ──
+      await txn.execute('''
+        CREATE TABLE temp_vouchers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          voucher_number TEXT NOT NULL,
+          voucher_type TEXT NOT NULL,
+          date TEXT NOT NULL,
+          description TEXT,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          total_amount INTEGER NOT NULL DEFAULT 0,
+          cash_box_id INTEGER,
+          customer_id INTEGER,
+          supplier_id INTEGER,
+          is_posted INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id),
+          FOREIGN KEY (customer_id) REFERENCES customers (id),
+          FOREIGN KEY (supplier_id) REFERENCES suppliers (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_vouchers SELECT
+          id, voucher_number, voucher_type, date, description, currency,
+          CAST(ROUND(total_amount*100) AS INTEGER),
+          cash_box_id, customer_id, supplier_id, is_posted, created_at, updated_at
+        FROM vouchers
+      ''');
+      await txn.execute('DROP TABLE vouchers');
+      await txn.execute('ALTER TABLE temp_vouchers RENAME TO vouchers');
+      await txn.execute('CREATE INDEX idx_vouchers_voucher_number ON vouchers (voucher_number)');
+      await txn.execute('CREATE INDEX idx_vouchers_voucher_type ON vouchers (voucher_type)');
+      await txn.execute('CREATE INDEX idx_vouchers_date ON vouchers (date)');
+      await txn.execute('CREATE INDEX idx_vouchers_created_at ON vouchers (created_at)');
+
+      // ── voucher_items ──
+      await txn.execute('''
+        CREATE TABLE temp_voucher_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          voucher_id INTEGER NOT NULL,
+          account_id INTEGER NOT NULL,
+          debit INTEGER NOT NULL DEFAULT 0,
+          credit INTEGER NOT NULL DEFAULT 0,
+          description TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (voucher_id) REFERENCES vouchers (id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_voucher_items SELECT
+          id, voucher_id, account_id,
+          CAST(ROUND(debit*100) AS INTEGER),
+          CAST(ROUND(credit*100) AS INTEGER),
+          description, created_at
+        FROM voucher_items
+      ''');
+      await txn.execute('DROP TABLE voucher_items');
+      await txn.execute('ALTER TABLE temp_voucher_items RENAME TO voucher_items');
+      await txn.execute('CREATE INDEX idx_voucher_items_voucher_id ON voucher_items (voucher_id)');
+      await txn.execute('CREATE INDEX idx_voucher_items_account_id ON voucher_items (account_id)');
+
+      // ── inventory_vouchers ──
+      await txn.execute('''
+        CREATE TABLE temp_inventory_vouchers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          voucher_number TEXT NOT NULL,
+          date TEXT NOT NULL,
+          warehouse_id INTEGER,
+          description TEXT,
+          currency TEXT NOT NULL DEFAULT 'YER',
+          total_value INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'approved',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (warehouse_id) REFERENCES warehouses (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_inventory_vouchers SELECT
+          id, voucher_number, date, warehouse_id, description, currency,
+          CAST(ROUND(total_value*100) AS INTEGER), status, created_at, updated_at
+        FROM inventory_vouchers
+      ''');
+      await txn.execute('DROP TABLE inventory_vouchers');
+      await txn.execute('ALTER TABLE temp_inventory_vouchers RENAME TO inventory_vouchers');
+      await txn.execute('CREATE INDEX idx_inventory_vouchers_number ON inventory_vouchers (voucher_number)');
+      await txn.execute('CREATE INDEX idx_inventory_vouchers_date ON inventory_vouchers (date)');
+      await txn.execute('CREATE INDEX idx_inventory_vouchers_warehouse ON inventory_vouchers (warehouse_id)');
+      await txn.execute('CREATE INDEX idx_inventory_vouchers_status ON inventory_vouchers (status)');
+
+      // ── inventory_voucher_items ──
+      await txn.execute('''
+        CREATE TABLE temp_inventory_voucher_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          voucher_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          system_quantity REAL NOT NULL,
+          actual_quantity REAL NOT NULL,
+          difference REAL NOT NULL,
+          unit_cost INTEGER NOT NULL DEFAULT 0,
+          total_value INTEGER NOT NULL DEFAULT 0,
+          notes TEXT,
+          FOREIGN KEY (voucher_id) REFERENCES inventory_vouchers (id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_inventory_voucher_items SELECT
+          id, voucher_id, product_id, system_quantity, actual_quantity, difference,
+          CAST(ROUND(unit_cost*100) AS INTEGER),
+          CAST(ROUND(total_value*100) AS INTEGER),
+          notes
+        FROM inventory_voucher_items
+      ''');
+      await txn.execute('DROP TABLE inventory_voucher_items');
+      await txn.execute('ALTER TABLE temp_inventory_voucher_items RENAME TO inventory_voucher_items');
+      await txn.execute('CREATE INDEX idx_inventory_voucher_items_voucher ON inventory_voucher_items (voucher_id)');
+      await txn.execute('CREATE INDEX idx_inventory_voucher_items_product ON inventory_voucher_items (product_id)');
+
+      // ── fiscal_years ──
+      await txn.execute('''
+        CREATE TABLE temp_fiscal_years (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          year INTEGER NOT NULL UNIQUE,
+          start_date TEXT NOT NULL,
+          end_date TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'open',
+          net_profit INTEGER NOT NULL DEFAULT 0,
+          closed_at TEXT,
+          closed_by TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_fiscal_years SELECT
+          id, year, start_date, end_date, status,
+          CAST(ROUND(net_profit*100) AS INTEGER),
+          closed_at, closed_by, notes, created_at, updated_at
+        FROM fiscal_years
+      ''');
+      await txn.execute('DROP TABLE fiscal_years');
+      await txn.execute('ALTER TABLE temp_fiscal_years RENAME TO fiscal_years');
+      await txn.execute('CREATE INDEX idx_fiscal_years_year ON fiscal_years (year)');
+      await txn.execute('CREATE INDEX idx_fiscal_years_status ON fiscal_years (status)');
+
+      // ── unit_conversions ──
+      await txn.execute('''
+        CREATE TABLE temp_unit_conversions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          from_unit TEXT NOT NULL,
+          to_unit TEXT NOT NULL,
+          from_unit_id INTEGER,
+          to_unit_id INTEGER,
+          conversion_factor REAL NOT NULL,
+          barcode TEXT,
+          sell_price INTEGER NOT NULL DEFAULT 0,
+          cost_price INTEGER NOT NULL DEFAULT 0,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_unit_conversions SELECT
+          id, product_id, from_unit, to_unit, from_unit_id, to_unit_id, conversion_factor, barcode,
+          CAST(ROUND(sell_price*100) AS INTEGER),
+          CAST(ROUND(cost_price*100) AS INTEGER),
+          is_active, created_at, updated_at
+        FROM unit_conversions
+      ''');
+      await txn.execute('DROP TABLE unit_conversions');
+      await txn.execute('ALTER TABLE temp_unit_conversions RENAME TO unit_conversions');
+      await txn.execute('CREATE INDEX idx_unit_conversions_product ON unit_conversions (product_id)');
+
+      // ── stock_movements ──
+      await txn.execute('''
+        CREATE TABLE temp_stock_movements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          movement_type TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          reference_type TEXT,
+          reference_id TEXT,
+          notes TEXT,
+          unit_cost INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_stock_movements SELECT
+          id, product_id, movement_type, quantity, reference_type, reference_id, notes,
+          CAST(ROUND(unit_cost*100) AS INTEGER),
+          created_at
+        FROM stock_movements
+      ''');
+      await txn.execute('DROP TABLE stock_movements');
+      await txn.execute('ALTER TABLE temp_stock_movements RENAME TO stock_movements');
+      await txn.execute('CREATE INDEX idx_stock_movements_product ON stock_movements (product_id)');
+      await txn.execute('CREATE INDEX idx_stock_movements_type ON stock_movements (movement_type)');
+      await txn.execute('CREATE INDEX idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
+
+      // ── held_orders ──
+      await txn.execute('''
+        CREATE TABLE temp_held_orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          shift_id INTEGER,
+          cart_data TEXT NOT NULL,
+          payment_method TEXT NOT NULL DEFAULT 'cash',
+          payments_data TEXT NOT NULL DEFAULT '[]',
+          discount INTEGER NOT NULL DEFAULT 0,
+          discount_type TEXT NOT NULL DEFAULT 'none',
+          customer_id INTEGER,
+          customer_name TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (shift_id) REFERENCES shifts (id) ON DELETE CASCADE
+        )
+      ''');
+      await txn.execute('''
+        INSERT INTO temp_held_orders SELECT
+          id, shift_id, cart_data, payment_method, payments_data,
+          CAST(ROUND(discount*100) AS INTEGER),
+          discount_type, customer_id, customer_name, created_at
+        FROM held_orders
+      ''');
+      await txn.execute('DROP TABLE held_orders');
+      await txn.execute('ALTER TABLE temp_held_orders RENAME TO held_orders');
+      await txn.execute('CREATE INDEX idx_held_orders_shift ON held_orders (shift_id)');
+    });
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2314,7 +3281,7 @@ class DatabaseHelper {
     final db = await database;
     final account = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
     if (account.isNotEmpty) {
-      final currentBalance = (account.first['balance'] as num?)?.toDouble() ?? 0.0;
+      final currentBalance = MoneyHelper.readMoney(account.first['balance']);
       final balanceType = account.first['balance_type'] as String? ?? 'credit';
       double newBalance;
       if (balanceType == 'credit') {
@@ -2342,8 +3309,8 @@ class DatabaseHelper {
     double totalDebit = 0.0;
     double totalCredit = 0.0;
     for (final entry in entries) {
-      totalDebit += (entry['debit'] as num?)?.toDouble() ?? 0.0;
-      totalCredit += (entry['credit'] as num?)?.toDouble() ?? 0.0;
+      totalDebit += MoneyHelper.readMoney(entry['debit']);
+      totalCredit += MoneyHelper.readMoney(entry['credit']);
     }
     final difference = (totalDebit - totalCredit).abs();
     if (difference > 0.01) {
@@ -2361,7 +3328,7 @@ class DatabaseHelper {
   ) async {
     final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
     if (account.isNotEmpty) {
-      final currentBalance = (account.first['balance'] as num?)?.toDouble() ?? 0.0;
+      final currentBalance = MoneyHelper.readMoney(account.first['balance']);
       final balanceType = account.first['balance_type'] as String? ?? 'credit';
       double newBalance;
       if (balanceType == 'credit') {
@@ -2369,7 +3336,7 @@ class DatabaseHelper {
       } else {
         newBalance = currentBalance + debit - credit;
       }
-      await txn.update('accounts', {'balance': newBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
+      await txn.update('accounts', {'balance': MoneyHelper.toCents(newBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
     }
   }
 
@@ -2506,7 +3473,7 @@ class DatabaseHelper {
   Future<int> insertCustomer(Map<String, dynamic> customerMap) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
-    final openingBalance = (customerMap['balance'] as num?)?.toDouble() ?? 0.0;
+    final openingBalance = MoneyHelper.readMoney(customerMap['balance']);
     final balanceType = customerMap['balance_type'] as String? ?? 'credit';
     final customerCurrency = customerMap['currency'] as String? ?? 'YER';
 
@@ -2531,8 +3498,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': customersAccountId,
               'journal_id': journalId,
-              'debit': openingBalance,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(openingBalance),
+              'credit': 0,
               'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
               'date': now,
               'created_at': now,
@@ -2540,8 +3507,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': openingBalance,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(openingBalance),
               'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
               'date': now,
               'created_at': now,
@@ -2553,8 +3520,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': customersAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': openingBalance,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(openingBalance),
               'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
               'date': now,
               'created_at': now,
@@ -2562,8 +3529,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
               'journal_id': journalId,
-              'debit': openingBalance,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(openingBalance),
+              'credit': 0,
               'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
               'date': now,
               'created_at': now,
@@ -2622,7 +3589,7 @@ class DatabaseHelper {
   Future<int> insertSupplier(Map<String, dynamic> supplierMap) async {
     final db = await database;
     final now = DateTime.now().toIso8601String();
-    final openingBalance = (supplierMap['balance'] as num?)?.toDouble() ?? 0.0;
+    final openingBalance = MoneyHelper.readMoney(supplierMap['balance']);
     final balanceType = supplierMap['balance_type'] as String? ?? 'credit';
     final supplierCurrency = supplierMap['currency'] as String? ?? 'YER';
 
@@ -2647,8 +3614,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': suppliersAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': openingBalance,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(openingBalance),
               'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
               'date': now,
               'created_at': now,
@@ -2656,8 +3623,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
               'journal_id': journalId,
-              'debit': openingBalance,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(openingBalance),
+              'credit': 0,
               'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
               'date': now,
               'created_at': now,
@@ -2669,8 +3636,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': suppliersAccountId,
               'journal_id': journalId,
-              'debit': openingBalance,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(openingBalance),
+              'credit': 0,
               'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
               'date': now,
               'created_at': now,
@@ -2678,8 +3645,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': openingBalance,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(openingBalance),
               'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
               'date': now,
               'created_at': now,
@@ -2821,8 +3788,8 @@ class DatabaseHelper {
 
   Future<double> getTotalCashBalance() async {
     final db = await database;
-    final result = await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN balance_type = 'credit' THEN balance ELSE -balance END), 0.0) AS total FROM cash_boxes WHERE is_active = 1");
-    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    final result = await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN balance_type = 'credit' THEN balance ELSE -balance END), 0) AS total FROM cash_boxes WHERE is_active = 1");
+    return MoneyHelper.readMoney(result.first['total']);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2985,8 +3952,8 @@ class DatabaseHelper {
     } else {
       baseUnitName = _getUnitName(baseUnitId);
     }
-    final baseSellPrice = (product.first['sell_price'] as num?)?.toDouble() ?? 0.0;
-    final baseCostPrice = (product.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+    final baseSellPrice = MoneyHelper.readMoney(product.first['sell_price']);
+    final baseCostPrice = MoneyHelper.readMoney(product.first['cost_price']);
 
     // Start with base unit (factor = 1.0)
     final units = <Map<String, dynamic>>[
@@ -3010,8 +3977,8 @@ class DatabaseHelper {
     for (final conv in conversions) {
       final fromUnit = conv['from_unit'] as String? ?? '';
       final factor = (conv['conversion_factor'] as num?)?.toDouble() ?? 1.0;
-      final convSellPrice = (conv['sell_price'] as num?)?.toDouble() ?? (baseSellPrice * factor);
-      final convCostPrice = (conv['cost_price'] as num?)?.toDouble() ?? (baseCostPrice * factor);
+      final convSellPrice = MoneyHelper.readMoney(conv['sell_price']) != 0.0 ? MoneyHelper.readMoney(conv['sell_price']) : (baseSellPrice * factor);
+      final convCostPrice = MoneyHelper.readMoney(conv['cost_price']) != 0.0 ? MoneyHelper.readMoney(conv['cost_price']) : (baseCostPrice * factor);
       // Resolve unit_id from the conversion if available
       final fromUnitId = conv['from_unit_id'] as int?;
       units.add({
@@ -3050,7 +4017,7 @@ class DatabaseHelper {
     if (product.isEmpty) return;
 
     final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-    final currentAvgCost = (product.first['average_cost'] as num?)?.toDouble() ?? 0.0;
+    final currentAvgCost = MoneyHelper.readMoney(product.first['average_cost']);
 
     final newTotalValue = (currentStock * currentAvgCost) + (purchasedQty * purchasedUnitCost);
     final newTotalStock = currentStock + purchasedQty;
@@ -3059,8 +4026,8 @@ class DatabaseHelper {
     await db.update(
       'products',
       {
-        'average_cost': newAvgCost,
-        'cost_price': newAvgCost,  // Keep cost_price in sync for backward compatibility
+        'average_cost': MoneyHelper.toCents(newAvgCost),
+        'cost_price': MoneyHelper.toCents(newAvgCost),  // Keep cost_price in sync for backward compatibility
         'updated_at': DateTime.now().toIso8601String(),
       },
       where: 'id = ?',
@@ -3091,7 +4058,7 @@ class DatabaseHelper {
       'reference_type': referenceType,
       'reference_id': referenceId,
       'notes': notes,
-      'unit_cost': unitCost,
+      'unit_cost': MoneyHelper.toCents(unitCost)
       'created_at': DateTime.now().toIso8601String(),
     });
   }
@@ -3160,7 +4127,7 @@ class DatabaseHelper {
   }) async {
     try {
     final db = await database;
-    final total = (invoiceMap['total'] as num?)?.toDouble() ?? 0.0;
+    final total = MoneyHelper.readMoney(invoiceMap['total']);
     final invoiceCurrency = (invoiceMap['currency'] as String?) ?? 'YER';
     final now = DateTime.now().toIso8601String();
 
@@ -3192,7 +4159,7 @@ class DatabaseHelper {
         // Use base_quantity for stock deduction (always in base unit)
         // Falls back to quantity for backward compat with old invoice items
         final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
-        final unitPrice = (item['unit_price'] as num?)?.toDouble() ?? 0.0;
+        final unitPrice = MoneyHelper.readMoney(item['unit_price']);
         final invoiceIdStr = invoiceMap['id'] as String? ?? '';
         if (productId == null) continue;
 
@@ -3220,7 +4187,7 @@ class DatabaseHelper {
               'quantity': -baseQuantity,
               'reference_type': invoiceType,
               'reference_id': invoiceIdStr,
-              'unit_cost': unitPrice,
+              'unit_cost': MoneyHelper.toCents(unitPrice)
               'created_at': now,
             });
           } else {
@@ -3235,7 +4202,7 @@ class DatabaseHelper {
               'quantity': baseQuantity,
               'reference_type': 'sale_return',
               'reference_id': invoiceIdStr,
-              'unit_cost': unitPrice,
+              'unit_cost': MoneyHelper.toCents(unitPrice)
               'created_at': now,
             });
           }
@@ -3250,7 +4217,7 @@ class DatabaseHelper {
             final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
             if (productRow.isNotEmpty) {
               final currentStock = (productRow.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-              final currentAvgCost = (productRow.first['average_cost'] as num?)?.toDouble() ?? 0.0;
+              final currentAvgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
               // current_stock already updated above, so subtract the new qty to get the old stock
               final oldStock = currentStock - baseQuantity;
               final newTotalValue = (oldStock * currentAvgCost) + (baseQuantity * unitPrice);
@@ -3259,8 +4226,8 @@ class DatabaseHelper {
               await txn.update(
                 'products',
                 {
-                  'average_cost': newAvgCost,
-                  'cost_price': newAvgCost,
+                  'average_cost': MoneyHelper.toCents(newAvgCost),
+                  'cost_price': MoneyHelper.toCents(newAvgCost),
                   'updated_at': now,
                 },
                 where: 'id = ?',
@@ -3273,7 +4240,7 @@ class DatabaseHelper {
               'quantity': baseQuantity,
               'reference_type': 'purchase',
               'reference_id': invoiceIdStr,
-              'unit_cost': unitPrice,
+              'unit_cost': MoneyHelper.toCents(unitPrice)
               'created_at': now,
             });
           } else {
@@ -3298,7 +4265,7 @@ class DatabaseHelper {
               'quantity': -baseQuantity,
               'reference_type': 'purchase_return',
               'reference_id': invoiceIdStr,
-              'unit_cost': unitPrice,
+              'unit_cost': MoneyHelper.toCents(unitPrice)
               'created_at': now,
             });
           }
@@ -3358,8 +4325,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': debitAccountId,
               'journal_id': journalId,
-              'debit': journalTotal,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(journalTotal),
+              'credit': 0,
               'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3370,8 +4337,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': creditAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': journalTotal,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(journalTotal),
               'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3384,8 +4351,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': cashBanksAccountId,
               'journal_id': journalId,
-              'debit': journalEffectivePaid,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(journalEffectivePaid),
+              'credit': 0,
               'description': 'فاتورة مبيعات (مدفوع) - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3396,8 +4363,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': customersAccountId,
               'journal_id': journalId,
-              'debit': journalRemainingAmount,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(journalRemainingAmount),
+              'credit': 0,
               'description': 'فاتورة مبيعات (آجل) - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3408,8 +4375,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': salesAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': journalTotal,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(journalTotal),
               'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3423,8 +4390,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': debitAccountId,
               'journal_id': journalId,
-              'debit': journalTotal,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(journalTotal),
+              'credit': 0,
               'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3435,8 +4402,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': salesAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': journalTotal,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(journalTotal),
               'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3452,8 +4419,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': debitAccountId,
               'journal_id': journalId,
-              'debit': journalTotal,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(journalTotal),
+              'credit': 0,
               'description': 'فاتورة مشتريات - مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3464,8 +4431,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': journalTotal,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(journalTotal),
               'description': 'فاتورة مشتريات - مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3478,8 +4445,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': journalTotal,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(journalTotal),
+              'credit': 0,
               'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3490,8 +4457,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': cashBanksAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': journalEffectivePaid,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(journalEffectivePaid),
               'description': 'فاتورة مشتريات (مدفوع) - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3502,8 +4469,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': suppliersAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': journalRemainingAmount,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(journalRemainingAmount),
               'description': 'فاتورة مشتريات (آجل) - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3516,8 +4483,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': journalTotal,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(journalTotal),
+              'credit': 0,
               'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3529,8 +4496,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': creditAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': journalTotal,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(journalTotal),
               'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
@@ -3562,10 +4529,10 @@ class DatabaseHelper {
             // Look up product average cost (weighted average)
             final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
             if (productRow.isEmpty) continue;
-            final averageCost = (productRow.first['average_cost'] as num?)?.toDouble()
-                          ?? (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+            final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+            final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
             // COGS must use base_quantity (not quantity) because average_cost is per base unit
-            totalCogs += averageCost * baseQuantity;
+            totalCogs += effectiveCost * baseQuantity;
           }
 
           if (totalCogs > 0) {
@@ -3574,8 +4541,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': cogsAccountId,
                 'journal_id': journalId,
-                'debit': totalCogs,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(totalCogs),
+                'credit': 0,
                 'description': 'تكلفة بضاعة مباعة - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -3583,8 +4550,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
                 'journal_id': journalId,
-                'debit': 0.0,
-                'credit': totalCogs,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(totalCogs),
                 'description': 'تخفيض مخزون - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -3597,8 +4564,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
                 'journal_id': journalId,
-                'debit': totalCogs,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(totalCogs),
+                'credit': 0,
                 'description': 'إعادة مخزون مرتجع - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -3606,8 +4573,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': cogsAccountId,
                 'journal_id': journalId,
-                'debit': 0.0,
-                'credit': totalCogs,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(totalCogs),
                 'description': 'عكس تكلفة بضاعة مرتجعة - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -3637,9 +4604,9 @@ class DatabaseHelper {
             if (productId == null) continue;
             final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
             if (productRow.isEmpty) continue;
-            final averageCost = (productRow.first['average_cost'] as num?)?.toDouble()
-                          ?? (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
-            totalPurchaseCost += averageCost * baseQuantity;
+            final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+            final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+            totalPurchaseCost += effectiveCost * baseQuantity;
           }
 
           if (totalPurchaseCost > 0) {
@@ -3648,8 +4615,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
                 'journal_id': journalId,
-                'debit': totalPurchaseCost,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(totalPurchaseCost),
+                'credit': 0,
                 'description': 'إضافة مخزون مشتريات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -3657,8 +4624,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': purchasesAccountId,
                 'journal_id': journalId,
-                'debit': 0.0,
-                'credit': totalPurchaseCost,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(totalPurchaseCost),
                 'description': 'تحويل من حساب المشتريات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -3670,8 +4637,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': purchasesAccountId,
                 'journal_id': journalId,
-                'debit': totalPurchaseCost,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(totalPurchaseCost),
+                'credit': 0,
                 'description': 'عكس تحويل مشتريات مرتجعة - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -3679,8 +4646,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
                 'journal_id': journalId,
-                'debit': 0.0,
-                'credit': totalPurchaseCost,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(totalPurchaseCost),
                 'description': 'تخفيض مخزون مرتجع مشتريات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -3723,9 +4690,9 @@ class DatabaseHelper {
           customerAmount = total;
         }
         if (isDebit) {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoiceMap['customer_id']]);
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoiceMap['customer_id']]);
         } else {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoiceMap['customer_id']]);
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoiceMap['customer_id']]);
         }
       }
 
@@ -3747,9 +4714,9 @@ class DatabaseHelper {
           supplierAmount = total;
         }
         if (isCreditToSupplier) {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoiceMap['supplier_id']]);
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoiceMap['supplier_id']]);
         } else {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoiceMap['supplier_id']]);
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoiceMap['supplier_id']]);
         }
       }
 
@@ -3764,16 +4731,16 @@ class DatabaseHelper {
         if (cbBalanceType == 'credit') {
           // Credit-type (له): money in increases balance, money out decreases
           if (isCashIn) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [cashAmount, now, cashBoxId]);
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
           } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [cashAmount, now, cashBoxId]);
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
           }
         } else {
           // Debit-type (عليه): money in decreases balance (less owed), money out increases balance (more owed)
           if (isCashIn) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [cashAmount, now, cashBoxId]);
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
           } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [cashAmount, now, cashBoxId]);
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
           }
         }
       }
@@ -3955,9 +4922,9 @@ class DatabaseHelper {
     if (invoiceRows.isEmpty) return;
     final invoice = invoiceRows.first;
 
-    final currentRemaining = (invoice['remaining'] as num?)?.toDouble() ?? 0.0;
-    final currentPaid = (invoice['paid_amount'] as num?)?.toDouble() ?? 0.0;
-    final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+    final currentRemaining = MoneyHelper.readMoney(invoice['remaining']);
+    final currentPaid = MoneyHelper.readMoney(invoice['paid_amount']);
+    final total = MoneyHelper.readMoney(invoice['total']);
     final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
     final invoiceType = (invoice['type'] as String?) ?? 'sale';
     final customerId = invoice['customer_id'] as int?;
@@ -4012,8 +4979,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': cashBanksAccountId,
             'journal_id': journalId,
-            'debit': paymentAmount,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(paymentAmount),
+            'credit': 0,
             'description': 'تحصيل دفعة فاتورة مبيعات - $invoiceId',
             'date': now,
             'created_at': now,
@@ -4024,8 +4991,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': customersAccountId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': paymentAmount,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(paymentAmount),
             'description': 'تحصيل دفعة فاتورة مبيعات - $invoiceId',
             'date': now,
             'created_at': now,
@@ -4038,8 +5005,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': suppliersAccountId,
             'journal_id': journalId,
-            'debit': paymentAmount,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(paymentAmount),
+            'credit': 0,
             'description': 'سداد دفعة فاتورة مشتريات - $invoiceId',
             'date': now,
             'created_at': now,
@@ -4050,8 +5017,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': cashBanksAccountId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': paymentAmount,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(paymentAmount),
             'description': 'سداد دفعة فاتورة مشتريات - $invoiceId',
             'date': now,
             'created_at': now,
@@ -4062,21 +5029,21 @@ class DatabaseHelper {
 
       // 6. Update customer balance (customer owes less after payment)
       if (customerId != null) {
-        await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [paymentAmount, now, customerId]);
+        await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, customerId]);
       }
 
       // 7. Update supplier balance (we owe less after payment)
       if (supplierId != null) {
-        await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [paymentAmount, now, supplierId]);
+        await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, supplierId]);
       }
 
       // 8. Update cash box balance
       if (invoiceType == 'sale' || invoiceType == 'sale_return') {
         // Sale: cash comes in
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [paymentAmount, now, cashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, cashBoxId]);
       } else {
         // Purchase: cash goes out
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [paymentAmount, now, cashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, cashBoxId]);
       }
     });
   }
@@ -4102,13 +5069,13 @@ class DatabaseHelper {
       throw Exception('لا يمكن إلغاء فاتورة في سنة مالية مغلقة');
     }
 
-    final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+    final total = MoneyHelper.readMoney(invoice['total']);
     final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
     final invoiceType = (invoice['type'] as String?) ?? 'sale';
     final isReturn = (invoice['is_return'] as int?) == 1;
     final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
     final cashBoxId = invoice['cash_box_id'] as int?;
-    final transportCharges = (invoice['transport_charges'] as num?)?.toDouble() ?? 0.0;
+    final transportCharges = MoneyHelper.readMoney(invoice['transport_charges']);
 
     // Fetch items for stock reversal
     final items = await db.query('invoice_items', where: 'invoice_id = ?', whereArgs: [id]);
@@ -4135,8 +5102,8 @@ class DatabaseHelper {
 
       // Determine original debit/credit accounts and handle partial payments
       // Check for partial payment (same logic as saveInvoiceWithJournalEntries)
-      final paidAmount = (invoice['paid_amount'] as num?)?.toDouble() ?? 0.0;
-      final remainingAmount = (invoice['remaining'] as num?)?.toDouble() ?? 0.0;
+      final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
+      final remainingAmount = MoneyHelper.readMoney(invoice['remaining']);
       final isPartialCash = paymentMechanism == 'cash' && paidAmount > 0.005 && remainingAmount > 0.005;
 
       if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
@@ -4146,8 +5113,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': cashBanksAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': paidAmount,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(paidAmount),
               'description': 'إلغاء فاتورة مبيعات (مدفوع) - $id',
               'date': now,
               'created_at': now,
@@ -4158,8 +5125,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': customersAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': remainingAmount,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(remainingAmount),
               'description': 'إلغاء فاتورة مبيعات (آجل) - $id',
               'date': now,
               'created_at': now,
@@ -4170,8 +5137,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': salesAccountId,
               'journal_id': journalId,
-              'debit': total,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(total),
+              'credit': 0,
               'description': 'إلغاء فاتورة مبيعات - $id',
               'date': now,
               'created_at': now,
@@ -4185,8 +5152,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': originalCreditAccountId,
               'journal_id': journalId,
-              'debit': total,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(total),
+              'credit': 0,
               'description': 'إلغاء فاتورة مبيعات - مرتجع - $id',
               'date': now,
               'created_at': now,
@@ -4197,8 +5164,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': salesAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': total,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(total),
               'description': 'إلغاء فاتورة مبيعات - مرتجع - $id',
               'date': now,
               'created_at': now,
@@ -4212,8 +5179,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': salesAccountId,
               'journal_id': journalId,
-              'debit': total,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(total),
+              'credit': 0,
               'description': 'إلغاء فاتورة مبيعات - $id',
               'date': now,
               'created_at': now,
@@ -4224,8 +5191,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': originalDebitAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': total,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(total),
               'description': 'إلغاء فاتورة مبيعات - $id',
               'date': now,
               'created_at': now,
@@ -4240,8 +5207,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': cashBanksAccountId,
               'journal_id': journalId,
-              'debit': paidAmount,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(paidAmount),
+              'credit': 0,
               'description': 'إلغاء فاتورة مشتريات (مدفوع) - $id',
               'date': now,
               'created_at': now,
@@ -4252,8 +5219,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': suppliersAccountId,
               'journal_id': journalId,
-              'debit': remainingAmount,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(remainingAmount),
+              'credit': 0,
               'description': 'إلغاء فاتورة مشتريات (آجل) - $id',
               'date': now,
               'created_at': now,
@@ -4264,8 +5231,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': total,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(total),
               'description': 'إلغاء فاتورة مشتريات - $id',
               'date': now,
               'created_at': now,
@@ -4279,8 +5246,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': total,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(total),
+              'credit': 0,
               'description': 'إلغاء فاتورة مشتريات - مرتجع - $id',
               'date': now,
               'created_at': now,
@@ -4291,8 +5258,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': originalDebitAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': total,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(total),
               'description': 'إلغاء فاتورة مشتريات - مرتجع - $id',
               'date': now,
               'created_at': now,
@@ -4306,8 +5273,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': originalCreditAccountId,
               'journal_id': journalId,
-              'debit': total,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(total),
+              'credit': 0,
               'description': 'إلغاء فاتورة مشتريات - $id',
               'date': now,
               'created_at': now,
@@ -4318,8 +5285,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': total,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(total),
               'description': 'إلغاء فاتورة مشتريات - $id',
               'date': now,
               'created_at': now,
@@ -4345,7 +5312,7 @@ class DatabaseHelper {
 
             final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
             if (productRow.isEmpty) continue;
-            final costPrice = (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+            final costPrice = MoneyHelper.readMoney(productRow.first['cost_price']);
             totalCogs += costPrice * quantity;
           }
 
@@ -4355,8 +5322,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
                 'journal_id': journalId,
-                'debit': totalCogs,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(totalCogs),
+                'credit': 0,
                 'description': 'إلغاء تكلفة بضاعة مباعة - $id',
                 'date': now,
                 'created_at': now,
@@ -4364,8 +5331,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': cogsAccountId,
                 'journal_id': journalId,
-                'debit': 0.0,
-                'credit': totalCogs,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(totalCogs),
                 'description': 'إلغاء تخفيض مخزون - $id',
                 'date': now,
                 'created_at': now,
@@ -4377,8 +5344,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': cogsAccountId,
                 'journal_id': journalId,
-                'debit': totalCogs,
-                'credit': 0.0,
+                'debit': MoneyHelper.toCents(totalCogs),
+                'credit': 0,
                 'description': 'إلغاء إعادة مخزون مرتجع - $id',
                 'date': now,
                 'created_at': now,
@@ -4386,8 +5353,8 @@ class DatabaseHelper {
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
                 'journal_id': journalId,
-                'debit': 0.0,
-                'credit': totalCogs,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(totalCogs),
                 'description': 'إلغاء عكس تكلفة بضاعة مرتجعة - $id',
                 'date': now,
                 'created_at': now,
@@ -4419,9 +5386,9 @@ class DatabaseHelper {
           customerReversalAmount = total;
         }
         if (wasDebit) {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [customerReversalAmount, now, invoice['customer_id']]);
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerReversalAmount), now, invoice['customer_id']]);
         } else {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [customerReversalAmount, now, invoice['customer_id']]);
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerReversalAmount), now, invoice['customer_id']]);
         }
       }
 
@@ -4439,9 +5406,9 @@ class DatabaseHelper {
           supplierReversalAmount = total;
         }
         if (wasCreditToSupplier) {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [supplierReversalAmount, now, invoice['supplier_id']]);
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierReversalAmount), now, invoice['supplier_id']]);
         } else {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [supplierReversalAmount, now, invoice['supplier_id']]);
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierReversalAmount), now, invoice['supplier_id']]);
         }
       }
 
@@ -4451,9 +5418,9 @@ class DatabaseHelper {
         final cashReversalAmount = isPartialCash ? paidAmount : total;
         final wasCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
         if (wasCashIn) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [cashReversalAmount, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashReversalAmount), now, cashBoxId]);
         } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [cashReversalAmount, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashReversalAmount), now, cashBoxId]);
         }
         // No separate transport reversal needed - transport is already included in total/paidAmount
       }
@@ -4566,21 +5533,21 @@ class DatabaseHelper {
     final db = await database;
     final now = DateTime.now();
     final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0.0) AS total FROM expenses WHERE date(expense_date) >= ?", [monthStart]);
-    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE date(expense_date) >= ?", [monthStart]);
+    return MoneyHelper.readMoney(result.first['total']);
   }
 
   Future<double> getTotalExpensesByCategory(String category) async {
     final db = await database;
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0.0) AS total FROM expenses WHERE category = ?", [category]);
-    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE category = ?", [category]);
+    return MoneyHelper.readMoney(result.first['total']);
   }
 
   Future<double> getTotalExpensesForDate(DateTime date) async {
     final db = await database;
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0.0) AS total FROM expenses WHERE date(expense_date) = ?", [dateStr]);
-    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE date(expense_date) = ?", [dateStr]);
+    return MoneyHelper.readMoney(result.first['total']);
   }
 
   /// Save expense with journal entry.
@@ -4591,7 +5558,7 @@ class DatabaseHelper {
     await _checkFiscalPeriodOpen(expenseDate);
 
     final db = await database;
-    final amountBase = (expenseMap['amount_base'] as num?)?.toDouble() ?? 0.0;
+    final amountBase = MoneyHelper.readMoney(expenseMap['amount_base']);
     final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
     final operationType = (expenseMap['operation_type'] as String?) ?? 'صرف';
     final now = DateTime.now().toIso8601String();
@@ -4641,8 +5608,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': expenseAccId,
             'journal_id': journalId,
-            'debit': amountBase,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(amountBase),
+            'credit': 0,
             'description': 'مصروف: $title',
             'date': now,
             'created_at': now,
@@ -4653,8 +5620,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': cashAccountId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': amountBase,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(amountBase),
             'description': 'مصروف: $title',
             'date': now,
             'created_at': now,
@@ -4667,8 +5634,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': cashAccountId,
             'journal_id': journalId,
-            'debit': amountBase,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(amountBase),
+            'credit': 0,
             'description': 'قبض: $title',
             'date': now,
             'created_at': now,
@@ -4679,8 +5646,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': expenseAccId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': amountBase,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(amountBase),
             'description': 'قبض: $title',
             'date': now,
             'created_at': now,
@@ -4692,9 +5659,9 @@ class DatabaseHelper {
       // Update cash box balance
       if (cashBoxId != null && amountBase > 0) {
         if (isSarf) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
         } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [amountBase, now, cashBoxId]);
+          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
         }
       }
     });
@@ -4732,10 +5699,10 @@ class DatabaseHelper {
   Future<double> getAccountBalance(int accountId) async {
     final db = await database;
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS balance FROM transactions WHERE account_id = ?",
+      "SELECT COALESCE(SUM(debit) - SUM(credit), 0) AS balance FROM transactions WHERE account_id = ?",
       [accountId],
     );
-    return (result.first['balance'] as num?)?.toDouble() ?? 0.0;
+    return MoneyHelper.readMoney(result.first['balance']);
   }
 
   /// Create an expense account with optional opening balance
@@ -4779,7 +5746,7 @@ class DatabaseHelper {
         'name_en': nameAr,
         'account_code': newCode,
         'account_type': 'EXPENSE',
-        'balance': 0.0,  // Start at 0, will be updated via _updateAccountBalanceWithJournal
+        'balance': 0,  // Start at 0, will be updated via _updateAccountBalanceWithJournal
         'currency': currency,
         'is_active': 1,
         'is_system': 0,
@@ -4813,8 +5780,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': accountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': openingBalance,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(openingBalance),
               'description': 'رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
@@ -4822,8 +5789,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': obAccountId,
               'journal_id': journalId,
-              'debit': openingBalance,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(openingBalance),
+              'credit': 0,
               'description': 'مقابل رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
@@ -4837,8 +5804,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': accountId,
               'journal_id': journalId,
-              'debit': openingBalance,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(openingBalance),
+              'credit': 0,
               'description': 'رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
@@ -4846,8 +5813,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': obAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': openingBalance,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(openingBalance),
               'description': 'مقابل رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
@@ -4864,8 +5831,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': accountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': openingBalance,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(openingBalance),
               'description': 'رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
@@ -4874,8 +5841,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': accountId,
               'journal_id': journalId,
-              'debit': openingBalance,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(openingBalance),
+              'credit': 0,
               'description': 'رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
@@ -5049,13 +6016,13 @@ class DatabaseHelper {
       'SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS net_debit, COALESCE(SUM(credit) - SUM(debit), 0.0) AS net_credit FROM transactions WHERE account_id = ?',
       [accountId],
     );
-    final netDebit = (result.first['net_debit'] as num?)?.toDouble() ?? 0.0;
-    final netCredit = (result.first['net_credit'] as num?)?.toDouble() ?? 0.0;
+    final netDebit = MoneyHelper.readMoney(result.first['net_debit']);
+    final netCredit = MoneyHelper.readMoney(result.first['net_credit']);
 
     // For debit-balance accounts (ASSET, COST): balance = debit - credit
     // For credit-balance accounts (LIABILITY, REVENUE, EXPENSE): balance = credit - debit
     final computedBalance = (balanceType == 'debit') ? netDebit : netCredit;
-    await db.update('accounts', {'balance': computedBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
+    await db.update('accounts', {'balance': MoneyHelper.toCents(computedBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -5121,24 +6088,24 @@ class DatabaseHelper {
   Future<double> getTotalSalesForDate(DateTime date) async {
     final db = await database;
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) = ?", [dateStr]);
-    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) = ?", [dateStr]);
+    return MoneyHelper.readMoney(result.first['total']);
   }
 
   Future<double> getTotalPurchasesThisMonth() async {
     final db = await database;
     final now = DateTime.now();
     final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('purchase', 'purchase_return') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
-    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('purchase', 'purchase_return') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
+    return MoneyHelper.readMoney(result.first['total']);
   }
 
   Future<double> getTotalSalesThisMonth() async {
     final db = await database;
     final now = DateTime.now();
     final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
-    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
+    return MoneyHelper.readMoney(result.first['total']);
   }
 
   Future<int> getInvoiceCountForDate(DateTime date) async {
@@ -5498,7 +6465,7 @@ class DatabaseHelper {
         expected_amount = opening_amount + total_sales + ? - total_returns - total_discounts - ?,
         updated_at = ?
       WHERE id = ?
-    ''', [saleAmount, returnAmount, discountAmount, saleAmount, discountAmount, DateTime.now().toIso8601String(), shiftId]);
+    ''', [MoneyHelper.toCents(saleAmount), MoneyHelper.toCents(returnAmount), MoneyHelper.toCents(discountAmount), MoneyHelper.toCents(saleAmount), MoneyHelper.toCents(discountAmount), DateTime.now().toIso8601String(), shiftId]);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -5521,9 +6488,9 @@ class DatabaseHelper {
     final db = await database;
     final fromCurrency = (exchangeMap['from_currency'] as String?) ?? 'YER';
     final toCurrency = (exchangeMap['to_currency'] as String?) ?? 'YER';
-    final fromAmount = (exchangeMap['from_amount'] as num?)?.toDouble() ?? 0.0;
-    final toAmount = (exchangeMap['to_amount'] as num?)?.toDouble() ?? 0.0;
-    final gainLoss = (exchangeMap['gain_loss'] as num?)?.toDouble() ?? 0.0;
+    final fromAmount = MoneyHelper.readMoney(exchangeMap['from_amount']);
+    final toAmount = MoneyHelper.readMoney(exchangeMap['to_amount']);
+    final gainLoss = MoneyHelper.readMoney(exchangeMap['gain_loss']);
     final gainLossType = (exchangeMap['gain_loss_type'] as String?) ?? '';
     final fromCashBoxId = (exchangeMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
     final toCashBoxId = (exchangeMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
@@ -5562,8 +6529,8 @@ class DatabaseHelper {
         await txn.insert('transactions', {
           'account_id': toCashBanksAccountId,
           'journal_id': journalId,
-          'debit': toAmount,
-          'credit': 0.0,
+          'debit': MoneyHelper.toCents(toAmount),
+          'credit': 0,
           'description': 'صرافة: استلام $toCurrency - ${exchangeMap['exchange_number']}',
           'date': now,
           'created_at': now,
@@ -5576,8 +6543,8 @@ class DatabaseHelper {
         await txn.insert('transactions', {
           'account_id': fromCashBanksAccountId,
           'journal_id': journalId,
-          'debit': 0.0,
-          'credit': fromAmount,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(fromAmount),
           'description': 'صرافة: صرف $fromCurrency - ${exchangeMap['exchange_number']}',
           'date': now,
           'created_at': now,
@@ -5603,8 +6570,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': gainAccountId,
               'journal_id': journalId,
-              'debit': 0.0,
-              'credit': gainLoss,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(gainLoss),
               'description': 'أرباح صرافة - ${exchangeMap['exchange_number']}',
               'date': now,
               'created_at': now,
@@ -5626,8 +6593,8 @@ class DatabaseHelper {
             await txn.insert('transactions', {
               'account_id': lossAccountId,
               'journal_id': journalId,
-              'debit': gainLoss,
-              'credit': 0.0,
+              'debit': MoneyHelper.toCents(gainLoss),
+              'credit': 0,
               'description': 'خسائر صرافة - ${exchangeMap['exchange_number']}',
               'date': now,
               'created_at': now,
@@ -5644,9 +6611,9 @@ class DatabaseHelper {
       final exFromBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
       final exFromBalanceType = exFromBox.isNotEmpty ? (exFromBox.first['balance_type'] as String? ?? 'credit') : 'credit';
       if (exFromBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [fromAmount, now, fromCashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(fromAmount), now, fromCashBoxId]);
       } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [fromAmount, now, fromCashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(fromAmount), now, fromCashBoxId]);
       }
       // إضافة المبلغ إلى صندوق المستقبل
       // For credit-type boxes (له): balance increases when money arrives
@@ -5654,9 +6621,9 @@ class DatabaseHelper {
       final exToBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
       final exToBalanceType = exToBox.isNotEmpty ? (exToBox.first['balance_type'] as String? ?? 'credit') : 'credit';
       if (exToBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [toAmount, now, toCashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(toAmount), now, toCashBoxId]);
       } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [toAmount, now, toCashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(toAmount), now, toCashBoxId]);
       }
     });
 
@@ -5708,7 +6675,7 @@ class DatabaseHelper {
     final db = await database;
     final fromCashBoxId = (transferMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
     final toCashBoxId = (transferMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
-    final amount = (transferMap['amount'] as num?)?.toDouble() ?? 0.0;
+    final amount = MoneyHelper.readMoney(transferMap['amount']);
     final transferCurrency = (transferMap['currency'] as String?) ?? 'YER';
     final now = DateTime.now().toIso8601String();
 
@@ -5765,8 +6732,8 @@ class DatabaseHelper {
         await txn.insert('transactions', {
           'account_id': toAccountId,
           'journal_id': journalId,
-          'debit': amount,
-          'credit': 0.0,
+          'debit': MoneyHelper.toCents(amount),
+          'credit': 0,
           'description': 'تحويل: استلام من صندوق آخر - ${transferMap['transfer_number']}',
           'date': now,
           'created_at': now,
@@ -5779,8 +6746,8 @@ class DatabaseHelper {
         await txn.insert('transactions', {
           'account_id': fromAccountId,
           'journal_id': journalId,
-          'debit': 0.0,
-          'credit': amount,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(amount),
           'description': 'تحويل: صرف إلى صندوق آخر - ${transferMap['transfer_number']}',
           'date': now,
           'created_at': now,
@@ -5795,9 +6762,9 @@ class DatabaseHelper {
       final fromBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
       final fromBalanceType = fromBox.isNotEmpty ? (fromBox.first['balance_type'] as String? ?? 'credit') : 'credit';
       if (fromBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [amount, now, fromCashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, fromCashBoxId]);
       } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [amount, now, fromCashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, fromCashBoxId]);
       }
       // إضافة المبلغ إلى صندوق الوجهة
       // For credit-type boxes (له): balance increases when money arrives
@@ -5805,9 +6772,9 @@ class DatabaseHelper {
       final toBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
       final toBalanceType = toBox.isNotEmpty ? (toBox.first['balance_type'] as String? ?? 'credit') : 'credit';
       if (toBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [amount, now, toCashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, toCashBoxId]);
       } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [amount, now, toCashBoxId]);
+        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, toCashBoxId]);
       }
     });
 
@@ -5883,13 +6850,13 @@ class DatabaseHelper {
 
     for (final invoice in pendingInvoices) {
       final invoiceId = invoice['id'] as String;
-      final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+      final total = MoneyHelper.readMoney(invoice['total']);
       final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
       final invoiceType = (invoice['type'] as String?) ?? 'sale';
       final isReturn = (invoice['is_return'] as int?) == 1;
       final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
       final cashBoxId = invoice['cash_box_id'] as int?;
-      final transportCharges = (invoice['transport_charges'] as num?)?.toDouble() ?? 0.0;
+      final transportCharges = MoneyHelper.readMoney(invoice['transport_charges']);
 
       await db.transaction((txn) async {
         final journalId = DateTime.now().millisecondsSinceEpoch;
@@ -5936,8 +6903,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': debitAccountId,
             'journal_id': journalId,
-            'debit': total,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(total),
+            'credit': 0,
             'description': '${(invoiceType == 'sale' || invoiceType == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
             'date': now,
             'created_at': now,
@@ -5949,8 +6916,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': creditAccountId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': total,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(total),
             'description': '${(invoiceType == 'sale' || invoiceType == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
             'date': now,
             'created_at': now,
@@ -5977,10 +6944,10 @@ class DatabaseHelper {
 
               final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
               if (productRow.isEmpty) continue;
-              final averageCost = (productRow.first['average_cost'] as num?)?.toDouble()
-                            ?? (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
+              final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+              final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
               // COGS must use base_quantity (not quantity) because average_cost is per base unit
-              totalCogs += averageCost * baseQuantity;
+              totalCogs += effectiveCost * baseQuantity;
             }
 
             if (totalCogs > 0) {
@@ -5988,8 +6955,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': cogsAccountId,
                   'journal_id': journalId,
-                  'debit': totalCogs,
-                  'credit': 0.0,
+                  'debit': MoneyHelper.toCents(totalCogs),
+                  'credit': 0,
                   'description': 'تكلفة بضاعة مباعة - $invoiceId',
                   'date': now,
                   'created_at': now,
@@ -5997,8 +6964,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': inventoryAccountId,
                   'journal_id': journalId,
-                  'debit': 0.0,
-                  'credit': totalCogs,
+                  'debit': 0,
+                  'credit': MoneyHelper.toCents(totalCogs),
                   'description': 'تخفيض مخزون - $invoiceId',
                   'date': now,
                   'created_at': now,
@@ -6009,8 +6976,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': inventoryAccountId,
                   'journal_id': journalId,
-                  'debit': totalCogs,
-                  'credit': 0.0,
+                  'debit': MoneyHelper.toCents(totalCogs),
+                  'credit': 0,
                   'description': 'إعادة مخزون مرتجع - $invoiceId',
                   'date': now,
                   'created_at': now,
@@ -6018,8 +6985,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': cogsAccountId,
                   'journal_id': journalId,
-                  'debit': 0.0,
-                  'credit': totalCogs,
+                  'debit': 0,
+                  'credit': MoneyHelper.toCents(totalCogs),
                   'description': 'عكس تكلفة بضاعة مرتجعة - $invoiceId',
                   'date': now,
                   'created_at': now,
@@ -6047,9 +7014,9 @@ class DatabaseHelper {
               if (productId == null) continue;
               final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
               if (productRow.isEmpty) continue;
-              final avgCost = (productRow.first['average_cost'] as num?)?.toDouble()
-                          ?? (productRow.first['cost_price'] as num?)?.toDouble() ?? 0.0;
-              totalPurchaseCost += avgCost * baseQuantity;
+              final avgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+              final effectiveCost = avgCost > 0 ? avgCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+              totalPurchaseCost += effectiveCost * baseQuantity;
             }
 
             if (totalPurchaseCost > 0) {
@@ -6057,8 +7024,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': invAccountId,
                   'journal_id': journalId,
-                  'debit': totalPurchaseCost,
-                  'credit': 0.0,
+                  'debit': MoneyHelper.toCents(totalPurchaseCost),
+                  'credit': 0,
                   'description': 'إضافة مخزون مشتريات - $invoiceId',
                   'date': now,
                   'created_at': now,
@@ -6066,8 +7033,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': purchAccountId,
                   'journal_id': journalId,
-                  'debit': 0.0,
-                  'credit': totalPurchaseCost,
+                  'debit': 0,
+                  'credit': MoneyHelper.toCents(totalPurchaseCost),
                   'description': 'تحويل من حساب المشتريات - $invoiceId',
                   'date': now,
                   'created_at': now,
@@ -6078,8 +7045,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': purchAccountId,
                   'journal_id': journalId,
-                  'debit': totalPurchaseCost,
-                  'credit': 0.0,
+                  'debit': MoneyHelper.toCents(totalPurchaseCost),
+                  'credit': 0,
                   'description': 'عكس تحويل مشتريات مرتجعة - $invoiceId',
                   'date': now,
                   'created_at': now,
@@ -6087,8 +7054,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': invAccountId,
                   'journal_id': journalId,
-                  'debit': 0.0,
-                  'credit': totalPurchaseCost,
+                  'debit': 0,
+                  'credit': MoneyHelper.toCents(totalPurchaseCost),
                   'description': 'تخفيض مخزون مرتجع مشتريات - $invoiceId',
                   'date': now,
                   'created_at': now,
@@ -6113,9 +7080,9 @@ class DatabaseHelper {
           // For cash payments, customer balance should not change (they paid)
           final customerAmount = paymentMechanism == 'credit' ? total : 0.0;
           if (isDebit) {
-            await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoice['customer_id']]);
+            await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
           } else {
-            await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [customerAmount, now, invoice['customer_id']]);
+            await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
           }
         }
 
@@ -6125,9 +7092,9 @@ class DatabaseHelper {
           // For cash purchases, supplier balance should not change (we paid)
           final supplierAmount = paymentMechanism == 'credit' ? total : 0.0;
           if (isCreditToSupplier) {
-            await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoice['supplier_id']]);
+            await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
           } else {
-            await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [supplierAmount, now, invoice['supplier_id']]);
+            await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
           }
         }
 
@@ -6135,9 +7102,9 @@ class DatabaseHelper {
         if (cashBoxId != null) {
           final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
           if (isCashIn) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(total), now, cashBoxId]);
           } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [total, now, cashBoxId]);
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(total), now, cashBoxId]);
           }
         }
 
@@ -6188,8 +7155,8 @@ class DatabaseHelper {
   /// يتضمن التحقق الإلزامي من توازن القيد المزدوج
   Future<int> insertVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) async {
     // ── التحقق من توازن القيد: مجموع المدين يجب أن يساوي مجموع الدائن ──
-    final totalDebit = items.fold(0.0, (sum, item) => sum + ((item['debit'] as num?)?.toDouble() ?? 0.0));
-    final totalCredit = items.fold(0.0, (sum, item) => sum + ((item['credit'] as num?)?.toDouble() ?? 0.0));
+    final totalDebit = items.fold(0.0, (sum, item) => sum + MoneyHelper.readMoney(item['debit']));
+    final totalCredit = items.fold(0.0, (sum, item) => sum + MoneyHelper.readMoney(item['credit']));
     if ((totalDebit - totalCredit).abs() > 0.01) {
       throw Exception('القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit');
     }
@@ -6216,14 +7183,14 @@ class DatabaseHelper {
 
         // إنشاء قيد يومي لكل بند
         final accountId = (item['account_id'] as num?)?.toInt();
-        final debit = (item['debit'] as num?)?.toDouble() ?? 0.0;
-        final credit = (item['credit'] as num?)?.toDouble() ?? 0.0;
+        final debit = MoneyHelper.readMoney(item['debit']);
+        final credit = MoneyHelper.readMoney(item['credit']);
         if (accountId != null && (debit > 0 || credit > 0)) {
           await txn.insert('transactions', {
             'account_id': accountId,
             'journal_id': journalId,
-            'debit': debit,
-            'credit': credit,
+            'debit': MoneyHelper.toCents(debit),
+            'credit': MoneyHelper.toCents(credit),
             'description': item['description'] ?? voucherMap['description'] ?? 'سند ${voucherMap['voucher_number']}',
             'date': voucherMap['date'],
             'created_at': now,
@@ -6239,8 +7206,8 @@ class DatabaseHelper {
       if (cashBoxId != null) {
         final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
         if (cashBox.isNotEmpty) {
-          final currentBalance = (cashBox.first['balance'] as num?)?.toDouble() ?? 0.0;
-          final totalAmount = (voucherMap['total_amount'] as num?)?.toDouble() ?? 0.0;
+          final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
+          final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
           final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
           double newCashBalance;
           if (voucherType == 'receipt') {
@@ -6250,23 +7217,23 @@ class DatabaseHelper {
           } else {
             newCashBalance = currentBalance;
           }
-          await txn.update('cash_boxes', {'balance': newCashBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
+          await txn.update('cash_boxes', {'balance': MoneyHelper.toCents(newCashBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
         }
       }
 
       // تحديث رصيد العميل/المورد إذا كان مرتبطاً بالسند
       final customerId = voucherMap['customer_id'];
       final supplierId = voucherMap['supplier_id'];
-      final totalAmount = (voucherMap['total_amount'] as num?)?.toDouble() ?? 0.0;
+      final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
       final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
 
       if (customerId != null && totalAmount > 0) {
         // Receipt voucher for customer: customer pays us → decrease customer balance
         // Payment voucher to customer: we pay customer → increase customer balance
         if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalAmount, now, customerId]);
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
         } else if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalAmount, now, customerId]);
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
         }
       }
 
@@ -6274,9 +7241,9 @@ class DatabaseHelper {
         // Payment voucher for supplier: we pay supplier → decrease supplier balance
         // Receipt voucher from supplier: supplier pays us → increase supplier balance
         if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalAmount, now, supplierId]);
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
         } else if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalAmount, now, supplierId]);
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
         }
       }
     });
@@ -6319,22 +7286,22 @@ class DatabaseHelper {
       final voucherDate = voucherData['date'] as String? ?? now;
       final voucherNumber = voucherData['voucher_number'] as String? ?? '';
       final voucherType = voucherData['voucher_type'] as String? ?? '';
-      final totalAmount = (voucherData['total_amount'] as num?)?.toDouble() ?? 0.0;
+      final totalAmount = MoneyHelper.readMoney(voucherData['total_amount']);
       final cashBoxId = voucherData['cash_box_id'];
 
       // جلب بنود السند وعكس القيود
       final items = await txn.query('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
       for (final item in items) {
         final accountId = (item['account_id'] as num?)?.toInt();
-        final debit = (item['debit'] as num?)?.toDouble() ?? 0.0;
-        final credit = (item['credit'] as num?)?.toDouble() ?? 0.0;
+        final debit = MoneyHelper.readMoney(item['debit']);
+        final credit = MoneyHelper.readMoney(item['credit']);
         if (accountId != null && (debit > 0 || credit > 0)) {
           // عكس القيد:debit يصبح credit والعكس
           await txn.insert('transactions', {
             'account_id': accountId,
             'journal_id': DateTime.now().millisecondsSinceEpoch,
-            'debit': credit,
-            'credit': debit,
+            'debit': MoneyHelper.toCents(credit),
+            'credit': MoneyHelper.toCents(debit),
             'description': 'عكس سند $voucherNumber',
             'date': voucherDate,
             'created_at': now,
@@ -6349,7 +7316,7 @@ class DatabaseHelper {
       if (cashBoxId != null) {
         final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
         if (cashBox.isNotEmpty) {
-          final currentBalance = (cashBox.first['balance'] as num?)?.toDouble() ?? 0.0;
+          final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
           double newCashBalance;
           if (voucherType == 'receipt') {
             newCashBalance = currentBalance - totalAmount;
@@ -6358,7 +7325,7 @@ class DatabaseHelper {
           } else {
             newCashBalance = currentBalance;
           }
-          await txn.update('cash_boxes', {'balance': newCashBalance, 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
+          await txn.update('cash_boxes', {'balance': MoneyHelper.toCents(newCashBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
         }
       }
 
@@ -6368,19 +7335,19 @@ class DatabaseHelper {
       if (customerId != null && totalAmount > 0) {
         if (voucherType == 'receipt') {
           // Original receipt decreased customer balance, so reverse increases it
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalAmount, now, customerId]);
+          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
         } else if (voucherType == 'payment') {
           // Original payment increased customer balance, so reverse decreases it
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalAmount, now, customerId]);
+          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
         }
       }
       if (supplierId != null && totalAmount > 0) {
         if (voucherType == 'payment') {
           // Original payment decreased supplier balance, so reverse increases it
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [totalAmount, now, supplierId]);
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
         } else if (voucherType == 'receipt') {
           // Original receipt increased supplier balance, so reverse decreases it
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [totalAmount, now, supplierId]);
+          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
         }
       }
 
@@ -6472,7 +7439,7 @@ class DatabaseHelper {
         'type_label': 'فاتورة مبيعات',
         'id': row['id'],
         'entity_name': row['entity_name'],
-        'amount': (row['total'] as num?)?.toDouble() ?? 0.0,
+        'amount': MoneyHelper.readMoney(row['total']),
         'currency': row['currency'] ?? 'YER',
         'time': row['created_at'] ?? '',
       });
@@ -6495,7 +7462,7 @@ class DatabaseHelper {
         'type_label': 'فاتورة مشتريات',
         'id': row['id'],
         'entity_name': row['entity_name'],
-        'amount': (row['total'] as num?)?.toDouble() ?? 0.0,
+        'amount': MoneyHelper.readMoney(row['total']),
         'currency': row['currency'] ?? 'YER',
         'time': row['created_at'] ?? '',
       });
@@ -6518,7 +7485,7 @@ class DatabaseHelper {
           'type_label': isReceipt ? 'سند قبض' : 'سند صرف',
           'id': row['id'],
           'entity_name': row['description'] ?? row['voucher_number'] ?? '',
-          'amount': (row['total_amount'] as num?)?.toDouble() ?? 0.0,
+          'amount': MoneyHelper.readMoney(row['total_amount']),
           'currency': row['currency'] ?? 'YER',
           'time': row['date'] ?? '',
         });
@@ -6541,7 +7508,7 @@ class DatabaseHelper {
         'type_label': 'مصروف',
         'id': row['id'],
         'entity_name': row['title'] ?? (row['category'] ?? ''),
-        'amount': (row['amount'] as num?)?.toDouble() ?? 0.0,
+        'amount': MoneyHelper.readMoney(row['amount']),
         'currency': row['currency'] ?? 'YER',
         'time': row['expense_date'] ?? '',
       });
@@ -6564,7 +7531,7 @@ class DatabaseHelper {
         'type_label': 'تحويل نقدي',
         'id': row['id'],
         'entity_name': '${row['from_name'] ?? ''} ← ${row['to_name'] ?? ''}',
-        'amount': (row['amount'] as num?)?.toDouble() ?? 0.0,
+        'amount': MoneyHelper.readMoney(row['amount']),
         'currency': row['currency'] ?? 'YER',
         'time': row['created_at'] ?? '',
       });
@@ -6589,7 +7556,7 @@ class DatabaseHelper {
           'type_label': 'صرافة عملات',
           'id': row['id'],
           'entity_name': '${row['from_currency'] ?? ''} → ${row['to_currency'] ?? ''}',
-          'amount': (row['from_amount'] as num?)?.toDouble() ?? 0.0,
+          'amount': MoneyHelper.readMoney(row['from_amount']),
           'currency': row['from_currency'] ?? 'YER',
           'time': row['created_at'] ?? '',
         });
@@ -6633,7 +7600,7 @@ class DatabaseHelper {
       "AND created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_sales'] = (salesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    summary['total_sales'] = MoneyHelper.readMoney(salesResult.first['total']);
 
     // إجمالي المشتريات
     final purchasesResult = await db.rawQuery(
@@ -6642,7 +7609,7 @@ class DatabaseHelper {
       "AND created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_purchases'] = (purchasesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    summary['total_purchases'] = MoneyHelper.readMoney(purchasesResult.first['total']);
 
     // سندات القبض
     try {
@@ -6652,7 +7619,7 @@ class DatabaseHelper {
         "AND date >= ? AND date < ?",
         [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
       );
-      summary['total_receipts'] = (receiptsResult.first['total'] as num?)?.toDouble() ?? 0.0;
+      summary['total_receipts'] = MoneyHelper.readMoney(receiptsResult.first['total']);
     } catch (e) { _logMigrationError("migration", e); }
 
     // سندات الصرف
@@ -6663,7 +7630,7 @@ class DatabaseHelper {
         "AND date >= ? AND date < ?",
         [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
       );
-      summary['total_payments'] = (paymentsResult.first['total'] as num?)?.toDouble() ?? 0.0;
+      summary['total_payments'] = MoneyHelper.readMoney(paymentsResult.first['total']);
     } catch (e) { _logMigrationError("migration", e); }
 
     // المصروفات
@@ -6672,7 +7639,7 @@ class DatabaseHelper {
       "WHERE expense_date >= ? AND expense_date < ?",
       [startStr, endStr],
     );
-    summary['total_expenses'] = (expensesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    summary['total_expenses'] = MoneyHelper.readMoney(expensesResult.first['total']);
 
     // التحويلات
     final transfersResult = await db.rawQuery(
@@ -6680,7 +7647,7 @@ class DatabaseHelper {
       "WHERE created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_transfers'] = (transfersResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    summary['total_transfers'] = MoneyHelper.readMoney(transfersResult.first['total']);
 
     return summary;
   }
@@ -6828,7 +7795,7 @@ class DatabaseHelper {
         limit: 1,
       );
       final sourceAvgCost = sourceProductRow.isNotEmpty
-          ? (sourceProductRow.first['average_cost'] as num?)?.toDouble() ?? 0.0
+          ? MoneyHelper.readMoney(sourceProductRow.first['average_cost'])
           : 0.0;
 
       // خصم الكمية من مخزن المصدر
@@ -6860,7 +7827,7 @@ class DatabaseHelper {
         'reference_type': 'transfer',
         'reference_id': id.toString(),
         'notes': 'تحويل من مخزن #$fromWarehouseId إلى مخزن #$toWarehouseId',
-        'unit_cost': sourceAvgCost,
+        'unit_cost': MoneyHelper.toCents(sourceAvgCost)
         'created_at': now,
       });
 
@@ -6901,7 +7868,7 @@ class DatabaseHelper {
             'reference_type': 'transfer',
             'reference_id': id.toString(),
             'notes': 'تحويل من مخزن #$fromWarehouseId إلى مخزن #$toWarehouseId',
-            'unit_cost': sourceAvgCost,
+            'unit_cost': MoneyHelper.toCents(sourceAvgCost)
             'created_at': now,
           });
         } else {
@@ -6921,7 +7888,7 @@ class DatabaseHelper {
             'reference_type': 'transfer',
             'reference_id': id.toString(),
             'notes': 'تحويل من مخزن #$fromWarehouseId إلى مخزن #$toWarehouseId',
-            'unit_cost': sourceAvgCost,
+            'unit_cost': MoneyHelper.toCents(sourceAvgCost)
             'created_at': now,
           });
         }
@@ -7045,7 +8012,7 @@ class DatabaseHelper {
           'name_en': 'Inventory Variance Loss (YER)',
           'account_code': varianceLossCode,
           'account_type': 'EXPENSE',
-          'balance': 0.0,
+          'balance': 0,
           'currency': stocktakingCurrency,
           'balance_type': 'debit',
           'is_active': 1,
@@ -7073,7 +8040,7 @@ class DatabaseHelper {
           'name_en': 'Inventory Variance Income (YER)',
           'account_code': varianceIncomeCode,
           'account_type': 'REVENUE',
-          'balance': 0.0,
+          'balance': 0,
           'currency': stocktakingCurrency,
           'balance_type': 'credit',
           'is_active': 1,
@@ -7104,7 +8071,7 @@ class DatabaseHelper {
             ? (productRows.first['current_stock'] as num?)?.toDouble() ?? 0.0
             : 0.0;
         final averageCost = productRows.isNotEmpty
-            ? (productRows.first['average_cost'] as num?)?.toDouble() ?? 0.0
+            ? MoneyHelper.readMoney(productRows.first['average_cost'])
             : 0.0;
 
         // تحديث المخزون بالكمية الفعلية
@@ -7139,7 +8106,7 @@ class DatabaseHelper {
             'reference_type': 'stocktaking',
             'reference_id': sessionId.toString(),
             'notes': variance > 0 ? 'زيادة جرد' : 'نقص جرد',
-            'unit_cost': averageCost,
+            'unit_cost': MoneyHelper.toCents(averageCost)
             'created_at': now,
           });
 
@@ -7165,8 +8132,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': inventoryAccountId,
                   'journal_id': journalId,
-                  'debit': adjustmentAmount,
-                  'credit': 0.0,
+                  'debit': MoneyHelper.toCents(adjustmentAmount),
+                  'credit': 0,
                   'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
@@ -7177,8 +8144,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': varianceIncomeAccountId,
                   'journal_id': journalId,
-                  'debit': 0.0,
-                  'credit': adjustmentAmount,
+                  'debit': 0,
+                  'credit': MoneyHelper.toCents(adjustmentAmount),
                   'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
@@ -7192,8 +8159,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': varianceLossAccountId,
                   'journal_id': journalId,
-                  'debit': lossAmount,
-                  'credit': 0.0,
+                  'debit': MoneyHelper.toCents(lossAmount),
+                  'credit': 0,
                   'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
@@ -7204,8 +8171,8 @@ class DatabaseHelper {
                 await txn.insert('transactions', {
                   'account_id': inventoryAccountId,
                   'journal_id': journalId,
-                  'debit': 0.0,
-                  'credit': lossAmount,
+                  'debit': 0,
+                  'credit': MoneyHelper.toCents(lossAmount),
                   'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
@@ -7495,7 +8462,7 @@ class DatabaseHelper {
       for (final item in items) {
         final productId = item['product_id'] as int;
         final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
-        final unitCost = (item['unit_cost'] as num?)?.toDouble() ?? 0.0;
+        final unitCost = MoneyHelper.readMoney(item['unit_cost']);
         final totalValue = difference.abs() * unitCost;
 
         // Insert voucher item
@@ -7505,8 +8472,8 @@ class DatabaseHelper {
           'system_quantity': (item['system_quantity'] as num?)?.toDouble() ?? 0.0,
           'actual_quantity': (item['actual_quantity'] as num?)?.toDouble() ?? 0.0,
           'difference': difference,
-          'unit_cost': unitCost,
-          'total_value': totalValue,
+          'unit_cost': MoneyHelper.toCents(unitCost)
+          'total_value': MoneyHelper.toCents(totalValue)
           'notes': item['notes'] as String?,
         });
 
@@ -7529,7 +8496,7 @@ class DatabaseHelper {
             'reference_type': 'inventory_voucher',
             'reference_id': voucherId.toString(),
             'notes': 'سند جرد - تعديل المخزون',
-            'unit_cost': unitCost,
+            'unit_cost': MoneyHelper.toCents(unitCost)
             'created_at': now,
           });
         }
@@ -7567,8 +8534,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': invAccId,
             'journal_id': journalId,
-            'debit': totalIncreaseValue,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(totalIncreaseValue),
+            'credit': 0,
             'description': 'سند جرد - زيادة مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
@@ -7581,8 +8548,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': cogsAccId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': totalIncreaseValue,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(totalIncreaseValue),
             'description': 'سند جرد - زيادة مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
@@ -7599,8 +8566,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': cogsAccId,
             'journal_id': journalId,
-            'debit': totalDecreaseValue,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(totalDecreaseValue),
+            'credit': 0,
             'description': 'سند جرد - نقص مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
@@ -7613,8 +8580,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': invAccId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': totalDecreaseValue,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(totalDecreaseValue),
             'description': 'سند جرد - نقص مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
@@ -7743,7 +8710,7 @@ class DatabaseHelper {
         for (final item in items) {
           final productId = item['product_id'] as int;
           final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
-          final unitCost = (item['unit_cost'] as num?)?.toDouble() ?? 0.0;
+          final unitCost = MoneyHelper.readMoney(item['unit_cost']);
 
           // Reverse: subtract the difference that was added
           final product = await txn.query(
@@ -7773,7 +8740,7 @@ class DatabaseHelper {
             'reference_type': 'inventory_voucher',
             'reference_id': id.toString(),
             'notes': 'حذف سند جرد - عكس تعديل المخزون',
-            'unit_cost': unitCost,
+            'unit_cost': MoneyHelper.toCents(unitCost)
             'created_at': now,
           });
         }
@@ -7802,15 +8769,15 @@ class DatabaseHelper {
 
         for (final txnRow in exactTxns) {
           final accId = txnRow['account_id'] as int;
-          final debit = (txnRow['debit'] as num?)?.toDouble() ?? 0.0;
-          final credit = (txnRow['credit'] as num?)?.toDouble() ?? 0.0;
+          final debit = MoneyHelper.readMoney(txnRow['debit']);
+          final credit = MoneyHelper.readMoney(txnRow['credit']);
 
           // Reverse: swap debit and credit
           await txn.insert('transactions', {
             'account_id': accId,
             'journal_id': DateTime.now().millisecondsSinceEpoch,
-            'debit': credit,
-            'credit': debit,
+            'debit': MoneyHelper.toCents(credit),
+            'credit': MoneyHelper.toCents(debit),
             'description': 'عكس قيد - حذف سند جرد رقم $voucherNumber',
             'date': now.substring(0, 10),
             'created_at': now,
@@ -7878,7 +8845,7 @@ class DatabaseHelper {
       for (final item in items) {
         final productId = item['product_id'] as int;
         final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
-        final unitCost = (item['unit_cost'] as num?)?.toDouble() ?? 0.0;
+        final unitCost = MoneyHelper.readMoney(item['unit_cost']);
         final totalValue = difference.abs() * unitCost;
 
         // Update product stock
@@ -7909,7 +8876,7 @@ class DatabaseHelper {
           'reference_type': 'inventory_voucher',
           'reference_id': id.toString(),
           'notes': 'تأكيد سند جرد - تعديل المخزون',
-          'unit_cost': unitCost,
+          'unit_cost': MoneyHelper.toCents(unitCost)
           'created_at': now,
         });
 
@@ -7933,8 +8900,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': invAccId,
             'journal_id': journalId,
-            'debit': totalIncreaseValue,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(totalIncreaseValue),
+            'credit': 0,
             'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
             'date': voucherDate,
             'created_at': now,
@@ -7946,8 +8913,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': cogsAccId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': totalIncreaseValue,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(totalIncreaseValue),
             'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
             'date': voucherDate,
             'created_at': now,
@@ -7963,8 +8930,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': cogsAccId,
             'journal_id': journalId,
-            'debit': totalDecreaseValue,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(totalDecreaseValue),
+            'credit': 0,
             'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
             'date': voucherDate,
             'created_at': now,
@@ -7976,8 +8943,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': invAccId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': totalDecreaseValue,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(totalDecreaseValue),
             'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
             'date': voucherDate,
             'created_at': now,
@@ -8108,10 +9075,10 @@ class DatabaseHelper {
     final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId], limit: 1);
     if (customer.isEmpty) return false;
 
-    final debtCeiling = (customer.first['debt_ceiling'] as num?)?.toDouble() ?? 0.0;
+    final debtCeiling = MoneyHelper.readMoney(customer.first['debt_ceiling']);
     if (debtCeiling <= 0) return false; // لا يوجد سقف محدد
 
-    final currentBalance = (customer.first['balance'] as num?)?.toDouble() ?? 0.0;
+    final currentBalance = MoneyHelper.readMoney(customer.first['balance']);
     return (currentBalance + additionalAmount) > debtCeiling;
   }
 
@@ -8121,10 +9088,10 @@ class DatabaseHelper {
     final supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId], limit: 1);
     if (supplier.isEmpty) return false;
 
-    final debtCeiling = (supplier.first['debt_ceiling'] as num?)?.toDouble() ?? 0.0;
+    final debtCeiling = MoneyHelper.readMoney(supplier.first['debt_ceiling']);
     if (debtCeiling <= 0) return false;
 
-    final currentBalance = (supplier.first['balance'] as num?)?.toDouble() ?? 0.0;
+    final currentBalance = MoneyHelper.readMoney(supplier.first['balance']);
     return (currentBalance + additionalAmount) > debtCeiling;
   }
 
@@ -8165,8 +9132,8 @@ class DatabaseHelper {
         await txn.insert('transactions', {
           'account_id': accountId,
           'journal_id': journalId,
-          'debit': gainLossAmount.abs(),
-          'credit': 0.0,
+          'debit': MoneyHelper.toCents(gainLossAmount.abs()),
+          'credit': 0,
           'description': 'مكاسب صرف $currency - $referenceId',
           'date': now.substring(0, 10),
           'created_at': now,
@@ -8174,8 +9141,8 @@ class DatabaseHelper {
         await txn.insert('transactions', {
           'account_id': exchangeAccountId,
           'journal_id': journalId,
-          'debit': 0.0,
-          'credit': gainLossAmount.abs(),
+          'debit': 0,
+          'credit': MoneyHelper.toCents(gainLossAmount.abs()),
           'description': 'مكاسب صرف $currency - $referenceId',
           'date': now.substring(0, 10),
           'created_at': now,
@@ -8187,8 +9154,8 @@ class DatabaseHelper {
         await txn.insert('transactions', {
           'account_id': exchangeAccountId,
           'journal_id': journalId,
-          'debit': gainLossAmount.abs(),
-          'credit': 0.0,
+          'debit': MoneyHelper.toCents(gainLossAmount.abs()),
+          'credit': 0,
           'description': 'خسائر صرف $currency - $referenceId',
           'date': now.substring(0, 10),
           'created_at': now,
@@ -8196,8 +9163,8 @@ class DatabaseHelper {
         await txn.insert('transactions', {
           'account_id': accountId,
           'journal_id': journalId,
-          'debit': 0.0,
-          'credit': gainLossAmount.abs(),
+          'debit': 0,
+          'credit': MoneyHelper.toCents(gainLossAmount.abs()),
           'description': 'خسائر صرف $currency - $referenceId',
           'date': now.substring(0, 10),
           'created_at': now,
@@ -8226,7 +9193,7 @@ class DatabaseHelper {
       'name_en': 'Exchange Rate Gains/Losses',
       'account_code': '5300',
       'account_type': 'EXPENSE',
-      'balance': 0.0,
+      'balance': 0,
       'currency': 'YER',
       'balance_type': 'credit',
       'is_active': 1,
@@ -8240,8 +9207,8 @@ class DatabaseHelper {
   /// التحقق الإلزامي من توازن القيد المزدوج قبل الحفظ
   /// يُستخدم كدالة مساعدة للتأكد من أن مجموع المدين = مجموع الدائن
   void _assertJournalBalance(List<Map<String, dynamic>> entries) {
-    final totalDebit = entries.fold(0.0, (sum, e) => sum + ((e['debit'] as num?)?.toDouble() ?? 0.0));
-    final totalCredit = entries.fold(0.0, (sum, e) => sum + ((e['credit'] as num?)?.toDouble() ?? 0.0));
+    final totalDebit = entries.fold(0.0, (sum, e) => sum + MoneyHelper.readMoney(e['debit']));
+    final totalCredit = entries.fold(0.0, (sum, e) => sum + MoneyHelper.readMoney(e['credit']));
     if ((totalDebit - totalCredit).abs() > 0.01) {
       throw Exception('القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit. يجب أن يتساوى المدين والدائن.');
     }
@@ -8260,7 +9227,7 @@ class DatabaseHelper {
       WHERE a.account_type = 'REVENUE' AND a.is_active = 1
       AND t.date >= ? AND t.date <= ?
     ''', [yearStart, yearEnd]);
-    final totalRevenue = (revenueResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    final totalRevenue = MoneyHelper.readMoney(revenueResult.first['total']);
 
     final costResult = await db.rawQuery('''
       SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
@@ -8269,7 +9236,7 @@ class DatabaseHelper {
       WHERE a.account_type = 'COST' AND a.is_active = 1
       AND t.date >= ? AND t.date <= ?
     ''', [yearStart, yearEnd]);
-    final totalCosts = (costResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    final totalCosts = MoneyHelper.readMoney(costResult.first['total']);
 
     final expenseResult = await db.rawQuery('''
       SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
@@ -8278,7 +9245,7 @@ class DatabaseHelper {
       WHERE a.account_type = 'EXPENSE' AND a.is_active = 1
       AND t.date >= ? AND t.date <= ?
     ''', [yearStart, yearEnd]);
-    final totalExpenses = (expenseResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    final totalExpenses = MoneyHelper.readMoney(expenseResult.first['total']);
 
     final netProfit = totalRevenue - totalCosts - totalExpenses;
 
@@ -8325,7 +9292,7 @@ class DatabaseHelper {
           "WHERE account_id = ? AND date >= ? AND date <= ?",
           [accountId, yearStart, yearEnd],
         );
-        return (result.first['balance'] as num?)?.toDouble() ?? 0.0;
+        return MoneyHelper.readMoney(result.first['balance']);
       }
 
       // Calculate net profit per currency using transaction-derived balances
@@ -8380,8 +9347,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': accId,
             'journal_id': journalId,
-            'debit': balance,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(balance),
+            'credit': 0,
             'description': 'إقفال إيرادات السنة $year',
             'date': '$year-12-31',
             'created_at': now,
@@ -8392,8 +9359,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': reAccId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': balance,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(balance),
             'description': 'ترحيل أرباح السنة $year',
             'date': '$year-12-31',
             'created_at': now,
@@ -8411,8 +9378,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': accId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': balance,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(balance),
             'description': 'إقفال تكاليف السنة $year',
             'date': '$year-12-31',
             'created_at': now,
@@ -8423,8 +9390,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': reAccId,
             'journal_id': journalId,
-            'debit': balance,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(balance),
+            'credit': 0,
             'description': 'ترحيل تكاليف السنة $year',
             'date': '$year-12-31',
             'created_at': now,
@@ -8442,8 +9409,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': accId,
             'journal_id': journalId,
-            'debit': 0.0,
-            'credit': balance,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(balance),
             'description': 'إقفال مصاريف السنة $year',
             'date': '$year-12-31',
             'created_at': now,
@@ -8454,8 +9421,8 @@ class DatabaseHelper {
           await txn.insert('transactions', {
             'account_id': reAccId,
             'journal_id': journalId,
-            'debit': balance,
-            'credit': 0.0,
+            'debit': MoneyHelper.toCents(balance),
+            'credit': 0,
             'description': 'ترحيل مصاريف السنة $year',
             'date': '$year-12-31',
             'created_at': now,

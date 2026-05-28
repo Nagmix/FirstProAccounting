@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/datasources/database_helper.dart';
 
@@ -63,7 +64,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
             closedTodayCount++;
           }
         }
-        totalSalesAll += (s['total_sales'] as num?)?.toDouble() ?? 0.0;
+        totalSalesAll += MoneyHelper.readMoney(s['total_sales']);
       }
 
       if (mounted) {
@@ -335,14 +336,13 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     final shiftNumber = shift['shift_number']?.toString() ?? '-';
     final cashBoxName = shift['cash_box_name']?.toString() ?? '-';
     final cashierName = shift['cashier_name']?.toString() ?? '';
-    final openingAmount = (shift['opening_amount'] as num?)?.toDouble() ?? 0.0;
-    final totalSales = (shift['total_sales'] as num?)?.toDouble() ?? 0.0;
-    final totalReturns = (shift['total_returns'] as num?)?.toDouble() ?? 0.0;
-    final totalDiscounts = (shift['total_discounts'] as num?)?.toDouble() ?? 0.0;
-    final expectedAmount = (shift['expected_amount'] as num?)?.toDouble() ??
-        (openingAmount + totalSales - totalReturns - totalDiscounts);
-    final closingAmount = (shift['closing_amount'] as num?)?.toDouble() ?? 0.0;
-    final difference = (shift['difference'] as num?)?.toDouble() ?? 0.0;
+    final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
+    final totalSales = MoneyHelper.readMoney(shift['total_sales']);
+    final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
+    final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
+    final expectedAmount = MoneyHelper.readMoney(shift['expected_amount'], fallback: openingAmount + totalSales - totalReturns - totalDiscounts);
+    final closingAmount = MoneyHelper.readMoney(shift['closing_amount']);
+    final difference = MoneyHelper.readMoney(shift['difference']);
     final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
 
     final openedAt = _parseDate(shift['opened_at'] as String?);
@@ -822,7 +822,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   _detailRow(
                     'رصيد الافتتاح',
                     CurrencyFormatter.format(
-                      (shift['opening_amount'] as num?)?.toDouble() ?? 0.0,
+                      MoneyHelper.readMoney(shift['opening_amount']),
                       symbol: symbol,
                     ),
                     valueColor: AppColors.primary,
@@ -830,7 +830,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   _detailRow(
                     'إجمالي المبيعات',
                     CurrencyFormatter.format(
-                      (shift['total_sales'] as num?)?.toDouble() ?? 0.0,
+                      MoneyHelper.readMoney(shift['total_sales']),
                       symbol: symbol,
                     ),
                     valueColor: AppColors.success,
@@ -838,7 +838,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   _detailRow(
                     'إجمالي المرتجعات',
                     CurrencyFormatter.format(
-                      (shift['total_returns'] as num?)?.toDouble() ?? 0.0,
+                      MoneyHelper.readMoney(shift['total_returns']),
                       symbol: symbol,
                     ),
                     valueColor: AppColors.error,
@@ -846,7 +846,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   _detailRow(
                     'إجمالي الخصومات',
                     CurrencyFormatter.format(
-                      (shift['total_discounts'] as num?)?.toDouble() ?? 0.0,
+                      MoneyHelper.readMoney(shift['total_discounts']),
                       symbol: symbol,
                     ),
                     valueColor: AppColors.warning,
@@ -867,11 +867,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                         _detailRow(
                           'المتوقع في الصندوق',
                           CurrencyFormatter.format(
-                            (shift['expected_amount'] as num?)?.toDouble() ??
-                                ((shift['opening_amount'] as num?)?.toDouble() ?? 0.0) +
-                                    ((shift['total_sales'] as num?)?.toDouble() ?? 0.0) -
-                                    ((shift['total_returns'] as num?)?.toDouble() ?? 0.0) -
-                                    ((shift['total_discounts'] as num?)?.toDouble() ?? 0.0),
+                            MoneyHelper.readMoney(shift['expected_amount'], fallback: MoneyHelper.readMoney(shift['opening_amount']) + MoneyHelper.readMoney(shift['total_sales']) - MoneyHelper.readMoney(shift['total_returns']) - MoneyHelper.readMoney(shift['total_discounts'])),
                             symbol: symbol,
                           ),
                           valueColor: AppColors.primary,
@@ -882,7 +878,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                           _detailRow(
                             'الفعلي في الصندوق',
                             CurrencyFormatter.format(
-                              (shift['closing_amount'] as num?)?.toDouble() ?? 0.0,
+                              MoneyHelper.readMoney(shift['closing_amount']),
                               symbol: symbol,
                             ),
                             valueColor: AppColors.textPrimary,
@@ -936,23 +932,23 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                       child: Column(
                         children: [
                           _detailRow('رصيد الافتتاح', CurrencyFormatter.format(
-                            (shift['opening_amount'] as num?)?.toDouble() ?? 0.0, symbol: symbol,
+                            MoneyHelper.readMoney(shift['opening_amount']), symbol: symbol,
                           )),
                           _detailRow('إجمالي المبيعات', CurrencyFormatter.format(
-                            (shift['total_sales'] as num?)?.toDouble() ?? 0.0, symbol: symbol,
+                            MoneyHelper.readMoney(shift['total_sales']), symbol: symbol,
                           ), valueColor: AppColors.success),
                           _detailRow('إجمالي المرتجعات', CurrencyFormatter.format(
-                            (shift['total_returns'] as num?)?.toDouble() ?? 0.0, symbol: symbol,
+                            MoneyHelper.readMoney(shift['total_returns']), symbol: symbol,
                           ), valueColor: AppColors.error),
                           _detailRow('إجمالي الخصومات', CurrencyFormatter.format(
-                            (shift['total_discounts'] as num?)?.toDouble() ?? 0.0, symbol: symbol,
+                            MoneyHelper.readMoney(shift['total_discounts']), symbol: symbol,
                           ), valueColor: AppColors.warning),
                           const Divider(height: 20),
                           _detailRow('المتوقع', CurrencyFormatter.format(
-                            (shift['expected_amount'] as num?)?.toDouble() ?? 0.0, symbol: symbol,
+                            MoneyHelper.readMoney(shift['expected_amount']), symbol: symbol,
                           ), isBold: true),
                           _detailRow('الفعلي', CurrencyFormatter.format(
-                            (shift['closing_amount'] as num?)?.toDouble() ?? 0.0, symbol: symbol,
+                            MoneyHelper.readMoney(shift['closing_amount']), symbol: symbol,
                           ), isBold: true),
                           _buildDifferenceRow(shift, symbol),
                         ],
@@ -1040,7 +1036,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
   }
 
   Widget _buildDifferenceRow(Map<String, dynamic> shift, String symbol) {
-    final difference = (shift['difference'] as num?)?.toDouble() ?? 0.0;
+    final difference = MoneyHelper.readMoney(shift['difference']);
     if (difference.abs() < 0.005) {
       return _detailRow('الفرق', 'متوازن ✓', valueColor: AppColors.success, isBold: true);
     }
@@ -1056,7 +1052,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
   Widget _buildInvoiceItem(Map<String, dynamic> inv, String symbol) {
     final type = (inv['type'] as String?) ?? 'sale';
     final isReturn = (inv['is_return'] as int?) == 1 || type.contains('return');
-    final total = (inv['total'] as num?)?.toDouble() ?? 0.0;
+    final total = MoneyHelper.readMoney(inv['total']);
     final entityName = inv['entity_name']?.toString() ?? '';
     final createdAt = _parseDate(inv['created_at'] as String?);
     final invoiceNumber = inv['invoice_number']?.toString() ?? inv['id']?.toString() ?? '-';
@@ -1134,10 +1130,10 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     final currency = (shift['currency'] as String?) ?? 'YER';
     final symbol = _currencySymbol(currency);
 
-    final openingAmount = (shift['opening_amount'] as num?)?.toDouble() ?? 0.0;
-    final totalSales = (shift['total_sales'] as num?)?.toDouble() ?? 0.0;
-    final totalReturns = (shift['total_returns'] as num?)?.toDouble() ?? 0.0;
-    final totalDiscounts = (shift['total_discounts'] as num?)?.toDouble() ?? 0.0;
+    final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
+    final totalSales = MoneyHelper.readMoney(shift['total_sales']);
+    final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
+    final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
     final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
     final expectedAmount = openingAmount + totalSales - totalReturns - totalDiscounts;
 

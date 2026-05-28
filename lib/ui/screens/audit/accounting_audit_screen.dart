@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 /// Accounting audit screen that verifies all operations are linked to
@@ -123,7 +124,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       // Check overall balance
       bool isBalanced = true;
       for (final tb in trialBalance) {
-        final diff = (tb['balance_diff'] as num?)?.toDouble() ?? 0.0;
+        final diff = MoneyHelper.readMoney(tb['balance_diff']);
         if (diff.abs() > 0.01) {
           isBalanced = false;
           break;
@@ -378,9 +379,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           const SizedBox(height: 6),
           ..._trialBalanceByCurrency.map((tb) {
             final currency = tb['currency'] as String? ?? 'YER';
-            final debit = (tb['total_debit'] as num?)?.toDouble() ?? 0.0;
-            final credit = (tb['total_credit'] as num?)?.toDouble() ?? 0.0;
-            final diff = (tb['balance_diff'] as num?)?.toDouble() ?? 0.0;
+            final debit = MoneyHelper.readMoney(tb['total_debit']);
+            final credit = MoneyHelper.readMoney(tb['total_credit']);
+            final diff = MoneyHelper.readMoney(tb['balance_diff']);
             final isOk = diff.abs() <= 0.01;
 
             return Container(
@@ -451,7 +452,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             final currency = item['currency'] as String? ?? 'YER';
             final type = item['account_type'] as String? ?? '';
             final count = (item['count'] as int?) ?? 0;
-            final balance = (item['total_balance'] as num?)?.toDouble() ?? 0.0;
+            final balance = MoneyHelper.readMoney(item['total_balance']);
             final color = typeColors[type] ?? AppColors.primary;
 
             return Padding(
@@ -527,7 +528,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
                       ],
                     ),
                   ),
-                  Text(CurrencyFormatter.format((inv['total'] as num?)?.toDouble() ?? 0.0), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(CurrencyFormatter.format(MoneyHelper.readMoney(inv['total'])), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
                 ],
               ),
             );
@@ -582,7 +583,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
                       ],
                     ),
                   ),
-                  Text(CurrencyFormatter.format((exp['amount'] as num?)?.toDouble() ?? 0.0), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(CurrencyFormatter.format(MoneyHelper.readMoney(exp['amount'])), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
                 ],
               ),
             );
@@ -612,7 +613,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           ),
           const SizedBox(height: 12),
           ..._unbalancedJournals.map((j) {
-            final diff = (j['diff'] as num?)?.toDouble() ?? 0.0;
+            final diff = MoneyHelper.readMoney(j['diff']);
             return Container(
               margin: const EdgeInsets.only(bottom: 6),
               padding: const EdgeInsets.all(10),

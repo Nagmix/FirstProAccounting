@@ -8,6 +8,7 @@ import 'package:printing/printing.dart';
 
 import '../../data/datasources/database_helper.dart';
 import 'currency_formatter.dart';
+import 'money_helper.dart';
 
 /// Generates professional PDF invoices for sales, purchases, and POS transactions.
 /// Business header info (name, phone, email, address, logo) is pulled from
@@ -298,8 +299,8 @@ class InvoicePdfGenerator {
         ...items.map((item) {
           final productName = (item['product_name'] as String?) ?? '—';
           final quantity = (item['quantity'] as num?)?.toDouble() ?? 0;
-          final unitPrice = (item['unit_price'] as num?)?.toDouble() ?? 0;
-          final totalPrice = (item['total_price'] as num?)?.toDouble() ?? 0;
+          final unitPrice = MoneyHelper.readMoney(item['unit_price']);
+          final totalPrice = MoneyHelper.readMoney(item['total_price']);
 
           return pw.TableRow(
             children: [
@@ -319,13 +320,13 @@ class InvoicePdfGenerator {
     String currencySymbol,
     pw.Font? font,
   ) {
-    final subtotal = (invoice['subtotal'] as num?)?.toDouble() ?? 0;
-    final discountAmount = (invoice['discount_amount'] as num?)?.toDouble() ?? 0;
-    final taxAmount = (invoice['tax_amount'] as num?)?.toDouble() ?? 0;
-    final transportCharges = (invoice['transport_charges'] as num?)?.toDouble() ?? 0;
-    final total = (invoice['total'] as num?)?.toDouble() ?? 0;
-    final paidAmount = (invoice['paid_amount'] as num?)?.toDouble() ?? 0;
-    final remaining = (invoice['remaining'] as num?)?.toDouble() ?? 0;
+    final subtotal = MoneyHelper.readMoney(invoice['subtotal']);
+    final discountAmount = MoneyHelper.readMoney(invoice['discount_amount']);
+    final taxAmount = MoneyHelper.readMoney(invoice['tax_amount']);
+    final transportCharges = MoneyHelper.readMoney(invoice['transport_charges']);
+    final total = MoneyHelper.readMoney(invoice['total']);
+    final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
+    final remaining = MoneyHelper.readMoney(invoice['remaining']);
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),

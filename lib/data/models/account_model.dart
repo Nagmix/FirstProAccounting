@@ -1,3 +1,5 @@
+import '../../core/utils/money_helper.dart';
+
 enum AccountType { ASSET, LIABILITY, COST, REVENUE, EXPENSE }
 
 class Account {
@@ -93,11 +95,11 @@ class Account {
       'parent_id': parentId,
       'account_code': accountCode,
       'account_type': _accountTypeString,
-      'balance': balance,
+      'balance': MoneyHelper.toCents(balance),
       'currency': currency,
       'linked_cash_box_id': linkedCashBoxId,
       'is_active': isActive ? 1 : 0,
-      'debt_ceiling': debtCeiling,
+      'debt_ceiling': MoneyHelper.toCents(debtCeiling),
       'balance_type': effectiveBalanceType,  // Always save derived value
       'is_system': isSystem ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
@@ -113,11 +115,11 @@ class Account {
       parentId: map['parent_id'],
       accountCode: map['account_code'],
       accountType: _accountTypeFromString(map['account_type'] ?? 'ASSET'),
-      balance: (map['balance'] ?? 0.0).toDouble(),
+      balance: MoneyHelper.readMoney(map['balance']),
       currency: map['currency'] ?? 'YER',
       linkedCashBoxId: map['linked_cash_box_id'],
       isActive: (map['is_active'] ?? 1) == 1,
-      debtCeiling: (map['debt_ceiling'] ?? 0.0).toDouble(),
+      debtCeiling: MoneyHelper.readMoney(map['debt_ceiling']),
       balanceType: map['balance_type'] ?? 'auto',
       isSystem: (map['is_system'] ?? 0) == 1,
       createdAt: DateTime.parse(map['created_at']),

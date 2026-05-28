@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 /// Advanced charts screen with multiple chart types using pure Flutter custom painting.
@@ -422,8 +423,8 @@ class _MonthlyBarPainter extends CustomPainter {
     // Find max value
     double maxVal = 0;
     for (final d in data) {
-      final s = (d['sales'] as num?)?.toDouble() ?? 0;
-      final p = (d['purchases'] as num?)?.toDouble() ?? 0;
+      final s = MoneyHelper.readMoney(d['sales']);
+      final p = MoneyHelper.readMoney(d['purchases']);
       if (s > maxVal) maxVal = s;
       if (p > maxVal) maxVal = p;
     }
@@ -449,8 +450,8 @@ class _MonthlyBarPainter extends CustomPainter {
 
     for (int i = 0; i < 12; i++) {
       final monthData = data.length > i ? data[i] : null;
-      final sales = monthData != null ? (monthData['sales'] as num?)?.toDouble() ?? 0 : 0;
-      final purchases = monthData != null ? (monthData['purchases'] as num?)?.toDouble() ?? 0 : 0;
+      final sales = monthData != null ? MoneyHelper.readMoney(monthData['sales']) : 0;
+      final purchases = monthData != null ? MoneyHelper.readMoney(monthData['purchases']) : 0;
 
       final x = leftPad + i * groupW + groupW * 0.15;
 
@@ -539,10 +540,10 @@ class DonutChart extends StatelessWidget {
         final i = entry.key;
         final d = entry.value;
         final cat = d['category'] as String? ?? '';
-        final total = (d['total'] as num?)?.toDouble() ?? 0;
+        final total = MoneyHelper.readMoney(d['total']);
         final type = d['type'] as String? ?? '';
         final color = colors[i % colors.length];
-        final totalAll = data.fold(0.0, (sum, d) => sum + ((d['total'] as num?)?.toDouble() ?? 0));
+        final totalAll = data.fold(0.0, (sum, d) => sum + (MoneyHelper.readMoney(d['total'])));
         final pct = totalAll > 0 ? (total / totalAll * 100).toStringAsFixed(1) : '0.0';
 
         return Padding(
@@ -582,13 +583,13 @@ class _DonutPainter extends CustomPainter {
     final outerR = min(size.width, size.height) / 2 - 8;
     final innerR = outerR * 0.55;
 
-    final totalAll = data.fold(0.0, (sum, d) => sum + ((d['total'] as num?)?.toDouble() ?? 0));
+    final totalAll = data.fold(0.0, (sum, d) => sum + (MoneyHelper.readMoney(d['total'])));
     if (totalAll == 0) return;
 
     double startAngle = -pi / 2;
 
     for (int i = 0; i < data.length; i++) {
-      final val = (data[i]['total'] as num?)?.toDouble() ?? 0;
+      final val = MoneyHelper.readMoney(data[i]['total']);
       final sweepAngle = (val / totalAll) * 2 * pi;
       final paint = Paint()
         ..color = colors[i % colors.length]
@@ -674,7 +675,7 @@ class _LineChartPainter extends CustomPainter {
     double maxVal = 0;
     double minVal = double.infinity;
     for (final d in data) {
-      final v = (d['total'] as num?)?.toDouble() ?? 0;
+      final v = MoneyHelper.readMoney(d['total']);
       if (v > maxVal) maxVal = v;
       if (v < minVal) minVal = v;
     }
@@ -706,7 +707,7 @@ class _LineChartPainter extends CustomPainter {
     final stepX = chartW / (data.length > 1 ? data.length - 1 : 1);
 
     for (int i = 0; i < data.length; i++) {
-      final val = (data[i]['total'] as num?)?.toDouble() ?? 0;
+      final val = MoneyHelper.readMoney(data[i]['total']);
       final x = leftPad + i * stepX;
       final y = topPad + chartH * (1 - (val - effectiveMin) / effectiveRange);
       points.add(Offset(x, y));
@@ -781,7 +782,7 @@ class _LineChartPainter extends CustomPainter {
 
     // Min/Max labels
     if (data.isNotEmpty) {
-      final maxIdx = data.indexWhere((d) => (d['total'] as num?)?.toDouble() == maxVal);
+      final maxIdx = data.indexWhere((d) => MoneyHelper.readMoney(d['total']) == maxVal);
       if (maxIdx >= 0 && maxIdx < points.length) {
         textPainter.text = TextSpan(
           text: '▲ ${_fmt(maxVal)}',
@@ -865,7 +866,7 @@ class _HorizontalBarPainter extends CustomPainter {
 
     double maxVal = 0;
     for (final d in data) {
-      final v = (d[valueKey] as num?)?.toDouble() ?? 0;
+      final v = MoneyHelper.readMoney(d[valueKey]);
       if (v > maxVal) maxVal = v;
     }
     if (maxVal == 0) maxVal = 1;
@@ -873,7 +874,7 @@ class _HorizontalBarPainter extends CustomPainter {
     final colors = AppColors.chartColors;
 
     for (int i = 0; i < data.length; i++) {
-      final val = (data[i][valueKey] as num?)?.toDouble() ?? 0;
+      final val = MoneyHelper.readMoney(data[i][valueKey]);
       final label = data[i][labelKey] as String? ?? '';
       final y = 5.0 + i * (barH + 8);
       final barW = maxVal > 0 ? (val / maxVal) * chartW : 0.0;
@@ -956,13 +957,13 @@ class _CustomerBalancePainter extends CustomPainter {
 
     double maxVal = 0;
     for (final d in data) {
-      final v = (d['balance'] as num?)?.toDouble() ?? 0;
+      final v = MoneyHelper.readMoney(d['balance']);
       if (v > maxVal) maxVal = v;
     }
     if (maxVal == 0) maxVal = 1;
 
     for (int i = 0; i < data.length; i++) {
-      final val = (data[i]['balance'] as num?)?.toDouble() ?? 0;
+      final val = MoneyHelper.readMoney(data[i]['balance']);
       final name = data[i]['name'] as String? ?? '';
       final bt = data[i]['balance_type'] as String? ?? 'credit';
       final y = 5.0 + i * (barH + 8);
@@ -1084,8 +1085,8 @@ class _StackedBarPainter extends CustomPainter {
     // Find max
     double maxVal = 0;
     for (final d in data) {
-      final inf = (d['inflow'] as num?)?.toDouble() ?? 0;
-      final out = (d['outflow'] as num?)?.toDouble() ?? 0;
+      final inf = MoneyHelper.readMoney(d['inflow']);
+      final out = MoneyHelper.readMoney(d['outflow']);
       if (inf > maxVal) maxVal = inf;
       if (out > maxVal) maxVal = out;
     }
@@ -1111,8 +1112,8 @@ class _StackedBarPainter extends CustomPainter {
 
     for (int i = 0; i < 12; i++) {
       final monthData = data.length > i ? data[i] : null;
-      final inflow = monthData != null ? (monthData['inflow'] as num?)?.toDouble() ?? 0 : 0;
-      final outflow = monthData != null ? (monthData['outflow'] as num?)?.toDouble() ?? 0 : 0;
+      final inflow = monthData != null ? MoneyHelper.readMoney(monthData['inflow']) : 0;
+      final outflow = monthData != null ? MoneyHelper.readMoney(monthData['outflow']) : 0;
 
       final x = leftPad + i * groupW + groupW * 0.15;
 

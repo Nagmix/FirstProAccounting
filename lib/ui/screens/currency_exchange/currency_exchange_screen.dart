@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -277,7 +278,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
       (cb) => cb['id'] == _fromCashBoxId,
       orElse: () => <String, dynamic>{},
     );
-    final fromBoxBalance = (fromBox['balance'] as num?)?.toDouble() ?? 0.0;
+    final fromBoxBalance = MoneyHelper.readMoney(fromBox['balance']);
     if (fromAmount > fromBoxBalance) {
       _showError('رصيد الصندوق غير كافي (الرصيد: ${CurrencyFormatter.format(fromBoxBalance)} ${_currencySymbol(_fromCurrency)})');
       return;
@@ -1040,7 +1041,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               items: _fromCashBoxes.map((cb) {
                 final id = cb['id'] as int;
                 final name = cb['name'] as String;
-                final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+                final balance = MoneyHelper.readMoney(cb['balance']);
                 return DropdownMenuItem<int>(
                   value: id,
                   child: Row(
@@ -1109,7 +1110,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               items: _toCashBoxes.map((cb) {
                 final id = cb['id'] as int;
                 final name = cb['name'] as String;
-                final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+                final balance = MoneyHelper.readMoney(cb['balance']);
                 return DropdownMenuItem<int>(
                   value: id,
                   child: Row(
@@ -1191,9 +1192,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   // ── Journal Entry Card (shown after successful exchange) ───────────
   Widget _buildJournalEntryCard(ThemeData theme) {
     final ex = _lastExchange!;
-    final fromAmount = (ex['from_amount'] as num?)?.toDouble() ?? 0.0;
-    final toAmount = (ex['to_amount'] as num?)?.toDouble() ?? 0.0;
-    final gainLoss = (ex['gain_loss'] as num?)?.toDouble() ?? 0.0;
+    final fromAmount = MoneyHelper.readMoney(ex['from_amount']);
+    final toAmount = MoneyHelper.readMoney(ex['to_amount']);
+    final gainLoss = MoneyHelper.readMoney(ex['gain_loss']);
     final gainLossType = ex['gain_loss_type'] as String?;
     final fromCur = ex['from_currency'] as String;
     final toCur = ex['to_currency'] as String;
@@ -1468,10 +1469,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   }
 
   Widget _buildExchangeCard(ThemeData theme, Map<String, dynamic> ex) {
-    final fromAmount = (ex['from_amount'] as num?)?.toDouble() ?? 0.0;
-    final toAmount = (ex['to_amount'] as num?)?.toDouble() ?? 0.0;
+    final fromAmount = MoneyHelper.readMoney(ex['from_amount']);
+    final toAmount = MoneyHelper.readMoney(ex['to_amount']);
     final rate = (ex['exchange_rate'] as num?)?.toDouble() ?? 0.0;
-    final gainLoss = (ex['gain_loss'] as num?)?.toDouble() ?? 0.0;
+    final gainLoss = MoneyHelper.readMoney(ex['gain_loss']);
     final gainLossType = ex['gain_loss_type'] as String?;
     final fromCur = ex['from_currency'] as String? ?? '';
     final toCur = ex['to_currency'] as String? ?? '';

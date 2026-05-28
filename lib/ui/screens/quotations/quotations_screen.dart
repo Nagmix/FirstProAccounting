@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 /// Helper class for quotation line items in the creation form.
@@ -183,13 +184,13 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
         'is_return': 0,
         'cash_box_id': null,
         'customer_id': quotation['customer_id'],
-        'subtotal': (quotation['subtotal'] as num?)?.toDouble() ?? 0.0,
+        'subtotal': MoneyHelper.readMoney(quotation['subtotal']),
         'discount_rate': (quotation['discount_rate'] as num?)?.toDouble() ?? 0.0,
-        'discount_amount': (quotation['discount_amount'] as num?)?.toDouble() ?? 0.0,
-        'tax_amount': (quotation['tax_amount'] as num?)?.toDouble() ?? 0.0,
-        'total': (quotation['total'] as num?)?.toDouble() ?? 0.0,
+        'discount_amount': MoneyHelper.readMoney(quotation['discount_amount']),
+        'tax_amount': MoneyHelper.readMoney(quotation['tax_amount']),
+        'total': MoneyHelper.readMoney(quotation['total']),
         'paid_amount': 0.0,
-        'remaining': (quotation['total'] as num?)?.toDouble() ?? 0.0,
+        'remaining': MoneyHelper.readMoney(quotation['total']),
         'status': 'pending',
         'currency': quotation['currency'] ?? 'YER',
         'exchange_rate': (quotation['exchange_rate'] as num?)?.toDouble() ?? 1.0,
@@ -202,8 +203,8 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
         'product_id': item['product_id'],
         'product_name': item['product_name'] ?? '',
         'quantity': (item['quantity'] as num?)?.toDouble() ?? 1.0,
-        'unit_price': (item['unit_price'] as num?)?.toDouble() ?? 0.0,
-        'total_price': (item['total_price'] as num?)?.toDouble() ?? 0.0,
+        'unit_price': MoneyHelper.readMoney(item['unit_price']),
+        'total_price': MoneyHelper.readMoney(item['total_price']),
       }).toList();
 
       // Save invoice with journal entries
@@ -264,7 +265,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
                 _detailRow('رقم العرض', quotation['quotation_number'] ?? ''),
                 _detailRow('العميل', quotation['customer_name'] ?? 'بدون عميل'),
                 _detailRow('العملة', quotation['currency'] ?? 'YER'),
-                _detailRow('الإجمالي', CurrencyFormatter.format((quotation['total'] as num?)?.toDouble() ?? 0)),
+                _detailRow('الإجمالي', CurrencyFormatter.format(MoneyHelper.readMoney(quotation['total']))),
                 _detailRow('الحالة', _statusLabels[status] ?? status),
                 const Divider(height: 32),
                 Row(
@@ -456,7 +457,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
   }
 
   Widget _buildSummaryCard(ThemeData theme, bool isDark) {
-    final totalValue = _filteredQuotations.fold<double>(0, (sum, q) => sum + ((q['total'] as num?)?.toDouble() ?? 0));
+    final totalValue = _filteredQuotations.fold<double>(0, (sum, q) => sum + (MoneyHelper.readMoney(q['total'])));
     final acceptedCount = _filteredQuotations.where((q) => q['status'] == 'accepted').length;
 
     return Container(
@@ -513,7 +514,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
   Widget _buildQuotationCard(BuildContext ctx, Map<String, dynamic> q, bool isDark, ThemeData theme) {
     final status = q['status'] ?? 'draft';
     final statusColor = _statusColors[status] ?? Colors.grey;
-    final total = (q['total'] as num?)?.toDouble() ?? 0;
+    final total = MoneyHelper.readMoney(q['total']);
     final currency = q['currency'] ?? 'YER';
     final createdAt = q['created_at'] != null ? DateTime.tryParse(q['created_at']) : null;
     final canConvert = status == 'accepted' || status == 'sent';
@@ -861,7 +862,7 @@ class _CreateQuotationFormState extends State<_CreateQuotationForm> {
                               itemCount: filtered.length,
                               itemBuilder: (ctx, i) {
                                 final p = filtered[i];
-                                final sellPrice = (p['sell_price'] as num?)?.toDouble() ?? 0;
+                                final sellPrice = MoneyHelper.readMoney(p['sell_price']);
                                 return ListTile(
                                   title: Text(p['name_ar'] ?? ''),
                                   subtitle: Text(CurrencyFormatter.formatValue(sellPrice) + ' ${_currencySymbol[_selectedCurrency] ?? ''}'),

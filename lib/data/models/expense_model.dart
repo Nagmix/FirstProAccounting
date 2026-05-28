@@ -1,3 +1,5 @@
+import '../../core/utils/money_helper.dart';
+
 class Expense {
   final int? id;
   final String title;
@@ -77,10 +79,10 @@ class Expense {
       'id': id,
       'title': title,
       'description': description,
-      'amount': amount,
+      'amount': MoneyHelper.toCents(amount),
       'currency': currency,
       'exchange_rate': exchangeRate,
-      'amount_base': amountBase,
+      'amount_base': MoneyHelper.toCents(amountBase),
       'expense_date': expenseDate,
       'category': category,
       'payment_method': paymentMethod,
@@ -104,10 +106,10 @@ class Expense {
       id: map['id'],
       title: map['title'] ?? '',
       description: map['description'],
-      amount: (map['amount'] ?? 0.0).toDouble(),
+      amount: MoneyHelper.readMoney(map['amount']),
       currency: map['currency'] ?? 'YER',
       exchangeRate: (map['exchange_rate'] ?? 1.0).toDouble(),
-      amountBase: (map['amount_base'] ?? 0.0).toDouble(),
+      amountBase: MoneyHelper.readMoney(map['amount_base']),
       expenseDate: map['expense_date'] ?? DateTime.now().toIso8601String(),
       category: map['category'],
       paymentMethod: map['payment_method'] ?? 'cash',

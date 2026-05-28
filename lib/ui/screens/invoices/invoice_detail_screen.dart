@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/invoice_item_model.dart';
 
@@ -62,7 +63,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       final customer = customers.where((c) => c['id'] == invoice['customer_id']).firstOrNull;
       if (customer != null) {
         entityName = customer['name'] as String? ?? '—';
-        entityBalance = (customer['balance'] as num?)?.toDouble() ?? 0.0;
+        entityBalance = MoneyHelper.readMoney(customer['balance']);
         entityBalanceType = customer['balance_type'] as String? ?? 'credit';
       }
     } else if (invoice['supplier_id'] != null) {
@@ -70,7 +71,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       final supplier = suppliers.where((s) => s['id'] == invoice['supplier_id']).firstOrNull;
       if (supplier != null) {
         entityName = supplier['name'] as String? ?? '—';
-        entityBalance = (supplier['balance'] as num?)?.toDouble() ?? 0.0;
+        entityBalance = MoneyHelper.readMoney(supplier['balance']);
         entityBalanceType = supplier['balance_type'] as String? ?? 'credit';
       }
     }
@@ -185,7 +186,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     final isReturn = (_invoice?['is_return'] as int?) == 1;
     final status = _invoice?['status'] as String? ?? 'pending';
     final createdAt = DateTime.tryParse(_invoice?['created_at'] as String? ?? '') ?? DateTime.now();
-    final remaining = (_invoice?['remaining'] as num?)?.toDouble() ?? 0.0;
+    final remaining = MoneyHelper.readMoney(_invoice?['remaining']);
 
     return Container(
       width: double.infinity,
@@ -280,7 +281,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   Widget _buildOriginalInvoiceSection() {
     final originalId = _originalInvoice?['id'] as String? ?? '';
     final originalType = _originalInvoice?['type'] as String? ?? '';
-    final originalTotal = (_originalInvoice?['total'] as num?)?.toDouble() ?? 0.0;
+    final originalTotal = MoneyHelper.readMoney(_originalInvoice?['total']);
     final originalDate = DateTime.tryParse(_originalInvoice?['created_at'] as String? ?? '');
     final dateStr = originalDate != null ? DateFormatter.formatDateTime(originalDate) : '';
     final displayId = originalId.length > 12 ? '...${originalId.substring(originalId.length - 8)}' : originalId;
@@ -397,7 +398,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           ..._linkedReturns.map((ret) {
             final retId = ret['id'] as String? ?? '';
             final entityName = ret['entity_name'] as String? ?? '—';
-            final total = (ret['total'] as num?)?.toDouble() ?? 0.0;
+            final total = MoneyHelper.readMoney(ret['total']);
             final status = ret['status'] as String? ?? '';
             final createdAt = DateTime.tryParse(ret['created_at'] as String? ?? '');
             final dateStr = createdAt != null ? DateFormatter.formatDateTime(createdAt) : '';
@@ -642,13 +643,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   // ── Summary section ──────────────────────────────────────────────
   Widget _buildSummarySection() {
-    final subtotal = (_invoice?['subtotal'] as num?)?.toDouble() ?? 0.0;
-    final discountAmount = (_invoice?['discount_amount'] as num?)?.toDouble() ?? 0.0;
-    final taxAmount = (_invoice?['tax_amount'] as num?)?.toDouble() ?? 0.0;
-    final transportCharges = (_invoice?['transport_charges'] as num?)?.toDouble() ?? 0.0;
-    final total = (_invoice?['total'] as num?)?.toDouble() ?? 0.0;
-    final paidAmount = (_invoice?['paid_amount'] as num?)?.toDouble() ?? 0.0;
-    final remaining = (_invoice?['remaining'] as num?)?.toDouble() ?? 0.0;
+    final subtotal = MoneyHelper.readMoney(_invoice?['subtotal']);
+    final discountAmount = MoneyHelper.readMoney(_invoice?['discount_amount']);
+    final taxAmount = MoneyHelper.readMoney(_invoice?['tax_amount']);
+    final transportCharges = MoneyHelper.readMoney(_invoice?['transport_charges']);
+    final total = MoneyHelper.readMoney(_invoice?['total']);
+    final paidAmount = MoneyHelper.readMoney(_invoice?['paid_amount']);
+    final remaining = MoneyHelper.readMoney(_invoice?['remaining']);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -748,7 +749,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   // ── Bottom actions ───────────────────────────────────────────────
   Widget _buildBottomActions() {
-    final remaining = (_invoice?['remaining'] as num?)?.toDouble() ?? 0.0;
+    final remaining = MoneyHelper.readMoney(_invoice?['remaining']);
     final status = _invoice?['status'] as String? ?? 'pending';
     final isCancelled = status == 'cancelled';
 
@@ -821,7 +822,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   // ── Record Payment Dialog ────────────────────────────────────────
   void _showRecordPaymentDialog() {
-    final remaining = (_invoice?['remaining'] as num?)?.toDouble() ?? 0.0;
+    final remaining = MoneyHelper.readMoney(_invoice?['remaining']);
     final amountController = TextEditingController(text: remaining.toStringAsFixed(2));
     int? selectedCashBoxId;
     List<Map<String, dynamic>> cashBoxes = [];
@@ -998,9 +999,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     buffer.writeln('──────────────────');
     buffer.writeln('رقم: ${_displayInvoiceId(_invoice?['id'] as String?)}');
     buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: $_entityName');
-    buffer.writeln('الإجمالي: ${CurrencyFormatter.format((_invoice?['total'] as num?)?.toDouble() ?? 0.0)}');
-    buffer.writeln('المدفوع: ${CurrencyFormatter.format((_invoice?['paid_amount'] as num?)?.toDouble() ?? 0.0)}');
-    buffer.writeln('المتبقي: ${CurrencyFormatter.format((_invoice?['remaining'] as num?)?.toDouble() ?? 0.0)}');
+    buffer.writeln('الإجمالي: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['total']))}');
+    buffer.writeln('المدفوع: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['paid_amount']))}');
+    buffer.writeln('المتبقي: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['remaining']))}');
     buffer.writeln('──────────────────');
     for (final item in _items) {
       final itemModel = InvoiceItem.fromMap(item);
@@ -1016,9 +1017,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     buffer.writeln('━━━━━━━━━━━━━━━━━━');
     buffer.writeln('رقم: ${_displayInvoiceId(_invoice?['id'] as String?)}');
     buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: *$_entityName*');
-    buffer.writeln('*الإجمالي: ${CurrencyFormatter.format((_invoice?['total'] as num?)?.toDouble() ?? 0.0)}*');
-    buffer.writeln('المدفوع: ${CurrencyFormatter.format((_invoice?['paid_amount'] as num?)?.toDouble() ?? 0.0)}');
-    buffer.writeln('المتبقي: ${CurrencyFormatter.format((_invoice?['remaining'] as num?)?.toDouble() ?? 0.0)}');
+    buffer.writeln('*الإجمالي: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['total']))}*');
+    buffer.writeln('المدفوع: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['paid_amount']))}');
+    buffer.writeln('المتبقي: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['remaining']))}');
     buffer.writeln('━━━━━━━━━━━━━━━━━━');
     for (final item in _items) {
       final itemModel = InvoiceItem.fromMap(item);

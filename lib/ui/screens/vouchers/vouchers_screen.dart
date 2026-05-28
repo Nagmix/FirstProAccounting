@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'create_voucher_screen.dart';
@@ -182,7 +183,7 @@ class _VouchersScreenState extends State<VouchersScreen>
     final number = voucher['voucher_number'] as String? ?? '';
     final type = voucher['voucher_type'] as String? ?? 'receipt';
     final date = voucher['date'] as String? ?? '';
-    final totalAmount = (voucher['total_amount'] as num?)?.toDouble() ?? 0.0;
+    final totalAmount = MoneyHelper.readMoney(voucher['total_amount']);
     final currency = voucher['currency'] as String? ?? 'YER';
     final description = voucher['description'] as String? ?? '';
     final voucherId = (voucher['id'] as num?)?.toInt() ?? 0;
@@ -316,8 +317,8 @@ class _VouchersScreenState extends State<VouchersScreen>
                     itemBuilder: (context, index) {
                       final item = enrichedItems[index];
                       final acctName = item['account_name'] as String? ?? '';
-                      final debit = (item['debit'] as num?)?.toDouble() ?? 0.0;
-                      final credit = (item['credit'] as num?)?.toDouble() ?? 0.0;
+                      final debit = MoneyHelper.readMoney(item['debit']);
+                      final credit = MoneyHelper.readMoney(item['credit']);
                       final itemDesc = item['description'] as String? ?? '';
                       return Container(
                         margin: const EdgeInsets.only(bottom: 6),
@@ -517,7 +518,7 @@ class _VouchersScreenState extends State<VouchersScreen>
     final number = voucher['voucher_number'] as String? ?? '';
     final type = voucher['voucher_type'] as String? ?? 'receipt';
     final date = voucher['date'] as String? ?? '';
-    final totalAmount = (voucher['total_amount'] as num?)?.toDouble() ?? 0.0;
+    final totalAmount = MoneyHelper.readMoney(voucher['total_amount']);
     final currency = voucher['currency'] as String? ?? 'YER';
     final description = voucher['description'] as String? ?? '';
     final typeAr = _getVoucherTypeAr(type);

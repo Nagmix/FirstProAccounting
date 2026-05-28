@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../core/utils/money_helper.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -330,8 +331,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
           unitId: fromUnitId,
           factor: (c['conversion_factor'] as num?)?.toDouble() ?? 1.0,
           barcode: (c['barcode'] as String?) ?? '',
-          sellPrice: (c['sell_price'] as num?)?.toDouble() ?? 0.0,
-          costPrice: (c['cost_price'] as num?)?.toDouble() ?? 0.0,
+          sellPrice: MoneyHelper.readMoney(c['sell_price']),
+          costPrice: MoneyHelper.readMoney(c['cost_price']),
         );
       }).toList();
 
@@ -785,13 +786,13 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
                   // Update account balances within the transaction
                   // Inventory account (debit-balance / ASSET): balance += debit - credit
-                  final invBal = (inventoryAccount.first['balance'] as num?)?.toDouble() ?? 0.0;
+                  final invBal = MoneyHelper.readMoney(inventoryAccount.first['balance']);
                   final invBt = inventoryAccount.first['balance_type'] as String? ?? 'debit';
                   final newInvBal = invBt == 'credit' ? invBal - totalValue : invBal + totalValue;
                   await txn.update('accounts', {'balance': newInvBal, 'updated_at': now}, where: 'id = ?', whereArgs: [inventoryAccountId]);
 
                   // Opening balance account (credit-balance / EQUITY): balance += credit - debit
-                  final obBal = (openingBalanceAccount.first['balance'] as num?)?.toDouble() ?? 0.0;
+                  final obBal = MoneyHelper.readMoney(openingBalanceAccount.first['balance']);
                   final obBt = openingBalanceAccount.first['balance_type'] as String? ?? 'credit';
                   final newObBal = obBt == 'credit' ? obBal + totalValue : obBal - totalValue;
                   await txn.update('accounts', {'balance': newObBal, 'updated_at': now}, where: 'id = ?', whereArgs: [openingBalanceAccountId]);

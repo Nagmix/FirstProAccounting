@@ -1,3 +1,5 @@
+import '../../core/utils/money_helper.dart';
+
 class Transaction {
   final int? id;
   final int accountId;
@@ -24,8 +26,8 @@ class Transaction {
       'id': id,
       'account_id': accountId,
       'journal_id': journalId,
-      'debit': debit,
-      'credit': credit,
+      'debit': MoneyHelper.toCents(debit),
+      'credit': MoneyHelper.toCents(credit),
       'description': description,
       'date': date.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
@@ -37,8 +39,8 @@ class Transaction {
       id: map['id'],
       accountId: map['account_id'],
       journalId: map['journal_id'],
-      debit: (map['debit'] ?? 0.0).toDouble(),
-      credit: (map['credit'] ?? 0.0).toDouble(),
+      debit: MoneyHelper.readMoney(map['debit']),
+      credit: MoneyHelper.readMoney(map['credit']),
       description: map['description'],
       date: DateTime.parse(map['date']),
       createdAt: DateTime.parse(map['created_at']),

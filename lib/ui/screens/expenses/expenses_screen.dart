@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'expense_account_detail_screen.dart';
 
@@ -30,7 +31,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
     double totalBalance = 0.0;
     for (final account in accounts) {
-      final balance = (account['balance'] as num?)?.toDouble() ?? 0.0;
+      final balance = MoneyHelper.readMoney(account['balance']);
       final balanceType = account['balance_type'] as String? ?? 'credit';
       final accountType = account['account_type'] as String? ?? '';
       // Use effective balance type: EXPENSE/COST/ASSET are debit-nature
@@ -232,8 +233,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   Widget _buildExpenseAccountCard(Map<String, dynamic> account, ThemeData theme, bool isDark) {
     final name = account['name_ar'] as String? ?? '';
     final currency = account['currency'] as String? ?? 'YER';
-    final debtCeiling = (account['debt_ceiling'] as num?)?.toDouble() ?? 0.0;
-    final balance = (account['balance'] as num?)?.toDouble() ?? 0.0;
+    final debtCeiling = MoneyHelper.readMoney(account['debt_ceiling']);
+    final balance = MoneyHelper.readMoney(account['balance']);
     final balanceType = account['balance_type'] as String? ?? 'credit';
     final accountCode = account['account_code'] as String? ?? '';
     final isSystem = (account['is_system'] as int?) == 1;

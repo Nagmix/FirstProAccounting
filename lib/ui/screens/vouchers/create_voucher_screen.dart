@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart' show Transaction;
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/datasources/database_helper.dart';
 
@@ -237,7 +238,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
     final now = DateTime.now().toIso8601String();
     final journalId = DateTime.now().millisecondsSinceEpoch;
     final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
-    final totalAmount = (voucherMap['total_amount'] as num?)?.toDouble() ?? 0.0;
+    final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
     final dateStr = voucherMap['date'] as String? ?? now;
 
     await db.transaction((txn) async {
@@ -253,8 +254,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
 
         // إنشاء قيد يومي لكل بند
         final accountId = (item['account_id'] as num?)?.toInt();
-        final debit = (item['debit'] as num?)?.toDouble() ?? 0.0;
-        final credit = (item['credit'] as num?)?.toDouble() ?? 0.0;
+        final debit = MoneyHelper.readMoney(item['debit']);
+        final credit = MoneyHelper.readMoney(item['credit']);
         if (accountId != null && (debit > 0 || credit > 0)) {
           await txn.insert('transactions', {
             'account_id': accountId,
@@ -319,7 +320,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
             ? 'debit'
             : 'credit';
 
-    double currentBalance = (account['balance'] as num?)?.toDouble() ?? 0.0;
+    double currentBalance = MoneyHelper.readMoney(account['balance']);
     if (effectiveType == 'debit') {
       currentBalance = currentBalance + debit - credit;
     } else {

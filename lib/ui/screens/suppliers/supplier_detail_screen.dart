@@ -6,6 +6,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/supplier_model.dart';
@@ -266,10 +267,10 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   double _getMovementAmount(Map<String, dynamic> movement) {
     final source = movement['_source'] as String? ?? '';
     if (source == 'invoice') {
-      return (movement['total'] as num?)?.toDouble() ?? 0.0;
+      return MoneyHelper.readMoney(movement['total']);
     }
     if (source == 'voucher') {
-      return (movement['total_amount'] as num?)?.toDouble() ?? 0.0;
+      return MoneyHelper.readMoney(movement['total_amount']);
     }
     return 0.0;
   }
@@ -701,7 +702,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
         if (source == 'invoice') {
           final type = m['type'] as String? ?? '';
           final isReturn = (m['is_return'] as num?)?.toInt() == 1;
-          final total = (m['total'] as num?)?.toDouble() ?? 0.0;
+          final total = MoneyHelper.readMoney(m['total']);
           dateStr = m['created_at'] as String? ?? '';
           description = _getInvoiceTypeAr(type, isReturn);
           typeAr = description;
@@ -718,7 +719,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
           }
         } else if (source == 'voucher') {
           final vType = m['voucher_type'] as String? ?? '';
-          final totalAmount = (m['total_amount'] as num?)?.toDouble() ?? 0.0;
+          final totalAmount = MoneyHelper.readMoney(m['total_amount']);
           dateStr = m['date'] as String? ?? m['created_at'] as String? ?? '';
           description = m['description'] as String? ?? _getVoucherTypeAr(vType);
           typeAr = _getVoucherTypeAr(vType);
@@ -829,7 +830,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
         if (source == 'invoice') {
           final type = m['type'] as String? ?? '';
           final isReturn = (m['is_return'] as num?)?.toInt() == 1;
-          final total = (m['total'] as num?)?.toDouble() ?? 0.0;
+          final total = MoneyHelper.readMoney(m['total']);
           dateStr = m['created_at'] as String? ?? '';
           description = _getInvoiceTypeAr(type, isReturn);
           typeAr = description;
@@ -846,7 +847,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
           }
         } else if (source == 'voucher') {
           final vType = m['voucher_type'] as String? ?? '';
-          final totalAmount = (m['total_amount'] as num?)?.toDouble() ?? 0.0;
+          final totalAmount = MoneyHelper.readMoney(m['total_amount']);
           dateStr = m['date'] as String? ?? m['created_at'] as String? ?? '';
           description = m['description'] as String? ?? _getVoucherTypeAr(vType);
           typeAr = _getVoucherTypeAr(vType);
@@ -1476,9 +1477,9 @@ class _MovementCard extends StatelessWidget {
   double _getAmount() {
     final source = movement['_source'] as String? ?? '';
     if (source == 'invoice') {
-      return (movement['total'] as num?)?.toDouble() ?? 0.0;
+      return MoneyHelper.readMoney(movement['total']);
     }
-    return (movement['total_amount'] as num?)?.toDouble() ?? 0.0;
+    return MoneyHelper.readMoney(movement['total_amount']);
   }
 
   Widget _buildInvoiceCard(ThemeData theme, String direction) {

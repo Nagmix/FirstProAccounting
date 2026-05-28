@@ -1,3 +1,5 @@
+import '../../core/utils/money_helper.dart';
+
 class InvoiceItem {
   final int? id;
   final String invoiceId;
@@ -32,8 +34,8 @@ class InvoiceItem {
       'product_id': productId,
       'product_name': productName,
       'quantity': quantity,
-      'unit_price': unitPrice,
-      'total_price': totalPrice,
+      'unit_price': MoneyHelper.toCents(unitPrice),
+      'total_price': MoneyHelper.toCents(totalPrice),
       'unit_name': unitName,
       'conversion_factor': conversionFactor,
       'base_quantity': baseQuantity,
@@ -48,8 +50,8 @@ class InvoiceItem {
       productId: map['product_id'],
       productName: map['product_name'],
       quantity: (map['quantity'] ?? 1.0).toDouble(),
-      unitPrice: (map['unit_price'] ?? 0.0).toDouble(),
-      totalPrice: (map['total_price'] ?? 0.0).toDouble(),
+      unitPrice: MoneyHelper.readMoney(map['unit_price']),
+      totalPrice: MoneyHelper.readMoney(map['total_price']),
       unitName: map['unit_name'],
       conversionFactor: (map['conversion_factor'] ?? 1.0).toDouble(),
       baseQuantity: (map['base_quantity'] ?? map['quantity'] ?? 1.0).toDouble(),

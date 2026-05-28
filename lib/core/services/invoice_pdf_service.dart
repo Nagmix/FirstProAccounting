@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 
 import '../../data/datasources/database_helper.dart';
+import '../utils/money_helper.dart';
 
 /// Professional sales invoice PDF generator for the FirstPro accounting app.
 ///
@@ -427,9 +428,8 @@ class InvoicePdfService {
       final expiryDate = item['expiry_date'] as String? ?? '—';
       final unit = item['unit'] as String? ?? item['unit_name'] as String? ?? '—';
       final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
-      final unitPrice = (item['unit_price'] as num?)?.toDouble() ?? 0.0;
-      final totalPrice = (item['total_price'] as num?)?.toDouble() ??
-          (quantity * unitPrice);
+      final unitPrice = MoneyHelper.readMoney(item['unit_price']);
+      final totalPrice = MoneyHelper.readMoney(item['total_price'], fallback: quantity * unitPrice);
 
       grandTotal += totalPrice;
 
@@ -510,15 +510,15 @@ class InvoicePdfService {
     String currencySymbol,
   ) {
     final subtotal =
-        (invoice['subtotal'] as num?)?.toDouble() ?? 0.0;
+        MoneyHelper.readMoney(invoice['subtotal']);
     final discountAmount =
-        (invoice['discount_amount'] as num?)?.toDouble() ?? 0.0;
+        MoneyHelper.readMoney(invoice['discount_amount']);
     final taxAmount =
-        (invoice['tax_amount'] as num?)?.toDouble() ?? 0.0;
+        MoneyHelper.readMoney(invoice['tax_amount']);
     final transportCharges =
-        (invoice['transport_charges'] as num?)?.toDouble() ?? 0.0;
+        MoneyHelper.readMoney(invoice['transport_charges']);
     final total =
-        (invoice['total'] as num?)?.toDouble() ?? 0.0;
+        MoneyHelper.readMoney(invoice['total']);
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(8),
@@ -612,7 +612,7 @@ class InvoicePdfService {
     String currency,
     String currencySymbol,
   ) {
-    final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+    final total = MoneyHelper.readMoney(invoice['total']);
 
     final currencyNameAr = currency == 'SAR'
         ? 'ريال سعودي'

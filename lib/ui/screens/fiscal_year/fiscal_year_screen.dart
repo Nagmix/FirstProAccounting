@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 class FiscalYearScreen extends StatefulWidget {
@@ -246,7 +247,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                         final fy = _fiscalYears[index];
                         final isOpen = (fy['status'] as String?) == 'open';
                         final year = fy['year'] as int? ?? 0;
-                        final netProfit = (fy['net_profit'] as num?)?.toDouble() ?? 0.0;
+                        final netProfit = MoneyHelper.readMoney(fy['net_profit']);
                         final startDate = fy['start_date'] as String? ?? '$year-01-01';
                         final endDate = fy['end_date'] as String? ?? '$year-12-31';
                         final closedAt = fy['closed_at'] as String?;

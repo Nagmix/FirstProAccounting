@@ -13,6 +13,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
@@ -141,7 +142,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'id': c['id'],
         'name': c['name'],
         'type': 'customer',
-        'balance': (c['balance'] as num?)?.toDouble() ?? 0.0,
+        'balance': MoneyHelper.readMoney(c['balance']),
         'balance_type': c['balance_type'] ?? 'credit',
       });
     }
@@ -150,7 +151,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'id': s['id'],
         'name': s['name'],
         'type': 'supplier',
-        'balance': (s['balance'] as num?)?.toDouble() ?? 0.0,
+        'balance': MoneyHelper.readMoney(s['balance']),
         'balance_type': s['balance_type'] ?? 'credit',
       });
     }
@@ -969,7 +970,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       final inv = nonReturnInvoices[index];
                       final invId = inv['id'] as String? ?? '';
                       final entityName = inv['entity_name'] as String? ?? '—';
-                      final total = (inv['total'] as num?)?.toDouble() ?? 0.0;
+                      final total = MoneyHelper.readMoney(inv['total']);
                       final createdAt = DateTime.tryParse(inv['created_at'] as String? ?? '');
                       final dateStr = createdAt != null ? DateFormatter.formatDateTime(createdAt) : '';
                       final displayId = invId.length > 12 ? '...${invId.substring(invId.length - 8)}' : invId;
@@ -1336,7 +1337,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           label: 'الصندوق *',
           icon: Icons.account_balance_wallet_rounded,
           items: _cashBoxes.map((cb) {
-            final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+            final balance = MoneyHelper.readMoney(cb['balance']);
             final bt = cb['balance_type'] as String? ?? 'credit';
             return DropdownMenuItem<int>(
               value: cb['id'] as int,
@@ -1649,7 +1650,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         final entity = _filteredEntities[index];
                         final isSelected = _selectedEntityId == entity['id'] && _selectedEntityType == entity['type'];
                         final isCustomer = entity['type'] == 'customer';
-                        final balance = (entity['balance'] as num?)?.toDouble() ?? 0.0;
+                        final balance = MoneyHelper.readMoney(entity['balance']);
                         final bt = entity['balance_type'] as String? ?? 'credit';
 
                         return InkWell(

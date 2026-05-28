@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
@@ -65,17 +66,17 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   }
 
   double get _totalPurchases => _invoices.fold(0.0, (sum, i) {
-    final total = (i['total'] as num?)?.toDouble() ?? 0.0;
+    final total = MoneyHelper.readMoney(i['total']);
     final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
     return sum + (isReturn ? -total : total);
   });
   double get _totalPaid => _invoices.fold(0.0, (sum, i) {
-    final paid = (i['paid_amount'] as num?)?.toDouble() ?? 0.0;
+    final paid = MoneyHelper.readMoney(i['paid_amount']);
     final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
     return sum + (isReturn ? -paid : paid);
   });
   double get _totalRemaining => _invoices.fold(0.0, (sum, i) {
-    final remaining = (i['remaining'] as num?)?.toDouble() ?? 0.0;
+    final remaining = MoneyHelper.readMoney(i['remaining']);
     final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
     return sum + (isReturn ? -remaining : remaining);
   });
@@ -464,9 +465,9 @@ class _PurchaseInvoiceCard extends StatelessWidget {
     final type = invoiceData['type'] as String? ?? '';
     final isReturn = (invoiceData['is_return'] as int?) == 1;
     final status = invoiceData['status'] as String? ?? 'pending';
-    final remaining = (invoiceData['remaining'] as num?)?.toDouble() ?? 0.0;
-    final total = (invoiceData['total'] as num?)?.toDouble() ?? 0.0;
-    final paidAmount = (invoiceData['paid_amount'] as num?)?.toDouble() ?? 0.0;
+    final remaining = MoneyHelper.readMoney(invoiceData['remaining']);
+    final total = MoneyHelper.readMoney(invoiceData['total']);
+    final paidAmount = MoneyHelper.readMoney(invoiceData['paid_amount']);
     final paymentMechanism = invoiceData['payment_mechanism'] as String? ?? 'cash';
     final currency = invoiceData['currency'] as String? ?? 'YER';
 

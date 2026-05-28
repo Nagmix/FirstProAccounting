@@ -4,6 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../../data/models/invoice_item_model.dart';
 import '../../../data/models/product_model.dart';
@@ -96,9 +97,9 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
         }
         // Use cost_price for purchase invoices, sell_price for sale invoices
         if (widget.invoiceType == 'purchase') {
-          _priceController.text = ((_selectedUnit?['cost_price'] as num?)?.toDouble() ?? 0).toStringAsFixed(2);
+          _priceController.text = (MoneyHelper.readMoney(_selectedUnit?['cost_price'])).toStringAsFixed(2);
         } else {
-          _priceController.text = ((_selectedUnit?['sell_price'] as num?)?.toDouble() ?? 0).toStringAsFixed(2);
+          _priceController.text = (MoneyHelper.readMoney(_selectedUnit?['sell_price'])).toStringAsFixed(2);
         }
       }
     });
@@ -587,8 +588,8 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
               final isSelected = _selectedUnit?['unit_name'] == unit['unit_name'];
               // Show cost_price for purchase invoices, sell_price for sale invoices
               final price = widget.invoiceType == 'purchase'
-                  ? (unit['cost_price'] as num?)?.toDouble() ?? 0.0
-                  : (unit['sell_price'] as num?)?.toDouble() ?? 0.0;
+                  ? MoneyHelper.readMoney(unit['cost_price'])
+                  : MoneyHelper.readMoney(unit['sell_price']);
               return GestureDetector(
                 onTap: () {
                   setState(() {

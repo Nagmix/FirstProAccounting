@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 class CreateInventoryVoucherScreen extends StatefulWidget {
@@ -71,7 +72,7 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
       _items[index].productId = productId;
       _items[index].productName = product['name_ar'] as String? ?? '';
       _items[index].systemQuantity = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
-      _items[index].unitCost = (product['cost_price'] as num?)?.toDouble() ?? 0.0;
+      _items[index].unitCost = MoneyHelper.readMoney(product['cost_price']);
     });
   }
 

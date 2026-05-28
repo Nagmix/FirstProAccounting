@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import '../../../core/utils/esc_pos_commands.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../utils/money_helper.dart';
 
 /// Bluetooth printer device info.
 class BluetoothPrinterDevice {
@@ -199,12 +200,12 @@ class BluetoothPrinterService {
       date: receiptData['date'] as DateTime? ?? DateTime.now(),
       customerName: receiptData['customer_name']?.toString() ?? 'بدون عميل',
       items: (receiptData['items'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-      subtotal: (receiptData['subtotal'] as num?)?.toDouble() ?? 0,
-      discount: (receiptData['discount'] as num?)?.toDouble() ?? 0,
-      tax: (receiptData['tax'] as num?)?.toDouble() ?? 0,
-      total: (receiptData['total'] as num?)?.toDouble() ?? 0,
-      paid: (receiptData['paid'] as num?)?.toDouble() ?? 0,
-      remaining: (receiptData['remaining'] as num?)?.toDouble() ?? 0,
+      subtotal: MoneyHelper.readMoney(receiptData['subtotal']),
+      discount: MoneyHelper.readMoney(receiptData['discount']),
+      tax: MoneyHelper.readMoney(receiptData['tax']),
+      total: MoneyHelper.readMoney(receiptData['total']),
+      paid: MoneyHelper.readMoney(receiptData['paid']),
+      remaining: MoneyHelper.readMoney(receiptData['remaining']),
       currency: receiptData['currency']?.toString() ?? 'ر.ي',
       notes: receiptData['notes']?.toString(),
       charsPerLine: _charsPerLine,
@@ -248,12 +249,12 @@ class BluetoothPrinterService {
       'date': createdAt,
       'customer_name': invoice['entity_name'] ?? 'بدون عميل',
       'items': invoiceItems,
-      'subtotal': (invoice['subtotal'] as num?)?.toDouble() ?? 0,
-      'discount': (invoice['discount_amount'] as num?)?.toDouble() ?? 0,
-      'tax': (invoice['tax_amount'] as num?)?.toDouble() ?? 0,
-      'total': (invoice['total'] as num?)?.toDouble() ?? 0,
-      'paid': (invoice['paid_amount'] as num?)?.toDouble() ?? 0,
-      'remaining': (invoice['remaining'] as num?)?.toDouble() ?? 0,
+      'subtotal': MoneyHelper.readMoney(invoice['subtotal']),
+      'discount': MoneyHelper.readMoney(invoice['discount_amount']),
+      'tax': MoneyHelper.readMoney(invoice['tax_amount']),
+      'total': MoneyHelper.readMoney(invoice['total']),
+      'paid': MoneyHelper.readMoney(invoice['paid_amount']),
+      'remaining': MoneyHelper.readMoney(invoice['remaining']),
       'currency': invoice['currency'] ?? 'YER',
       'notes': invoice['notes'],
     });
@@ -289,7 +290,7 @@ class BluetoothPrinterService {
     cmds.addAll(EscPosCommands.setAlignment(0));
 
     final name = customerData['name']?.toString() ?? '';
-    final balance = (customerData['balance'] as num?)?.toDouble() ?? 0;
+    final balance = MoneyHelper.readMoney(customerData['balance']);
     final bt = customerData['balance_type'] as String? ?? 'credit';
     final currency = customerData['currency'] as String? ?? 'YER';
 

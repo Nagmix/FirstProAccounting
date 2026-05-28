@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 /// شاشة العمليات اليومية - تعرض جميع الحركات المالية ليوم محدد في مكان واحد
@@ -497,7 +498,7 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
     final type = operation['type'] as String? ?? '';
     final typeLabel = operation['type_label'] as String? ?? _getTypeLabel(type);
     final entityName = operation['entity_name'] as String? ?? '';
-    final amount = (operation['amount'] as num?)?.toDouble() ?? 0.0;
+    final amount = MoneyHelper.readMoney(operation['amount']);
     final time = _formatTime(operation['time'] as String?);
     final refId = operation['id']?.toString() ?? '';
     final color = _getTypeColor(type);

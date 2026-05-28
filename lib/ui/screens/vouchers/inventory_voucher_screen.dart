@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'create_inventory_voucher_screen.dart';
 
@@ -126,7 +127,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
               _buildDetailRow(theme, 'التاريخ', details['date'] as String? ?? ''),
               _buildDetailRow(theme, 'المخزن', details['warehouse_name'] as String? ?? 'غير محدد'),
               _buildDetailRow(theme, 'الوصف', details['description'] as String? ?? ''),
-              _buildDetailRow(theme, 'القيمة الإجمالية', CurrencyFormatter.format((details['total_value'] as num?)?.toDouble() ?? 0.0, symbol: currencySymbol)),
+              _buildDetailRow(theme, 'القيمة الإجمالية', CurrencyFormatter.format(MoneyHelper.readMoney(details['total_value']), symbol: currencySymbol)),
               const Divider(height: 24),
               Text('البنود', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
@@ -169,7 +170,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                                 const SizedBox(width: 16),
                                 Text('القيمة: ', style: theme.textTheme.bodySmall),
                                 Text(
-                                  CurrencyFormatter.format((item['total_value'] as num?)?.toDouble() ?? 0.0, symbol: currencySymbol),
+                                  CurrencyFormatter.format(MoneyHelper.readMoney(item['total_value']), symbol: currencySymbol),
                                   style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                                 ),
                               ],
@@ -361,7 +362,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
   Widget _buildVoucherCard(Map<String, dynamic> voucher, ThemeData theme, bool isDark) {
     final number = voucher['voucher_number'] as String? ?? '';
     final date = voucher['date'] as String? ?? '';
-    final totalValue = (voucher['total_value'] as num?)?.toDouble() ?? 0.0;
+    final totalValue = MoneyHelper.readMoney(voucher['total_value']);
     final currency = voucher['currency'] as String? ?? 'YER';
     final warehouseName = voucher['warehouse_name'] as String? ?? '';
     final status = voucher['status'] as String? ?? 'approved';

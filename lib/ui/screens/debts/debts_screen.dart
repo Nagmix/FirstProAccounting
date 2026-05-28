@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -84,7 +85,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   /// means the customer owes the business money (receivable / ديون العملاء)
   List<Map<String, dynamic>> get _debtCustomers {
     return _allCustomers.where((c) {
-      final balance = (c['balance'] as num?)?.toDouble() ?? 0.0;
+      final balance = MoneyHelper.readMoney(c['balance']);
       final balanceType = c['balance_type'] as String? ?? 'credit';
       final matchesCurrency = _selectedCurrency == 'الكل' ||
           (c['currency'] as String? ?? 'YER') == _selectedCurrency;
@@ -100,7 +101,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   /// In double-entry: supplier is a LIABILITY account, credit balance = business owes supplier
   List<Map<String, dynamic>> get _debtSuppliers {
     return _allSuppliers.where((s) {
-      final balance = (s['balance'] as num?)?.toDouble() ?? 0.0;
+      final balance = MoneyHelper.readMoney(s['balance']);
       final balanceType = s['balance_type'] as String? ?? 'credit';
       final matchesCurrency = _selectedCurrency == 'الكل' ||
           (s['currency'] as String? ?? 'YER') == _selectedCurrency;
@@ -115,7 +116,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   /// Expense accounts that represent business debts (LIABILITY accounts with balance > 0)
   List<Map<String, dynamic>> get _debtExpenseAccounts {
     return _liabilityAccounts.where((a) {
-      final balance = (a['balance'] as num?)?.toDouble() ?? 0.0;
+      final balance = MoneyHelper.readMoney(a['balance']);
       final balanceType = a['balance_type'] as String? ?? 'credit';
       final matchesCurrency = _selectedCurrency == 'الكل' ||
           (a['currency'] as String? ?? 'YER') == _selectedCurrency;
@@ -129,7 +130,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     final totals = <String, double>{};
     for (final c in _debtCustomers) {
       final currency = c['currency'] as String? ?? 'YER';
-      final balance = (c['balance'] as num?)?.toDouble() ?? 0.0;
+      final balance = MoneyHelper.readMoney(c['balance']);
       totals[currency] = (totals[currency] ?? 0.0) + balance;
     }
     return totals;
@@ -140,12 +141,12 @@ class _DebtsScreenState extends State<DebtsScreen>
     final totals = <String, double>{};
     for (final s in _debtSuppliers) {
       final currency = s['currency'] as String? ?? 'YER';
-      final balance = (s['balance'] as num?)?.toDouble() ?? 0.0;
+      final balance = MoneyHelper.readMoney(s['balance']);
       totals[currency] = (totals[currency] ?? 0.0) + balance;
     }
     for (final a in _debtExpenseAccounts) {
       final currency = a['currency'] as String? ?? 'YER';
-      final balance = (a['balance'] as num?)?.toDouble() ?? 0.0;
+      final balance = MoneyHelper.readMoney(a['balance']);
       totals[currency] = (totals[currency] ?? 0.0) + balance;
     }
     return totals;
@@ -368,9 +369,9 @@ class _DebtsScreenState extends State<DebtsScreen>
   Widget _buildCustomerDebtCard(ThemeData theme, Map<String, dynamic> customer) {
     final name = customer['name'] as String? ?? 'بدون اسم';
     final phone = customer['phone'] as String? ?? '';
-    final balance = (customer['balance'] as num?)?.toDouble() ?? 0.0;
+    final balance = MoneyHelper.readMoney(customer['balance']);
     final currency = customer['currency'] as String? ?? 'YER';
-    final creditLimit = (customer['debt_ceiling'] as num?)?.toDouble() ?? (customer['credit_limit'] as num?)?.toDouble() ?? 0.0;
+    final creditLimit = MoneyHelper.readMoney(customer['debt_ceiling'], fallback: MoneyHelper.readMoney(customer['credit_limit']));
     final hasCreditLimit = creditLimit > 0;
     final isOverLimit = hasCreditLimit && balance > creditLimit;
 
@@ -690,7 +691,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   Widget _buildSupplierDebtCard(ThemeData theme, Map<String, dynamic> supplier) {
     final name = supplier['name'] as String? ?? 'بدون اسم';
     final phone = supplier['phone'] as String? ?? '';
-    final balance = (supplier['balance'] as num?)?.toDouble() ?? 0.0;
+    final balance = MoneyHelper.readMoney(supplier['balance']);
     final currency = supplier['currency'] as String? ?? 'YER';
 
     return Card(
@@ -812,7 +813,7 @@ class _DebtsScreenState extends State<DebtsScreen>
 
   Widget _buildDebtAccountCard(ThemeData theme, Map<String, dynamic> account) {
     final name = account['name_ar'] as String? ?? 'حساب بدون اسم';
-    final balance = (account['balance'] as num?)?.toDouble() ?? 0.0;
+    final balance = MoneyHelper.readMoney(account['balance']);
     final currency = account['currency'] as String? ?? 'YER';
     final accountCode = account['account_code'] as String? ?? '';
 
@@ -1221,7 +1222,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       BuildContext context, Map<String, dynamic> customer) {
     final customerId = customer['id'] as int;
     final name = customer['name'] as String? ?? 'بدون اسم';
-    final balance = (customer['balance'] as num?)?.toDouble() ?? 0.0;
+    final balance = MoneyHelper.readMoney(customer['balance']);
     final currency = customer['currency'] as String? ?? 'YER';
 
     showModalBottomSheet(
@@ -1244,7 +1245,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       BuildContext context, Map<String, dynamic> supplier) {
     final supplierId = supplier['id'] as int;
     final name = supplier['name'] as String? ?? 'بدون اسم';
-    final balance = (supplier['balance'] as num?)?.toDouble() ?? 0.0;
+    final balance = MoneyHelper.readMoney(supplier['balance']);
     final currency = supplier['currency'] as String? ?? 'YER';
 
     showModalBottomSheet(
@@ -1438,9 +1439,9 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
   }
 
   Widget _buildInvoiceTile(ThemeData theme, Map<String, dynamic> invoice) {
-    final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
-    final remaining = (invoice['remaining'] as num?)?.toDouble() ?? 0.0;
-    final paidAmount = (invoice['paid_amount'] as num?)?.toDouble() ?? 0.0;
+    final total = MoneyHelper.readMoney(invoice['total']);
+    final remaining = MoneyHelper.readMoney(invoice['remaining']);
+    final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
     final createdAt = invoice['created_at'] as String? ?? '';
     final isPaid = remaining <= 0;
     final invoiceCurrency =
@@ -1747,9 +1748,9 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
   }
 
   Widget _buildInvoiceTile(ThemeData theme, Map<String, dynamic> invoice) {
-    final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
-    final remaining = (invoice['remaining'] as num?)?.toDouble() ?? 0.0;
-    final paidAmount = (invoice['paid_amount'] as num?)?.toDouble() ?? 0.0;
+    final total = MoneyHelper.readMoney(invoice['total']);
+    final remaining = MoneyHelper.readMoney(invoice['remaining']);
+    final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
     final createdAt = invoice['created_at'] as String? ?? '';
     final isPaid = remaining <= 0;
     final invoiceCurrency =

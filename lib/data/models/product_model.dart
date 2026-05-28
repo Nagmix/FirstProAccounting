@@ -1,3 +1,5 @@
+import '../../core/utils/money_helper.dart';
+
 class Product {
   final int? id;
   final String? itemCode;
@@ -114,12 +116,12 @@ class Product {
       'supplier_id': supplierId,
       'group_id': groupId,
       'description': description,
-      'cost_price': costPrice,
-      'average_cost': averageCost,
-      'sell_price': sellPrice,
-      'wholesale_price': wholesalePrice,
-      'special_wholesale_price': specialWholesalePrice,
-      'minimum_sale_price': minimumSalePrice,
+      'cost_price': MoneyHelper.toCents(costPrice),
+      'average_cost': MoneyHelper.toCents(averageCost),
+      'sell_price': MoneyHelper.toCents(sellPrice),
+      'wholesale_price': MoneyHelper.toCents(wholesalePrice),
+      'special_wholesale_price': MoneyHelper.toCents(specialWholesalePrice),
+      'minimum_sale_price': MoneyHelper.toCents(minimumSalePrice),
       'tax_rate': taxRate,
       'tax_inclusive': taxInclusive ? 1 : 0,
       'sales_account_id': salesAccountId,
@@ -165,12 +167,12 @@ class Product {
       supplierId: map['supplier_id'],
       groupId: map['group_id'],
       description: map['description'],
-      costPrice: (map['cost_price'] ?? 0.0).toDouble(),
-      averageCost: (map['average_cost'] ?? map['cost_price'] ?? 0.0).toDouble(),
-      sellPrice: (map['sell_price'] ?? 0.0).toDouble(),
-      wholesalePrice: (map['wholesale_price'] ?? 0.0).toDouble(),
-      specialWholesalePrice: (map['special_wholesale_price'] ?? 0.0).toDouble(),
-      minimumSalePrice: (map['minimum_sale_price'] ?? 0.0).toDouble(),
+      costPrice: MoneyHelper.readMoney(map['cost_price']),
+      averageCost: MoneyHelper.readMoney(map['average_cost'] ?? map['cost_price']),
+      sellPrice: MoneyHelper.readMoney(map['sell_price']),
+      wholesalePrice: MoneyHelper.readMoney(map['wholesale_price']),
+      specialWholesalePrice: MoneyHelper.readMoney(map['special_wholesale_price']),
+      minimumSalePrice: MoneyHelper.readMoney(map['minimum_sale_price']),
       taxRate: (map['tax_rate'] ?? 0.0).toDouble(),
       taxInclusive: (map['tax_inclusive'] ?? 0) == 1,
       salesAccountId: map['sales_account_id'],

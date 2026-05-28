@@ -1,3 +1,5 @@
+import '../../core/utils/money_helper.dart';
+
 class Customer {
   final int? id;
   final String name;
@@ -42,10 +44,10 @@ class Customer {
       'email': email,
       'contact_method': contactMethod,
       'notes': notes,
-      'balance': balance,
+      'balance': MoneyHelper.toCents(balance),
       'balance_type': balanceType,
       'currency': currency,
-      'debt_ceiling': debtCeiling,
+      'debt_ceiling': MoneyHelper.toCents(debtCeiling),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -61,10 +63,10 @@ class Customer {
       email: map['email'],
       contactMethod: map['contact_method'] ?? map['notification_method'],
       notes: map['notes'],
-      balance: (map['balance'] ?? 0.0).toDouble(),
+      balance: MoneyHelper.readMoney(map['balance']),
       balanceType: map['balance_type'] ?? 'credit',
       currency: map['currency'] ?? 'YER',
-      debtCeiling: (map['debt_ceiling'] ?? map['credit_limit'] ?? 0.0).toDouble(),
+      debtCeiling: MoneyHelper.readMoney(map['debt_ceiling'] ?? map['credit_limit']),
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
     );

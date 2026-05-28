@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
 
@@ -143,7 +144,7 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
       items.add({
         'product_id': id,
         'product_name': product['name_ar'] as String? ?? '',
-        'cost_price': (product['cost_price'] as num?)?.toDouble() ?? 0.0,
+        'cost_price': MoneyHelper.readMoney(product['cost_price']),
         'system_quantity': systemQty,
         'actual_quantity': actualQty,
         'difference': variance,

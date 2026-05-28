@@ -3,6 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import '../../widgets/animated_entry.dart';
 import '../../widgets/stat_card.dart';
@@ -78,11 +79,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
 
       if (mounted) {
         setState(() {
-          _monthSales = (results[0] as num?)?.toDouble() ?? 0.0;
-          _monthPurchases = (results[1] as num?)?.toDouble() ?? 0.0;
-          _monthExpenses = (results[2] as num?)?.toDouble() ?? 0.0;
-          _monthCOGS = (results[1] as num?)?.toDouble() ?? 0.0; // TODO: replace with actual COGS query
-          _cashBalance = (results[4] as num?)?.toDouble() ?? 0.0;
+          _monthSales = MoneyHelper.readMoney(results[0]);
+          _monthPurchases = MoneyHelper.readMoney(results[1]);
+          _monthExpenses = MoneyHelper.readMoney(results[2]);
+          _monthCOGS = MoneyHelper.readMoney(results[1]); // TODO: replace with actual COGS query
+          _cashBalance = MoneyHelper.readMoney(results[4]);
           _recentActivity = results[5] as List<Map<String, dynamic>>;
           _topCustomers = topCustomersResult;
           _currencyBreakdown = currencyBreakdownResult;
@@ -654,7 +655,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     }
 
     final maxSale = _topCustomers.isNotEmpty
-        ? (_topCustomers.first['total_sales'] as num?)?.toDouble() ?? 1.0
+        ? MoneyHelper.readMoney(_topCustomers.first['total_sales'], fallback: 1.0)
         : 1.0;
 
     return Padding(
@@ -671,7 +672,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
             final index = entry.key;
             final customer = entry.value;
             final name = customer['name'] as String? ?? '—';
-            final sales = (customer['total_sales'] as num?)?.toDouble() ?? 0.0;
+            final sales = MoneyHelper.readMoney(customer['total_sales']);
             final progress = maxSale > 0 ? sales / maxSale : 0.0;
             final rankColor = index == 0
                 ? AppColors.warning
@@ -778,7 +779,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
         child: Column(
           children: _currencyBreakdown.map((item) {
             final code = item['currency'] as String? ?? 'YER';
-            final total = (item['total'] as num?)?.toDouble() ?? 0.0;
+            final total = MoneyHelper.readMoney(item['total']);
             final symbol = currencySymbols[code] ?? code;
 
             return Padding(
@@ -887,7 +888,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
           children: _recentActivity.map((invoice) {
             final type = invoice['type'] as String? ?? 'sale';
             final entityName = invoice['entity_name'] as String? ?? '—';
-            final total = (invoice['total'] as num?)?.toDouble() ?? 0.0;
+            final total = MoneyHelper.readMoney(invoice['total']);
             final createdAt = DateTime.tryParse(
                     invoice['created_at'] as String? ?? '') ??
                 DateTime.now();

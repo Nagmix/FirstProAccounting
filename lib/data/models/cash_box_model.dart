@@ -1,3 +1,5 @@
+import '../../core/utils/money_helper.dart';
+
 class CashBox {
   final int? id;
   final String name;
@@ -44,7 +46,7 @@ class CashBox {
       'bank_name': bankName,
       'bank_branch': bankBranch,
       'currency': currency,
-      'balance': balance,
+      'balance': MoneyHelper.toCents(balance),
       'balance_type': balanceType,
       'linked_account_id': linkedAccountId,
       'is_active': isActive ? 1 : 0,
@@ -62,7 +64,7 @@ class CashBox {
       bankName: map['bank_name'],
       bankBranch: map['bank_branch'],
       currency: map['currency'] ?? 'YER',
-      balance: (map['balance'] ?? 0.0).toDouble(),
+      balance: MoneyHelper.readMoney(map['balance']),
       balanceType: map['balance_type'] ?? 'credit',
       linkedAccountId: map['linked_account_id'],
       isActive: (map['is_active'] ?? 1) == 1,

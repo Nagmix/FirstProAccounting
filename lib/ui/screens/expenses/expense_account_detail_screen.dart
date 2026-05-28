@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 import 'add_expense_screen.dart';
 
@@ -50,8 +51,8 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
     double totalDebit = 0.0;
     double totalCredit = 0.0;
     for (final tx in results[0]) {
-      totalDebit += (tx['debit'] as num?)?.toDouble() ?? 0.0;
-      totalCredit += (tx['credit'] as num?)?.toDouble() ?? 0.0;
+      totalDebit += MoneyHelper.readMoney(tx['debit']);
+      totalCredit += MoneyHelper.readMoney(tx['credit']);
     }
 
     setState(() {
@@ -70,7 +71,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
     final isDark = theme.brightness == Brightness.dark;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    final debtCeiling = (widget.account['debt_ceiling'] as num?)?.toDouble() ?? 0.0;
+    final debtCeiling = MoneyHelper.readMoney(widget.account['debt_ceiling']);
     final balanceType = widget.account['balance_type'] as String? ?? 'credit';
 
     return Directionality(
@@ -129,8 +130,8 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
                             // Calculate running balance up to this point
                             double running = 0.0;
                             for (int i = 0; i <= index; i++) {
-                              final d = (_transactions[i]['debit'] as num?)?.toDouble() ?? 0.0;
-                              final c = (_transactions[i]['credit'] as num?)?.toDouble() ?? 0.0;
+                              final d = MoneyHelper.readMoney(_transactions[i]['debit']);
+                              final c = MoneyHelper.readMoney(_transactions[i]['credit']);
                               running += d - c;
                             }
                             return _buildTransactionCard(tx, running, theme, isDark);
@@ -382,8 +383,8 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
   }
 
   Widget _buildTransactionCard(Map<String, dynamic> tx, double runningBalance, ThemeData theme, bool isDark) {
-    final debit = (tx['debit'] as num?)?.toDouble() ?? 0.0;
-    final credit = (tx['credit'] as num?)?.toDouble() ?? 0.0;
+    final debit = MoneyHelper.readMoney(tx['debit']);
+    final credit = MoneyHelper.readMoney(tx['credit']);
     final description = (tx['description'] as String?) ?? 'بدون وصف';
     final dateStr = tx['date'] as String? ?? '';
     final createdAt = tx['created_at'] as String? ?? '';

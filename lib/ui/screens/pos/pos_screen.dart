@@ -9,6 +9,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -136,7 +137,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       if (product != null) {
         _addToCartDirect(product, {
           'unit_name': conversion['from_unit'] as String,
-          'sell_price': (conversion['sell_price'] as num?)?.toDouble() ?? product.sellPrice,
+          'sell_price': MoneyHelper.readMoney(conversion['sell_price'], fallback: product.sellPrice),
           'conversion_factor': (conversion['conversion_factor'] as num?)?.toDouble() ?? 1.0,
           'barcode': conversion['barcode'] as String?,
         });
@@ -208,12 +209,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           productId: item['productId'] as int,
           name: item['productName'] as String,
           quantity: (item['quantity'] as num).toInt(),
-          unitPrice: (item['unitPrice'] as num).toDouble(),
+          unitPrice: MoneyHelper.readMoney(item['unitPrice']),
           unitName: item['unitName'] as String? ?? 'قطعة',
-          conversionFactor: (item['conversionFactor'] as num?)?.toDouble() ?? 1.0,
+          conversionFactor: (item['conversionFactor'] as num?)?.toDouble() ?? 1.0, // conversion_factor is non-monetary
         )).toList();
         final payments = paymentsData.map((p) => _PaymentEntry(
-          amount: (p['amount'] as num).toDouble(),
+          amount: MoneyHelper.readMoney(p['amount']),
           method: p['method'] as String? ?? 'cash',
         )).toList();
         final discountTypeStr = row['discount_type'] as String? ?? 'fixed';
@@ -221,7 +222,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           items: cartItems,
           paymentMethod: row['payment_method'] as String? ?? 'cash',
           payments: payments,
-          discount: (row['discount'] as num?)?.toDouble() ?? 0.0,
+          discount: MoneyHelper.readMoney(row['discount']),
           discountType: DiscountType.values.firstWhere((e) => e.name == discountTypeStr, orElse: () => DiscountType.fixed),
           customerId: row['customer_id'] as int?,
           customerName: row['customer_name'] as String? ?? '',
@@ -553,8 +554,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildShiftInfoBar() {
     final shift = _activeShift!;
-    final totalSales = (shift['total_sales'] as num?)?.toDouble() ?? 0.0;
-    final openingAmount = (shift['opening_amount'] as num?)?.toDouble() ?? 0.0;
+    final totalSales = MoneyHelper.readMoney(shift['total_sales']);
+    final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -2169,7 +2170,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       // Update cash box balance
                       final cashBox = await db.getCashBoxById(cashBoxId);
                       if (cashBox != null) {
-                        final currentBalance = (cashBox['balance'] as num?)?.toDouble() ?? 0.0;
+                        final currentBalance = MoneyHelper.readMoney(cashBox['balance']);
                         final newBalance = isCashIn
                             ? currentBalance + amount
                             : currentBalance - amount;
@@ -2313,10 +2314,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     if (_activeShift == null) return;
 
     final shift = _activeShift!;
-    final openingAmount = (shift['opening_amount'] as num?)?.toDouble() ?? 0.0;
-    final totalSales = (shift['total_sales'] as num?)?.toDouble() ?? 0.0;
-    final totalReturns = (shift['total_returns'] as num?)?.toDouble() ?? 0.0;
-    final totalDiscounts = (shift['total_discounts'] as num?)?.toDouble() ?? 0.0;
+    final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
+    final totalSales = MoneyHelper.readMoney(shift['total_sales']);
+    final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
+    final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
     final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
     final expectedAmount = openingAmount + totalSales - totalReturns - totalDiscounts;
 
@@ -2421,10 +2422,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     final shift = _activeShift!;
     final shiftId = shift['id'] as int;
-    final openingAmount = (shift['opening_amount'] as num?)?.toDouble() ?? 0.0;
-    final totalSales = (shift['total_sales'] as num?)?.toDouble() ?? 0.0;
-    final totalReturns = (shift['total_returns'] as num?)?.toDouble() ?? 0.0;
-    final totalDiscounts = (shift['total_discounts'] as num?)?.toDouble() ?? 0.0;
+    final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
+    final totalSales = MoneyHelper.readMoney(shift['total_sales']);
+    final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
+    final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
     final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
     final expectedAmount = openingAmount + totalSales - totalReturns - totalDiscounts;
 
@@ -2744,7 +2745,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         final cId = c['id'] as int;
                         final cName = c['name']?.toString() ?? '';
                         final cPhone = c['phone']?.toString() ?? '';
-                        final cBalance = (c['balance'] as num?)?.toDouble() ?? 0.0;
+                        final cBalance = MoneyHelper.readMoney(c['balance']);
                         final isSelected = _selectedCustomerId == cId;
                         return ListTile(
                           leading: CircleAvatar(
@@ -2935,7 +2936,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // Multiple units available - show selection dialog
     String? selectedUnitName = availableUnits.first['unit_name'] as String?;
-    double selectedPrice = (availableUnits.first['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
+    double selectedPrice = MoneyHelper.readMoney(availableUnits.first['sell_price'], fallback: product.sellPrice);
     double selectedFactor = (availableUnits.first['conversion_factor'] as num?)?.toDouble() ?? 1.0;
     String? selectedBarcode = availableUnits.first['barcode'] as String?;
 
@@ -2951,14 +2952,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               children: [
                 ...availableUnits.map((unit) => ListTile(
                   title: Text(unit['unit_name'] as String),
-                  subtitle: Text('${CurrencyFormatter.format((unit['sell_price'] as num?)?.toDouble() ?? 0.0)}'),
+                  subtitle: Text('${CurrencyFormatter.format(MoneyHelper.readMoney(unit['sell_price']))}'),
                   trailing: (unit['unit_name'] == selectedUnitName)
                       ? Icon(Icons.check_circle, color: AppColors.success)
                       : null,
                   onTap: () {
                     setDialogState(() {
                       selectedUnitName = unit['unit_name'] as String;
-                      selectedPrice = (unit['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
+                      selectedPrice = MoneyHelper.readMoney(unit['sell_price'], fallback: product.sellPrice);
                       selectedFactor = (unit['conversion_factor'] as num?)?.toDouble() ?? 1.0;
                       selectedBarcode = unit['barcode'] as String?;
                     });
@@ -3042,7 +3043,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     if (!mounted) return;
 
     final unitName = (unitInfo?['unit_name'] as String?) ?? 'قطعة';
-    final unitPrice = (unitInfo?['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
+    final unitPrice = MoneyHelper.readMoney(unitInfo?['sell_price'], fallback: product.sellPrice);
     final unitBarcode = unitInfo?['barcode'] as String?;
     final factor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
 
@@ -4015,7 +4016,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           if (product != null) {
             _addToCartDirect(product, {
               'unit_name': conversion['from_unit'] as String,
-              'sell_price': (conversion['sell_price'] as num?)?.toDouble() ?? product.sellPrice,
+              'sell_price': MoneyHelper.readMoney(conversion['sell_price'], fallback: product.sellPrice),
               'conversion_factor': (conversion['conversion_factor'] as num?)?.toDouble() ?? 1.0,
               'barcode': conversion['barcode'] as String?,
             });

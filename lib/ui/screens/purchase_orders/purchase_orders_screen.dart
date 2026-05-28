@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 /// Helper class for purchase order line items in the creation form.
@@ -202,7 +203,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
                           _detailRow('رقم الطلب', order['order_number'] ?? ''),
                           _detailRow('المورد', order['supplier_name'] ?? 'بدون مورد'),
                           _detailRow('العملة', order['currency'] ?? 'YER'),
-                          _detailRow('الإجمالي', CurrencyFormatter.format((order['total'] as num?)?.toDouble() ?? 0)),
+                          _detailRow('الإجمالي', CurrencyFormatter.format(MoneyHelper.readMoney(order['total']))),
                           if (order['expected_date'] != null)
                             _detailRow('تاريخ الاستلام المتوقع', DateFormatter.formatDate(DateTime.tryParse(order['expected_date']) ?? DateTime.now())),
                           if (order['notes'] != null && (order['notes'] as String).isNotEmpty)
@@ -269,7 +270,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
           Expanded(
             flex: 2,
             child: Text(
-              CurrencyFormatter.format((item['total_price'] as num?)?.toDouble() ?? 0),
+              CurrencyFormatter.format(MoneyHelper.readMoney(item['total_price'])),
               textAlign: TextAlign.end,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
@@ -432,7 +433,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
   }
 
   Widget _buildSummaryCard(ThemeData theme, bool isDark) {
-    final totalValue = _filteredOrders.fold<double>(0, (sum, o) => sum + ((o['total'] as num?)?.toDouble() ?? 0));
+    final totalValue = _filteredOrders.fold<double>(0, (sum, o) => sum + (MoneyHelper.readMoney(o['total'])));
     final receivedCount = _filteredOrders.where((o) => o['status'] == 'received').length;
 
     return Container(
@@ -489,7 +490,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
   Widget _buildOrderCard(BuildContext ctx, Map<String, dynamic> o, bool isDark, ThemeData theme) {
     final status = o['status'] ?? 'draft';
     final statusColor = _statusColors[status] ?? Colors.grey;
-    final total = (o['total'] as num?)?.toDouble() ?? 0;
+    final total = MoneyHelper.readMoney(o['total']);
     final currency = o['currency'] ?? 'YER';
     final createdAt = o['created_at'] != null ? DateTime.tryParse(o['created_at']) : null;
 
@@ -806,7 +807,7 @@ class _CreatePurchaseOrderFormState extends State<_CreatePurchaseOrderForm> {
                               itemCount: filtered.length,
                               itemBuilder: (ctx, i) {
                                 final p = filtered[i];
-                                final costPrice = (p['cost_price'] as num?)?.toDouble() ?? 0;
+                                final costPrice = MoneyHelper.readMoney(p['cost_price']);
                                 return ListTile(
                                   title: Text(p['name_ar'] ?? ''),
                                   subtitle: Text(CurrencyFormatter.formatValue(costPrice) + ' ${_currencySymbol[_selectedCurrency] ?? ''}'),

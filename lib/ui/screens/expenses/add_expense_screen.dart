@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
 
 class AddExpenseScreen extends StatefulWidget {
@@ -77,11 +78,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         setState(() {
           _existingExpense = expense;
           _titleController.text = expense['title'] as String? ?? '';
-          _amountController.text = (expense['amount'] as num?)?.toDouble().toStringAsFixed(2) ?? '';
+          _amountController.text = MoneyHelper.readMoney(expense['amount']).toStringAsFixed(2) ?? '';
           _selectedCurrency = expense['currency'] as String? ?? 'YER';
           _selectedExchangeRate = (expense['exchange_rate'] as num?)?.toDouble() ?? 1.0;
           _exchangeRateController.text = _selectedExchangeRate.toStringAsFixed(4);
-          _amountBase = (expense['amount_base'] as num?)?.toDouble() ?? 0.0;
+          _amountBase = MoneyHelper.readMoney(expense['amount_base']);
           _selectedCashBoxId = expense['cash_box_id'] as int?;
           _beneficiaryController.text = expense['beneficiary'] as String? ?? '';
           _referenceNumberController.text = expense['reference_number'] as String? ?? '';
@@ -448,7 +449,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               hintText: 'اختر الصندوق',
             ),
             items: _cashBoxes.map((cb) {
-              final balance = (cb['balance'] as num?)?.toDouble() ?? 0.0;
+              final balance = MoneyHelper.readMoney(cb['balance']);
               final bt = cb['balance_type'] as String? ?? 'credit';
               return DropdownMenuItem<int>(
                 value: cb['id'] as int,
@@ -778,7 +779,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   Future<void> _saveExpenseWithAccountTransaction(Map<String, dynamic> expenseMap, int? expenseAccountId) async {
     final db = await DatabaseHelper().database;
-    final amountBase = (expenseMap['amount_base'] as num?)?.toDouble() ?? 0.0;
+    final amountBase = MoneyHelper.readMoney(expenseMap['amount_base']);
     final now = DateTime.now().toIso8601String();
 
     await db.transaction((txn) async {
@@ -884,7 +885,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     await db.transaction((txn) async {
       // ── 1. Reverse old journal entries ──
       if (_existingExpense != null) {
-        final oldAmountBase = (_existingExpense!['amount_base'] as num?)?.toDouble() ?? 0.0;
+        final oldAmountBase = MoneyHelper.readMoney(_existingExpense!['amount_base']);
         final oldOperationType = _existingExpense!['operation_type'] as String? ?? 'صرف';
         final oldCurrency = _existingExpense!['currency'] as String? ?? 'YER';
         final oldCodeOffset = oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
@@ -981,7 +982,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       await txn.update('expenses', newExpenseMap, where: 'id = ?', whereArgs: [expenseId]);
 
       // ── 3. Create new journal entries ──
-      final newAmountBase = (newExpenseMap['amount_base'] as num?)?.toDouble() ?? 0.0;
+      final newAmountBase = MoneyHelper.readMoney(newExpenseMap['amount_base']);
       if (newExpenseAccountId != null && newAmountBase > 0) {
         final journalId = DateTime.now().millisecondsSinceEpoch;
         final title = newExpenseMap['title'] as String? ?? 'مصروف';
@@ -1078,7 +1079,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final accountType = account['account_type'] as String? ?? '';
     final effectiveType = (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE') ? 'debit' : 'credit';
     
-    double currentBalance = (account['balance'] as num?)?.toDouble() ?? 0.0;
+    double currentBalance = MoneyHelper.readMoney(account['balance']);
     if (effectiveType == 'debit') {
       currentBalance = currentBalance + debit - credit;
     } else {
