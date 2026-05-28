@@ -54,6 +54,7 @@ dependencies:
   excel: ^4.0.6
   flutter_blue_plus: ^1.32.0
   fl_chart: ^0.69.0
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:

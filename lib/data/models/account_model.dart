@@ -36,13 +36,23 @@ class Account {
   }) : createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now() {
     // Auto-derive balanceType from accountType if not explicitly set
-    // ASSET and COST accounts have debit nature; others have credit nature
+    // ASSET, COST, and EXPENSE accounts have debit nature; others have credit nature
   }
 
   /// Get the effective balance type, deriving from accountType if set to 'auto'
+  /// Accounting convention:
+  /// - ASSET (أصول): debit nature (increase with debit)
+  /// - COST (تكاليف): debit nature (increase with debit)
+  /// - EXPENSE (مصاريف): debit nature (increase with debit)
+  /// - LIABILITY (خصوم): credit nature (increase with credit)
+  /// - REVENUE (إيرادات): credit nature (increase with credit)
   String get effectiveBalanceType {
     if (balanceType != 'auto') return balanceType;
-    return (accountType == AccountType.ASSET || accountType == AccountType.COST) ? 'debit' : 'credit';
+    return (accountType == AccountType.ASSET ||
+            accountType == AccountType.COST ||
+            accountType == AccountType.EXPENSE)
+        ? 'debit'
+        : 'credit';
   }
 
   String get _accountTypeString {

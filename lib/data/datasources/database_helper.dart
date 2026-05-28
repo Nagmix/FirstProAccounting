@@ -4,6 +4,12 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper {
+  /// Log a migration error instead of silently swallowing it (H-07)
+  /// This helps debug database issues during upgrades.
+  static void _logMigrationError(String operation, dynamic error) {
+    debugPrint('⚠️ DB Migration Warning [$operation]: $error');
+    // Non-critical: migrations may fail if column already exists (idempotent)
+  }
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
@@ -46,6 +52,11 @@ class DatabaseHelper {
       version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
+      onOpen: (db) async {
+        // Enable foreign key enforcement (M-06)
+        // SQLite doesn't enforce FK constraints by default
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
     );
   }
 
@@ -1083,23 +1094,23 @@ class DatabaseHelper {
     }
     if (oldVersion < 4) {
       // Add new columns to invoices
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN payment_mechanism TEXT NOT NULL DEFAULT \'cash\''); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN payment_method TEXT NOT NULL DEFAULT \'cash\''); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN is_return INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN cash_box_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN payment_mechanism TEXT NOT NULL DEFAULT \'cash\''); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN payment_method TEXT NOT NULL DEFAULT \'cash\''); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN is_return INTEGER NOT NULL DEFAULT 0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN cash_box_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
 
       // Add balance_type to customers
-      try { await db.execute('ALTER TABLE customers ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (_) {}
+      try { await db.execute('ALTER TABLE customers ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (e) { _logMigrationError("migration", e); }
 
       // Add balance_type to suppliers (default 'credit' because we typically owe the supplier)
-      try { await db.execute('ALTER TABLE suppliers ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (_) {}
+      try { await db.execute('ALTER TABLE suppliers ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (e) { _logMigrationError("migration", e); }
 
       // Add linked_cash_box_id to accounts
-      try { await db.execute('ALTER TABLE accounts ADD COLUMN linked_cash_box_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE accounts ADD COLUMN linked_cash_box_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
 
       // Change currency default in accounts
-      try { await db.execute('UPDATE accounts SET currency = \'YER\' WHERE currency = \'SAR\''); } catch (_) {}
-      try { await db.execute('UPDATE suppliers SET currency = \'YER\' WHERE currency = \'SAR\''); } catch (_) {}
+      try { await db.execute('UPDATE accounts SET currency = \'YER\' WHERE currency = \'SAR\''); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('UPDATE suppliers SET currency = \'YER\' WHERE currency = \'SAR\''); } catch (e) { _logMigrationError("migration", e); }
 
       // Create cash_boxes table
       await db.execute('''
@@ -1125,10 +1136,10 @@ class DatabaseHelper {
       try {
         await db.execute('UPDATE invoices SET payment_mechanism = payment_type WHERE payment_mechanism = \'cash\' AND payment_type IN (\'cash\', \'credit\')');
         await db.execute('UPDATE invoices SET payment_method = \'cash\' WHERE payment_mechanism = \'cash\'');
-      } catch (_) {}
+      } catch (e) { _logMigrationError("migration", e); }
 
       // Update default VAT rate
-      try { await db.execute('UPDATE products SET tax_rate = 0.0 WHERE tax_rate = 15.0'); } catch (_) {}
+      try { await db.execute('UPDATE products SET tax_rate = 0.0 WHERE tax_rate = 15.0'); } catch (e) { _logMigrationError("migration", e); }
 
       // Seed default accounts if not existing
       await _seedDefaultAccounts(db);
@@ -1147,7 +1158,7 @@ class DatabaseHelper {
           await db.update('currencies', {'is_default': 1}, where: 'code = ?', whereArgs: ['YER']);
           await db.update('currencies', {'is_default': 0}, where: 'code != ?', whereArgs: ['YER']);
         }
-      } catch (_) {}
+      } catch (e) { _logMigrationError("migration", e); }
     }
     if (oldVersion < 5) {
       // Create expenses table
@@ -1183,11 +1194,11 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_expenses_account_id ON expenses (account_id)');
 
       // Add currency column to invoices
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN currency TEXT NOT NULL DEFAULT \'YER\''); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN exchange_rate REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN currency TEXT NOT NULL DEFAULT \'YER\''); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN exchange_rate REAL NOT NULL DEFAULT 1.0'); } catch (e) { _logMigrationError("migration", e); }
 
       // Add currency column to customers
-      try { await db.execute('ALTER TABLE customers ADD COLUMN currency TEXT NOT NULL DEFAULT \'YER\''); } catch (_) {}
+      try { await db.execute('ALTER TABLE customers ADD COLUMN currency TEXT NOT NULL DEFAULT \'YER\''); } catch (e) { _logMigrationError("migration", e); }
     }
     if (oldVersion < 6) {
       // Create employees table
@@ -1214,10 +1225,10 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_employees_is_active ON employees (is_active)');
 
       // Add transport_charges column to invoices
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN transport_charges REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN transport_charges REAL NOT NULL DEFAULT 0.0'); } catch (e) { _logMigrationError("migration", e); }
 
       // Delete AED and KWD currencies
-      try { await db.delete('currencies', where: 'code IN (?, ?)', whereArgs: ['AED', 'KWD']); } catch (_) {}
+      try { await db.delete('currencies', where: 'code IN (?, ?)', whereArgs: ['AED', 'KWD']); } catch (e) { _logMigrationError("migration", e); }
 
       // Seed accounts for SAR and USD currencies if they don't exist
       await _seedAccountsForCurrency(db, 'YER', 'ر.ي', 0);
@@ -1226,23 +1237,23 @@ class DatabaseHelper {
     }
     if (oldVersion < 7) {
       // Add e-wallet and bank transfer columns to invoices
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN ewallet_provider TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN bank_transfer_provider TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN transfer_number TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN attachment_path TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN ewallet_provider TEXT'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN bank_transfer_provider TEXT'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN transfer_number TEXT'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN attachment_path TEXT'); } catch (e) { _logMigrationError("migration", e); }
     }
     if (oldVersion < 8) {
       // Add debt_ceiling and balance_type to accounts
-      try { await db.execute('ALTER TABLE accounts ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE accounts ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (_) {}
+      try { await db.execute('ALTER TABLE accounts ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE accounts ADD COLUMN balance_type TEXT NOT NULL DEFAULT \'credit\''); } catch (e) { _logMigrationError("migration", e); }
 
       // Add attachment_path, operation_type, expense_account_id to expenses
-      try { await db.execute('ALTER TABLE expenses ADD COLUMN attachment_path TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE expenses ADD COLUMN operation_type TEXT NOT NULL DEFAULT \'صرف\''); } catch (_) {}
-      try { await db.execute('ALTER TABLE expenses ADD COLUMN expense_account_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE expenses ADD COLUMN attachment_path TEXT'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE expenses ADD COLUMN operation_type TEXT NOT NULL DEFAULT \'صرف\''); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE expenses ADD COLUMN expense_account_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
 
       // Add index for expense_account_id
-      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_expenses_expense_account_id ON expenses (expense_account_id)'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_expenses_expense_account_id ON expenses (expense_account_id)'); } catch (e) { _logMigrationError("migration", e); }
     }
     if (oldVersion < 9) {
       // Delete duplicate-named accounts that have the same name as their parent category:
@@ -1257,7 +1268,7 @@ class DatabaseHelper {
       for (final code in codesToDelete) {
         try {
           await db.delete('accounts', where: 'account_code = ?', whereArgs: [code]);
-        } catch (_) {}
+        } catch (e) { _logMigrationError("migration", e); }
       }
     }
 
@@ -1424,13 +1435,13 @@ class DatabaseHelper {
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 12) {
       // Add shift-related columns to invoices
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN shift_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN cashier_name TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoices ADD COLUMN is_posted INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN shift_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN cashier_name TEXT'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoices ADD COLUMN is_posted INTEGER NOT NULL DEFAULT 0'); } catch (e) { _logMigrationError("migration", e); }
 
       // Create indexes for new invoice columns
-      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_shift_id ON invoices (shift_id)'); } catch (_) {}
-      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_is_posted ON invoices (is_posted)'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_shift_id ON invoices (shift_id)'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_is_posted ON invoices (is_posted)'); } catch (e) { _logMigrationError("migration", e); }
 
       // Create currency_exchanges table (صرافة العملات)
       await db.execute('''
@@ -1479,7 +1490,7 @@ class DatabaseHelper {
       try {
         await db.update('currencies', {'exchange_rate': 140.0}, where: 'code = ?', whereArgs: ['SAR']);
         await db.update('currencies', {'exchange_rate': 530.0}, where: 'code = ?', whereArgs: ['USD']);
-      } catch (_) {}
+      } catch (e) { _logMigrationError("migration", e); }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1487,14 +1498,14 @@ class DatabaseHelper {
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 13) {
       // Add currency column to cash_boxes
-      try { await db.execute("ALTER TABLE cash_boxes ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'"); } catch (_) {}
+      try { await db.execute("ALTER TABLE cash_boxes ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'"); } catch (e) { _logMigrationError("migration", e); }
 
       // Add cashier_name column to shifts
-      try { await db.execute("ALTER TABLE shifts ADD COLUMN cashier_name TEXT"); } catch (_) {}
+      try { await db.execute("ALTER TABLE shifts ADD COLUMN cashier_name TEXT"); } catch (e) { _logMigrationError("migration", e); }
     }
     if (oldVersion < 14) {
       // Add image_path column to products
-      try { await db.execute('ALTER TABLE products ADD COLUMN image_path TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN image_path TEXT'); } catch (e) { _logMigrationError("migration", e); }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1507,8 +1518,8 @@ class DatabaseHelper {
     //  both upgrade paths and fresh-install fixes are covered.
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 15) {
-      try { await db.execute("ALTER TABLE cash_boxes ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'"); } catch (_) {}
-      try { await db.execute('ALTER TABLE shifts ADD COLUMN cashier_name TEXT'); } catch (_) {}
+      try { await db.execute("ALTER TABLE cash_boxes ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'"); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE shifts ADD COLUMN cashier_name TEXT'); } catch (e) { _logMigrationError("migration", e); }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1672,17 +1683,17 @@ class DatabaseHelper {
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 20) {
       // Add debt_ceiling column to suppliers
-      try { await db.execute('ALTER TABLE suppliers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE suppliers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (e) { _logMigrationError("migration", e); }
 
       // Add contact_method column to suppliers
-      try { await db.execute("ALTER TABLE suppliers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (_) {}
+      try { await db.execute("ALTER TABLE suppliers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (e) { _logMigrationError("migration", e); }
 
       // Fix supplier balance_type default to 'credit' (we typically owe the supplier)
-      try { await db.execute("UPDATE suppliers SET balance_type = 'credit' WHERE balance_type = 'debit' AND balance >= 0"); } catch (_) {}
+      try { await db.execute("UPDATE suppliers SET balance_type = 'credit' WHERE balance_type = 'debit' AND balance >= 0"); } catch (e) { _logMigrationError("migration", e); }
 
       // Add customer_id and supplier_id columns to vouchers
-      try { await db.execute('ALTER TABLE vouchers ADD COLUMN customer_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE vouchers ADD COLUMN supplier_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE vouchers ADD COLUMN customer_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE vouchers ADD COLUMN supplier_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
 
       // Seed new accounts for each currency if they don't exist
       final now20 = DateTime.now().toIso8601String();
@@ -1734,14 +1745,14 @@ class DatabaseHelper {
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 21) {
       // Add contact_method column to customers (replacing notification_method)
-      try { await db.execute("ALTER TABLE customers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (_) {}
+      try { await db.execute("ALTER TABLE customers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (e) { _logMigrationError("migration", e); }
 
       // Add debt_ceiling column to customers (replacing credit_limit)
-      try { await db.execute('ALTER TABLE customers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE customers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (e) { _logMigrationError("migration", e); }
 
       // Copy data from old columns to new columns
-      try { await db.execute("UPDATE customers SET contact_method = COALESCE(notification_method, 'whatsapp') WHERE contact_method IS NULL OR contact_method = 'whatsapp'"); } catch (_) {}
-      try { await db.execute('UPDATE customers SET debt_ceiling = COALESCE(credit_limit, 0.0) WHERE debt_ceiling = 0.0'); } catch (_) {}
+      try { await db.execute("UPDATE customers SET contact_method = COALESCE(notification_method, 'whatsapp') WHERE contact_method IS NULL OR contact_method = 'whatsapp'"); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('UPDATE customers SET debt_ceiling = COALESCE(credit_limit, 0.0) WHERE debt_ceiling = 0.0'); } catch (e) { _logMigrationError("migration", e); }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1821,7 +1832,7 @@ class DatabaseHelper {
       // ── Weighted Average Cost: add average_cost column ──
       try {
         await db.execute('ALTER TABLE products ADD COLUMN average_cost REAL NOT NULL DEFAULT 0.0');
-      } catch (_) {}
+      } catch (e) { _logMigrationError("migration", e); }
       // Initialize average_cost from existing cost_price
       await db.execute('UPDATE products SET average_cost = cost_price WHERE average_cost = 0.0 AND cost_price > 0.0');
 
@@ -1944,17 +1955,17 @@ class DatabaseHelper {
       await _seedDefaultUnits(db);
 
       // ── Add new product columns for unit management ──
-      try { await db.execute('ALTER TABLE products ADD COLUMN base_unit_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN purchase_unit_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN sale_unit_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN tax_inclusive INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN track_stock INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN is_sellable INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN is_purchasable INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN allow_negative INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN sell_retail INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN show_in_pos INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN supplier_code TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN base_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN purchase_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN sale_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN tax_inclusive INTEGER NOT NULL DEFAULT 0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN track_stock INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN is_sellable INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN is_purchasable INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN allow_negative INTEGER NOT NULL DEFAULT 0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN sell_retail INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN show_in_pos INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN supplier_code TEXT'); } catch (e) { _logMigrationError("migration", e); }
 
       // Migrate existing unit_id → base_unit_id
       await db.execute('UPDATE products SET base_unit_id = unit_id WHERE base_unit_id IS NULL AND unit_id IS NOT NULL');
@@ -1962,16 +1973,16 @@ class DatabaseHelper {
       await db.execute('UPDATE products SET purchase_unit_id = unit_id WHERE purchase_unit_id IS NULL AND unit_id IS NOT NULL');
 
       // ── Add unit fields to invoice_items ──
-      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_name TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN conversion_factor REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN base_quantity REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_name TEXT'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN conversion_factor REAL NOT NULL DEFAULT 1.0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN base_quantity REAL NOT NULL DEFAULT 1.0'); } catch (e) { _logMigrationError("migration", e); }
 
       // Backfill base_quantity from quantity for existing invoice items
       await db.execute('UPDATE invoice_items SET base_quantity = quantity WHERE base_quantity = 1.0 AND quantity != 1.0');
 
       // ── Update unit_conversions to use unit IDs ──
-      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN from_unit_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN to_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN from_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN to_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1981,21 +1992,21 @@ class DatabaseHelper {
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 26) {
       // ── Products table: add missing columns ──
-      try { await db.execute('ALTER TABLE products ADD COLUMN average_cost REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN tax_inclusive INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN expiry_tracking INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN has_variants INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN base_unit_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN purchase_unit_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN sale_unit_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN track_stock INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN is_sellable INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN is_purchasable INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN allow_negative INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN sell_retail INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN show_in_pos INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN supplier_code TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN image_path TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN average_cost REAL NOT NULL DEFAULT 0.0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN tax_inclusive INTEGER NOT NULL DEFAULT 0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN expiry_tracking INTEGER NOT NULL DEFAULT 0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN has_variants INTEGER NOT NULL DEFAULT 0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN base_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN purchase_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN sale_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN track_stock INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN is_sellable INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN is_purchasable INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN allow_negative INTEGER NOT NULL DEFAULT 0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN sell_retail INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN show_in_pos INTEGER NOT NULL DEFAULT 1'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN supplier_code TEXT'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN image_path TEXT'); } catch (e) { _logMigrationError("migration", e); }
 
       // Initialize average_cost from cost_price where average_cost is 0
       await db.execute('UPDATE products SET average_cost = cost_price WHERE average_cost = 0.0 AND cost_price > 0.0');
@@ -2047,21 +2058,21 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_unit_conversions_barcode ON unit_conversions (barcode)');
 
       // ── Add unit fields to invoice_items ──
-      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_name TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN conversion_factor REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN base_quantity REAL NOT NULL DEFAULT 1.0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_name TEXT'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN conversion_factor REAL NOT NULL DEFAULT 1.0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE invoice_items ADD COLUMN base_quantity REAL NOT NULL DEFAULT 1.0'); } catch (e) { _logMigrationError("migration", e); }
 
       // ── Add debt_ceiling and contact_method to customers ──
-      try { await db.execute('ALTER TABLE customers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
-      try { await db.execute("ALTER TABLE customers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (_) {}
+      try { await db.execute('ALTER TABLE customers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute("ALTER TABLE customers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (e) { _logMigrationError("migration", e); }
 
       // ── Add debt_ceiling and contact_method to suppliers ──
-      try { await db.execute('ALTER TABLE suppliers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (_) {}
-      try { await db.execute("ALTER TABLE suppliers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (_) {}
+      try { await db.execute('ALTER TABLE suppliers ADD COLUMN debt_ceiling REAL NOT NULL DEFAULT 0.0'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute("ALTER TABLE suppliers ADD COLUMN contact_method TEXT DEFAULT 'whatsapp'"); } catch (e) { _logMigrationError("migration", e); }
 
       // ── Add operation_type and expense_account_id to expenses ──
-      try { await db.execute("ALTER TABLE expenses ADD COLUMN operation_type TEXT NOT NULL DEFAULT 'صرف'"); } catch (_) {}
-      try { await db.execute('ALTER TABLE expenses ADD COLUMN expense_account_id INTEGER'); } catch (_) {}
+      try { await db.execute("ALTER TABLE expenses ADD COLUMN operation_type TEXT NOT NULL DEFAULT 'صرف'"); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE expenses ADD COLUMN expense_account_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
 
       // ── Migrate existing unit_id → base_unit_id ──
       await db.execute('UPDATE products SET base_unit_id = unit_id WHERE base_unit_id IS NULL AND unit_id IS NOT NULL');
@@ -2122,8 +2133,8 @@ class DatabaseHelper {
     //  v27 Migration: Add cogs_account_id and vat_account_id to products
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 27) {
-      try { await db.execute('ALTER TABLE products ADD COLUMN cogs_account_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE products ADD COLUMN vat_account_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE products ADD COLUMN cogs_account_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE products ADD COLUMN vat_account_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -2131,8 +2142,8 @@ class DatabaseHelper {
     //  (was missing from _onCreate in earlier versions)
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 28) {
-      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN from_unit_id INTEGER'); } catch (_) {}
-      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN to_unit_id INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN from_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
+      try { await db.execute('ALTER TABLE unit_conversions ADD COLUMN to_unit_id INTEGER'); } catch (e) { _logMigrationError("migration", e); }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -2161,12 +2172,12 @@ class DatabaseHelper {
     if (oldVersion < 30) {
       try {
         await db.execute('ALTER TABLE stocktaking_items ADD COLUMN variance REAL NOT NULL DEFAULT 0.0');
-      } catch (_) {}
+      } catch (e) { _logMigrationError("migration", e); }
     }
     if (oldVersion < 31) {
       try {
         await db.execute('ALTER TABLE invoices ADD COLUMN original_invoice_id TEXT');
-      } catch (_) {}
+      } catch (e) { _logMigrationError("migration", e); }
       await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
     }
 
@@ -2213,7 +2224,7 @@ class DatabaseHelper {
       // Add cost_price column to unit_conversions if it doesn't exist
       try {
         await db.execute('ALTER TABLE unit_conversions ADD COLUMN cost_price REAL NOT NULL DEFAULT 0.0');
-      } catch (_) {
+      } catch (e) { _logMigrationError("alter", e);
         // Column already exists, ignore
       }
     }
@@ -2325,6 +2336,22 @@ class DatabaseHelper {
   ///   balance = balance + credit - debit
   /// For debit-balance accounts (ASSET, COST):
   ///   balance = balance + debit - credit
+  /// Validate that total debits equal total credits for a journal entry (C-03)
+  /// Throws an exception if the journal entry is unbalanced.
+  void _validateJournalBalance(List<Map<String, dynamic>> entries) {
+    double totalDebit = 0.0;
+    double totalCredit = 0.0;
+    for (final entry in entries) {
+      totalDebit += (entry['debit'] as num?)?.toDouble() ?? 0.0;
+      totalCredit += (entry['credit'] as num?)?.toDouble() ?? 0.0;
+    }
+    final difference = (totalDebit - totalCredit).abs();
+    if (difference > 0.01) {
+      debugPrint('⚠️ UNBALANCED JOURNAL ENTRY: Debit=$totalDebit, Credit=$totalCredit, Diff=$difference');
+      throw Exception('قيد محاسبي غير متوازن: المدين=$totalDebit, الدائن=$totalCredit, الفرق=$difference');
+    }
+  }
+
   Future<void> _updateAccountBalanceWithJournal(
     Transaction txn,
     int accountId,
@@ -3669,6 +3696,14 @@ class DatabaseHelper {
       // NOTE: Transport charges are already included in `total` (total = subtotal - discount + tax + transportCharges).
       // The main journal entries and cash box update above already account for transport correctly.
       // No separate transport journal entries are needed here to avoid double-counting.
+
+      // ── Validate journal balance (C-03): debits must equal credits ──
+      final journalEntries = await txn.query(
+        'transactions',
+        where: 'journal_id = ?',
+        whereArgs: [journalId],
+      );
+      _validateJournalBalance(journalEntries);
 
       // Update customer/supplier balance
       // For full cash payments: entity balance should NOT change (they already paid in full)
@@ -6488,7 +6523,7 @@ class DatabaseHelper {
           'time': row['date'] ?? '',
         });
       }
-    } catch (_) {
+    } catch (e) { _logMigrationError("alter", e);
       // جدول السندات غير موجود بعد
     }
 
@@ -6559,7 +6594,7 @@ class DatabaseHelper {
           'time': row['created_at'] ?? '',
         });
       }
-    } catch (_) {
+    } catch (e) { _logMigrationError("alter", e);
       // جدول صرافة العملات غير موجود بعد
     }
 
@@ -6618,7 +6653,7 @@ class DatabaseHelper {
         [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
       );
       summary['total_receipts'] = (receiptsResult.first['total'] as num?)?.toDouble() ?? 0.0;
-    } catch (_) {}
+    } catch (e) { _logMigrationError("migration", e); }
 
     // سندات الصرف
     try {
@@ -6629,7 +6664,7 @@ class DatabaseHelper {
         [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
       );
       summary['total_payments'] = (paymentsResult.first['total'] as num?)?.toDouble() ?? 0.0;
-    } catch (_) {}
+    } catch (e) { _logMigrationError("migration", e); }
 
     // المصروفات
     final expensesResult = await db.rawQuery(

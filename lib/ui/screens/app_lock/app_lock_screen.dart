@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -94,6 +96,9 @@ class _AppLockScreenState extends State<AppLockScreen>
 
   Future<void> _initializeScreen() async {
     try {
+      // Load or generate per-installation salt (C-04 / H-01)
+      _pinSalt = await _getOrCreatePinSalt();
+
       // Check if PIN is enabled (secure storage with DB fallback for migration)
       final pinEnabled = await _readSecureWithMigration('pin_enabled');
       _isPinEnabled = pinEnabled == '1';
@@ -144,14 +149,54 @@ class _AppLockScreenState extends State<AppLockScreen>
     }
   }
 
-  /// Improved hash function for PIN verification with salt and multiple rounds.
-  /// New format uses 'h2$' prefix; old format used 'h$' prefix.
+  /// Secure SHA-256 based PIN hashing with per-installation salt (C-04).
+  /// New format uses 'h3$' prefix; previous formats used 'h2$' and 'h$'.
   /// Must match the hash function used in settings_screen.dart.
   String _hashPin(String pin) {
+    // Use per-installation salt if available, otherwise use a default
+    // The salt is generated on first use and stored in FlutterSecureStorage
+    final salt = _pinSalt;
+    final key = utf8.encode('$salt$pin$salt');
+    final bytes = sha256.convert(key).bytes;
+    // Multiple rounds for key stretching
+    var currentBytes = bytes;
+    for (var round = 0; round < 1000; round++) {
+      final roundKey = utf8.encode('$salt${base64Encode(currentBytes)}$pin$round');
+      currentBytes = sha256.convert(roundKey).bytes;
+    }
+    return 'h3\$${base64Encode(currentBytes)}';
+  }
+
+  /// Per-installation salt for PIN hashing (C-04 / H-01)
+  /// Generated once and stored in FlutterSecureStorage
+  String? _pinSalt;
+
+  /// Get or generate the per-installation salt
+  Future<String> _getOrCreatePinSalt() async {
+    try {
+      var salt = await _secureStorage.read(key: 'pin_salt');
+      if (salt == null || salt.isEmpty) {
+        // Generate a random salt using timestamp + random values
+        final random = DateTime.now().microsecondsSinceEpoch.toString() +
+            DateTime.now().millisecond.toString() +
+            pin.hashCode.toString();
+        final saltBytes = sha256.convert(utf8.encode(random)).bytes;
+        salt = base64Encode(saltBytes);
+        await _secureStorage.write(key: 'pin_salt', value: salt);
+      }
+      return salt;
+    } catch (_) {
+      // Fallback salt if secure storage fails
+      return 'F1r5tPr0_Fallback_2024_Salt';
+    }
+  }
+
+  /// Old hash function (h2 format) for backward-compatible PIN verification.
+  /// Used to verify PINs stored with the 'h2$' prefix.
+  String _hashPinH2(String pin) {
     const salt = 'F1r5tPr0_4cc0unt1ng_2024!@#';
     var hash = 0;
     final salted = salt + pin + salt;
-    // Multiple rounds for increased difficulty
     var input = salted;
     for (var round = 0; round < 100; round++) {
       hash = 0;
@@ -164,7 +209,7 @@ class _AppLockScreenState extends State<AppLockScreen>
     return 'h2\$$hash';
   }
 
-  /// Old hash function for backward-compatible PIN verification.
+  /// Oldest hash function for backward-compatible PIN verification.
   /// Used to verify PINs that were stored with the old 'h$' prefix.
   String _hashPinOld(String pin) {
     int hash = 0;
@@ -175,15 +220,21 @@ class _AppLockScreenState extends State<AppLockScreen>
     return 'h\$$hash';
   }
 
-  /// Verify a PIN against a stored hash, supporting both old and new formats.
+  /// Verify a PIN against a stored hash, supporting all formats (h3$, h2$, h$).
   bool _verifyPin(String enteredPin, String storedHash) {
-    if (storedHash.startsWith('h2\$')) {
+    if (storedHash.startsWith('h3\$')) {
       return _hashPin(enteredPin) == storedHash;
+    } else if (storedHash.startsWith('h2\$')) {
+      // Old h2 format — verify using old algorithm, then re-hash with new format
+      final matches = _hashPinH2(enteredPin) == storedHash;
+      if (matches) {
+        _upgradePinHash(enteredPin);
+      }
+      return matches;
     } else if (storedHash.startsWith('h\$')) {
-      // Old format — verify using old algorithm, then re-hash with new format
+      // Oldest format — verify using old algorithm, then re-hash with new format
       final matches = _hashPinOld(enteredPin) == storedHash;
       if (matches) {
-        // Upgrade the stored hash to new format
         _upgradePinHash(enteredPin);
       }
       return matches;

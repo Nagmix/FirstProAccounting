@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -101,6 +103,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
+    // Load per-installation salt for PIN hashing (C-04)
+    _pinSalt = await _getOrCreatePinSalt();
+
     final db = DatabaseHelper();
     final businessName = await db.getSetting('business_name');
     final phone = await db.getSetting('business_phone');
@@ -179,24 +184,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await db.setSetting(key, value);
   }
 
-  /// Improved hash function for PIN storage with salt and multiple rounds.
-  /// New format uses 'h2$' prefix; old format used 'h$' prefix.
-  /// Must match the hash function used in app_lock_screen.dart.
-  String _hashPin(String pin) {
-    const salt = 'F1r5tPr0_4cc0unt1ng_2024!@#';
-    var hash = 0;
-    final salted = salt + pin + salt;
-    // Multiple rounds for increased difficulty
-    var input = salted;
-    for (var round = 0; round < 100; round++) {
-      hash = 0;
-      for (var i = 0; i < input.length; i++) {
-        hash = ((hash << 5) - hash) + input.codeUnitAt(i);
-        hash = hash & 0x7fffffff;
+  /// Secure SHA-256 based PIN hashing with per-installation salt (C-04).
+  /// New format uses 'h3$' prefix; must match app_lock_screen.dart.
+  String? _pinSalt;
+
+  Future<String> _getOrCreatePinSalt() async {
+    try {
+      const storage = FlutterSecureStorage();
+      var salt = await storage.read(key: 'pin_salt');
+      if (salt == null || salt.isEmpty) {
+        final random = DateTime.now().microsecondsSinceEpoch.toString() +
+            DateTime.now().millisecond.toString();
+        final saltBytes = sha256.convert(utf8.encode(random)).bytes;
+        salt = base64Encode(saltBytes);
+        await storage.write(key: 'pin_salt', value: salt);
       }
-      input = '$hash$salt$pin';
+      return salt;
+    } catch (_) {
+      return 'F1r5tPr0_Fallback_2024_Salt';
     }
-    return 'h2\$$hash';
+  }
+
+  String _hashPin(String pin) {
+    final salt = _pinSalt ?? 'F1r5tPr0_Fallback_2024_Salt';
+    final key = utf8.encode('$salt$pin$salt');
+    final bytes = sha256.convert(key).bytes;
+    var currentBytes = bytes;
+    for (var round = 0; round < 1000; round++) {
+      final roundKey = utf8.encode('$salt${base64Encode(currentBytes)}$pin$round');
+      currentBytes = sha256.convert(roundKey).bytes;
+    }
+    return 'h3\$${base64Encode(currentBytes)}';
   }
 
   // ════════════════════════════════════════════════════════════════
