@@ -662,7 +662,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // ── Modern dropdown helper ────────────────────────────────────────
   Widget _buildModernDropdown<T>({
-    required T value,
+    required T? value,
     required String label,
     required IconData icon,
     required List<DropdownMenuItem<T>> items,
