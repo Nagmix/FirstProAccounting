@@ -2941,8 +2941,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
 
     // Multiple units available - show selection dialog
+    // Note: getAvailableUnitsForProduct already converts cents to doubles
     String? selectedUnitName = availableUnits.first['unit_name'] as String?;
-    double selectedPrice = MoneyHelper.readMoney(availableUnits.first['sell_price'], fallback: product.sellPrice);
+    double selectedPrice = (availableUnits.first['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
     double selectedFactor = (availableUnits.first['conversion_factor'] as num?)?.toDouble() ?? 1.0;
     String? selectedBarcode = availableUnits.first['barcode'] as String?;
 
@@ -2958,14 +2959,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               children: [
                 ...availableUnits.map((unit) => ListTile(
                   title: Text(unit['unit_name'] as String),
-                  subtitle: Text('${CurrencyFormatter.format(MoneyHelper.readMoney(unit['sell_price']))}'),
+                  subtitle: Text('${CurrencyFormatter.format((unit['sell_price'] as num?)?.toDouble() ?? 0.0)}'),
                   trailing: (unit['unit_name'] == selectedUnitName)
                       ? Icon(Icons.check_circle, color: AppColors.success)
                       : null,
                   onTap: () {
                     setDialogState(() {
                       selectedUnitName = unit['unit_name'] as String;
-                      selectedPrice = MoneyHelper.readMoney(unit['sell_price'], fallback: product.sellPrice);
+                      selectedPrice = (unit['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
                       selectedFactor = (unit['conversion_factor'] as num?)?.toDouble() ?? 1.0;
                       selectedBarcode = unit['barcode'] as String?;
                     });
@@ -3049,7 +3050,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     if (!mounted) return;
 
     final unitName = (unitInfo?['unit_name'] as String?) ?? 'قطعة';
-    final unitPrice = MoneyHelper.readMoney(unitInfo?['sell_price'], fallback: product.sellPrice);
+    final unitPrice = (unitInfo?['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
     final unitBarcode = unitInfo?['barcode'] as String?;
     final factor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
 

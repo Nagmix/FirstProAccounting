@@ -96,10 +96,11 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
           _selectedUnit = units.first;
         }
         // Use cost_price for purchase invoices, sell_price for sale invoices
+        // Note: getAvailableUnitsForProduct already converts cents to doubles
         if (widget.invoiceType == 'purchase') {
-          _priceController.text = (MoneyHelper.readMoney(_selectedUnit?['cost_price'])).toStringAsFixed(2);
+          _priceController.text = ((_selectedUnit?['cost_price'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
         } else {
-          _priceController.text = (MoneyHelper.readMoney(_selectedUnit?['sell_price'])).toStringAsFixed(2);
+          _priceController.text = ((_selectedUnit?['sell_price'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
         }
       }
     });

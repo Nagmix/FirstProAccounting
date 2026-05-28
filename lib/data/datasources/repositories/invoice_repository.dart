@@ -87,12 +87,14 @@ class InvoiceRepository {
         final invoiceIdStr = invoiceMap['id'] as String? ?? '';
         if (productId == null) continue;
 
+        // Get product's average cost for stock movement logging
+        final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+        final averageCost = prodRow.isNotEmpty ? MoneyHelper.readMoney(prodRow.first['average_cost']) : 0.0;
+        final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
+
         if (invoiceType == 'sale' || invoiceType == 'pos') {
           if (!isReturn) {
             // Sale: stock leaves warehouse (always in base units)
-            // Check if product allows negative stock
-            final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
             if (allowNeg) {
               await txn.rawUpdate(
                 'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
@@ -104,14 +106,14 @@ class InvoiceRepository {
                 [baseQuantity, now, productId],
               );
             }
-            // Log stock movement
+            // Log stock movement (use average cost, not selling price)
             await txn.insert('stock_movements', {
               'product_id': productId,
               'movement_type': 'sale',
               'quantity': -baseQuantity,
               'reference_type': invoiceType,
               'reference_id': invoiceIdStr,
-              'unit_cost': MoneyHelper.toCents(unitPrice),
+              'unit_cost': MoneyHelper.toCents(averageCost),
               'created_at': now,
             });
           } else {
@@ -126,7 +128,7 @@ class InvoiceRepository {
               'quantity': baseQuantity,
               'reference_type': 'sale_return',
               'reference_id': invoiceIdStr,
-              'unit_cost': MoneyHelper.toCents(unitPrice),
+              'unit_cost': MoneyHelper.toCents(averageCost),
               'created_at': now,
             });
           }

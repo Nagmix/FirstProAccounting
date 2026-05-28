@@ -132,7 +132,8 @@ class MoneyHelper {
   ];
 
   static const productMoneyFields = [
-    'sell_price', 'cost_price', 'average_cost', 'min_price', 'max_price',
+    'sell_price', 'cost_price', 'average_cost',
+    'wholesale_price', 'special_wholesale_price', 'minimum_sale_price',
   ];
 
   static const accountMoneyFields = [

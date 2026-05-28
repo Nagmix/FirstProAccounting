@@ -598,7 +598,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         final begArgs = <dynamic>[_dateFrom!.toIso8601String()];
         begArgs.addAll(_currencyArgs());
         final begRes = await database.rawQuery(
-          "SELECT COALESCE(SUM(p.current_stock * p.cost_price), 0) AS total_value "
+          "SELECT COALESCE(SUM(CAST(ROUND(p.current_stock * p.cost_price) AS INTEGER)), 0) AS total_value "
           "FROM products p WHERE p.track_stock = 1$cf", begArgs);
         beginningInventory = MoneyHelper.readMoney(begRes.first['total_value']);
       }
@@ -606,7 +606,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       final endArgs = <dynamic>[];
       endArgs.addAll(_currencyArgs());
       final endRes = await database.rawQuery(
-        "SELECT COALESCE(SUM(p.current_stock * p.cost_price), 0) AS total_value "
+        "SELECT COALESCE(SUM(CAST(ROUND(p.current_stock * p.cost_price) AS INTEGER)), 0) AS total_value "
         "FROM products p WHERE p.track_stock = 1$cf", endArgs);
       endingInventory = MoneyHelper.readMoney(endRes.first['total_value']);
     } catch (e) {
@@ -638,8 +638,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     double totalProfit = 0, totalRevenue = 0, totalCost = 0;
     _reportRows = items.map((item) {
       final profit = MoneyHelper.readMoney(item['profit']);
-      final total = MoneyHelper.readMoney(item['total']);
-      final cost = MoneyHelper.readMoney(item['total_cost']);
+      final total = MoneyHelper.readMoney(item['sale_total']);
+      final cost = MoneyHelper.readMoney(item['cost_total']);
       totalProfit += profit;
       totalRevenue += total;
       totalCost += cost;
