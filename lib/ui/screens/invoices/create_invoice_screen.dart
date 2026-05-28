@@ -349,6 +349,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         margin: const EdgeInsets.only(right: 4),
         child: IconButton(
           onPressed: () => Navigator.pop(context),
+          tooltip: 'رجوع',
           icon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(

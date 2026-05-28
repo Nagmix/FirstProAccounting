@@ -1185,6 +1185,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
+                tooltip: 'حذف',
               ),
             ],
           ),

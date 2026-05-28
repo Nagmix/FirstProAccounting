@@ -797,6 +797,30 @@ class InvoiceRepository {
     return await db.update('invoices', {'status': 'cancelled'}, where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Delete an invoice and all its related records (CASCADE behavior).
+  /// M-14: Ensures data consistency when deleting invoices.
+  Future<int> deleteInvoiceWithCascade(String invoiceId) async {
+    final db = await _db;
+    return await db.transaction((txn) async {
+      // Delete stock movements linked to this invoice
+      await txn.delete('stock_movements', where: 'reference_id = ?', whereArgs: [invoiceId]);
+      // Delete invoice items
+      await txn.delete('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
+      // Delete journal transactions (by finding journal_ids used by this invoice)
+      // Note: journal_id is shared across entries in one invoice
+      final invoiceItems = await txn.query('transactions',
+        where: 'description LIKE ?',
+        whereArgs: ['%$invoiceId%'],
+      );
+      final journalIds = invoiceItems.map((t) => t['journal_id']).toSet();
+      for (final journalId in journalIds) {
+        await txn.delete('transactions', where: 'journal_id = ?', whereArgs: [journalId]);
+      }
+      // Finally delete the invoice
+      return await txn.delete('invoices', where: 'id = ?', whereArgs: [invoiceId]);
+    });
+  }
+
   /// Record a payment against an existing invoice.
   /// Updates invoice paid_amount/remaining/status, creates journal entries,
   /// updates customer/supplier balance, and updates cash box balance.

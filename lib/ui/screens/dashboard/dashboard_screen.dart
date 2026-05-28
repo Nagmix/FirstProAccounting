@@ -864,52 +864,56 @@ class _GridActionCard extends StatelessWidget {
 
     return SizedBox(
       height: _kCardHeight,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: isDark ? Colors.black.withOpacity(0.12) : Colors.black.withOpacity(0.03),
-              offset: const Offset(0, 2), blurRadius: 6,
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
+      child: Semantics(
+        button: true,
+        label: item.label,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            splashColor: item.color.withOpacity(0.1),
-            highlightColor: item.color.withOpacity(0.05),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Icon container — compact
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: isDark ? item.color.withOpacity(0.12) : effectiveBg,
-                      borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? Colors.black.withOpacity(0.12) : Colors.black.withOpacity(0.03),
+                offset: const Offset(0, 2), blurRadius: 6,
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(16),
+              splashColor: item.color.withOpacity(0.1),
+              highlightColor: item.color.withOpacity(0.05),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Icon container — compact
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(
+                        color: isDark ? item.color.withOpacity(0.12) : effectiveBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(item.icon, color: item.color, size: 18),
                     ),
-                    child: Icon(item.icon, color: item.color, size: 18),
-                  ),
-                  const SizedBox(height: 4),
-                  // Label
-                  Text(item.label,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                      height: 1.2,
-                      fontSize: 10,
+                    const SizedBox(height: 4),
+                    // Label
+                    Text(item.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                        height: 1.2,
+                        fontSize: 10,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

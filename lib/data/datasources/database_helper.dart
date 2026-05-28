@@ -3512,6 +3512,8 @@ class DatabaseHelper {
   Future<Map<String, dynamic>?> getInvoiceById(String invoiceId) => invoices.getInvoiceById(invoiceId);
   Future<List<Map<String, dynamic>>> getLinkedReturns(String invoiceId) => invoices.getLinkedReturns(invoiceId);
   Future<int> deleteInvoice(String id) => invoices.deleteInvoice(id);
+  /// M-14: Delete invoice with CASCADE (deletes related items, transactions, stock movements).
+  Future<int> deleteInvoiceWithCascade(String invoiceId) => invoices.deleteInvoiceWithCascade(invoiceId);
   Future<void> recordInvoicePayment({
     required String invoiceId,
     required double amount,
