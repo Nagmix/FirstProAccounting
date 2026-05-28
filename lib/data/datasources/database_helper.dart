@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:path/path.dart';
+import '../../core/security/db_encryption.dart';
 import '../../core/utils/money_helper.dart';
 import 'services/journal_service.dart';
 import 'repositories/account_repository.dart';
@@ -82,11 +83,13 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _databaseName);
 
+    final encryptionKey = await DbEncryption.getOrGenerateKey();
     return await openDatabase(
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
+      password: encryptionKey,
       onOpen: (db) async {
         // Enable foreign key enforcement (M-06)
         // SQLite doesn't enforce FK constraints by default

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart' show Transaction;
+import 'package:sqflite_sqlcipher/sqflite.dart' show Transaction;
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';

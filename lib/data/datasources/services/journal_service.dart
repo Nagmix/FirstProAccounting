@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
 

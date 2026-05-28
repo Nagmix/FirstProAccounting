@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart' show Transaction;
+import 'package:sqflite_sqlcipher/sqflite.dart' show Transaction;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';

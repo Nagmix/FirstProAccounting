@@ -1,4 +1,4 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/utils/money_helper.dart';
 import '../../models/customer_model.dart';
