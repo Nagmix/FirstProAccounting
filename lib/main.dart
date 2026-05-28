@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-// H-09: Localization import — generated at build time via `flutter gen-l10n`
-// Uncomment after running `flutter gen-l10n` or during flutter build:
-// import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'core/constants/app_constants.dart';
@@ -112,13 +110,13 @@ class _FirstProAppState extends State<FirstProApp> {
 
       // ── RTL / Arabic locale setup ───────────────────────────
       localizationsDelegates: const [
-        // AppLocalizations.delegate, // H-09: Uncomment after `flutter gen-l10n`
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar'), Locale('en')],
+      supportedLocales: AppLocalizations.supportedLocales,
 
       // ── Theming ─────────────────────────────────────────────
       theme: AppTheme.lightTheme,
