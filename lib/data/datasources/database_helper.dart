@@ -3,6 +3,20 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../core/utils/money_helper.dart';
+import 'services/journal_service.dart';
+import 'repositories/account_repository.dart';
+import 'repositories/customer_repository.dart';
+import 'repositories/invoice_repository.dart';
+import 'repositories/product_repository.dart';
+import 'repositories/supplier_repository.dart';
+import 'repositories/expense_repository.dart';
+import 'repositories/reference_data_repository.dart';
+import 'services/cash_box_service.dart';
+import 'services/stock_service.dart';
+import 'services/shift_service.dart';
+import 'repositories/order_repository.dart';
+import 'services/report_service.dart';
+import 'services/audit_service.dart';
 
 class DatabaseHelper {
   /// Log a migration error instead of silently swallowing it (H-07)
@@ -14,6 +28,22 @@ class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
+
+  // C-08: Sub-services for God class decomposition
+  late final JournalService journal = JournalService(this);
+  late final AccountRepository accounts = AccountRepository(this);
+  late final CustomerRepository customers = CustomerRepository(this);
+  late final InvoiceRepository invoices = InvoiceRepository(this);
+  late final ProductRepository products = ProductRepository(this);
+  late final SupplierRepository suppliers = SupplierRepository(this);
+  late final ExpenseRepository expenses = ExpenseRepository(this);
+  late final CashBoxService cashBoxes = CashBoxService(this);
+  late final ReferenceDataRepository refData = ReferenceDataRepository(this);
+  late final StockService stock = StockService(this);
+  late final ShiftService shifts = ShiftService(this);
+  late final OrderRepository orders = OrderRepository(this);
+  late final ReportService reports = ReportService(this);
+  late final AuditService audit = AuditService(this);
 
   static Database? _database;
   static Future<Database>? _databaseFuture;
@@ -3274,29 +3304,9 @@ class DatabaseHelper {
   //  Helper: Update account balance considering balance_type
   // ══════════════════════════════════════════════════════════════
 
-  /// Public helper to update account balance by amount.
-  /// [isDebit] = true means this is a debit entry (increase for debit-balance accounts).
-  /// [isDebit] = false means this is a credit entry (increase for credit-balance accounts).
-  Future<void> updateAccountBalance(int accountId, double amount, {required bool isDebit}) async {
-    final db = await database;
-    final account = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
-    if (account.isNotEmpty) {
-      final currentBalance = MoneyHelper.readMoney(account.first['balance']);
-      final balanceType = account.first['balance_type'] as String? ?? 'credit';
-      double newBalance;
-      if (balanceType == 'credit') {
-        // Credit-balance accounts: credit increases, debit decreases
-        newBalance = isDebit ? currentBalance - amount : currentBalance + amount;
-      } else {
-        // Debit-balance accounts: debit increases, credit decreases
-        newBalance = isDebit ? currentBalance + amount : currentBalance - amount;
-      }
-      await db.update('accounts', {
-        'balance': newBalance,
-        'updated_at': DateTime.now().toIso8601String(),
-      }, where: 'id = ?', whereArgs: [accountId]);
-    }
-  }
+  /// Delegates to [JournalService.updateAccountBalance].
+  Future<void> updateAccountBalance(int accountId, double amount, {required bool isDebit}) =>
+      journal.updateAccountBalance(accountId, amount, isDebit: isDebit);
 
   /// Update an account's balance considering its balance_type.
   /// For credit-balance accounts (LIABILITY, REVENUE, most EXPENSE):
@@ -3344,665 +3354,104 @@ class DatabaseHelper {
   //  Product CRUD methods
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> insertProduct(Map<String, dynamic> productMap) async {
-    final db = await database;
-    return await db.insert('products', productMap);
-  }
+  Future<int> insertProduct(Map<String, dynamic> productMap) => products.insertProduct(productMap);
 
-  Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    if (activeOnly == true) {
-      return await db.query('products', where: 'is_active = ?', whereArgs: [1], orderBy: orderBy);
-    }
-    return await db.query('products', orderBy: orderBy);
-  }
+  Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC'}) => products.getAllProducts(activeOnly: activeOnly, orderBy: orderBy);
 
-  Future<List<Map<String, dynamic>>> searchProducts(String query, {int? warehouseId}) async {
-    final db = await database;
-    final likeQuery = '%$query%';
-    if (warehouseId != null) {
-      return await db.query(
-        'products',
-        where: '(name_ar LIKE ? OR name_en LIKE ? OR barcode LIKE ? OR item_code LIKE ?) AND (warehouse_id = ? OR warehouse_id IS NULL) AND is_active = 1',
-        whereArgs: [likeQuery, likeQuery, likeQuery, likeQuery, warehouseId],
-        orderBy: 'created_at DESC',
-      );
-    }
-    return await db.query(
-      'products',
-      where: 'name_ar LIKE ? OR name_en LIKE ? OR barcode LIKE ? OR item_code LIKE ?',
-      whereArgs: [likeQuery, likeQuery, likeQuery, likeQuery],
-      orderBy: 'created_at DESC',
-    );
-  }
+  Future<List<Map<String, dynamic>>> searchProducts(String query, {int? warehouseId}) => products.searchProducts(query, warehouseId: warehouseId);
 
-  Future<Map<String, dynamic>?> getProductById(int id) async {
-    final db = await database;
-    final results = await db.query('products', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
+  Future<Map<String, dynamic>?> getProductById(int id) => products.getProductById(id);
 
-  Future<int> updateProduct(int id, Map<String, dynamic> productMap) async {
-    final db = await database;
-    return await db.update('products', productMap, where: 'id = ?', whereArgs: [id]);
-  }
+  Future<int> updateProduct(int id, Map<String, dynamic> productMap) => products.updateProduct(id, productMap);
 
-  Future<int> deleteProduct(int id) async {
-    final db = await database;
-    // Check if product is referenced in invoice_items
-    final refs = await db.query('invoice_items', where: 'product_id = ?', whereArgs: [id], limit: 1);
-    if (refs.isNotEmpty) {
-      // Soft-delete: product has history, cannot hard-delete
-      return await db.update('products', {'is_active': 0}, where: 'id = ?', whereArgs: [id]);
-    }
-    return await db.delete('products', where: 'id = ?', whereArgs: [id]);
-  }
+  Future<int> deleteProduct(int id) => products.deleteProduct(id);
 
-  Future<void> decrementProductStock(int productId, double quantity) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-    // Check if product allows negative stock
-    final productRow = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-    final allowNegative = productRow.isNotEmpty ? (productRow.first['allow_negative'] as int?) == 1 : false;
-    if (allowNegative) {
-      await db.rawUpdate(
-        'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
-        [quantity, now, productId],
-      );
-    } else {
-      await db.rawUpdate(
-        'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-        [quantity, now, productId],
-      );
-    }
-  }
+  Future<void> decrementProductStock(int productId, double quantity) => products.decrementProductStock(productId, quantity);
 
   /// Increment product stock (used for purchase invoices and sale return restocking).
-  Future<void> incrementProductStock(int productId, double quantity) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-    await db.rawUpdate(
-      'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
-      [quantity, now, productId],
-    );
-  }
+  Future<void> incrementProductStock(int productId, double quantity) => products.incrementProductStock(productId, quantity);
 
-  Future<int> getProductCount() async {
-    final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) AS cnt FROM products');
-    return (result.first['cnt'] as num?)?.toInt() ?? 0;
-  }
+  Future<int> getProductCount() => products.getProductCount();
 
-  Future<String> getNextItemCode() async {
-    final db = await database;
-    final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(item_code, 5) AS INTEGER)), 0) + 1 AS next_code FROM products WHERE item_code LIKE 'PRD-%'",
-    );
-    final nextNum = (result.first['next_code'] as num?)?.toInt() ?? 1;
-    return 'PRD-${nextNum.toString().padLeft(5, '0')}';
-  }
+  Future<String> getNextItemCode() => products.getNextItemCode();
 
   /// Check if an item_code already exists in the products table.
   /// Optionally exclude a product ID (for edit mode).
-  Future<bool> checkItemCodeExists(String code, {int? excludeId}) async {
-    final db = await database;
-    if (code.trim().isEmpty) return false;
-    List<Map<String, dynamic>> result;
-    if (excludeId != null) {
-      result = await db.query(
-        'products',
-        where: 'item_code = ? AND id != ?',
-        whereArgs: [code.trim(), excludeId],
-        limit: 1,
-      );
-    } else {
-      result = await db.query(
-        'products',
-        where: 'item_code = ?',
-        whereArgs: [code.trim()],
-        limit: 1,
-      );
-    }
-    return result.isNotEmpty;
-  }
+  Future<bool> checkItemCodeExists(String code, {int? excludeId}) => products.checkItemCodeExists(code, excludeId: excludeId);
 
   // ══════════════════════════════════════════════════════════════
-  //  Customer CRUD methods
+  //  Customer CRUD methods — delegated to CustomerRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> insertCustomer(Map<String, dynamic> customerMap) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-    final openingBalance = MoneyHelper.readMoney(customerMap['balance']);
-    final balanceType = customerMap['balance_type'] as String? ?? 'credit';
-    final customerCurrency = customerMap['currency'] as String? ?? 'YER';
-
-    int? customerId;
-    await db.transaction((txn) async {
-      customerId = await txn.insert('customers', customerMap);
-
-      // ── Opening Balance Journal Entry ──
-      if (openingBalance > 0) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
-        final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
-
-        final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), customerCurrency], limit: 1);
-        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2200 + codeOffset).toString(), customerCurrency], limit: 1);
-
-        final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
-        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
-
-        if (customersAccountId != null && openingBalanceAccountId != null) {
-          if (balanceType == 'debit') {
-            // Customer has debit (عليه) opening balance: Debit Customers, Credit Opening Balance Equity
-            await txn.insert('transactions', {
-              'account_id': customersAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(openingBalance),
-              'credit': 0,
-              'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
-              'date': now,
-              'created_at': now,
-            });
-            await txn.insert('transactions', {
-              'account_id': openingBalanceAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(openingBalance),
-              'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, customersAccountId, openingBalance, 0.0, now);
-            await _updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
-          } else {
-            // Customer has credit (له) opening balance: Credit Customers, Debit Opening Balance Equity
-            await txn.insert('transactions', {
-              'account_id': customersAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(openingBalance),
-              'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
-              'date': now,
-              'created_at': now,
-            });
-            await txn.insert('transactions', {
-              'account_id': openingBalanceAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(openingBalance),
-              'credit': 0,
-              'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, openingBalance, now);
-            await _updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
-          }
-        }
-      }
-    });
-    return customerId!;
-  }
-
-  Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.query('customers', orderBy: orderBy);
-  }
-
-  Future<List<Map<String, dynamic>>> searchCustomers(String query) async {
-    final db = await database;
-    final likeQuery = '%$query%';
-    return await db.query('customers', where: 'name LIKE ? OR phone LIKE ?', whereArgs: [likeQuery, likeQuery], orderBy: 'created_at DESC');
-  }
-
-  Future<Map<String, dynamic>?> getCustomerById(int id) async {
-    final db = await database;
-    final results = await db.query('customers', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<int> updateCustomer(int id, Map<String, dynamic> customerMap) async {
-    final db = await database;
-    return await db.update('customers', customerMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteCustomer(int id) async {
-    final db = await database;
-    // Check if customer is referenced in invoices
-    final refs = await db.query('invoices', where: 'customer_id = ?', whereArgs: [id], limit: 1);
-    if (refs.isNotEmpty) {
-      // Soft-delete not supported by schema — just prevent deletion
-      return 0;
-    }
-    return await db.delete('customers', where: 'id = ?', whereArgs: [id]);
-  }
+  Future<int> insertCustomer(Map<String, dynamic> customerMap) => customers.insertCustomer(customerMap);
+  Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'name'}) => customers.getAllCustomers(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> searchCustomers(String query) => customers.searchCustomers(query);
+  Future<Map<String, dynamic>?> getCustomerById(int id) => customers.getCustomerById(id);
+  Future<int> updateCustomer(int id, Map<String, dynamic> customerMap) => customers.updateCustomer(id, customerMap);
+  Future<int> deleteCustomer(int id) => customers.deleteCustomer(id);
+  Future<int> getCustomerCount() => customers.getCustomerCount();
+  Future<bool> isCustomerOverDebtCeiling(int customerId, double additionalAmount) => customers.isCustomerOverDebtCeiling(customerId, additionalAmount);
+  Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) => customers.getTopCustomerBalances(limit);
 
   // ══════════════════════════════════════════════════════════════
-  //  Supplier CRUD methods
+  //  Supplier CRUD methods — delegated to SupplierRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> getAllSuppliers() async {
-    final db = await database;
-    return await db.query('suppliers', orderBy: 'name ASC');
-  }
-
-  Future<int> insertSupplier(Map<String, dynamic> supplierMap) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-    final openingBalance = MoneyHelper.readMoney(supplierMap['balance']);
-    final balanceType = supplierMap['balance_type'] as String? ?? 'credit';
-    final supplierCurrency = supplierMap['currency'] as String? ?? 'YER';
-
-    int? supplierId;
-    await db.transaction((txn) async {
-      supplierId = await txn.insert('suppliers', supplierMap);
-
-      // ── Opening Balance Journal Entry ──
-      if (openingBalance > 0) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
-        final codeOffset = supplierCurrency == 'SAR' ? 1 : (supplierCurrency == 'USD' ? 2 : 0);
-
-        final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), supplierCurrency], limit: 1);
-        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2200 + codeOffset).toString(), supplierCurrency], limit: 1);
-
-        final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
-        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
-
-        if (suppliersAccountId != null && openingBalanceAccountId != null) {
-          if (balanceType == 'credit') {
-            // Supplier has credit (له) opening balance: Credit Suppliers, Debit Opening Balance Equity
-            await txn.insert('transactions', {
-              'account_id': suppliersAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(openingBalance),
-              'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
-              'date': now,
-              'created_at': now,
-            });
-            await txn.insert('transactions', {
-              'account_id': openingBalanceAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(openingBalance),
-              'credit': 0,
-              'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, openingBalance, now);
-            await _updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
-          } else {
-            // Supplier has debit (عليه) opening balance: Debit Suppliers, Credit Opening Balance Equity
-            await txn.insert('transactions', {
-              'account_id': suppliersAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(openingBalance),
-              'credit': 0,
-              'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
-              'date': now,
-              'created_at': now,
-            });
-            await txn.insert('transactions', {
-              'account_id': openingBalanceAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(openingBalance),
-              'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, suppliersAccountId, openingBalance, 0.0, now);
-            await _updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
-          }
-        }
-      }
-    });
-    return supplierId!;
-  }
-
-  Future<int> updateSupplier(int id, Map<String, dynamic> supplierMap) async {
-    final db = await database;
-    return await db.update('suppliers', supplierMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteSupplier(int id) async {
-    final db = await database;
-    // Check if supplier is referenced in invoices
-    final refs = await db.query('invoices', where: 'supplier_id = ?', whereArgs: [id], limit: 1);
-    if (refs.isNotEmpty) {
-      // Soft-delete not supported by schema — just prevent deletion
-      return 0;
-    }
-    return await db.delete('suppliers', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<List<Map<String, dynamic>>> searchSuppliers(String query) async {
-    final db = await database;
-    final likeQuery = '%$query%';
-    return await db.query('suppliers', where: 'name LIKE ? OR phone LIKE ?', whereArgs: [likeQuery, likeQuery], orderBy: 'name ASC');
-  }
-
-  /// Get all invoices for a specific supplier.
-  Future<List<Map<String, dynamic>>> getSupplierInvoices(int supplierId) async {
-    final db = await database;
-    return await db.query(
-      'invoices',
-      where: 'supplier_id = ?',
-      whereArgs: [supplierId],
-      orderBy: 'created_at DESC',
-    );
-  }
-
-  /// Get all vouchers for a specific supplier.
-  Future<List<Map<String, dynamic>>> getSupplierVouchers(int supplierId) async {
-    final db = await database;
-    return await db.query(
-      'vouchers',
-      where: 'supplier_id = ?',
-      whereArgs: [supplierId],
-      orderBy: 'date DESC',
-    );
-  }
-
-  /// Get all financial movements for a supplier (invoices + vouchers) sorted by date.
-  Future<List<Map<String, dynamic>>> getSupplierMovements(int supplierId) async {
-    final db = await database;
-
-    // Get invoices for this supplier
-    final invoices = await db.query(
-      'invoices',
-      where: 'supplier_id = ?',
-      whereArgs: [supplierId],
-      orderBy: 'created_at DESC',
-    );
-
-    // Get vouchers for this supplier
-    final vouchers = await db.query(
-      'vouchers',
-      where: 'supplier_id = ?',
-      whereArgs: [supplierId],
-      orderBy: 'date DESC',
-    );
-
-    // Tag each entry with its source
-    final movements = <Map<String, dynamic>>[];
-    for (final inv in invoices) {
-      movements.add({
-        ...inv,
-        '_source': 'invoice',
-        '_sort_date': inv['created_at'] ?? '',
-      });
-    }
-    for (final v in vouchers) {
-      movements.add({
-        ...v,
-        '_source': 'voucher',
-        '_sort_date': v['date'] ?? v['created_at'] ?? '',
-      });
-    }
-
-    // Sort by date descending
-    movements.sort((a, b) {
-      final dateA = a['_sort_date'] as String? ?? '';
-      final dateB = b['_sort_date'] as String? ?? '';
-      return dateB.compareTo(dateA);
-    });
-
-    return movements;
-  }
+  Future<List<Map<String, dynamic>>> getAllSuppliers() => suppliers.getAllSuppliers();
+  Future<int> insertSupplier(Map<String, dynamic> supplierMap) => suppliers.insertSupplier(supplierMap);
+  Future<int> updateSupplier(int id, Map<String, dynamic> supplierMap) => suppliers.updateSupplier(id, supplierMap);
+  Future<int> deleteSupplier(int id) => suppliers.deleteSupplier(id);
+  Future<List<Map<String, dynamic>>> searchSuppliers(String query) => suppliers.searchSuppliers(query);
+  Future<List<Map<String, dynamic>>> getSupplierInvoices(int supplierId) => suppliers.getSupplierInvoices(supplierId);
+  Future<List<Map<String, dynamic>>> getSupplierVouchers(int supplierId) => suppliers.getSupplierVouchers(supplierId);
+  Future<List<Map<String, dynamic>>> getSupplierMovements(int supplierId) => suppliers.getSupplierMovements(supplierId);
+  Future<Map<String, dynamic>?> getSupplierById(int id) => suppliers.getSupplierById(id);
+  Future<bool> isSupplierOverDebtCeiling(int supplierId, double additionalAmount) => suppliers.isSupplierOverDebtCeiling(supplierId, additionalAmount);
 
   // ══════════════════════════════════════════════════════════════
-  //  Cash Boxes & Banks CRUD methods
+  //  Cash Boxes & Banks CRUD methods — delegated to CashBoxService
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> insertCashBox(Map<String, dynamic> cashBoxMap) async {
-    final db = await database;
-    return await db.insert('cash_boxes', cashBoxMap);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllCashBoxes() async {
-    final db = await database;
-    return await db.query('cash_boxes', where: 'is_active = ?', whereArgs: [1], orderBy: 'type ASC, name ASC');
-  }
-
-  Future<List<Map<String, dynamic>>> getCashBoxesByType(String type) async {
-    final db = await database;
-    return await db.query('cash_boxes', where: 'type = ? AND is_active = ?', whereArgs: [type, 1], orderBy: 'name ASC');
-  }
-
-  Future<Map<String, dynamic>?> getCashBoxById(int id) async {
-    final db = await database;
-    final results = await db.query('cash_boxes', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<int> updateCashBox(int id, Map<String, dynamic> cashBoxMap) async {
-    final db = await database;
-    return await db.update('cash_boxes', cashBoxMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteCashBox(int id) async {
-    final db = await database;
-    return await db.delete('cash_boxes', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<double> getTotalCashBalance() async {
-    final db = await database;
-    final result = await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN balance_type = 'credit' THEN balance ELSE -balance END), 0) AS total FROM cash_boxes WHERE is_active = 1");
-    return MoneyHelper.readMoney(result.first['total']);
-  }
+  Future<int> insertCashBox(Map<String, dynamic> cashBoxMap) => cashBoxes.insertCashBox(cashBoxMap);
+  Future<List<Map<String, dynamic>>> getAllCashBoxes() => cashBoxes.getAllCashBoxes();
+  Future<List<Map<String, dynamic>>> getCashBoxesByType(String type) => cashBoxes.getCashBoxesByType(type);
+  Future<Map<String, dynamic>?> getCashBoxById(int id) => cashBoxes.getCashBoxById(id);
+  Future<int> updateCashBox(int id, Map<String, dynamic> cashBoxMap) => cashBoxes.updateCashBox(id, cashBoxMap);
+  Future<int> deleteCashBox(int id) => cashBoxes.deleteCashBox(id);
+  Future<double> getTotalCashBalance() => cashBoxes.getTotalCashBalance();
 
   // ══════════════════════════════════════════════════════════════
-  //  Currency CRUD methods
+  //  Currency CRUD methods — delegated to ReferenceDataRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> insertCurrency(Map<String, dynamic> currencyMap) async {
-    final db = await database;
-    return await db.insert('currencies', currencyMap);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllCurrencies({String orderBy = 'is_default DESC, code ASC'}) async {
-    final db = await database;
-    return await db.query('currencies', orderBy: orderBy);
-  }
-
-  Future<Map<String, dynamic>?> getDefaultCurrency() async {
-    final db = await database;
-    final results = await db.query('currencies', where: 'is_default = ?', whereArgs: [1], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<int> updateCurrency(int id, Map<String, dynamic> currencyMap) async {
-    final db = await database;
-    return await db.update('currencies', currencyMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteCurrency(int id) async {
-    final db = await database;
-    return await db.delete('currencies', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<void> setDefaultCurrency(int id) async {
-    final db = await database;
-    await db.update('currencies', {'is_default': 0});
-    await db.update('currencies', {'is_default': 1}, where: 'id = ?', whereArgs: [id]);
-  }
+  Future<int> insertCurrency(Map<String, dynamic> currencyMap) => refData.insertCurrency(currencyMap);
+  Future<List<Map<String, dynamic>>> getAllCurrencies({String orderBy = 'is_default DESC, code ASC'}) => refData.getAllCurrencies(orderBy: orderBy);
+  Future<Map<String, dynamic>?> getDefaultCurrency() => refData.getDefaultCurrency();
+  Future<int> updateCurrency(int id, Map<String, dynamic> currencyMap) => refData.updateCurrency(id, currencyMap);
+  Future<int> deleteCurrency(int id) => refData.deleteCurrency(id);
+  Future<void> setDefaultCurrency(int id) => refData.setDefaultCurrency(id);
 
   // ══════════════════════════════════════════════════════════════
-  //  Units Master (CRUD)
+  //  Units Master (CRUD) — delegated to ReferenceDataRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> getAllUnits({String? unitType, bool activeOnly = false}) async {
-    final db = await database;
-    String? where;
-    List<Object>? whereArgs;
-    if (unitType != null && activeOnly) {
-      where = 'unit_type = ? AND is_active = 1';
-      whereArgs = [unitType];
-    } else if (unitType != null) {
-      where = 'unit_type = ?';
-      whereArgs = [unitType];
-    } else if (activeOnly) {
-      where = 'is_active = 1';
-    }
-    return await db.query('units', where: where, whereArgs: whereArgs, orderBy: 'display_order ASC, id ASC');
-  }
-
-  Future<Map<String, dynamic>?> getUnitById(int id) async {
-    final db = await database;
-    final results = await db.query('units', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<int> insertUnit(Map<String, dynamic> unitMap) async {
-    final db = await database;
-    return await db.insert('units', unitMap);
-  }
-
-  Future<int> updateUnit(int id, Map<String, dynamic> unitMap) async {
-    final db = await database;
-    return await db.update('units', unitMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteUnit(int id) async {
-    final db = await database;
-    // Check if unit is used by any product
-    final productsWithUnit = await db.query(
-      'products',
-      where: 'base_unit_id = ? OR purchase_unit_id = ? OR sale_unit_id = ? OR unit_id = ?',
-      whereArgs: [id, id, id, id],
-      limit: 1,
-    );
-    if (productsWithUnit.isNotEmpty) {
-      throw Exception('لا يمكن حذف الوحدة لأنها مستخدمة في أصناف موجودة');
-    }
-    return await db.delete('units', where: 'id = ?', whereArgs: [id]);
-  }
-
-  /// Get unit name by ID from the units table
-  Future<String> getUnitNameById(int unitId) async {
-    final db = await database;
-    final results = await db.query('units', where: 'id = ?', whereArgs: [unitId], limit: 1);
-    if (results.isNotEmpty) {
-      return results.first['name_ar'] as String? ?? '';
-    }
-    // Fallback to old static mapping for backward compat
-    return _getUnitName(unitId);
-  }
+  Future<int> insertUnit(Map<String, dynamic> unitMap) => refData.insertUnit(unitMap);
+  Future<int> updateUnit(int id, Map<String, dynamic> unitMap) => refData.updateUnit(id, unitMap);
+  Future<int> deleteUnit(int id) => refData.deleteUnit(id);
+  Future<List<Map<String, dynamic>>> getAllUnits({String? unitType, bool activeOnly = false}) => refData.getAllUnits(unitType: unitType, activeOnly: activeOnly);
+  Future<Map<String, dynamic>?> getUnitById(int id) => refData.getUnitById(id);
+  Future<String> getUnitNameById(int unitId) => refData.getUnitNameById(unitId);
 
   // ══════════════════════════════════════════════════════════════
-  //  Unit Conversions (Multi-Unit support)
+  //  Unit Conversions — delegated to ReferenceDataRepository
   // ══════════════════════════════════════════════════════════════
 
-  /// Insert a unit conversion for a product (e.g., 1 carton = 24 pieces)
-  Future<int> insertUnitConversion(Map<String, dynamic> conversionMap) async {
-    final db = await database;
-    return await db.insert('unit_conversions', conversionMap);
-  }
-
-  /// Get all unit conversions for a product
-  Future<List<Map<String, dynamic>>> getUnitConversions(int productId) async {
-    final db = await database;
-    return await db.query(
-      'unit_conversions',
-      where: 'product_id = ? AND is_active = 1',
-      whereArgs: [productId],
-      orderBy: 'id ASC',
-    );
-  }
-
-  /// Update a unit conversion
-  Future<int> updateUnitConversion(int id, Map<String, dynamic> conversionMap) async {
-    final db = await database;
-    return await db.update('unit_conversions', conversionMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  /// Delete a unit conversion
-  Future<int> deleteUnitConversion(int id) async {
-    final db = await database;
-    return await db.delete('unit_conversions', where: 'id = ?', whereArgs: [id]);
-  }
-
-  /// Find unit conversion by barcode (for POS barcode scanning)
-  Future<Map<String, dynamic>?> findUnitConversionByBarcode(String barcode) async {
-    final db = await database;
-    final results = await db.query(
-      'unit_conversions',
-      where: 'barcode = ? AND is_active = 1',
-      whereArgs: [barcode.trim()],
-      limit: 1,
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  /// Get all available units for a product (base unit + conversions)
-  /// Returns a list of maps with: {unit_name, conversion_factor, sell_price, barcode, unit_id, is_base}
-  Future<List<Map<String, dynamic>>> getAvailableUnitsForProduct(int productId) async {
-    final db = await database;
-    // Get base product info
-    final product = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-    if (product.isEmpty) return [];
-
-    // Resolve base unit name from units table (fallback to static mapping)
-    final baseUnitId = product.first['base_unit_id'] as int? ?? product.first['unit_id'] as int? ?? 1;
-    String baseUnitName;
-    final unitRow = await db.query('units', where: 'id = ?', whereArgs: [baseUnitId], limit: 1);
-    if (unitRow.isNotEmpty) {
-      baseUnitName = unitRow.first['name_ar'] as String? ?? '';
-    } else {
-      baseUnitName = _getUnitName(baseUnitId);
-    }
-    final baseSellPrice = MoneyHelper.readMoney(product.first['sell_price']);
-    final baseCostPrice = MoneyHelper.readMoney(product.first['cost_price']);
-
-    // Start with base unit (factor = 1.0)
-    final units = <Map<String, dynamic>>[
-      {
-        'unit_name': baseUnitName,
-        'conversion_factor': 1.0,
-        'sell_price': baseSellPrice,
-        'cost_price': baseCostPrice,
-        'barcode': product.first['barcode'] as String? ?? '',
-        'is_base': 1,
-        'unit_id': baseUnitId,
-      },
-    ];
-
-    // Add converted units
-    final conversions = await db.query(
-      'unit_conversions',
-      where: 'product_id = ? AND is_active = 1',
-      whereArgs: [productId],
-    );
-    for (final conv in conversions) {
-      final fromUnit = conv['from_unit'] as String? ?? '';
-      final factor = (conv['conversion_factor'] as num?)?.toDouble() ?? 1.0;
-      final convSellPrice = MoneyHelper.readMoney(conv['sell_price']) != 0.0 ? MoneyHelper.readMoney(conv['sell_price']) : (baseSellPrice * factor);
-      final convCostPrice = MoneyHelper.readMoney(conv['cost_price']) != 0.0 ? MoneyHelper.readMoney(conv['cost_price']) : (baseCostPrice * factor);
-      // Resolve unit_id from the conversion if available
-      final fromUnitId = conv['from_unit_id'] as int?;
-      units.add({
-        'unit_name': fromUnit,
-        'conversion_factor': factor,
-        'sell_price': convSellPrice,
-        'cost_price': convCostPrice,
-        'barcode': conv['barcode'] as String? ?? '',
-        'is_base': 0,
-        'conversion_id': conv['id'],
-        if (fromUnitId != null) 'unit_id': fromUnitId,
-      });
-    }
-    return units;
-  }
-
-  /// Helper: Get unit name from unit_id (matches static list in add_product_sheet)
-  String _getUnitName(int unitId) {
-    const units = {
-      1: 'قطعة', 2: 'كيلو', 3: 'لتر', 4: 'متر',
-      5: 'علبة', 6: 'كرتون', 7: 'طن', 8: 'جرام',
-    };
-    return units[unitId] ?? 'قطعة';
-  }
+  Future<int> insertUnitConversion(Map<String, dynamic> conversionMap) => refData.insertUnitConversion(conversionMap);
+  Future<List<Map<String, dynamic>>> getUnitConversions(int productId) => refData.getUnitConversions(productId);
+  Future<int> updateUnitConversion(int id, Map<String, dynamic> conversionMap) => refData.updateUnitConversion(id, conversionMap);
+  Future<int> deleteUnitConversion(int id) => refData.deleteUnitConversion(id);
+  Future<Map<String, dynamic>?> findUnitConversionByBarcode(String barcode) => refData.findUnitConversionByBarcode(barcode);
+  Future<List<Map<String, dynamic>>> getAvailableUnitsForProduct(int productId) => refData.getAvailableUnitsForProduct(productId);
 
   // ══════════════════════════════════════════════════════════════
   //  Weighted Average Cost
@@ -4010,30 +3459,7 @@ class DatabaseHelper {
 
   /// Update weighted average cost when purchasing at a new price.
   /// Formula: new_avg_cost = (existing_stock * old_avg_cost + new_qty * new_cost) / (existing_stock + new_qty)
-  Future<void> updateWeightedAverageCost(int productId, double purchasedQty, double purchasedUnitCost) async {
-    if (purchasedQty <= 0) return;
-    final db = await database;
-    final product = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-    if (product.isEmpty) return;
-
-    final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-    final currentAvgCost = MoneyHelper.readMoney(product.first['average_cost']);
-
-    final newTotalValue = (currentStock * currentAvgCost) + (purchasedQty * purchasedUnitCost);
-    final newTotalStock = currentStock + purchasedQty;
-    final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : purchasedUnitCost;
-
-    await db.update(
-      'products',
-      {
-        'average_cost': MoneyHelper.toCents(newAvgCost),
-        'cost_price': MoneyHelper.toCents(newAvgCost),  // Keep cost_price in sync for backward compatibility
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [productId],
-    );
-  }
+  Future<void> updateWeightedAverageCost(int productId, double purchasedQty, double purchasedUnitCost) => products.updateWeightedAverageCost(productId, purchasedQty, purchasedUnitCost);
 
   // ══════════════════════════════════════════════════════════════
   //  Stock Movement Log
@@ -4049,71 +3475,31 @@ class DatabaseHelper {
     String? referenceId,
     String? notes,
     double unitCost = 0.0,
-  }) async {
-    final db = await database;
-    return await db.insert('stock_movements', {
-      'product_id': productId,
-      'movement_type': movementType,
-      'quantity': quantity,
-      'reference_type': referenceType,
-      'reference_id': referenceId,
-      'notes': notes,
-      'unit_cost': MoneyHelper.toCents(unitCost)
-      'created_at': DateTime.now().toIso8601String(),
-    });
-  }
+  }) => products.logStockMovement(
+    productId: productId,
+    movementType: movementType,
+    quantity: quantity,
+    referenceType: referenceType,
+    referenceId: referenceId,
+    notes: notes,
+    unitCost: unitCost,
+  );
 
   /// Get stock movement history for a product
-  Future<List<Map<String, dynamic>>> getStockMovements(int productId, {int limit = 50}) async {
-    final db = await database;
-    return await db.query(
-      'stock_movements',
-      where: 'product_id = ?',
-      whereArgs: [productId],
-      orderBy: 'created_at DESC',
-      limit: limit,
-    );
-  }
+  Future<List<Map<String, dynamic>>> getStockMovements(int productId, {int limit = 50}) => products.getStockMovements(productId, limit: limit);
 
   /// Get stock movements by type (e.g., all sales today)
-  Future<List<Map<String, dynamic>>> getStockMovementsByType(String movementType, {DateTime? since}) async {
-    final db = await database;
-    if (since != null) {
-      return await db.query(
-        'stock_movements',
-        where: 'movement_type = ? AND created_at >= ?',
-        whereArgs: [movementType, since.toIso8601String()],
-        orderBy: 'created_at DESC',
-      );
-    }
-    return await db.query(
-      'stock_movements',
-      where: 'movement_type = ?',
-      whereArgs: [movementType],
-      orderBy: 'created_at DESC',
-    );
-  }
+  Future<List<Map<String, dynamic>>> getStockMovementsByType(String movementType, {DateTime? since}) => products.getStockMovementsByType(movementType, since: since);
 
   // ══════════════════════════════════════════════════════════════
-  //  Invoice CRUD methods
+  //  Invoice CRUD methods — delegated to InvoiceRepository
   // ══════════════════════════════════════════════════════════════
 
   Future<void> insertInvoiceWithItems(
     Map<String, dynamic> invoiceMap,
     List<Map<String, dynamic>> items,
-  ) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.insert('invoices', invoiceMap);
-      for (final item in items) {
-        await txn.insert('invoice_items', item);
-      }
-    });
-  }
+  ) => invoices.insertInvoiceWithItems(invoiceMap, items);
 
-  /// Save invoice and post journal entries to the chart of accounts.
-  /// [transportCharges] - optional transport charges that generate additional journal entries.
-  /// [deferPosting] - if true, skip journal entries (for POS deferred posting until shift close).
   Future<void> saveInvoiceWithJournalEntries(
     Map<String, dynamic> invoiceMap,
     List<Map<String, dynamic>> items, {
@@ -4124,1586 +3510,74 @@ class DatabaseHelper {
     double transportCharges = 0.0,
     bool deferPosting = false,
     double? paidAmount,
-  }) async {
-    try {
-    final db = await database;
-    final total = MoneyHelper.readMoney(invoiceMap['total']);
-    final invoiceCurrency = (invoiceMap['currency'] as String?) ?? 'YER';
-    final now = DateTime.now().toIso8601String();
+  }) => invoices.saveInvoiceWithJournalEntries(
+    invoiceMap, items,
+    invoiceType: invoiceType,
+    paymentMechanism: paymentMechanism,
+    isReturn: isReturn,
+    cashBoxId: cashBoxId,
+    transportCharges: transportCharges,
+    deferPosting: deferPosting,
+    paidAmount: paidAmount,
+  );
 
-    // ── التحقق من قفل الفترة المحاسبية ──
-    final invoiceDate = invoiceMap['date'] as String? ?? invoiceMap['created_at'] as String? ?? now;
-    await _checkFiscalPeriodOpen(invoiceDate);
-
-    // Check if the invoice date falls in a closed fiscal year
-    final isClosed = await isDateInClosedPeriod(DateTime.parse(invoiceDate));
-    if (isClosed) {
-      throw Exception('لا يمكن إضافة فاتورة في سنة مالية مغلقة');
-    }
-
-    await db.transaction((txn) async {
-      // Insert invoice
-      await txn.insert('invoices', invoiceMap);
-
-      // Insert invoice items
-      for (final item in items) {
-        await txn.insert('invoice_items', item);
-      }
-
-      // ── Stock management ──
-      // Sale/POS: decrement stock; Purchase: increment stock; Returns do the opposite
-      // Also logs stock movements and updates weighted average cost on purchases
-      for (final item in items) {
-        final productId = (item['product_id'] as num?)?.toInt();
-        final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
-        // Use base_quantity for stock deduction (always in base unit)
-        // Falls back to quantity for backward compat with old invoice items
-        final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
-        final unitPrice = MoneyHelper.readMoney(item['unit_price']);
-        final invoiceIdStr = invoiceMap['id'] as String? ?? '';
-        if (productId == null) continue;
-
-        if (invoiceType == 'sale' || invoiceType == 'pos') {
-          if (!isReturn) {
-            // Sale: stock leaves warehouse (always in base units)
-            // Check if product allows negative stock
-            final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
-            if (allowNeg) {
-              await txn.rawUpdate(
-                'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
-                [baseQuantity, now, productId],
-              );
-            } else {
-              await txn.rawUpdate(
-                'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-                [baseQuantity, now, productId],
-              );
-            }
-            // Log stock movement
-            await txn.insert('stock_movements', {
-              'product_id': productId,
-              'movement_type': 'sale',
-              'quantity': -baseQuantity,
-              'reference_type': invoiceType,
-              'reference_id': invoiceIdStr,
-              'unit_cost': MoneyHelper.toCents(unitPrice)
-              'created_at': now,
-            });
-          } else {
-            // Sale return: stock returns to warehouse (always in base units)
-            await txn.rawUpdate(
-              'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
-              [baseQuantity, now, productId],
-            );
-            await txn.insert('stock_movements', {
-              'product_id': productId,
-              'movement_type': 'return',
-              'quantity': baseQuantity,
-              'reference_type': 'sale_return',
-              'reference_id': invoiceIdStr,
-              'unit_cost': MoneyHelper.toCents(unitPrice)
-              'created_at': now,
-            });
-          }
-        } else if (invoiceType == 'purchase') {
-          if (!isReturn) {
-            // Purchase: stock enters warehouse (always in base units)
-            await txn.rawUpdate(
-              'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
-              [baseQuantity, now, productId],
-            );
-            // Update weighted average cost on purchase
-            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            if (productRow.isNotEmpty) {
-              final currentStock = (productRow.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-              final currentAvgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-              // current_stock already updated above, so subtract the new qty to get the old stock
-              final oldStock = currentStock - baseQuantity;
-              final newTotalValue = (oldStock * currentAvgCost) + (baseQuantity * unitPrice);
-              final newTotalStock = currentStock; // already includes new qty
-              final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : unitPrice;
-              await txn.update(
-                'products',
-                {
-                  'average_cost': MoneyHelper.toCents(newAvgCost),
-                  'cost_price': MoneyHelper.toCents(newAvgCost),
-                  'updated_at': now,
-                },
-                where: 'id = ?',
-                whereArgs: [productId],
-              );
-            }
-            await txn.insert('stock_movements', {
-              'product_id': productId,
-              'movement_type': 'purchase',
-              'quantity': baseQuantity,
-              'reference_type': 'purchase',
-              'reference_id': invoiceIdStr,
-              'unit_cost': MoneyHelper.toCents(unitPrice)
-              'created_at': now,
-            });
-          } else {
-            // Purchase return: stock leaves warehouse (always in base units)
-            // Check if product allows negative stock
-            final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
-            if (allowNeg) {
-              await txn.rawUpdate(
-                'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
-                [baseQuantity, now, productId],
-              );
-            } else {
-              await txn.rawUpdate(
-                'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-                [baseQuantity, now, productId],
-              );
-            }
-            await txn.insert('stock_movements', {
-              'product_id': productId,
-              'movement_type': 'return',
-              'quantity': -baseQuantity,
-              'reference_type': 'purchase_return',
-              'reference_id': invoiceIdStr,
-              'unit_cost': MoneyHelper.toCents(unitPrice)
-              'created_at': now,
-            });
-          }
-        }
-      }
-
-      // ── Deferred posting: skip journal entries for POS invoices ──
-      // Journal entries will be created by postShiftInvoices() when the shift is closed.
-      // This prevents double-posting (once at sale time and again at shift close).
-      if (deferPosting) {
-        return; // Stock already updated above; journal entries deferred to shift close.
-      }
-
-      // Post journal entries
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-
-      // ── Partial payment handling ──
-      // When paidAmount is provided and < total with cash mechanism, create split journal entries:
-      // Sale: Debit cash (paid) + Debit customer (remaining) = Credit sales (total)
-      // Purchase: Debit purchases (total) = Credit cash (paid) + Credit supplier (remaining)
-      final effectivePaid = paidAmount ?? (paymentMechanism == 'credit' ? 0.0 : total);
-      final isPartialCash = paymentMechanism == 'cash' && effectivePaid < total - 0.005 && effectivePaid > 0.005;
-      final remainingAmount = total - effectivePaid;
-
-      // ── Multi-currency: Journal entries should be in base currency (YER) ──
-      // When the invoice is in a foreign currency, convert amounts to YER
-      // using the invoice's exchange rate, and use YER accounts.
-      final exchangeRate = (invoiceMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-      final bool needsYerConversion = invoiceCurrency != 'YER' && exchangeRate > 0;
-      final double journalTotal = needsYerConversion ? total * exchangeRate : total;
-      final double journalEffectivePaid = needsYerConversion ? effectivePaid * exchangeRate : effectivePaid;
-      final double journalRemainingAmount = needsYerConversion ? remainingAmount * exchangeRate : remainingAmount;
-      // Always use YER accounts when converting; otherwise use currency-specific accounts
-      final int codeOffset = needsYerConversion ? 0 : (invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0));
-      final String journalCurrency = needsYerConversion ? 'YER' : invoiceCurrency;
-
-      // Get account IDs for journal entries (using journalCurrency which is YER when conversion needed)
-      final salesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(4100 + codeOffset).toString(), journalCurrency], limit: 1);
-      final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), journalCurrency], limit: 1);
-      final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), journalCurrency], limit: 1);
-      final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), journalCurrency], limit: 1);
-      final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), journalCurrency], limit: 1);
-
-      final salesAccountId = salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
-      final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
-      final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
-      final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
-      final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-
-      if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
-        if (isReturn) {
-          // Sale Return: Debit Sales Revenue, Credit Customer/Cash
-          final debitAccountId = salesAccountId;
-          final creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-
-          if (debitAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': debitAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalTotal),
-              'credit': 0,
-              'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, debitAccountId, journalTotal, 0.0, now);
-          }
-          if (creditAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': creditAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(journalTotal),
-              'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, journalTotal, now);
-          }
-        } else if (isPartialCash) {
-          // Sale with partial cash: Debit cash (paid) + Debit customer (remaining), Credit sales (total)
-          if (cashBanksAccountId != null && effectivePaid > 0) {
-            await txn.insert('transactions', {
-              'account_id': cashBanksAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalEffectivePaid),
-              'credit': 0,
-              'description': 'فاتورة مبيعات (مدفوع) - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, journalEffectivePaid, 0.0, now);
-          }
-          if (customersAccountId != null && remainingAmount > 0) {
-            await txn.insert('transactions', {
-              'account_id': customersAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalRemainingAmount),
-              'credit': 0,
-              'description': 'فاتورة مبيعات (آجل) - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, customersAccountId, journalRemainingAmount, 0.0, now);
-          }
-          if (salesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': salesAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(journalTotal),
-              'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, journalTotal, now);
-          }
-        } else {
-          // Normal sale: full cash or full credit
-          final debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-          if (debitAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': debitAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalTotal),
-              'credit': 0,
-              'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, debitAccountId, journalTotal, 0.0, now);
-          }
-          if (salesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': salesAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(journalTotal),
-              'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, journalTotal, now);
-          }
-        }
-      } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
-        if (isReturn) {
-          // Purchase Return: Debit Cash/Supplier, Credit Purchases
-          final debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          if (debitAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': debitAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalTotal),
-              'credit': 0,
-              'description': 'فاتورة مشتريات - مرتجع - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, debitAccountId, journalTotal, 0.0, now);
-          }
-          if (purchasesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': purchasesAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(journalTotal),
-              'description': 'فاتورة مشتريات - مرتجع - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, journalTotal, now);
-          }
-        } else if (isPartialCash) {
-          // Purchase with partial cash: Debit purchases (total), Credit cash (paid) + Credit supplier (remaining)
-          if (purchasesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': purchasesAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalTotal),
-              'credit': 0,
-              'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, journalTotal, 0.0, now);
-          }
-          if (cashBanksAccountId != null && effectivePaid > 0) {
-            await txn.insert('transactions', {
-              'account_id': cashBanksAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(journalEffectivePaid),
-              'description': 'فاتورة مشتريات (مدفوع) - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, journalEffectivePaid, now);
-          }
-          if (suppliersAccountId != null && remainingAmount > 0) {
-            await txn.insert('transactions', {
-              'account_id': suppliersAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(journalRemainingAmount),
-              'description': 'فاتورة مشتريات (آجل) - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, journalRemainingAmount, now);
-          }
-        } else {
-          // Normal purchase: full cash or full credit
-          if (purchasesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': purchasesAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalTotal),
-              'credit': 0,
-              'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, journalTotal, 0.0, now);
-          }
-          final creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          if (creditAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': creditAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(journalTotal),
-              'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, journalTotal, now);
-          }
-        }
-      }
-
-      // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
-      // For sale invoices (not return): Debit COGS, Credit Inventory for average_cost * base_quantity
-      // For sale returns: Debit Inventory, Credit COGS
-      // For purchase invoices (not return): Debit Inventory, Credit Purchases (transfer to inventory)
-      // For purchase returns: Debit Purchases, Credit Inventory (reverse transfer)
-      if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
-        final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), journalCurrency], limit: 1);
-        final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), journalCurrency], limit: 1);
-        final cogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
-        final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
-
-        if (cogsAccountId != null && inventoryAccountId != null) {
-          double totalCogs = 0.0;
-          for (final item in items) {
-            final productId = (item['product_id'] as num?)?.toInt();
-            final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
-            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
-            if (productId == null) continue;
-
-            // Look up product average cost (weighted average)
-            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            if (productRow.isEmpty) continue;
-            final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-            final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-            // COGS must use base_quantity (not quantity) because average_cost is per base unit
-            totalCogs += effectiveCost * baseQuantity;
-          }
-
-          if (totalCogs > 0) {
-            if (!isReturn) {
-              // Sale: Debit COGS, Credit Inventory
-              await txn.insert('transactions', {
-                'account_id': cogsAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalCogs),
-                'credit': 0,
-                'description': 'تكلفة بضاعة مباعة - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalCogs),
-                'description': 'تخفيض مخزون - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              // Update account balances
-              await _updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
-              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
-            } else {
-              // Sale return: Debit Inventory, Credit COGS (reverse)
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalCogs),
-                'credit': 0,
-                'description': 'إعادة مخزون مرتجع - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': cogsAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalCogs),
-                'description': 'عكس تكلفة بضاعة مرتجعة - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              // Update account balances
-              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
-              await _updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
-            }
-          }
-        }
-      }
-
-      // ── Purchase Inventory Transfer Entries ──
-      // In perpetual inventory: Purchases debit Purchases account, but inventory must also increase.
-      // Add transfer: Debit Inventory, Credit Purchases (for the cost of items purchased)
-      if ((invoiceType == 'purchase' || invoiceType == 'purchase_return')) {
-        final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), journalCurrency], limit: 1);
-        final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), journalCurrency], limit: 1);
-        final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
-        final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
-
-        if (inventoryAccountId != null && purchasesAccountId != null) {
-          double totalPurchaseCost = 0.0;
-          for (final item in items) {
-            final productId = (item['product_id'] as num?)?.toInt();
-            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
-            if (productId == null) continue;
-            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            if (productRow.isEmpty) continue;
-            final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-            final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-            totalPurchaseCost += effectiveCost * baseQuantity;
-          }
-
-          if (totalPurchaseCost > 0) {
-            if (!isReturn) {
-              // Purchase: Debit Inventory (goods come in), Credit Purchases (transfer from purchases account)
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalPurchaseCost),
-                'credit': 0,
-                'description': 'إضافة مخزون مشتريات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': purchasesAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalPurchaseCost),
-                'description': 'تحويل من حساب المشتريات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalPurchaseCost, 0.0, now);
-              await _updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, totalPurchaseCost, now);
-            } else {
-              // Purchase return: Debit Purchases, Credit Inventory (reverse)
-              await txn.insert('transactions', {
-                'account_id': purchasesAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalPurchaseCost),
-                'credit': 0,
-                'description': 'عكس تحويل مشتريات مرتجعة - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalPurchaseCost),
-                'description': 'تخفيض مخزون مرتجع مشتريات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, purchasesAccountId, totalPurchaseCost, 0.0, now);
-              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalPurchaseCost, now);
-            }
-          }
-        }
-      }
-
-      // ── Transport Charges ──
-      // NOTE: Transport charges are already included in `total` (total = subtotal - discount + tax + transportCharges).
-      // The main journal entries and cash box update above already account for transport correctly.
-      // No separate transport journal entries are needed here to avoid double-counting.
-
-      // ── Validate journal balance (C-03): debits must equal credits ──
-      final journalEntries = await txn.query(
-        'transactions',
-        where: 'journal_id = ?',
-        whereArgs: [journalId],
-      );
-      _validateJournalBalance(journalEntries);
-
-      // Update customer/supplier balance
-      // For full cash payments: entity balance should NOT change (they already paid in full)
-      // For partial cash: only the remaining unpaid amount affects entity balance
-      // For credit: entity owes the full amount (total already includes transport)
-      if (invoiceMap['customer_id'] != null) {
-        final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-        double customerAmount;
-        if (paymentMechanism == 'cash' && !isPartialCash) {
-          // Full cash payment: entity balance should NOT change (already paid)
-          customerAmount = 0;
-        } else if (isPartialCash && !isReturn) {
-          // Partial cash: only the remaining amount is owed by the customer
-          customerAmount = remainingAmount;
-        } else {
-          // Credit mechanism: entity owes the full amount (total already includes transport)
-          customerAmount = total;
-        }
-        if (isDebit) {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoiceMap['customer_id']]);
-        } else {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoiceMap['customer_id']]);
-        }
-      }
-
-      // Supplier balance logic:
-      // For full cash payments: entity balance should NOT change (they already paid in full)
-      // For partial cash: only the remaining unpaid amount affects entity balance
-      // For credit: entity is owed the full amount (total already includes transport)
-      if (invoiceMap['supplier_id'] != null) {
-        final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-        double supplierAmount;
-        if (paymentMechanism == 'cash' && !isPartialCash) {
-          // Full cash payment: entity balance should NOT change (already paid)
-          supplierAmount = 0;
-        } else if (isPartialCash && !isReturn) {
-          // Partial cash: only the remaining amount is owed to the supplier
-          supplierAmount = remainingAmount;
-        } else {
-          // Credit mechanism: entity is owed the full amount (total already includes transport)
-          supplierAmount = total;
-        }
-        if (isCreditToSupplier) {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoiceMap['supplier_id']]);
-        } else {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoiceMap['supplier_id']]);
-        }
-      }
-
-      // Update cash box balance (total already includes transport charges)
-      if (cashBoxId != null) {
-        // For partial payments, only update cash box with the paid amount
-        final cashAmount = isPartialCash ? effectivePaid : total;
-        final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn);
-        // Check cash box balance_type to determine direction
-        final cbRow = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-        final cbBalanceType = cbRow.isNotEmpty ? (cbRow.first['balance_type'] as String? ?? 'credit') : 'credit';
-        if (cbBalanceType == 'credit') {
-          // Credit-type (له): money in increases balance, money out decreases
-          if (isCashIn) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
-          } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
-          }
-        } else {
-          // Debit-type (عليه): money in decreases balance (less owed), money out increases balance (more owed)
-          if (isCashIn) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
-          } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
-          }
-        }
-      }
-    });
-    } catch (e) {
-      // If the error is already a closed-fiscal-year message, pass it through
-      final msg = e.toString();
-      if (msg.contains('سنة مالية مغلقة') || msg.contains('فترة مغلقة')) {
-        rethrow;
-      }
-      // Log the error for audit trail
-      await logAuditEvent(
-        action: 'error',
-        tableName: 'invoices',
-        recordId: int.tryParse(invoiceMap['id']?.toString() ?? ''),
-        recordType: invoiceType,
-        oldValues: 'خطأ أثناء حفظ الفاتورة: $e',
-      );
-      throw Exception('حدث خطأ أثناء حفظ الفاتورة: $e');
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> getAllInvoices({String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT i.*,
-        CASE
-          WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل')
-          WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد')
-          ELSE 'بدون عميل'
-        END AS entity_name
-      FROM invoices i
-      LEFT JOIN customers c ON i.customer_id = c.id
-      LEFT JOIN suppliers s ON i.supplier_id = s.id
-      ORDER BY i.$orderBy
-    ''');
-  }
-
-  Future<List<Map<String, dynamic>>> getInvoicesByType(String type) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT i.*,
-        CASE
-          WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل')
-          WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد')
-          ELSE 'بدون عميل'
-        END AS entity_name
-      FROM invoices i
-      LEFT JOIN customers c ON i.customer_id = c.id
-      LEFT JOIN suppliers s ON i.supplier_id = s.id
-      WHERE i.type = ?
-      ORDER BY i.created_at DESC
-    ''', [type]);
-  }
-
-  Future<List<Map<String, dynamic>>> getInvoiceItems(String invoiceId) async {
-    final db = await database;
-    return await db.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
-  }
-
-  /// Get a single invoice by its ID.
-  Future<Map<String, dynamic>?> getInvoiceById(String invoiceId) async {
-    final db = await database;
-    final results = await db.query('invoices', where: 'id = ?', whereArgs: [invoiceId], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  /// Get all return invoices linked to a specific original invoice.
-  Future<List<Map<String, dynamic>>> getLinkedReturns(String invoiceId) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT i.*,
-        CASE
-          WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل')
-          WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد')
-          ELSE 'بدون عميل'
-        END AS entity_name
-      FROM invoices i
-      LEFT JOIN customers c ON i.customer_id = c.id
-      LEFT JOIN suppliers s ON i.supplier_id = s.id
-      WHERE i.original_invoice_id = ?
-      ORDER BY i.created_at DESC
-    ''', [invoiceId]);
-  }
-
-  /// Check return limits for items against their original invoice quantities.
-  /// Returns a map of product_id -> error message if any product's total returns exceed its original quantity.
-  /// Returns an empty map if all items are within limits.
-  Future<Map<int, String>> checkReturnLimits(
-    String? originalInvoiceId,
-    List<Map<String, dynamic>> items,
-  ) async {
-    if (originalInvoiceId == null || originalInvoiceId.isEmpty) return {};
-
-    final db = await database;
-    final errors = <int, String>{};
-
-    // Get original invoice items
-    final originalItems = await db.query(
-      'invoice_items',
-      where: 'invoice_id = ?',
-      whereArgs: [originalInvoiceId],
-    );
-
-    // Build a map of product_id -> original quantity
-    final originalQtyMap = <int, double>{};
-    for (final item in originalItems) {
-      final productId = (item['product_id'] as num?)?.toInt() ?? 0;
-      final qty = (item['base_quantity'] as num?)?.toDouble() ??
-                  (item['quantity'] as num?)?.toDouble() ?? 0.0;
-      originalQtyMap[productId] = (originalQtyMap[productId] ?? 0.0) + qty;
-    }
-
-    // Get existing returns for this original invoice (excluding cancelled)
-    final existingReturns = await db.rawQuery('''
-      SELECT ii.product_id, SUM(ii.base_quantity) AS total_returned
-      FROM invoice_items ii
-      INNER JOIN invoices i ON ii.invoice_id = i.id
-      WHERE i.original_invoice_id = ? AND i.status != 'cancelled'
-      GROUP BY ii.product_id
-    ''', [originalInvoiceId]);
-
-    // Build map of product_id -> already returned quantity
-    final alreadyReturnedMap = <int, double>{};
-    for (final row in existingReturns) {
-      final productId = (row['product_id'] as num?)?.toInt() ?? 0;
-      final totalReturned = (row['total_returned'] as num?)?.toDouble() ?? 0.0;
-      alreadyReturnedMap[productId] = totalReturned;
-    }
-
-    // Check each item in the new return
-    for (final item in items) {
-      final productId = (item['product_id'] as num?)?.toInt() ?? 0;
-      if (productId == 0) continue;
-      final productName = item['product_name'] as String? ?? '';
-      final newReturnQty = (item['base_quantity'] as num?)?.toDouble() ??
-                           (item['quantity'] as num?)?.toDouble() ?? 0.0;
-
-      final originalQty = originalQtyMap[productId] ?? 0.0;
-      if (originalQty == 0.0) {
-        errors[productId] = 'الصنف "$productName" غير موجود في الفاتورة الأصلية';
-        continue;
-      }
-
-      final alreadyReturned = alreadyReturnedMap[productId] ?? 0.0;
-      final totalAfterReturn = alreadyReturned + newReturnQty;
-
-      if (totalAfterReturn > originalQty + 0.005) {
-        final remaining = originalQty - alreadyReturned;
-        errors[productId] = 'كمية المرتجع للصنف "$productName" ($totalAfterReturn) تتجاوز الكمية المسموحة ($remaining متبقي من أصل $originalQty)';
-      }
-    }
-
-    return errors;
-  }
-
-  /// Soft-delete an invoice by setting status to 'cancelled'.
-  /// Does NOT reverse journal entries — use [cancelInvoice] for full reversal.
-  Future<int> deleteInvoice(String id) async {
-    final db = await database;
-    return await db.update('invoices', {'status': 'cancelled'}, where: 'id = ?', whereArgs: [id]);
-  }
-
-  /// Record a payment against an existing invoice.
-  /// Updates invoice paid_amount/remaining/status, creates journal entries,
-  /// updates customer/supplier balance, and updates cash box balance.
+  Future<List<Map<String, dynamic>>> getAllInvoices({String orderBy = 'created_at DESC'}) => invoices.getAllInvoices(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getInvoicesByType(String type) => invoices.getInvoicesByType(type);
+  Future<List<Map<String, dynamic>>> getInvoiceItems(String invoiceId) => invoices.getInvoiceItems(invoiceId);
+  Future<Map<String, dynamic>?> getInvoiceById(String invoiceId) => invoices.getInvoiceById(invoiceId);
+  Future<List<Map<String, dynamic>>> getLinkedReturns(String invoiceId) => invoices.getLinkedReturns(invoiceId);
+  Future<int> deleteInvoice(String id) => invoices.deleteInvoice(id);
   Future<void> recordInvoicePayment({
     required String invoiceId,
     required double amount,
     required int cashBoxId,
     String paymentMethod = 'cash',
     String? notes,
-  }) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-
-    // 1. Get the invoice
-    final invoiceRows = await db.query('invoices', where: 'id = ?', whereArgs: [invoiceId], limit: 1);
-    if (invoiceRows.isEmpty) return;
-    final invoice = invoiceRows.first;
-
-    final currentRemaining = MoneyHelper.readMoney(invoice['remaining']);
-    final currentPaid = MoneyHelper.readMoney(invoice['paid_amount']);
-    final total = MoneyHelper.readMoney(invoice['total']);
-    final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
-    final invoiceType = (invoice['type'] as String?) ?? 'sale';
-    final customerId = invoice['customer_id'] as int?;
-    final supplierId = invoice['supplier_id'] as int?;
-
-    // 2. Validate amount doesn't exceed remaining
-    if (amount <= 0) return;
-    final paymentAmount = amount > currentRemaining ? currentRemaining : amount;
-    final newPaid = currentPaid + paymentAmount;
-    final newRemaining = total - newPaid;
-
-    // 3. Determine new status
-    String newStatus;
-    if (newRemaining <= 0.005) {
-      newStatus = 'paid';
-    } else if (newPaid > 0) {
-      newStatus = 'partial';
-    } else {
-      newStatus = 'unpaid';
-    }
-
-    await db.transaction((txn) async {
-      // 4. Update invoice paid_amount, remaining, status
-      await txn.update(
-        'invoices',
-        {
-          'paid_amount': newPaid,
-          'remaining': newRemaining > 0 ? newRemaining : 0.0,
-          'status': newStatus,
-        },
-        where: 'id = ?',
-        whereArgs: [invoiceId],
-      );
-
-      // 5. Create journal entries
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-      final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
-
-      final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-      final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-      final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-
-      final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-      final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
-      final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
-
-      // For sale invoices: Debit cash, Credit customer (customer owes less)
-      // For purchase invoices: Debit supplier, Credit cash (we owe supplier less)
-      if (invoiceType == 'sale' || invoiceType == 'sale_return') {
-        // Sale: customer is paying us → Debit cash, Credit customer account
-        if (cashBanksAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': cashBanksAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(paymentAmount),
-            'credit': 0,
-            'description': 'تحصيل دفعة فاتورة مبيعات - $invoiceId',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, paymentAmount, 0.0, now);
-        }
-        if (customersAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': customersAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(paymentAmount),
-            'description': 'تحصيل دفعة فاتورة مبيعات - $invoiceId',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, paymentAmount, now);
-        }
-      } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
-        // Purchase: we are paying supplier → Debit supplier, Credit cash
-        if (suppliersAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': suppliersAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(paymentAmount),
-            'credit': 0,
-            'description': 'سداد دفعة فاتورة مشتريات - $invoiceId',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, suppliersAccountId, paymentAmount, 0.0, now);
-        }
-        if (cashBanksAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': cashBanksAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(paymentAmount),
-            'description': 'سداد دفعة فاتورة مشتريات - $invoiceId',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, paymentAmount, now);
-        }
-      }
-
-      // 6. Update customer balance (customer owes less after payment)
-      if (customerId != null) {
-        await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, customerId]);
-      }
-
-      // 7. Update supplier balance (we owe less after payment)
-      if (supplierId != null) {
-        await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, supplierId]);
-      }
-
-      // 8. Update cash box balance
-      if (invoiceType == 'sale' || invoiceType == 'sale_return') {
-        // Sale: cash comes in
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, cashBoxId]);
-      } else {
-        // Purchase: cash goes out
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, cashBoxId]);
-      }
-    });
-  }
-
-  /// Cancel an invoice: soft-delete + reversal journal entries + balance reversals + stock restore.
-  Future<void> cancelInvoice(String id) async {
-    try {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-
-    // Fetch invoice
-    final invoiceRows = await db.query('invoices', where: 'id = ?', whereArgs: [id], limit: 1);
-    if (invoiceRows.isEmpty) return;
-    final invoice = invoiceRows.first;
-
-    // Already cancelled — nothing to do
-    if ((invoice['status'] as String?) == 'cancelled') return;
-
-    // Check if the invoice date falls in a closed fiscal year
-    final invoiceDate = invoice['date'] as String? ?? invoice['created_at'] as String;
-    final isClosed = await isDateInClosedPeriod(DateTime.parse(invoiceDate));
-    if (isClosed) {
-      throw Exception('لا يمكن إلغاء فاتورة في سنة مالية مغلقة');
-    }
-
-    final total = MoneyHelper.readMoney(invoice['total']);
-    final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
-    final invoiceType = (invoice['type'] as String?) ?? 'sale';
-    final isReturn = (invoice['is_return'] as int?) == 1;
-    final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
-    final cashBoxId = invoice['cash_box_id'] as int?;
-    final transportCharges = MoneyHelper.readMoney(invoice['transport_charges']);
-
-    // Fetch items for stock reversal
-    final items = await db.query('invoice_items', where: 'invoice_id = ?', whereArgs: [id]);
-
-    await db.transaction((txn) async {
-      // 1. Set status to cancelled
-      await txn.update('invoices', {'status': 'cancelled'}, where: 'id = ?', whereArgs: [id]);
-
-      // 2. Create reversal journal entries
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-      final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
-
-      final salesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(4100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-      final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-      final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-      final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-      final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-
-      final salesAccountId = salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
-      final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
-      final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
-      final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
-      final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-
-      // Determine original debit/credit accounts and handle partial payments
-      // Check for partial payment (same logic as saveInvoiceWithJournalEntries)
-      final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
-      final remainingAmount = MoneyHelper.readMoney(invoice['remaining']);
-      final isPartialCash = paymentMechanism == 'cash' && paidAmount > 0.005 && remainingAmount > 0.005;
-
-      if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
-        if (isPartialCash && !isReturn) {
-          // Reverse partial cash sale: Credit Cash (paid), Credit Customer (remaining), Debit Sales (total)
-          if (cashBanksAccountId != null && paidAmount > 0) {
-            await txn.insert('transactions', {
-              'account_id': cashBanksAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(paidAmount),
-              'description': 'إلغاء فاتورة مبيعات (مدفوع) - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, paidAmount, now);
-          }
-          if (customersAccountId != null && remainingAmount > 0) {
-            await txn.insert('transactions', {
-              'account_id': customersAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(remainingAmount),
-              'description': 'إلغاء فاتورة مبيعات (آجل) - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, remainingAmount, now);
-          }
-          if (salesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': salesAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(total),
-              'credit': 0,
-              'description': 'إلغاء فاتورة مبيعات - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, salesAccountId, total, 0.0, now);
-          }
-        } else if (isReturn) {
-          // Reverse sale return: Debit Customer/Cash (original credit), Credit Sales (original debit)
-          final originalCreditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-          if (originalCreditAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': originalCreditAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(total),
-              'credit': 0,
-              'description': 'إلغاء فاتورة مبيعات - مرتجع - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, originalCreditAccountId, total, 0.0, now);
-          }
-          if (salesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': salesAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(total),
-              'description': 'إلغاء فاتورة مبيعات - مرتجع - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
-          }
-        } else {
-          // Normal reversal (full cash or full credit): swap debit/credit
-          final originalDebitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-          if (salesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': salesAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(total),
-              'credit': 0,
-              'description': 'إلغاء فاتورة مبيعات - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, salesAccountId, total, 0.0, now);
-          }
-          if (originalDebitAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': originalDebitAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(total),
-              'description': 'إلغاء فاتورة مبيعات - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, originalDebitAccountId, 0.0, total, now);
-          }
-        }
-      } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
-        if (isPartialCash && !isReturn) {
-          // Reverse partial cash purchase: Debit Cash (paid), Debit Supplier (remaining), Credit Purchases (total)
-          if (cashBanksAccountId != null && paidAmount > 0) {
-            await txn.insert('transactions', {
-              'account_id': cashBanksAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(paidAmount),
-              'credit': 0,
-              'description': 'إلغاء فاتورة مشتريات (مدفوع) - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, cashBanksAccountId, paidAmount, 0.0, now);
-          }
-          if (suppliersAccountId != null && remainingAmount > 0) {
-            await txn.insert('transactions', {
-              'account_id': suppliersAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(remainingAmount),
-              'credit': 0,
-              'description': 'إلغاء فاتورة مشتريات (آجل) - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, suppliersAccountId, remainingAmount, 0.0, now);
-          }
-          if (purchasesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': purchasesAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(total),
-              'description': 'إلغاء فاتورة مشتريات - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, total, now);
-          }
-        } else if (isReturn) {
-          // Reverse purchase return: Debit Purchases (original credit), Credit Cash/Supplier (original debit)
-          final originalDebitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          if (purchasesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': purchasesAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(total),
-              'credit': 0,
-              'description': 'إلغاء فاتورة مشتريات - مرتجع - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
-          }
-          if (originalDebitAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': originalDebitAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(total),
-              'description': 'إلغاء فاتورة مشتريات - مرتجع - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, originalDebitAccountId, 0.0, total, now);
-          }
-        } else {
-          // Normal reversal (full cash or full credit): swap debit/credit
-          final originalCreditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          if (originalCreditAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': originalCreditAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(total),
-              'credit': 0,
-              'description': 'إلغاء فاتورة مشتريات - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, originalCreditAccountId, total, 0.0, now);
-          }
-          if (purchasesAccountId != null && total > 0) {
-            await txn.insert('transactions', {
-              'account_id': purchasesAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(total),
-              'description': 'إلغاء فاتورة مشتريات - $id',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, total, now);
-          }
-        }
-      }
-
-      // 2b. Reverse COGS journal entries (for sale invoices)
-      if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
-        final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final cogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
-        final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
-
-        if (cogsAccountId != null && inventoryAccountId != null) {
-          double totalCogs = 0.0;
-          for (final item in items) {
-            final productId = (item['product_id'] as num?)?.toInt();
-            final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
-            if (productId == null) continue;
-
-            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            if (productRow.isEmpty) continue;
-            final costPrice = MoneyHelper.readMoney(productRow.first['cost_price']);
-            totalCogs += costPrice * quantity;
-          }
-
-          if (totalCogs > 0) {
-            if (!isReturn) {
-              // Original: Debit COGS, Credit Inventory → Reverse: Debit Inventory, Credit COGS
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalCogs),
-                'credit': 0,
-                'description': 'إلغاء تكلفة بضاعة مباعة - $id',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': cogsAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalCogs),
-                'description': 'إلغاء تخفيض مخزون - $id',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
-              await _updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
-            } else {
-              // Original return: Debit Inventory, Credit COGS → Reverse: Debit COGS, Credit Inventory
-              await txn.insert('transactions', {
-                'account_id': cogsAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalCogs),
-                'credit': 0,
-                'description': 'إلغاء إعادة مخزون مرتجع - $id',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': inventoryAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalCogs),
-                'description': 'إلغاء عكس تكلفة بضاعة مرتجعة - $id',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
-              await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
-            }
-          }
-        }
-      }
-
-      // 3. Transport charges reversal
-      // NOTE: Transport charges are already included in `total`, so the main reversal entries above
-      // already handle transport correctly. No separate transport reversal is needed.
-
-      // 4. Reverse customer/supplier balance
-      // Must mirror the save logic: full cash = no balance change, partial cash = only remaining, credit = total
-      if (invoice['customer_id'] != null) {
-        final wasDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-        double customerReversalAmount;
-        if (paymentMechanism == 'cash' && !isPartialCash) {
-          // Full cash payment: original save set customerAmount = 0, so reversal is also 0
-          customerReversalAmount = 0;
-        } else if (isPartialCash && !isReturn) {
-          // Partial cash: original save set customerAmount = remainingAmount
-          customerReversalAmount = remainingAmount;
-        } else {
-          // Credit mechanism: original save set customerAmount = total (already includes transport)
-          customerReversalAmount = total;
-        }
-        if (wasDebit) {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerReversalAmount), now, invoice['customer_id']]);
-        } else {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerReversalAmount), now, invoice['customer_id']]);
-        }
-      }
-
-      if (invoice['supplier_id'] != null) {
-        final wasCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-        double supplierReversalAmount;
-        if (paymentMechanism == 'cash' && !isPartialCash) {
-          // Full cash payment: original save set supplierAmount = 0, so reversal is also 0
-          supplierReversalAmount = 0;
-        } else if (isPartialCash && !isReturn) {
-          // Partial cash: original save set supplierAmount = remainingAmount
-          supplierReversalAmount = remainingAmount;
-        } else {
-          // Credit mechanism: original save set supplierAmount = total (already includes transport)
-          supplierReversalAmount = total;
-        }
-        if (wasCreditToSupplier) {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierReversalAmount), now, invoice['supplier_id']]);
-        } else {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierReversalAmount), now, invoice['supplier_id']]);
-        }
-      }
-
-      // 5. Reverse cash box balance
-      // Must mirror the save logic: full cash = reverse total, partial cash = reverse paidAmount only
-      if (cashBoxId != null) {
-        final cashReversalAmount = isPartialCash ? paidAmount : total;
-        final wasCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
-        if (wasCashIn) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashReversalAmount), now, cashBoxId]);
-        } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashReversalAmount), now, cashBoxId]);
-        }
-        // No separate transport reversal needed - transport is already included in total/paidAmount
-      }
-
-      // 6. Restore product stock
-      for (final item in items) {
-        final productId = (item['product_id'] as num?)?.toInt();
-        final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
-        if (productId == null) continue;
-        // Check allow_negative for this product
-        final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-        final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
-
-        if (invoiceType == 'sale' || invoiceType == 'pos') {
-          if (!isReturn) {
-            // Was decremented, now restore
-            await txn.rawUpdate('UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
-          } else {
-            // Was incremented (return), now decrement
-            if (allowNeg) {
-              await txn.rawUpdate('UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
-            } else {
-              await txn.rawUpdate('UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?', [quantity, now, productId]);
-            }
-          }
-        } else if (invoiceType == 'purchase') {
-          if (!isReturn) {
-            // Was incremented, now decrement
-            if (allowNeg) {
-              await txn.rawUpdate('UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
-            } else {
-              await txn.rawUpdate('UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?', [quantity, now, productId]);
-            }
-          } else {
-            // Was decremented (return), now restore
-            await txn.rawUpdate('UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?', [quantity, now, productId]);
-          }
-        }
-      }
-    });
-
-    // Log audit event for invoice cancellation
-    await logAuditEvent(
-      action: 'cancel',
-      tableName: 'invoices',
-      recordId: int.tryParse(id),
-      recordType: invoice['type'] as String?,
-      oldValues: jsonEncode({'status': invoice['status']}),
-      newValues: jsonEncode({'status': 'cancelled'}),
-      userName: null,
-    );
-    } catch (e) {
-      // If the error is already a closed-fiscal-year message, pass it through
-      final msg = e.toString();
-      if (msg.contains('سنة مالية مغلقة') || msg.contains('فترة مغلقة')) {
-        rethrow;
-      }
-      // Log the error for audit trail
-      await logAuditEvent(
-        action: 'error',
-        tableName: 'invoices',
-        recordId: int.tryParse(id),
-        oldValues: 'خطأ أثناء إلغاء الفاتورة: $e',
-      );
-      throw Exception('حدث خطأ أثناء إلغاء الفاتورة: $e');
-    }
-  }
+  }) => invoices.recordInvoicePayment(
+    invoiceId: invoiceId,
+    amount: amount,
+    cashBoxId: cashBoxId,
+    paymentMethod: paymentMethod,
+    notes: notes,
+  );
+  Future<void> cancelInvoice(String id) => invoices.cancelInvoice(id);
 
   // ══════════════════════════════════════════════════════════════
-  //  Expense CRUD methods
+  //  Expense CRUD methods — delegated to ExpenseRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> insertExpense(Map<String, dynamic> expenseMap) async {
-    final db = await database;
-    return await db.insert('expenses', expenseMap);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllExpenses({String orderBy = 'expense_date DESC'}) async {
-    final db = await database;
-    return await db.query('expenses', orderBy: orderBy);
-  }
-
-  Future<List<Map<String, dynamic>>> getExpensesByCategory(String category) async {
-    final db = await database;
-    return await db.query('expenses', where: 'category = ?', whereArgs: [category], orderBy: 'expense_date DESC');
-  }
-
-  Future<List<Map<String, dynamic>>> getExpensesByDateRange(String startDate, String endDate) async {
-    final db = await database;
-    return await db.query('expenses', where: 'expense_date >= ? AND expense_date <= ?', whereArgs: [startDate, endDate], orderBy: 'expense_date DESC');
-  }
-
-  Future<Map<String, dynamic>?> getExpenseById(int id) async {
-    final db = await database;
-    final results = await db.query('expenses', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<int> updateExpense(int id, Map<String, dynamic> expenseMap) async {
-    final db = await database;
-    return await db.update('expenses', expenseMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteExpense(int id) async {
-    final db = await database;
-    return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<double> getTotalExpensesThisMonth() async {
-    final db = await database;
-    final now = DateTime.now();
-    final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE date(expense_date) >= ?", [monthStart]);
-    return MoneyHelper.readMoney(result.first['total']);
-  }
-
-  Future<double> getTotalExpensesByCategory(String category) async {
-    final db = await database;
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE category = ?", [category]);
-    return MoneyHelper.readMoney(result.first['total']);
-  }
-
-  Future<double> getTotalExpensesForDate(DateTime date) async {
-    final db = await database;
-    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE date(expense_date) = ?", [dateStr]);
-    return MoneyHelper.readMoney(result.first['total']);
-  }
-
-  /// Save expense with journal entry.
-  /// Supports operation_type: 'صرف' (disburse - debit expense, credit cash) or 'قبض' (receive - debit cash, credit expense).
-  Future<void> saveExpenseWithJournalEntry(Map<String, dynamic> expenseMap) async {
-    // Check if fiscal period is closed before creating expense
-    final expenseDate = expenseMap['expense_date'] as String? ?? DateTime.now().toIso8601String();
-    await _checkFiscalPeriodOpen(expenseDate);
-
-    final db = await database;
-    final amountBase = MoneyHelper.readMoney(expenseMap['amount_base']);
-    final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
-    final operationType = (expenseMap['operation_type'] as String?) ?? 'صرف';
-    final now = DateTime.now().toIso8601String();
-
-    await db.transaction((txn) async {
-      // Insert expense
-      await txn.insert('expenses', expenseMap);
-
-      // Post journal entry
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-
-      // Determine currency-specific account code offset
-      final codeOffset = expenseCurrency == 'SAR' ? 1 : (expenseCurrency == 'USD' ? 2 : 0);
-
-      // Get expense account (code 5000+offset) or use provided account_id
-      final expenseAccountId = expenseMap['account_id'] as int?;
-      int? expenseAccId = expenseAccountId;
-
-      if (expenseAccId == null) {
-        final expenseAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5000 + codeOffset).toString(), expenseCurrency], limit: 1);
-        expenseAccId = expenseAccount.isNotEmpty ? expenseAccount.first['id'] as int : null;
-      }
-
-      // Get cash/bank account (code 1100+offset) or use cash box linked account
-      int? cashAccountId;
-      final cashBoxId = expenseMap['cash_box_id'] as int?;
-      if (cashBoxId != null) {
-        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-        if (cashBox.isNotEmpty) {
-          final linkedAccountId = cashBox.first['linked_account_id'] as int?;
-          if (linkedAccountId != null) {
-            cashAccountId = linkedAccountId;
-          }
-        }
-      }
-      if (cashAccountId == null) {
-        final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), expenseCurrency], limit: 1);
-        cashAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-      }
-
-      final title = expenseMap['title'] as String? ?? 'مصروف';
-      final isSarf = operationType == 'صرف';
-
-      if (isSarf) {
-        // صرف (disburse): Debit expense account, Credit cash/bank
-        if (expenseAccId != null && amountBase > 0) {
-          await txn.insert('transactions', {
-            'account_id': expenseAccId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(amountBase),
-            'credit': 0,
-            'description': 'مصروف: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, expenseAccId, amountBase, 0.0, now);
-        }
-        if (cashAccountId != null && amountBase > 0) {
-          await txn.insert('transactions', {
-            'account_id': cashAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(amountBase),
-            'description': 'مصروف: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cashAccountId, 0.0, amountBase, now);
-        }
-      } else {
-        // قبض (receive): Debit cash/bank, Credit expense account
-        if (cashAccountId != null && amountBase > 0) {
-          await txn.insert('transactions', {
-            'account_id': cashAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(amountBase),
-            'credit': 0,
-            'description': 'قبض: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cashAccountId, amountBase, 0.0, now);
-        }
-        if (expenseAccId != null && amountBase > 0) {
-          await txn.insert('transactions', {
-            'account_id': expenseAccId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(amountBase),
-            'description': 'قبض: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, expenseAccId, 0.0, amountBase, now);
-        }
-      }
-
-      // Update cash box balance
-      if (cashBoxId != null && amountBase > 0) {
-        if (isSarf) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
-        } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
-        }
-      }
-    });
-  }
+  Future<int> insertExpense(Map<String, dynamic> expenseMap) => expenses.insertExpense(expenseMap);
+  Future<List<Map<String, dynamic>>> getAllExpenses({String orderBy = 'expense_date DESC'}) => expenses.getAllExpenses(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getExpensesByCategory(String category) => expenses.getExpensesByCategory(category);
+  Future<List<Map<String, dynamic>>> getExpensesByDateRange(String startDate, String endDate) => expenses.getExpensesByDateRange(startDate, endDate);
+  Future<Map<String, dynamic>?> getExpenseById(int id) => expenses.getExpenseById(id);
+  Future<int> updateExpense(int id, Map<String, dynamic> expenseMap) => expenses.updateExpense(id, expenseMap);
+  Future<int> deleteExpense(int id) => expenses.deleteExpense(id);
+  Future<double> getTotalExpensesThisMonth() => expenses.getTotalExpensesThisMonth();
+  Future<double> getTotalExpensesByCategory(String category) => expenses.getTotalExpensesByCategory(category);
+  Future<double> getTotalExpensesForDate(DateTime date) => expenses.getTotalExpensesForDate(date);
+  Future<void> saveExpenseWithJournalEntry(Map<String, dynamic> expenseMap) => expenses.saveExpenseWithJournalEntry(expenseMap);
 
   // ══════════════════════════════════════════════════════════════
   //  Expense Account methods
   // ══════════════════════════════════════════════════════════════
 
   /// Get all expense accounts (accounts with type='EXPENSE')
-  Future<List<Map<String, dynamic>>> getExpenseAccounts() async {
-    final db = await database;
-    return await db.query('accounts', where: 'is_active = ? AND account_type = ?', whereArgs: [1, 'EXPENSE'], orderBy: 'account_code ASC');
-  }
+  Future<List<Map<String, dynamic>>> getExpenseAccounts() => accounts.getExpenseAccounts();
 
   /// Get expense accounts filtered by currency
-  Future<List<Map<String, dynamic>>> getExpenseAccountsByCurrency(String currency) async {
-    final db = await database;
-    return await db.query('accounts', where: 'is_active = ? AND account_type = ? AND currency = ?', whereArgs: [1, 'EXPENSE', currency], orderBy: 'account_code ASC');
-  }
+  Future<List<Map<String, dynamic>>> getExpenseAccountsByCurrency(String currency) => accounts.getExpenseAccountsByCurrency(currency);
 
   /// Get all expenses for a specific expense account
-  Future<List<Map<String, dynamic>>> getExpensesByAccountId(int accountId, {String orderBy = 'expense_date DESC'}) async {
-    final db = await database;
-    return await db.query('expenses', where: 'expense_account_id = ?', whereArgs: [accountId], orderBy: orderBy);
-  }
+  Future<List<Map<String, dynamic>>> getExpensesByAccountId(int accountId, {String orderBy = 'expense_date DESC'}) => expenses.getExpensesByAccountId(accountId, orderBy: orderBy);
 
-  /// Get all transactions for an account with running balance calculated
-  Future<List<Map<String, dynamic>>> getAccountTransactions(int accountId) async {
-    final db = await database;
-    return await db.query('transactions', where: 'account_id = ?', whereArgs: [accountId], orderBy: 'date ASC, id ASC');
-  }
+  /// Delegates to [JournalService.getAccountTransactions].
+  Future<List<Map<String, dynamic>>> getAccountTransactions(int accountId) =>
+      journal.getAccountTransactions(accountId);
 
-  /// Get current balance of an account (computed from transactions)
-  Future<double> getAccountBalance(int accountId) async {
-    final db = await database;
-    final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(debit) - SUM(credit), 0) AS balance FROM transactions WHERE account_id = ?",
-      [accountId],
-    );
-    return MoneyHelper.readMoney(result.first['balance']);
-  }
+  /// Delegates to [JournalService.getAccountBalance].
+  Future<double> getAccountBalance(int accountId) =>
+      journal.getAccountBalance(accountId);
 
   /// Create an expense account with optional opening balance
   Future<int> createExpenseAccount({
@@ -5713,3286 +3587,301 @@ class DatabaseHelper {
     double openingBalance = 0.0,
     String balanceType = 'credit', // 'credit' = له, 'debit' = عليه
     String? notes,
-  }) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-
-    // Get next account code for EXPENSE type
-    final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
-    final currencySymbol = currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
-
-    // Find the max existing expense account code for this currency
-    final existingExpenseAccounts = await db.query(
-      'accounts',
-      where: 'account_type = ? AND currency = ?',
-      whereArgs: ['EXPENSE', currency],
-      orderBy: 'account_code DESC',
-      limit: 1,
-    );
-
-    String newCode;
-    if (existingExpenseAccounts.isNotEmpty) {
-      final lastCode = int.tryParse(existingExpenseAccounts.first['account_code'] as String) ?? 5000;
-      newCode = (lastCode + 1).toString();
-    } else {
-      newCode = (5000 + codeOffset).toString();
-    }
-
-    // Create the account inside a transaction for atomicity
-    return await db.transaction((txn) async {
-      // Create account with initial balance = 0 (will be updated via journal)
-      final accountId = await txn.insert('accounts', {
-        'name_ar': '$nameAr ($currencySymbol)',
-        'name_en': nameAr,
-        'account_code': newCode,
-        'account_type': 'EXPENSE',
-        'balance': 0,  // Start at 0, will be updated via _updateAccountBalanceWithJournal
-        'currency': currency,
-        'is_active': 1,
-        'is_system': 0,
-        'debt_ceiling': debtCeiling ?? 0.0,
-        'balance_type': balanceType,
-        'created_at': now,
-        'updated_at': now,
-      });
-
-      // Create double-entry opening balance transaction if > 0
-      // Must include contra-entry to Opening Balance Equity account (3900+offset)
-      if (openingBalance > 0) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
-
-        // Find the Opening Balance Equity account for this currency
-        final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[currency] ?? 0;
-        final obCode = (3900 + codeOffset).toString();
-        final obAccounts = await txn.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [obCode, currency],
-          limit: 1,
-        );
-
-        if (obAccounts.isNotEmpty) {
-          final obAccountId = obAccounts.first['id'] as int;
-
-          if (balanceType == 'credit') {
-            // Expense account has credit balance (unlikely but possible)
-            // Credit the expense account, Debit the Opening Balance Equity
-            await txn.insert('transactions', {
-              'account_id': accountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(openingBalance),
-              'description': 'رصيد افتتاحي - $nameAr',
-              'date': now,
-              'created_at': now,
-            });
-            await txn.insert('transactions', {
-              'account_id': obAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(openingBalance),
-              'credit': 0,
-              'description': 'مقابل رصيد افتتاحي - $nameAr',
-              'date': now,
-              'created_at': now,
-            });
-            // Update both account balances
-            await _updateAccountBalanceWithJournal(txn, accountId, 0.0, openingBalance, now);
-            await _updateAccountBalanceWithJournal(txn, obAccountId, openingBalance, 0.0, now);
-          } else {
-            // Expense account has debit balance (normal for expenses)
-            // Debit the expense account, Credit the Opening Balance Equity
-            await txn.insert('transactions', {
-              'account_id': accountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(openingBalance),
-              'credit': 0,
-              'description': 'رصيد افتتاحي - $nameAr',
-              'date': now,
-              'created_at': now,
-            });
-            await txn.insert('transactions', {
-              'account_id': obAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(openingBalance),
-              'description': 'مقابل رصيد افتتاحي - $nameAr',
-              'date': now,
-              'created_at': now,
-            });
-            // Update both account balances
-            await _updateAccountBalanceWithJournal(txn, accountId, openingBalance, 0.0, now);
-            await _updateAccountBalanceWithJournal(txn, obAccountId, 0.0, openingBalance, now);
-          }
-        } else {
-          // Fallback: if no Opening Balance Equity account found, create single-sided entry
-          // but log a warning since this means the double-entry is incomplete
-          debugPrint('WARNING: No Opening Balance Equity account found for currency $currency. Creating single-sided entry for $nameAr.');
-          if (balanceType == 'credit') {
-            await txn.insert('transactions', {
-              'account_id': accountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(openingBalance),
-              'description': 'رصيد افتتاحي - $nameAr',
-              'date': now,
-              'created_at': now,
-            });
-          } else {
-            await txn.insert('transactions', {
-              'account_id': accountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(openingBalance),
-              'credit': 0,
-              'description': 'رصيد افتتاحي - $nameAr',
-              'date': now,
-              'created_at': now,
-            });
-          }
-          await _updateAccountBalanceWithJournal(txn, accountId,
-            balanceType == 'debit' ? openingBalance : 0.0,
-            balanceType == 'credit' ? openingBalance : 0.0, now);
-        }
-      }
-
-      return accountId;
-    });
-  }
+  }) => accounts.createExpenseAccount(
+    nameAr: nameAr,
+    currency: currency,
+    debtCeiling: debtCeiling,
+    openingBalance: openingBalance,
+    balanceType: balanceType,
+    notes: notes,
+  );
 
   // ══════════════════════════════════════════════════════════════
-  //  Category methods
+  //  Category methods — delegated to ReferenceDataRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> getAllCategories() async {
-    final db = await database;
-    return await db.query('categories', where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-  }
-
-  Future<int> insertCategory(Map<String, dynamic> categoryMap) async {
-    final db = await database;
-    return await db.insert('categories', categoryMap);
-  }
-
-  Future<int> deleteCategory(int id) async {
-    final db = await database;
-    return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> updateCategory(int id, Map<String, dynamic> categoryMap) async {
-    final db = await database;
-    return await db.update('categories', categoryMap, where: 'id = ?', whereArgs: [id]);
-  }
+  Future<List<Map<String, dynamic>>> getAllCategories() => refData.getAllCategories();
+  Future<int> insertCategory(Map<String, dynamic> categoryMap) => refData.insertCategory(categoryMap);
+  Future<int> deleteCategory(int id) => refData.deleteCategory(id);
+  Future<int> updateCategory(int id, Map<String, dynamic> categoryMap) => refData.updateCategory(id, categoryMap);
 
   // ══════════════════════════════════════════════════════════════
-  //  Warehouse methods
+  //  Warehouse methods — delegated to ReferenceDataRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> getAllWarehouses() async {
-    final db = await database;
-    return await db.query('warehouses', where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-  }
+  Future<List<Map<String, dynamic>>> getAllWarehouses() => refData.getAllWarehouses();
+  Future<int> insertWarehouse(Map<String, dynamic> warehouseMap) => refData.insertWarehouse(warehouseMap);
+  Future<int> updateWarehouse(int id, Map<String, dynamic> warehouseMap) => refData.updateWarehouse(id, warehouseMap);
+  Future<int> deleteWarehouse(int id) => refData.deleteWarehouse(id);
+  Future<List<Map<String, dynamic>>> searchWarehouses(String query) => refData.searchWarehouses(query);
 
-  Future<int> insertWarehouse(Map<String, dynamic> warehouseMap) async {
-    final db = await database;
-    return await db.insert('warehouses', warehouseMap);
-  }
-
-  Future<int> updateWarehouse(int id, Map<String, dynamic> warehouseMap) async {
-    final db = await database;
-    return await db.update('warehouses', warehouseMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteWarehouse(int id) async {
-    final db = await database;
-    return await db.delete('warehouses', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<List<Map<String, dynamic>>> searchWarehouses(String query) async {
-    final db = await database;
-    final likeQuery = '%$query%';
-    return await db.query(
-      'warehouses',
-      where: 'is_active = ? AND (name LIKE ? OR location LIKE ?)',
-      whereArgs: [1, likeQuery, likeQuery],
-      orderBy: 'name ASC',
-    );
-  }
-
-  Future<int> getProductCountByWarehouse(int warehouseId) async {
-    final db = await database;
-    final result = await db.rawQuery(
-      'SELECT COUNT(*) AS cnt FROM products WHERE warehouse_id = ? AND is_active = 1',
-      [warehouseId],
-    );
-    return (result.first['cnt'] as num?)?.toInt() ?? 0;
-  }
+  Future<int> getProductCountByWarehouse(int warehouseId) => products.getProductCountByWarehouse(warehouseId);
 
   // ══════════════════════════════════════════════════════════════
   //  Account methods
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> getAllAccounts() async {
-    final db = await database;
-    return await db.query('accounts', where: 'is_active = ?', whereArgs: [1], orderBy: 'account_code ASC');
-  }
+  Future<List<Map<String, dynamic>>> getAllAccounts() => accounts.getAllAccounts();
 
-  Future<List<Map<String, dynamic>>> getAccountsByType(String accountType) async {
-    final db = await database;
-    return await db.query('accounts', where: 'is_active = ? AND account_type = ?', whereArgs: [1, accountType], orderBy: 'account_code ASC');
-  }
+  Future<List<Map<String, dynamic>>> getAccountsByType(String accountType) => accounts.getAccountsByType(accountType);
 
-  Future<List<Map<String, dynamic>>> getAccountsByCurrency(String currencyCode) async {
-    final db = await database;
-    return await db.query('accounts', where: 'is_active = ? AND currency = ?', whereArgs: [1, currencyCode], orderBy: 'account_code ASC');
-  }
+  Future<List<Map<String, dynamic>>> getAccountsByCurrency(String currencyCode) => accounts.getAccountsByCurrency(currencyCode);
 
-  Future<int> insertAccount(Map<String, dynamic> accountMap) async {
-    final db = await database;
-    return await db.insert('accounts', accountMap);
-  }
+  Future<int> insertAccount(Map<String, dynamic> accountMap) => accounts.insertAccount(accountMap);
 
-  Future<int> updateAccount(int id, Map<String, dynamic> accountMap) async {
-    final db = await database;
-    return await db.update('accounts', accountMap, where: 'id = ?', whereArgs: [id]);
-  }
+  Future<int> updateAccount(int id, Map<String, dynamic> accountMap) => accounts.updateAccount(id, accountMap);
 
-  Future<int> deleteAccount(int id) async {
-    final db = await database;
-    // Check if it's a system account
-    final account = await db.query('accounts', where: 'id = ?', whereArgs: [id], limit: 1);
-    if (account.isEmpty) return 0;
-    if ((account.first['is_system'] as int?) == 1) {
-      return -1; // Cannot delete system account
-    }
-    // Check for child accounts
-    final children = await db.query('accounts', where: 'parent_id = ?', whereArgs: [id], limit: 1);
-    if (children.isNotEmpty) {
-      return -2; // Cannot delete account with child accounts
-    }
-    // Check for transactions referencing this account
-    final transactions = await db.query('transactions', where: 'account_id = ?', whereArgs: [id], limit: 1);
-    if (transactions.isNotEmpty) {
-      return -3; // Cannot delete account with transactions
-    }
-    // Remove linked_cash_box_id references
-    await db.rawUpdate('UPDATE cash_boxes SET linked_account_id = NULL WHERE linked_account_id = ?', [id]);
-    return await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
-  }
+  Future<int> deleteAccount(int id) => accounts.deleteAccount(id);
 
   /// Get the next available account code for a given account type.
   /// Uses 4-digit numeric codes where the first digit is the type prefix.
   /// Steps by 10 to leave room for sub-accounts.
-  Future<String> getNextAccountCode(String accountType) async {
-    final db = await database;
-    final prefixMap = {
-      'ASSET': '1',
-      'LIABILITY': '2',
-      'COST': '3',
-      'REVENUE': '4',
-      'EXPENSE': '5',
-    };
-    final prefix = prefixMap[accountType] ?? '9';
-    final result = await db.rawQuery(
-      'SELECT COALESCE(MAX(CAST(account_code AS INTEGER)), 0) AS max_code FROM accounts WHERE account_code LIKE ? AND account_type = ?',
-      ['$prefix%', accountType],
-    );
-    final maxCode = (result.first['max_code'] as num?)?.toInt() ?? 0;
-    // If no existing codes, start at prefix*1000 + 10 (e.g. 1010 for ASSET)
-    final nextCode = maxCode == 0 ? (int.parse(prefix) * 1000 + 10) : maxCode + 10;
-    return nextCode.toString();
-  }
+  Future<String> getNextAccountCode(String accountType) => accounts.getNextAccountCode(accountType);
 
-  /// Reconcile an account's balance column with the actual computed balance from transactions.
-  /// Computes SUM(debit) - SUM(credit) and updates the `balance` column.
-  Future<void> reconcileAccountBalance(int accountId) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-
-    // Get the account's balance_type to compute balance correctly
-    final accountRow = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
-    if (accountRow.isEmpty) return;
-    final balanceType = accountRow.first['balance_type'] as String? ?? 'credit';
-
-    final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS net_debit, COALESCE(SUM(credit) - SUM(debit), 0.0) AS net_credit FROM transactions WHERE account_id = ?',
-      [accountId],
-    );
-    final netDebit = MoneyHelper.readMoney(result.first['net_debit']);
-    final netCredit = MoneyHelper.readMoney(result.first['net_credit']);
-
-    // For debit-balance accounts (ASSET, COST): balance = debit - credit
-    // For credit-balance accounts (LIABILITY, REVENUE, EXPENSE): balance = credit - debit
-    final computedBalance = (balanceType == 'debit') ? netDebit : netCredit;
-    await db.update('accounts', {'balance': MoneyHelper.toCents(computedBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
-  }
+  /// Delegates to [JournalService.reconcileAccountBalance].
+  Future<void> reconcileAccountBalance(int accountId) =>
+      journal.reconcileAccountBalance(accountId);
 
   // ══════════════════════════════════════════════════════════════
-  //  Employee CRUD methods
+  //  Employee CRUD methods — delegated to ReferenceDataRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> insertEmployee(Map<String, dynamic> employeeMap) async {
-    final db = await database;
-    return await db.insert('employees', employeeMap);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllEmployees() async {
-    final db = await database;
-    return await db.query('employees', orderBy: 'name ASC');
-  }
-
-  Future<Map<String, dynamic>?> getEmployeeById(int id) async {
-    final db = await database;
-    final results = await db.query('employees', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<int> updateEmployee(int id, Map<String, dynamic> employeeMap) async {
-    final db = await database;
-    return await db.update('employees', employeeMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteEmployee(int id) async {
-    final db = await database;
-    return await db.delete('employees', where: 'id = ?', whereArgs: [id]);
-  }
-
-  /// Alias for getAllEmployees - used by some screens
-  Future<List<Map<String, dynamic>>> getEmployees() async {
-    return getAllEmployees();
-  }
+  Future<int> insertEmployee(Map<String, dynamic> employeeMap) => refData.insertEmployee(employeeMap);
+  Future<List<Map<String, dynamic>>> getAllEmployees() => refData.getAllEmployees();
+  Future<Map<String, dynamic>?> getEmployeeById(int id) => refData.getEmployeeById(id);
+  Future<int> updateEmployee(int id, Map<String, dynamic> employeeMap) => refData.updateEmployee(id, employeeMap);
+  Future<int> deleteEmployee(int id) => refData.deleteEmployee(id);
+  Future<List<Map<String, dynamic>>> getEmployees() => refData.getEmployees();
 
   // ══════════════════════════════════════════════════════════════
-  //  Settings methods
+  //  Settings methods — delegated to ReferenceDataRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<String?> getSetting(String key) async {
-    final db = await database;
-    final results = await db.query('settings', where: 'key = ?', whereArgs: [key], limit: 1);
-    if (results.isEmpty) return null;
-    return results.first['value'] as String?;
-  }
-
-  Future<void> setSetting(String key, String value) async {
-    final db = await database;
-    await db.insert('settings', {'key': key, 'value': value, 'updated_at': DateTime.now().toIso8601String()}, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  Future<void> deleteSetting(String key) async {
-    final db = await database;
-    await db.delete('settings', where: 'key = ?', whereArgs: [key]);
-  }
+  Future<String?> getSetting(String key) => refData.getSetting(key);
+  Future<void> setSetting(String key, String value) => refData.setSetting(key, value);
+  Future<void> deleteSetting(String key) => refData.deleteSetting(key);
 
   // ══════════════════════════════════════════════════════════════
   //  Dashboard query methods
   // ══════════════════════════════════════════════════════════════
 
-  Future<double> getTotalSalesForDate(DateTime date) async {
-    final db = await database;
-    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) = ?", [dateStr]);
-    return MoneyHelper.readMoney(result.first['total']);
-  }
+  Future<double> getTotalSalesForDate(DateTime date) => invoices.getTotalSalesForDate(date);
+  Future<double> getTotalPurchasesThisMonth() => invoices.getTotalPurchasesThisMonth();
+  Future<double> getTotalSalesThisMonth() => invoices.getTotalSalesThisMonth();
+  Future<int> getInvoiceCountForDate(DateTime date) => invoices.getInvoiceCountForDate(date);
 
-  Future<double> getTotalPurchasesThisMonth() async {
-    final db = await database;
-    final now = DateTime.now();
-    final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('purchase', 'purchase_return') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
-    return MoneyHelper.readMoney(result.first['total']);
-  }
+  Future<double> getCashBalance() => invoices.getCashBalance();
 
-  Future<double> getTotalSalesThisMonth() async {
-    final db = await database;
-    final now = DateTime.now();
-    final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
-    return MoneyHelper.readMoney(result.first['total']);
-  }
-
-  Future<int> getInvoiceCountForDate(DateTime date) async {
-    final db = await database;
-    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery("SELECT COUNT(*) AS cnt FROM invoices WHERE date(created_at) = ?", [dateStr]);
-    return (result.first['cnt'] as num?)?.toInt() ?? 0;
-  }
-
-  Future<int> getCustomerCount() async {
-    final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) AS cnt FROM customers');
-    return (result.first['cnt'] as num?)?.toInt() ?? 0;
-  }
-
-  Future<double> getCashBalance() async {
-    return getTotalCashBalance();
-  }
-
-  Future<List<Map<String, dynamic>>> getRecentInvoices({int limit = 5}) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT i.id, i.type, i.total, i.paid_amount, i.remaining, i.is_return,
-             i.status, i.created_at, i.payment_mechanism,
-             COALESCE(c.name, s.name, 'بدون عميل') AS entity_name
-      FROM invoices i
-      LEFT JOIN customers c ON i.customer_id = c.id
-      LEFT JOIN suppliers s ON i.supplier_id = s.id
-      ORDER BY i.created_at DESC
-      LIMIT ?
-    ''', [limit]);
-  }
-
-  Future<List<Map<String, dynamic>>> getDailySalesTotals({int days = 7}) async {
-    final db = await database;
-    final now = DateTime.now();
-    final startDate = now.subtract(Duration(days: days - 1));
-    final startDateStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
-
-    return await db.rawQuery('''
-      SELECT date(created_at) AS date, COALESCE(SUM(total), 0.0) AS total
-      FROM invoices
-      WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) >= ?
-      GROUP BY date(created_at)
-      ORDER BY date(created_at) ASC
-    ''', [startDateStr]);
-  }
+  Future<List<Map<String, dynamic>>> getRecentInvoices({int limit = 10}) => invoices.getRecentInvoices(limit: limit);
+  Future<List<Map<String, dynamic>>> getDailySalesTotals({int days = 7}) => invoices.getDailySalesTotals(days: days);
 
   // ══════════════════════════════════════════════════════════════
   //  Additional utility methods
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> getTransactionsByAccount(int accountId) async {
-    final db = await database;
-    return await db.query('transactions', where: 'account_id = ?', whereArgs: [accountId], orderBy: 'date DESC');
-  }
-
-  Future<Map<String, dynamic>?> getSupplierById(int id) async {
-    final db = await database;
-    final results = await db.query('suppliers', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
+  /// Delegates to [JournalService.getTransactionsByAccount].
+  Future<List<Map<String, dynamic>>> getTransactionsByAccount(int accountId) =>
+      journal.getTransactionsByAccount(accountId);
 
   // ══════════════════════════════════════════════════════════════
-  //  Notification CRUD methods
+  //  Notification CRUD methods — delegated to ReferenceDataRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> insertNotification(Map<String, dynamic> notificationMap) async {
-    final db = await database;
-    return await db.insert('notifications', notificationMap);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllNotifications({String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.query('notifications', orderBy: orderBy);
-  }
-
-  Future<List<Map<String, dynamic>>> getNotificationsByType(String type, {String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.query('notifications', where: 'type = ?', whereArgs: [type], orderBy: orderBy);
-  }
-
-  Future<int> markNotificationAsRead(int id) async {
-    final db = await database;
-    return await db.update('notifications', {'is_read': 1}, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteNotification(int id) async {
-    final db = await database;
-    return await db.delete('notifications', where: 'id = ?', whereArgs: [id]);
-  }
+  Future<int> insertNotification(Map<String, dynamic> notificationMap) => refData.insertNotification(notificationMap);
+  Future<List<Map<String, dynamic>>> getAllNotifications({String orderBy = 'created_at DESC'}) => refData.getAllNotifications(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getNotificationsByType(String type, {String orderBy = 'created_at DESC'}) => refData.getNotificationsByType(type, orderBy: orderBy);
+  Future<int> markNotificationAsRead(int id) => refData.markNotificationAsRead(id);
+  Future<int> deleteNotification(int id) => refData.deleteNotification(id);
 
   // ══════════════════════════════════════════════════════════════
-  //  Quotation CRUD methods
+  //  Quotation CRUD methods — delegated to OrderRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<void> insertQuotationWithItems(Map<String, dynamic> quotationMap, List<Map<String, dynamic>> items) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.insert('quotations', quotationMap);
-      for (final item in items) {
-        await txn.insert('quotation_items', item);
-      }
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getAllQuotations({String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT q.*, COALESCE(c.name, 'بدون عميل') AS customer_name
-      FROM quotations q
-      LEFT JOIN customers c ON q.customer_id = c.id
-      ORDER BY q.$orderBy
-    ''');
-  }
-
-  Future<List<Map<String, dynamic>>> getQuotationsByStatus(String status) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT q.*, COALESCE(c.name, 'بدون عميل') AS customer_name
-      FROM quotations q
-      LEFT JOIN customers c ON q.customer_id = c.id
-      WHERE q.status = ?
-      ORDER BY q.created_at DESC
-    ''', [status]);
-  }
-
-  Future<Map<String, dynamic>?> getQuotationById(String id) async {
-    final db = await database;
-    final results = await db.query('quotations', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<List<Map<String, dynamic>>> getQuotationItems(String quotationId) async {
-    final db = await database;
-    return await db.query('quotation_items', where: 'quotation_id = ?', whereArgs: [quotationId]);
-  }
-
-  Future<int> updateQuotation(String id, Map<String, dynamic> quotationMap) async {
-    final db = await database;
-    return await db.update('quotations', quotationMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteQuotation(String id) async {
-    final db = await database;
-    await db.delete('quotation_items', where: 'quotation_id = ?', whereArgs: [id]);
-    return await db.delete('quotations', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<String> getNextQuotationNumber() async {
-    final db = await database;
-    final now = DateTime.now();
-    final prefix = 'QT-${now.year}${now.month.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(quotation_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM quotations WHERE quotation_number LIKE ?",
-      ['$prefix%'],
-    );
-    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
-    return '$prefix${nextNum.toString().padLeft(4, '0')}';
-  }
+  Future<void> insertQuotationWithItems(Map<String, dynamic> quotationMap, List<Map<String, dynamic>> items) => orders.insertQuotationWithItems(quotationMap, items);
+  Future<List<Map<String, dynamic>>> getAllQuotations({String orderBy = 'created_at DESC'}) => orders.getAllQuotations(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getQuotationsByStatus(String status) => orders.getQuotationsByStatus(status);
+  Future<Map<String, dynamic>?> getQuotationById(String id) => orders.getQuotationById(id);
+  Future<List<Map<String, dynamic>>> getQuotationItems(String quotationId) => orders.getQuotationItems(quotationId);
+  Future<int> updateQuotation(String id, Map<String, dynamic> quotationMap) => orders.updateQuotation(id, quotationMap);
+  Future<int> deleteQuotation(String id) => orders.deleteQuotation(id);
+  Future<String> getNextQuotationNumber() => orders.getNextQuotationNumber();
 
   // ══════════════════════════════════════════════════════════════
-  //  Purchase Order CRUD methods
+  //  Purchase Order CRUD methods — delegated to OrderRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<void> insertPurchaseOrderWithItems(Map<String, dynamic> poMap, List<Map<String, dynamic>> items) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.insert('purchase_orders', poMap);
-      for (final item in items) {
-        await txn.insert('purchase_order_items', item);
-      }
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getAllPurchaseOrders({String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT po.*, COALESCE(s.name, 'بدون مورد') AS supplier_name
-      FROM purchase_orders po
-      LEFT JOIN suppliers s ON po.supplier_id = s.id
-      ORDER BY po.$orderBy
-    ''');
-  }
-
-  Future<List<Map<String, dynamic>>> getPurchaseOrdersByStatus(String status) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT po.*, COALESCE(s.name, 'بدون مورد') AS supplier_name
-      FROM purchase_orders po
-      LEFT JOIN suppliers s ON po.supplier_id = s.id
-      WHERE po.status = ?
-      ORDER BY po.created_at DESC
-    ''', [status]);
-  }
-
-  Future<Map<String, dynamic>?> getPurchaseOrderById(String id) async {
-    final db = await database;
-    final results = await db.query('purchase_orders', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<List<Map<String, dynamic>>> getPurchaseOrderItems(String poId) async {
-    final db = await database;
-    return await db.query('purchase_order_items', where: 'purchase_order_id = ?', whereArgs: [poId]);
-  }
-
-  Future<int> updatePurchaseOrder(String id, Map<String, dynamic> poMap) async {
-    final db = await database;
-    return await db.update('purchase_orders', poMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deletePurchaseOrder(String id) async {
-    final db = await database;
-    await db.delete('purchase_order_items', where: 'purchase_order_id = ?', whereArgs: [id]);
-    return await db.delete('purchase_orders', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<String> getNextPurchaseOrderNumber() async {
-    final db = await database;
-    final now = DateTime.now();
-    final prefix = 'PO-${now.year}${now.month.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(order_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM purchase_orders WHERE order_number LIKE ?",
-      ['$prefix%'],
-    );
-    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
-    return '$prefix${nextNum.toString().padLeft(4, '0')}';
-  }
+  Future<void> insertPurchaseOrderWithItems(Map<String, dynamic> poMap, List<Map<String, dynamic>> items) => orders.insertPurchaseOrderWithItems(poMap, items);
+  Future<List<Map<String, dynamic>>> getAllPurchaseOrders({String orderBy = 'created_at DESC'}) => orders.getAllPurchaseOrders(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getPurchaseOrdersByStatus(String status) => orders.getPurchaseOrdersByStatus(status);
+  Future<Map<String, dynamic>?> getPurchaseOrderById(String id) => orders.getPurchaseOrderById(id);
+  Future<List<Map<String, dynamic>>> getPurchaseOrderItems(String poId) => orders.getPurchaseOrderItems(poId);
+  Future<int> updatePurchaseOrder(String id, Map<String, dynamic> poMap) => orders.updatePurchaseOrder(id, poMap);
+  Future<int> deletePurchaseOrder(String id) => orders.deletePurchaseOrder(id);
+  Future<String> getNextPurchaseOrderNumber() => orders.getNextPurchaseOrderNumber();
 
   // ══════════════════════════════════════════════════════════════
-  //  Sales Order CRUD methods
+  //  Sales Order CRUD methods — delegated to OrderRepository
   // ══════════════════════════════════════════════════════════════
 
-  Future<void> insertSalesOrderWithItems(Map<String, dynamic> soMap, List<Map<String, dynamic>> items) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.insert('sales_orders', soMap);
-      for (final item in items) {
-        await txn.insert('sales_order_items', item);
-      }
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getAllSalesOrders({String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT so.*, COALESCE(c.name, 'بدون عميل') AS customer_name
-      FROM sales_orders so
-      LEFT JOIN customers c ON so.customer_id = c.id
-      ORDER BY so.$orderBy
-    ''');
-  }
-
-  Future<List<Map<String, dynamic>>> getSalesOrdersByStatus(String status) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT so.*, COALESCE(c.name, 'بدون عميل') AS customer_name
-      FROM sales_orders so
-      LEFT JOIN customers c ON so.customer_id = c.id
-      WHERE so.status = ?
-      ORDER BY so.created_at DESC
-    ''', [status]);
-  }
-
-  Future<Map<String, dynamic>?> getSalesOrderById(String id) async {
-    final db = await database;
-    final results = await db.query('sales_orders', where: 'id = ?', whereArgs: [id], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<List<Map<String, dynamic>>> getSalesOrderItems(String soId) async {
-    final db = await database;
-    return await db.query('sales_order_items', where: 'sales_order_id = ?', whereArgs: [soId]);
-  }
-
-  Future<int> updateSalesOrder(String id, Map<String, dynamic> soMap) async {
-    final db = await database;
-    return await db.update('sales_orders', soMap, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteSalesOrder(String id) async {
-    final db = await database;
-    await db.delete('sales_order_items', where: 'sales_order_id = ?', whereArgs: [id]);
-    return await db.delete('sales_orders', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<String> getNextSalesOrderNumber() async {
-    final db = await database;
-    final now = DateTime.now();
-    final prefix = 'SO-${now.year}${now.month.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(order_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM sales_orders WHERE order_number LIKE ?",
-      ['$prefix%'],
-    );
-    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
-    return '$prefix${nextNum.toString().padLeft(4, '0')}';
-  }
+  Future<void> insertSalesOrderWithItems(Map<String, dynamic> soMap, List<Map<String, dynamic>> items) => orders.insertSalesOrderWithItems(soMap, items);
+  Future<List<Map<String, dynamic>>> getAllSalesOrders({String orderBy = 'created_at DESC'}) => orders.getAllSalesOrders(orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getSalesOrdersByStatus(String status) => orders.getSalesOrdersByStatus(status);
+  Future<Map<String, dynamic>?> getSalesOrderById(String id) => orders.getSalesOrderById(id);
+  Future<List<Map<String, dynamic>>> getSalesOrderItems(String soId) => orders.getSalesOrderItems(soId);
+  Future<int> updateSalesOrder(String id, Map<String, dynamic> soMap) => orders.updateSalesOrder(id, soMap);
+  Future<int> deleteSalesOrder(String id) => orders.deleteSalesOrder(id);
+  Future<String> getNextSalesOrderNumber() => orders.getNextSalesOrderNumber();
 
   // ══════════════════════════════════════════════════════════════
-  //  Shift (وردية) CRUD methods
+  //  Shift (وردية) CRUD methods — delegated to ShiftService
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> openShift(Map<String, dynamic> shiftMap) async {
-    final db = await database;
-    return await db.insert('shifts', shiftMap);
-  }
-
-  Future<Map<String, dynamic>?> getActiveShift(int cashBoxId) async {
-    final db = await database;
-    final results = await db.query('shifts', where: 'cash_box_id = ? AND status = ?', whereArgs: [cashBoxId, 'open'], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<Map<String, dynamic>?> getActiveShiftForCashier(int? cashierId) async {
-    final db = await database;
-    if (cashierId == null) return null;
-    final results = await db.query('shifts', where: 'cashier_id = ? AND status = ?', whereArgs: [cashierId, 'open'], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<int> closeShift(int shiftId, Map<String, dynamic> closeData) async {
-    final db = await database;
-    return await db.update('shifts', closeData, where: 'id = ?', whereArgs: [shiftId]);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllShifts({String orderBy = 'opened_at DESC'}) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT s.*, cb.name AS cash_box_name
-      FROM shifts s
-      LEFT JOIN cash_boxes cb ON s.cash_box_id = cb.id
-      ORDER BY s.$orderBy
-    ''');
-  }
-
-  Future<String> getNextShiftNumber() async {
-    final db = await database;
-    final now = DateTime.now();
-    final prefix = 'SH-${now.year}${now.month.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(shift_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM shifts WHERE shift_number LIKE ?",
-      ['$prefix%'],
-    );
-    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
-    return '$prefix${nextNum.toString().padLeft(4, '0')}';
-  }
-
-  Future<void> updateShiftTotals(int shiftId, double saleAmount, double returnAmount, double discountAmount) async {
-    final db = await database;
-    await db.rawUpdate('''
-      UPDATE shifts SET 
-        total_sales = total_sales + ?,
-        total_returns = total_returns + ?,
-        total_discounts = total_discounts + ?,
-        transaction_count = transaction_count + 1,
-        expected_amount = opening_amount + total_sales + ? - total_returns - total_discounts - ?,
-        updated_at = ?
-      WHERE id = ?
-    ''', [MoneyHelper.toCents(saleAmount), MoneyHelper.toCents(returnAmount), MoneyHelper.toCents(discountAmount), MoneyHelper.toCents(saleAmount), MoneyHelper.toCents(discountAmount), DateTime.now().toIso8601String(), shiftId]);
-  }
+  Future<int> openShift(Map<String, dynamic> shiftMap) => shifts.openShift(shiftMap);
+  Future<Map<String, dynamic>?> getActiveShift(int cashBoxId) => shifts.getActiveShift(cashBoxId);
+  Future<Map<String, dynamic>?> getActiveShiftForCashier(int? cashierId) => shifts.getActiveShiftForCashier(cashierId);
+  Future<int> closeShift(int shiftId, Map<String, dynamic> closeData) => shifts.closeShift(shiftId, closeData);
+  Future<List<Map<String, dynamic>>> getAllShifts({String orderBy = 'opened_at DESC'}) => shifts.getAllShifts(orderBy: orderBy);
+  Future<String> getNextShiftNumber() => shifts.getNextShiftNumber();
+  Future<void> updateShiftTotals(int shiftId, double saleAmount, double returnAmount, double discountAmount) => shifts.updateShiftTotals(shiftId, saleAmount, returnAmount, discountAmount);
 
   // ══════════════════════════════════════════════════════════════
-  //  v12: Currency Exchange (صرافة العملات) CRUD methods
+  //  v12: Currency Exchange (صرافة العملات) — delegated to CashBoxService
   // ══════════════════════════════════════════════════════════════
 
-  /// إدراج عملية صرافة عملات مع القيود المحاسبية
-  /// Inserts a currency exchange record and posts journal entries.
-  ///
-  /// القيود المحاسبية:
-  /// - مدين: حساب الصناديق والبنوك للعملة المستلمة (to_currency) بالمبلغ المستلم
-  /// - دائن: حساب الصناديق والبنوك للعملة المرسلة (from_currency) بالمبلغ المرسل
-  /// - إذا كان هناك أرباح صرافة: دائن حساب أرباح الصرافة
-  /// - إذا كان هناك خسائر صرافة: مدين حساب خسائر الصرافة
-  Future<int> insertCurrencyExchange(Map<String, dynamic> exchangeMap) async {
-    // Check if fiscal period is closed before currency exchange
-    final exchangeDate = exchangeMap['date'] as String? ?? DateTime.now().toIso8601String();
-    await _checkFiscalPeriodOpen(exchangeDate);
-
-    final db = await database;
-    final fromCurrency = (exchangeMap['from_currency'] as String?) ?? 'YER';
-    final toCurrency = (exchangeMap['to_currency'] as String?) ?? 'YER';
-    final fromAmount = MoneyHelper.readMoney(exchangeMap['from_amount']);
-    final toAmount = MoneyHelper.readMoney(exchangeMap['to_amount']);
-    final gainLoss = MoneyHelper.readMoney(exchangeMap['gain_loss']);
-    final gainLossType = (exchangeMap['gain_loss_type'] as String?) ?? '';
-    final fromCashBoxId = (exchangeMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
-    final toCashBoxId = (exchangeMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
-    final now = DateTime.now().toIso8601String();
-
-    late int exchangeId;
-    await db.transaction((txn) async {
-      // إدراج سجل الصرافة
-      exchangeId = await txn.insert('currency_exchanges', exchangeMap);
-
-      // القيود المحاسبية
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-
-      // حساب الصناديق والبنوك للعملة المستلمة (مدين)
-      final toCodeOffset = toCurrency == 'SAR' ? 1 : (toCurrency == 'USD' ? 2 : 0);
-      final toCashBanksAccount = await txn.query(
-        'accounts',
-        where: 'account_code = ? AND currency = ?',
-        whereArgs: [(1100 + toCodeOffset).toString(), toCurrency],
-        limit: 1,
-      );
-      final toCashBanksAccountId = toCashBanksAccount.isNotEmpty ? toCashBanksAccount.first['id'] as int : null;
-
-      // حساب الصناديق والبنوك للعملة المرسلة (دائن)
-      final fromCodeOffset = fromCurrency == 'SAR' ? 1 : (fromCurrency == 'USD' ? 2 : 0);
-      final fromCashBanksAccount = await txn.query(
-        'accounts',
-        where: 'account_code = ? AND currency = ?',
-        whereArgs: [(1100 + fromCodeOffset).toString(), fromCurrency],
-        limit: 1,
-      );
-      final fromCashBanksAccountId = fromCashBanksAccount.isNotEmpty ? fromCashBanksAccount.first['id'] as int : null;
-
-      // مدين: حساب الصناديق والبنوك للعملة المستلمة
-      if (toCashBanksAccountId != null && toAmount > 0) {
-        await txn.insert('transactions', {
-          'account_id': toCashBanksAccountId,
-          'journal_id': journalId,
-          'debit': MoneyHelper.toCents(toAmount),
-          'credit': 0,
-          'description': 'صرافة: استلام $toCurrency - ${exchangeMap['exchange_number']}',
-          'date': now,
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, toCashBanksAccountId, toAmount, 0.0, now);
-      }
-
-      // دائن: حساب الصناديق والبنوك للعملة المرسلة
-      if (fromCashBanksAccountId != null && fromAmount > 0) {
-        await txn.insert('transactions', {
-          'account_id': fromCashBanksAccountId,
-          'journal_id': journalId,
-          'debit': 0,
-          'credit': MoneyHelper.toCents(fromAmount),
-          'description': 'صرافة: صرف $fromCurrency - ${exchangeMap['exchange_number']}',
-          'date': now,
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, fromCashBanksAccountId, 0.0, fromAmount, now);
-      }
-
-      // معالجة أرباح/خسائر الصرافة
-      if (gainLoss > 0) {
-        if (gainLossType == 'gain') {
-          // أرباح صرافة: دائن حساب أرباح الصرافة
-          // استخدام حساب إيراد بالعملة الأساسية (YER)
-          final gainCodeOffset = 0; // أرباح الصرافة تُسجل بالعملة الأساسية
-          final gainAccount = await txn.query(
-            'accounts',
-            where: 'account_code = ? AND currency = ?',
-            whereArgs: [(4100 + gainCodeOffset).toString(), 'YER'],
-            limit: 1,
-          );
-          final gainAccountId = gainAccount.isNotEmpty ? gainAccount.first['id'] as int : null;
-
-          if (gainAccountId != null) {
-            await txn.insert('transactions', {
-              'account_id': gainAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(gainLoss),
-              'description': 'أرباح صرافة - ${exchangeMap['exchange_number']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, gainAccountId, 0.0, gainLoss, now);
-          }
-        } else if (gainLossType == 'loss') {
-          // خسائر صرافة: مدين حساب خسائر الصرافة
-          final lossCodeOffset = 0; // خسائر الصرافة تُسجل بالعملة الأساسية (YER)
-          final lossAccount = await txn.query(
-            'accounts',
-            where: 'account_code = ? AND currency = ?',
-            whereArgs: [(5100 + lossCodeOffset).toString(), 'YER'],
-            limit: 1,
-          );
-          final lossAccountId = lossAccount.isNotEmpty ? lossAccount.first['id'] as int : null;
-
-          if (lossAccountId != null) {
-            await txn.insert('transactions', {
-              'account_id': lossAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(gainLoss),
-              'credit': 0,
-              'description': 'خسائر صرافة - ${exchangeMap['exchange_number']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, lossAccountId, gainLoss, 0.0, now);
-          }
-        }
-      }
-
-      // تحديث أرصدة الصناديق (مع مراعاة نوع الرصيد)
-      // خصف المبلغ من صندوق المصدر
-      // For credit-type boxes (له): balance decreases when money leaves
-      // For debit-type boxes (عليه): balance increases when money leaves (more owed)
-      final exFromBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
-      final exFromBalanceType = exFromBox.isNotEmpty ? (exFromBox.first['balance_type'] as String? ?? 'credit') : 'credit';
-      if (exFromBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(fromAmount), now, fromCashBoxId]);
-      } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(fromAmount), now, fromCashBoxId]);
-      }
-      // إضافة المبلغ إلى صندوق المستقبل
-      // For credit-type boxes (له): balance increases when money arrives
-      // For debit-type boxes (عليه): balance decreases when money arrives (less owed)
-      final exToBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
-      final exToBalanceType = exToBox.isNotEmpty ? (exToBox.first['balance_type'] as String? ?? 'credit') : 'credit';
-      if (exToBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(toAmount), now, toCashBoxId]);
-      } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(toAmount), now, toCashBoxId]);
-      }
-    });
-
-    return exchangeId;
-  }
-
-  /// جلب جميع عمليات الصرافة
-  Future<List<Map<String, dynamic>>> getAllCurrencyExchanges({String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT ce.*,
-        from_cb.name AS from_cash_box_name,
-        to_cb.name AS to_cash_box_name
-      FROM currency_exchanges ce
-      LEFT JOIN cash_boxes from_cb ON ce.from_cash_box_id = from_cb.id
-      LEFT JOIN cash_boxes to_cb ON ce.to_cash_box_id = to_cb.id
-      ORDER BY ce.$orderBy
-    ''');
-  }
-
-  /// جلب الرقم التالي لعملية الصرافة
-  Future<String> getNextExchangeNumber() async {
-    final db = await database;
-    final now = DateTime.now();
-    final prefix = 'CE-${now.year}${now.month.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(exchange_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM currency_exchanges WHERE exchange_number LIKE ?",
-      ['$prefix%'],
-    );
-    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
-    return '$prefix${nextNum.toString().padLeft(4, '0')}';
-  }
+  Future<int> insertCurrencyExchange(Map<String, dynamic> exchangeMap) => cashBoxes.insertCurrencyExchange(exchangeMap);
+  Future<List<Map<String, dynamic>>> getAllCurrencyExchanges({String orderBy = 'created_at DESC'}) => cashBoxes.getAllCurrencyExchanges(orderBy: orderBy);
+  Future<String> getNextExchangeNumber() => cashBoxes.getNextExchangeNumber();
 
   // ══════════════════════════════════════════════════════════════
-  //  v12: Cash Transfer (تحويل بين الصناديق) CRUD methods
+  //  v12: Cash Transfer (تحويل بين الصناديق) — delegated to CashBoxService
   // ══════════════════════════════════════════════════════════════
 
-  /// إدراج عملية تحويل بين الصناديق مع القيود المحاسبية
-  /// Inserts a cash transfer record and posts journal entries.
-  ///
-  /// القيود المحاسبية:
-  /// - مدين: حساب الصناديق والبنوك المرتبط بصندوق الوجهة
-  /// - دائن: حساب الصناديق والبنوك المرتبط بصندوق المصدر
-  Future<int> insertCashTransfer(Map<String, dynamic> transferMap) async {
-    // Check if fiscal period is closed before cash transfer
-    final transferDate = transferMap['date'] as String? ?? DateTime.now().toIso8601String();
-    await _checkFiscalPeriodOpen(transferDate);
-
-    final db = await database;
-    final fromCashBoxId = (transferMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
-    final toCashBoxId = (transferMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
-    final amount = MoneyHelper.readMoney(transferMap['amount']);
-    final transferCurrency = (transferMap['currency'] as String?) ?? 'YER';
-    final now = DateTime.now().toIso8601String();
-
-    late int transferId;
-    await db.transaction((txn) async {
-      // إدراج سجل التحويل
-      transferId = await txn.insert('cash_transfers', transferMap);
-
-      // القيود المحاسبية
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-
-      // الحصول على حساب الصندوق المصدر (المرتبط أو الافتراضي)
-      int? fromAccountId;
-      final fromCashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
-      if (fromCashBox.isNotEmpty) {
-        final linkedId = fromCashBox.first['linked_account_id'] as int?;
-        if (linkedId != null) {
-          fromAccountId = linkedId;
-        }
-      }
-      if (fromAccountId == null) {
-        final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
-        final fromCashBanksAccount = await txn.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [(1100 + codeOffset).toString(), transferCurrency],
-          limit: 1,
-        );
-        fromAccountId = fromCashBanksAccount.isNotEmpty ? fromCashBanksAccount.first['id'] as int : null;
-      }
-
-      // الحصول على حساب الصندوق الوجهة (المرتبط أو الافتراضي)
-      int? toAccountId;
-      final toCashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
-      if (toCashBox.isNotEmpty) {
-        final linkedId = toCashBox.first['linked_account_id'] as int?;
-        if (linkedId != null) {
-          toAccountId = linkedId;
-        }
-      }
-      if (toAccountId == null) {
-        final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
-        final toCashBanksAccount = await txn.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [(1100 + codeOffset).toString(), transferCurrency],
-          limit: 1,
-        );
-        toAccountId = toCashBanksAccount.isNotEmpty ? toCashBanksAccount.first['id'] as int : null;
-      }
-
-      // مدين: حساب الصناديق والبنوك للوجهة
-      if (toAccountId != null && amount > 0) {
-        await txn.insert('transactions', {
-          'account_id': toAccountId,
-          'journal_id': journalId,
-          'debit': MoneyHelper.toCents(amount),
-          'credit': 0,
-          'description': 'تحويل: استلام من صندوق آخر - ${transferMap['transfer_number']}',
-          'date': now,
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, toAccountId, amount, 0.0, now);
-      }
-
-      // دائن: حساب الصناديق والبنوك للمصدر
-      if (fromAccountId != null && amount > 0) {
-        await txn.insert('transactions', {
-          'account_id': fromAccountId,
-          'journal_id': journalId,
-          'debit': 0,
-          'credit': MoneyHelper.toCents(amount),
-          'description': 'تحويل: صرف إلى صندوق آخر - ${transferMap['transfer_number']}',
-          'date': now,
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, fromAccountId, 0.0, amount, now);
-      }
-
-      // تحديث أرصدة الصناديق (مع مراعاة نوع الرصيد)
-      // خصم المبلغ من صندوق المصدر
-      // For credit-type boxes (له): balance decreases when money leaves
-      // For debit-type boxes (عليه): balance increases when money leaves (more owed)
-      final fromBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
-      final fromBalanceType = fromBox.isNotEmpty ? (fromBox.first['balance_type'] as String? ?? 'credit') : 'credit';
-      if (fromBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, fromCashBoxId]);
-      } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, fromCashBoxId]);
-      }
-      // إضافة المبلغ إلى صندوق الوجهة
-      // For credit-type boxes (له): balance increases when money arrives
-      // For debit-type boxes (عليه): balance decreases when money arrives (less owed)
-      final toBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
-      final toBalanceType = toBox.isNotEmpty ? (toBox.first['balance_type'] as String? ?? 'credit') : 'credit';
-      if (toBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, toCashBoxId]);
-      } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, toCashBoxId]);
-      }
-    });
-
-    return transferId;
-  }
-
-  /// جلب جميع عمليات التحويل بين الصناديق
-  Future<List<Map<String, dynamic>>> getAllCashTransfers({String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT ct.*,
-        from_cb.name AS from_cash_box_name,
-        to_cb.name AS to_cash_box_name
-      FROM cash_transfers ct
-      LEFT JOIN cash_boxes from_cb ON ct.from_cash_box_id = from_cb.id
-      LEFT JOIN cash_boxes to_cb ON ct.to_cash_box_id = to_cb.id
-      ORDER BY ct.$orderBy
-    ''');
-  }
-
-  /// جلب الرقم التالي لعملية التحويل
-  Future<String> getNextTransferNumber() async {
-    final db = await database;
-    final now = DateTime.now();
-    final prefix = 'TR-${now.year}${now.month.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery(
-      "SELECT COALESCE(MAX(CAST(SUBSTR(transfer_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM cash_transfers WHERE transfer_number LIKE ?",
-      ['$prefix%'],
-    );
-    final nextNum = (result.first['next_num'] as num?)?.toInt() ?? 1;
-    return '$prefix${nextNum.toString().padLeft(4, '0')}';
-  }
+  Future<int> insertCashTransfer(Map<String, dynamic> transferMap) => cashBoxes.insertCashTransfer(transferMap);
+  Future<List<Map<String, dynamic>>> getAllCashTransfers({String orderBy = 'created_at DESC'}) => cashBoxes.getAllCashTransfers(orderBy: orderBy);
+  Future<String> getNextTransferNumber() => cashBoxes.getNextTransferNumber();
 
   // ══════════════════════════════════════════════════════════════
-  //  v12: Shift Invoice & Posting methods
+  //  v12: Shift Invoice & Posting methods — delegated to ShiftService
   // ══════════════════════════════════════════════════════════════
 
   /// جلب جميع فواتير الوردية المحددة
   /// Get all invoices for a specific shift.
-  Future<List<Map<String, dynamic>>> getShiftInvoices(int shiftId) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT i.*,
-        CASE
-          WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل')
-          WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد')
-          ELSE 'بدون عميل'
-        END AS entity_name
-      FROM invoices i
-      LEFT JOIN customers c ON i.customer_id = c.id
-      LEFT JOIN suppliers s ON i.supplier_id = s.id
-      WHERE i.shift_id = ?
-      ORDER BY i.created_at DESC
-    ''', [shiftId]);
-  }
+  Future<List<Map<String, dynamic>>> getShiftInvoices(int shiftId) => shifts.getShiftInvoices(shiftId);
 
   /// ترحيل جميع الفواتير المعلقة في وردية محددة
   /// Post all pending invoices in a shift by creating journal entries.
-  ///
-  /// عند إقفال الوردية، يتم إنشاء القيود المحاسبية لجميع الفواتير
-  /// التي لم يتم ترحيلها (is_posted = 0) وتحديث حالتها إلى مرحلة (is_posted = 1).
-  Future<int> postShiftInvoices(int shiftId) async {
-    final db = await database;
-    int postedCount = 0;
-    final now = DateTime.now().toIso8601String();
-
-    // جلب جميع الفواتير المعلقة في الوردية
-    final pendingInvoices = await db.query(
-      'invoices',
-      where: 'shift_id = ? AND is_posted = ?',
-      whereArgs: [shiftId, 0],
-    );
-
-    for (final invoice in pendingInvoices) {
-      final invoiceId = invoice['id'] as String;
-      final total = MoneyHelper.readMoney(invoice['total']);
-      final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
-      final invoiceType = (invoice['type'] as String?) ?? 'sale';
-      final isReturn = (invoice['is_return'] as int?) == 1;
-      final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
-      final cashBoxId = invoice['cash_box_id'] as int?;
-      final transportCharges = MoneyHelper.readMoney(invoice['transport_charges']);
-
-      await db.transaction((txn) async {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
-
-        // تحديد إزاحة كود الحساب حسب العملة
-        final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
-
-        // جلب معرفات الحسابات
-        final salesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(4100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-
-        final salesAccountId = salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
-        final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
-        final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
-        final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
-        final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-
-        int? debitAccountId;
-        int? creditAccountId;
-
-        if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
-          if (isReturn) {
-            debitAccountId = salesAccountId;
-            creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-          } else {
-            debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-            creditAccountId = salesAccountId;
-          }
-        } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
-          if (isReturn) {
-            debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-            creditAccountId = purchasesAccountId;
-          } else {
-            debitAccountId = purchasesAccountId;
-            creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          }
-        }
-
-        // إنشاء القيود المحاسبية
-        if (debitAccountId != null && total > 0) {
-          await txn.insert('transactions', {
-            'account_id': debitAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(total),
-            'credit': 0,
-            'description': '${(invoiceType == 'sale' || invoiceType == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
-        }
-
-        if (creditAccountId != null && total > 0) {
-          await txn.insert('transactions', {
-            'account_id': creditAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(total),
-            'description': '${(invoiceType == 'sale' || invoiceType == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
-        }
-
-        // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
-        if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
-          final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final cogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
-          final inventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
-
-          if (cogsAccountId != null && inventoryAccountId != null) {
-            // Fetch invoice items to calculate COGS
-            final invoiceItems = await txn.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
-            double totalCogs = 0.0;
-            for (final item in invoiceItems) {
-              final productId = (item['product_id'] as num?)?.toInt();
-              final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
-              final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
-              if (productId == null) continue;
-
-              final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-              if (productRow.isEmpty) continue;
-              final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-              final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-              // COGS must use base_quantity (not quantity) because average_cost is per base unit
-              totalCogs += effectiveCost * baseQuantity;
-            }
-
-            if (totalCogs > 0) {
-              if (!isReturn) {
-                await txn.insert('transactions', {
-                  'account_id': cogsAccountId,
-                  'journal_id': journalId,
-                  'debit': MoneyHelper.toCents(totalCogs),
-                  'credit': 0,
-                  'description': 'تكلفة بضاعة مباعة - $invoiceId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await txn.insert('transactions', {
-                  'account_id': inventoryAccountId,
-                  'journal_id': journalId,
-                  'debit': 0,
-                  'credit': MoneyHelper.toCents(totalCogs),
-                  'description': 'تخفيض مخزون - $invoiceId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await _updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
-                await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
-              } else {
-                await txn.insert('transactions', {
-                  'account_id': inventoryAccountId,
-                  'journal_id': journalId,
-                  'debit': MoneyHelper.toCents(totalCogs),
-                  'credit': 0,
-                  'description': 'إعادة مخزون مرتجع - $invoiceId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await txn.insert('transactions', {
-                  'account_id': cogsAccountId,
-                  'journal_id': journalId,
-                  'debit': 0,
-                  'credit': MoneyHelper.toCents(totalCogs),
-                  'description': 'عكس تكلفة بضاعة مرتجعة - $invoiceId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await _updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
-                await _updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
-              }
-            }
-          }
-        }
-
-        // ── Purchase Inventory Transfer Entries ──
-        if ((invoiceType == 'purchase' || invoiceType == 'purchase_return')) {
-          final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final invAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
-          final purchAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
-
-          if (invAccountId != null && purchAccountId != null) {
-            final invoiceItems = await txn.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
-            double totalPurchaseCost = 0.0;
-            for (final item in invoiceItems) {
-              final productId = (item['product_id'] as num?)?.toInt();
-              final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
-              if (productId == null) continue;
-              final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-              if (productRow.isEmpty) continue;
-              final avgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-              final effectiveCost = avgCost > 0 ? avgCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-              totalPurchaseCost += effectiveCost * baseQuantity;
-            }
-
-            if (totalPurchaseCost > 0) {
-              if (!isReturn) {
-                await txn.insert('transactions', {
-                  'account_id': invAccountId,
-                  'journal_id': journalId,
-                  'debit': MoneyHelper.toCents(totalPurchaseCost),
-                  'credit': 0,
-                  'description': 'إضافة مخزون مشتريات - $invoiceId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await txn.insert('transactions', {
-                  'account_id': purchAccountId,
-                  'journal_id': journalId,
-                  'debit': 0,
-                  'credit': MoneyHelper.toCents(totalPurchaseCost),
-                  'description': 'تحويل من حساب المشتريات - $invoiceId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await _updateAccountBalanceWithJournal(txn, invAccountId, totalPurchaseCost, 0.0, now);
-                await _updateAccountBalanceWithJournal(txn, purchAccountId, 0.0, totalPurchaseCost, now);
-              } else {
-                await txn.insert('transactions', {
-                  'account_id': purchAccountId,
-                  'journal_id': journalId,
-                  'debit': MoneyHelper.toCents(totalPurchaseCost),
-                  'credit': 0,
-                  'description': 'عكس تحويل مشتريات مرتجعة - $invoiceId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await txn.insert('transactions', {
-                  'account_id': invAccountId,
-                  'journal_id': journalId,
-                  'debit': 0,
-                  'credit': MoneyHelper.toCents(totalPurchaseCost),
-                  'description': 'تخفيض مخزون مرتجع مشتريات - $invoiceId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await _updateAccountBalanceWithJournal(txn, purchAccountId, totalPurchaseCost, 0.0, now);
-                await _updateAccountBalanceWithJournal(txn, invAccountId, 0.0, totalPurchaseCost, now);
-              }
-            }
-          }
-        }
-
-        // ── Transport Charges ──
-        // NOTE: Transport charges are already included in `total` (total = subtotal - discount + tax + transportCharges).
-        // The main journal entries and cash box update above already account for transport correctly.
-        // No separate transport journal entries are needed here to avoid double-counting.
-
-        // تحديث رصيد العميل/المورد
-        // NOTE: `total` already includes transport charges, so no need to add them again
-        if (invoice['customer_id'] != null) {
-          final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'pos' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-          // For credit payments, customer owes the full total (already includes transport)
-          // For cash payments, customer balance should not change (they paid)
-          final customerAmount = paymentMechanism == 'credit' ? total : 0.0;
-          if (isDebit) {
-            await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
-          } else {
-            await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
-          }
-        }
-
-        if (invoice['supplier_id'] != null) {
-          final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-          // For credit purchases, supplier is owed the full total (already includes transport)
-          // For cash purchases, supplier balance should not change (we paid)
-          final supplierAmount = paymentMechanism == 'credit' ? total : 0.0;
-          if (isCreditToSupplier) {
-            await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
-          } else {
-            await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
-          }
-        }
-
-        // تحديث رصيد الصندوق
-        if (cashBoxId != null) {
-          final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
-          if (isCashIn) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(total), now, cashBoxId]);
-          } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(total), now, cashBoxId]);
-          }
-        }
-
-        // تحديث حالة الفاتورة إلى مرحلة
-        await txn.update('invoices', {'is_posted': 1}, where: 'id = ?', whereArgs: [invoiceId]);
-      });
-
-      postedCount++;
-    }
-
-    return postedCount;
-  }
+  Future<int> postShiftInvoices(int shiftId) => shifts.postShiftInvoices(shiftId);
 
   // ══════════════════════════════════════════════════════════════
   //  v12: Additional lookup methods
   // ══════════════════════════════════════════════════════════════
 
-  /// جلب الصناديق حسب العملة
-  /// Get cash boxes filtered by currency (via linked account currency).
-  Future<List<Map<String, dynamic>>> getCashBoxesByCurrency(String currency) async {
-    final db = await database;
-    // الصناديق المرتبطة بحساب بعملة محددة
-    return await db.rawQuery('''
-      SELECT cb.* FROM cash_boxes cb
-      LEFT JOIN accounts a ON cb.linked_account_id = a.id
-      WHERE cb.is_active = 1 AND (
-        (a.currency = ?) OR (cb.linked_account_id IS NULL)
-      )
-      ORDER BY cb.type ASC, cb.name ASC
-    ''', [currency]);
-  }
+  Future<List<Map<String, dynamic>>> getCashBoxesByCurrency(String currency) => cashBoxes.getCashBoxesByCurrency(currency);
 
-  /// جلب حساب بكود وعملة محددة
-  /// Get account by code and currency.
-  Future<Map<String, dynamic>?> getAccountByCodeAndCurrency(String code, String currency) async {
-    final db = await database;
-    final results = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [code, currency], limit: 1);
-    return results.isNotEmpty ? results.first : null;
-  }
+  /// Delegates to [JournalService.getAccountByCodeAndCurrency].
+  Future<Map<String, dynamic>?> getAccountByCodeAndCurrency(String code, String currency) =>
+      journal.getAccountByCodeAndCurrency(code, currency);
 
   /// Count POS invoices for a given date prefix (e.g. '2026-03-04')
   /// Used to avoid invoice-ID collisions after app restart.
   // ══════════════════════════════════════════════════════════════
-  //  Voucher (السندات) CRUD methods - v18
+  //  Voucher (السندات) — delegated to CashBoxService
   // ══════════════════════════════════════════════════════════════
 
-  /// إدراج سند مع بنوده وإنشاء قيود يومية
-  /// يتضمن التحقق الإلزامي من توازن القيد المزدوج
-  Future<int> insertVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) async {
-    // ── التحقق من توازن القيد: مجموع المدين يجب أن يساوي مجموع الدائن ──
-    final totalDebit = items.fold(0.0, (sum, item) => sum + MoneyHelper.readMoney(item['debit']));
-    final totalCredit = items.fold(0.0, (sum, item) => sum + MoneyHelper.readMoney(item['credit']));
-    if ((totalDebit - totalCredit).abs() > 0.01) {
-      throw Exception('القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit');
-    }
+  Future<int> insertVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) => cashBoxes.insertVoucher(voucherMap, items);
+  Future<List<Map<String, dynamic>>> getAllVouchers({String? type, String orderBy = 'created_at DESC'}) => cashBoxes.getAllVouchers(type: type, orderBy: orderBy);
+  Future<List<Map<String, dynamic>>> getVoucherItems(int voucherId) => cashBoxes.getVoucherItems(voucherId);
+  Future<int> deleteVoucher(int voucherId) => cashBoxes.deleteVoucher(voucherId);
+  Future<Map<String, dynamic>?> getVoucherByNumber(String number) => cashBoxes.getVoucherByNumber(number);
+  Future<String> getNextVoucherNumber(String type) => cashBoxes.getNextVoucherNumber(type);
 
-    // ── التحقق من قفل الفترة المحاسبية ──
-    final voucherDate = voucherMap['date'] as String? ?? DateTime.now().toIso8601String();
-    await _checkFiscalPeriodOpen(voucherDate);
-
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
-
-    int voucherId = 0;
-    await db.transaction((txn) async {
-      // إدراج السند
-      voucherId = await txn.insert('vouchers', voucherMap);
-
-      // إدراج بنود السند وإنشاء قيود يومية
-      for (final item in items) {
-        final itemMap = Map<String, dynamic>.from(item);
-        itemMap['voucher_id'] = voucherId;
-        itemMap['created_at'] = now;
-        await txn.insert('voucher_items', itemMap);
-
-        // إنشاء قيد يومي لكل بند
-        final accountId = (item['account_id'] as num?)?.toInt();
-        final debit = MoneyHelper.readMoney(item['debit']);
-        final credit = MoneyHelper.readMoney(item['credit']);
-        if (accountId != null && (debit > 0 || credit > 0)) {
-          await txn.insert('transactions', {
-            'account_id': accountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(debit),
-            'credit': MoneyHelper.toCents(credit),
-            'description': item['description'] ?? voucherMap['description'] ?? 'سند ${voucherMap['voucher_number']}',
-            'date': voucherMap['date'],
-            'created_at': now,
-          });
-
-          // تحديث رصيد الحساب باستخدام منطق balance_type
-          await _updateAccountBalanceWithJournal(txn, accountId, debit, credit, now);
-        }
-      }
-
-      // تحديث رصيد الصندوق إذا كان مرتبطاً بالسند
-      final cashBoxId = voucherMap['cash_box_id'];
-      if (cashBoxId != null) {
-        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-        if (cashBox.isNotEmpty) {
-          final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
-          final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
-          final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
-          double newCashBalance;
-          if (voucherType == 'receipt') {
-            newCashBalance = currentBalance + totalAmount;
-          } else if (voucherType == 'payment') {
-            newCashBalance = currentBalance - totalAmount;
-          } else {
-            newCashBalance = currentBalance;
-          }
-          await txn.update('cash_boxes', {'balance': MoneyHelper.toCents(newCashBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
-        }
-      }
-
-      // تحديث رصيد العميل/المورد إذا كان مرتبطاً بالسند
-      final customerId = voucherMap['customer_id'];
-      final supplierId = voucherMap['supplier_id'];
-      final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
-      final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
-
-      if (customerId != null && totalAmount > 0) {
-        // Receipt voucher for customer: customer pays us → decrease customer balance
-        // Payment voucher to customer: we pay customer → increase customer balance
-        if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
-        } else if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
-        }
-      }
-
-      if (supplierId != null && totalAmount > 0) {
-        // Payment voucher for supplier: we pay supplier → decrease supplier balance
-        // Receipt voucher from supplier: supplier pays us → increase supplier balance
-        if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
-        } else if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
-        }
-      }
-    });
-    return voucherId;
-  }
-
-  /// جلب جميع السندات مع فلتر اختياري حسب النوع
-  Future<List<Map<String, dynamic>>> getAllVouchers({String? type, String orderBy = 'created_at DESC'}) async {
-    final db = await database;
-    if (type != null) {
-      return await db.query('vouchers', where: 'voucher_type = ?', whereArgs: [type], orderBy: orderBy);
-    }
-    return await db.query('vouchers', orderBy: orderBy);
-  }
-
-  /// جلب بنود سند معين
-  Future<List<Map<String, dynamic>>> getVoucherItems(int voucherId) async {
-    final db = await database;
-    return await db.query('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
-  }
-
-  /// حذف سند وعكس القيود اليومية
-  Future<int> deleteVoucher(int voucherId) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-
-    // Pre-check: verify the voucher's date is not in a closed fiscal period
-    final voucherPreCheck = await db.query('vouchers', where: 'id = ?', whereArgs: [voucherId], limit: 1);
-    if (voucherPreCheck.isNotEmpty) {
-      final preCheckDate = voucherPreCheck.first['date'] as String? ?? now;
-      await _checkFiscalPeriodOpen(preCheckDate);
-    }
-
-    await db.transaction((txn) async {
-      // جلب بيانات السند
-      final voucher = await txn.query('vouchers', where: 'id = ?', whereArgs: [voucherId], limit: 1);
-      if (voucher.isEmpty) return;
-
-      final voucherData = voucher.first;
-      final voucherDate = voucherData['date'] as String? ?? now;
-      final voucherNumber = voucherData['voucher_number'] as String? ?? '';
-      final voucherType = voucherData['voucher_type'] as String? ?? '';
-      final totalAmount = MoneyHelper.readMoney(voucherData['total_amount']);
-      final cashBoxId = voucherData['cash_box_id'];
-
-      // جلب بنود السند وعكس القيود
-      final items = await txn.query('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
-      for (final item in items) {
-        final accountId = (item['account_id'] as num?)?.toInt();
-        final debit = MoneyHelper.readMoney(item['debit']);
-        final credit = MoneyHelper.readMoney(item['credit']);
-        if (accountId != null && (debit > 0 || credit > 0)) {
-          // عكس القيد:debit يصبح credit والعكس
-          await txn.insert('transactions', {
-            'account_id': accountId,
-            'journal_id': DateTime.now().millisecondsSinceEpoch,
-            'debit': MoneyHelper.toCents(credit),
-            'credit': MoneyHelper.toCents(debit),
-            'description': 'عكس سند $voucherNumber',
-            'date': voucherDate,
-            'created_at': now,
-          });
-
-          // تحديث رصيد الحساب (عكس) باستخدام منطق balance_type
-          await _updateAccountBalanceWithJournal(txn, accountId, credit, debit, now);
-        }
-      }
-
-      // عكس تأثير الصندوق
-      if (cashBoxId != null) {
-        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-        if (cashBox.isNotEmpty) {
-          final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
-          double newCashBalance;
-          if (voucherType == 'receipt') {
-            newCashBalance = currentBalance - totalAmount;
-          } else if (voucherType == 'payment') {
-            newCashBalance = currentBalance + totalAmount;
-          } else {
-            newCashBalance = currentBalance;
-          }
-          await txn.update('cash_boxes', {'balance': MoneyHelper.toCents(newCashBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
-        }
-      }
-
-      // عكس تأثير رصيد العميل/المورد
-      final customerId = voucherData['customer_id'];
-      final supplierId = voucherData['supplier_id'];
-      if (customerId != null && totalAmount > 0) {
-        if (voucherType == 'receipt') {
-          // Original receipt decreased customer balance, so reverse increases it
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
-        } else if (voucherType == 'payment') {
-          // Original payment increased customer balance, so reverse decreases it
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
-        }
-      }
-      if (supplierId != null && totalAmount > 0) {
-        if (voucherType == 'payment') {
-          // Original payment decreased supplier balance, so reverse increases it
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
-        } else if (voucherType == 'receipt') {
-          // Original receipt increased supplier balance, so reverse decreases it
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
-        }
-      }
-
-      // حذف بنود السند ثم السند نفسه
-      await txn.delete('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
-      await txn.delete('vouchers', where: 'id = ?', whereArgs: [voucherId]);
-    });
-    return 1;
-  }
-
-  /// جلب سند برقمه
-  Future<Map<String, dynamic>?> getVoucherByNumber(String number) async {
-    final db = await database;
-    final result = await db.query('vouchers', where: 'voucher_number = ?', whereArgs: [number], limit: 1);
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  /// توليد رقم السند التالي حسب النوع
-  Future<String> getNextVoucherNumber(String type) async {
-    final db = await database;
-    final year = DateTime.now().year.toString();
-    final prefixMap = {
-      'receipt': 'REC',
-      'payment': 'PAY',
-      'settlement': 'SET',
-      'compound': 'CMP',
-      'inventory': 'INV',
-    };
-    final prefix = prefixMap[type] ?? 'VCH';
-    final fullPrefix = '$prefix-$year-';
-
-    final result = await db.rawQuery(
-      "SELECT voucher_number FROM vouchers WHERE voucher_number LIKE ? ORDER BY id DESC LIMIT 1",
-      ['$fullPrefix%'],
-    );
-
-    if (result.isEmpty) {
-      return '$fullPrefix${1.toString().padLeft(3, '0')}';
-    }
-
-    final lastNumber = result.first['voucher_number'] as String;
-    final parts = lastNumber.split('-');
-    if (parts.length >= 3) {
-      final lastSeq = int.tryParse(parts.last) ?? 0;
-      return '$fullPrefix${(lastSeq + 1).toString().padLeft(3, '0')}';
-    }
-    return '$fullPrefix${1.toString().padLeft(3, '0')}';
-  }
-
-  Future<int> getTodayPosInvoiceCount(String datePrefix) async {
-    final db = await database;
-    final result = await db.rawQuery(
-      "SELECT COUNT(*) AS cnt FROM invoices WHERE id LIKE ?",
-      ['POS-$datePrefix%'],
-    );
-    return (result.first['cnt'] as num?)?.toInt() ?? 0;
-  }
+  Future<int> getTodayPosInvoiceCount(String datePrefix) => invoices.getTodayPosInvoiceCount(datePrefix);
 
   // ══════════════════════════════════════════════════════════════
-  //  العمليات اليومية والتقارير الإضافية
+  //  العمليات اليومية والتقارير الإضافية — delegated to ReportService
   //  Daily Operations & Additional Reports
   // ══════════════════════════════════════════════════════════════
 
   /// جلب العمليات اليومية المجمعة لتاريخ محدد
-  /// Returns combined list of all daily transactions for a specific date.
-  Future<List<Map<String, dynamic>>> getDailyOperations(DateTime date) async {
-    final db = await database;
-    final dayStart = DateTime(date.year, date.month, date.day);
-    final dayEnd = dayStart.add(const Duration(days: 1));
-    final startStr = dayStart.toIso8601String();
-    final endStr = dayEnd.toIso8601String();
-
-    final List<Map<String, dynamic>> operations = [];
-
-    // فواتير المبيعات
-    final saleInvoices = await db.rawQuery(
-      "SELECT i.id, i.type, i.total, i.created_at, i.currency, "
-      "CASE WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل') "
-      "ELSE 'بدون عميل' END AS entity_name "
-      "FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id "
-      "WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 "
-      "AND i.created_at >= ? AND i.created_at < ? "
-      "ORDER BY i.created_at DESC",
-      [startStr, endStr],
-    );
-    for (final row in saleInvoices) {
-      operations.add({
-        'type': 'sale_invoice',
-        'type_label': 'فاتورة مبيعات',
-        'id': row['id'],
-        'entity_name': row['entity_name'],
-        'amount': MoneyHelper.readMoney(row['total']),
-        'currency': row['currency'] ?? 'YER',
-        'time': row['created_at'] ?? '',
-      });
-    }
-
-    // فواتير المشتريات
-    final purchaseInvoices = await db.rawQuery(
-      "SELECT i.id, i.type, i.total, i.created_at, i.currency, "
-      "CASE WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد') "
-      "ELSE 'بدون مورد' END AS entity_name "
-      "FROM invoices i LEFT JOIN suppliers s ON i.supplier_id = s.id "
-      "WHERE i.type = 'purchase' AND i.is_return = 0 "
-      "AND i.created_at >= ? AND i.created_at < ? "
-      "ORDER BY i.created_at DESC",
-      [startStr, endStr],
-    );
-    for (final row in purchaseInvoices) {
-      operations.add({
-        'type': 'purchase_invoice',
-        'type_label': 'فاتورة مشتريات',
-        'id': row['id'],
-        'entity_name': row['entity_name'],
-        'amount': MoneyHelper.readMoney(row['total']),
-        'currency': row['currency'] ?? 'YER',
-        'time': row['created_at'] ?? '',
-      });
-    }
-
-    // سندات القبض والصرف (باستخدام try/catch لأن الجدول قد لا يكون موجوداً)
-    try {
-      final vouchers = await db.rawQuery(
-        "SELECT id, voucher_number, voucher_type, total_amount, date, currency, description "
-        "FROM vouchers "
-        "WHERE date >= ? AND date < ? "
-        "ORDER BY date DESC",
-        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
-      );
-      for (final row in vouchers) {
-        final voucherType = row['voucher_type'] as String? ?? '';
-        final isReceipt = voucherType.contains('receipt') || voucherType.contains('قبض');
-        operations.add({
-          'type': isReceipt ? 'receipt_voucher' : 'payment_voucher',
-          'type_label': isReceipt ? 'سند قبض' : 'سند صرف',
-          'id': row['id'],
-          'entity_name': row['description'] ?? row['voucher_number'] ?? '',
-          'amount': MoneyHelper.readMoney(row['total_amount']),
-          'currency': row['currency'] ?? 'YER',
-          'time': row['date'] ?? '',
-        });
-      }
-    } catch (e) { _logMigrationError("alter", e);
-      // جدول السندات غير موجود بعد
-    }
-
-    // المصروفات
-    final expenses = await db.rawQuery(
-      "SELECT id, title, amount, expense_date, currency, category "
-      "FROM expenses "
-      "WHERE expense_date >= ? AND expense_date < ? "
-      "ORDER BY expense_date DESC",
-      [startStr, endStr],
-    );
-    for (final row in expenses) {
-      operations.add({
-        'type': 'expense',
-        'type_label': 'مصروف',
-        'id': row['id'],
-        'entity_name': row['title'] ?? (row['category'] ?? ''),
-        'amount': MoneyHelper.readMoney(row['amount']),
-        'currency': row['currency'] ?? 'YER',
-        'time': row['expense_date'] ?? '',
-      });
-    }
-
-    // التحويلات النقدية
-    final transfers = await db.rawQuery(
-      "SELECT ct.id, ct.transfer_number, ct.amount, ct.currency, ct.created_at, "
-      "cb_from.name AS from_name, cb_to.name AS to_name "
-      "FROM cash_transfers ct "
-      "LEFT JOIN cash_boxes cb_from ON ct.from_cash_box_id = cb_from.id "
-      "LEFT JOIN cash_boxes cb_to ON ct.to_cash_box_id = cb_to.id "
-      "WHERE ct.created_at >= ? AND ct.created_at < ? "
-      "ORDER BY ct.created_at DESC",
-      [startStr, endStr],
-    );
-    for (final row in transfers) {
-      operations.add({
-        'type': 'cash_transfer',
-        'type_label': 'تحويل نقدي',
-        'id': row['id'],
-        'entity_name': '${row['from_name'] ?? ''} ← ${row['to_name'] ?? ''}',
-        'amount': MoneyHelper.readMoney(row['amount']),
-        'currency': row['currency'] ?? 'YER',
-        'time': row['created_at'] ?? '',
-      });
-    }
-
-    // صرافة العملات
-    try {
-      final exchanges = await db.rawQuery(
-        "SELECT ce.id, ce.exchange_number, ce.from_amount, ce.to_amount, ce.from_currency, "
-        "ce.to_currency, ce.exchange_rate, ce.created_at, "
-        "cb_from.name AS from_box_name, cb_to.name AS to_box_name "
-        "FROM currency_exchanges ce "
-        "LEFT JOIN cash_boxes cb_from ON ce.from_cash_box_id = cb_from.id "
-        "LEFT JOIN cash_boxes cb_to ON ce.to_cash_box_id = cb_to.id "
-        "WHERE ce.created_at >= ? AND ce.created_at < ? "
-        "ORDER BY ce.created_at DESC",
-        [startStr, endStr],
-      );
-      for (final row in exchanges) {
-        operations.add({
-          'type': 'currency_exchange',
-          'type_label': 'صرافة عملات',
-          'id': row['id'],
-          'entity_name': '${row['from_currency'] ?? ''} → ${row['to_currency'] ?? ''}',
-          'amount': MoneyHelper.readMoney(row['from_amount']),
-          'currency': row['from_currency'] ?? 'YER',
-          'time': row['created_at'] ?? '',
-        });
-      }
-    } catch (e) { _logMigrationError("alter", e);
-      // جدول صرافة العملات غير موجود بعد
-    }
-
-    // ترتيب حسب الوقت تنازلياً
-    operations.sort((a, b) {
-      final timeA = (a['time'] as String?) ?? '';
-      final timeB = (b['time'] as String?) ?? '';
-      return timeB.compareTo(timeA);
-    });
-
-    return operations;
-  }
-
+  Future<List<Map<String, dynamic>>> getDailyOperations(DateTime date) => reports.getDailyOperations(date);
   /// جلب ملخص العمليات اليومية لتاريخ محدد
-  /// Returns daily summary totals by category.
-  Future<Map<String, double>> getDailySummary(DateTime date) async {
-    final db = await database;
-    final dayStart = DateTime(date.year, date.month, date.day);
-    final dayEnd = dayStart.add(const Duration(days: 1));
-    final startStr = dayStart.toIso8601String();
-    final endStr = dayEnd.toIso8601String();
-
-    final Map<String, double> summary = {
-      'total_sales': 0.0,
-      'total_purchases': 0.0,
-      'total_receipts': 0.0,
-      'total_payments': 0.0,
-      'total_expenses': 0.0,
-      'total_transfers': 0.0,
-    };
-
-    // إجمالي المبيعات
-    final salesResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices "
-      "WHERE type IN ('sale', 'pos') AND is_return = 0 "
-      "AND created_at >= ? AND created_at < ?",
-      [startStr, endStr],
-    );
-    summary['total_sales'] = MoneyHelper.readMoney(salesResult.first['total']);
-
-    // إجمالي المشتريات
-    final purchasesResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(total), 0.0) AS total FROM invoices "
-      "WHERE type = 'purchase' AND is_return = 0 "
-      "AND created_at >= ? AND created_at < ?",
-      [startStr, endStr],
-    );
-    summary['total_purchases'] = MoneyHelper.readMoney(purchasesResult.first['total']);
-
-    // سندات القبض
-    try {
-      final receiptsResult = await db.rawQuery(
-        "SELECT COALESCE(SUM(total_amount), 0.0) AS total FROM vouchers "
-        "WHERE voucher_type LIKE '%receipt%' OR voucher_type LIKE '%قبض%' "
-        "AND date >= ? AND date < ?",
-        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
-      );
-      summary['total_receipts'] = MoneyHelper.readMoney(receiptsResult.first['total']);
-    } catch (e) { _logMigrationError("migration", e); }
-
-    // سندات الصرف
-    try {
-      final paymentsResult = await db.rawQuery(
-        "SELECT COALESCE(SUM(total_amount), 0.0) AS total FROM vouchers "
-        "WHERE (voucher_type LIKE '%payment%' OR voucher_type LIKE '%صرف%') "
-        "AND date >= ? AND date < ?",
-        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
-      );
-      summary['total_payments'] = MoneyHelper.readMoney(paymentsResult.first['total']);
-    } catch (e) { _logMigrationError("migration", e); }
-
-    // المصروفات
-    final expensesResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(amount), 0.0) AS total FROM expenses "
-      "WHERE expense_date >= ? AND expense_date < ?",
-      [startStr, endStr],
-    );
-    summary['total_expenses'] = MoneyHelper.readMoney(expensesResult.first['total']);
-
-    // التحويلات
-    final transfersResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(amount), 0.0) AS total FROM cash_transfers "
-      "WHERE created_at >= ? AND created_at < ?",
-      [startStr, endStr],
-    );
-    summary['total_transfers'] = MoneyHelper.readMoney(transfersResult.first['total']);
-
-    return summary;
-  }
-
-  /// جلب الحسابات بدون حركة
-  /// Returns accounts that have zero transactions.
-  Future<List<Map<String, dynamic>>> getAccountsWithoutMovements() async {
-    final db = await database;
-    return await db.rawQuery(
-      "SELECT a.id, a.name_ar, a.account_code, a.account_type, a.currency, a.balance "
-      "FROM accounts a "
-      "LEFT JOIN transactions t ON a.id = t.account_id "
-      "WHERE a.is_active = 1 AND t.id IS NULL "
-      "ORDER BY a.account_code",
-    );
-  }
-
+  Future<Map<String, double>> getDailySummary(DateTime date) => reports.getDailySummary(date);
   /// جلب تقرير أرباح الفواتير
-  /// Returns profit per invoice (sale price - cost price).
-  Future<List<Map<String, dynamic>>> getInvoiceProfitReport({
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    final db = await database;
-    String dateFilter = '';
-    List<dynamic> args = [];
-    if (startDate != null) {
-      dateFilter += ' AND i.created_at >= ?';
-      args.add(startDate.toIso8601String());
-    }
-    if (endDate != null) {
-      final toDate = endDate.add(const Duration(days: 1));
-      dateFilter += ' AND i.created_at < ?';
-      args.add(toDate.toIso8601String());
-    }
-
-    return await db.rawQuery(
-      "SELECT i.id AS invoice_id, i.type, i.total AS sale_total, i.currency, i.created_at, "
-      "CASE WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل') "
-      "WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد') "
-      "ELSE 'بدون عميل' END AS entity_name, "
-      "COALESCE(SUM(ii.quantity * p.cost_price), 0.0) AS cost_total, "
-      "i.total - COALESCE(SUM(ii.quantity * p.cost_price), 0.0) AS profit "
-      "FROM invoices i "
-      "LEFT JOIN customers c ON i.customer_id = c.id "
-      "LEFT JOIN suppliers s ON i.supplier_id = s.id "
-      "LEFT JOIN invoice_items ii ON ii.invoice_id = i.id "
-      "LEFT JOIN products p ON ii.product_id = p.id "
-      "WHERE i.is_return = 0 AND i.type IN ('sale', 'pos', 'purchase') "
-      "$dateFilter "
-      "GROUP BY i.id "
-      "ORDER BY i.created_at DESC",
-      args,
-    );
-  }
-
+  Future<List<Map<String, dynamic>>> getInvoiceProfitReport({DateTime? startDate, DateTime? endDate}) => reports.getInvoiceProfitReport(startDate: startDate, endDate: endDate);
   /// جلب تقرير حركة المخزون
-  /// Returns stock in/out movements per product.
-  Future<List<Map<String, dynamic>>> getInventoryMovementReport({
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    final db = await database;
-    String dateFilter = '';
-    List<dynamic> args = [];
-    if (startDate != null) {
-      dateFilter += ' AND i.created_at >= ?';
-      args.add(startDate.toIso8601String());
-    }
-    if (endDate != null) {
-      final toDate = endDate.add(const Duration(days: 1));
-      dateFilter += ' AND i.created_at < ?';
-      args.add(toDate.toIso8601String());
-    }
-
-    return await db.rawQuery(
-      "SELECT p.id AS product_id, p.name_ar, p.item_code, p.current_stock, "
-      "COALESCE(sales_data.qty_out, 0.0) AS qty_out, "
-      "COALESCE(sales_data.revenue, 0.0) AS total_revenue, "
-      "COALESCE(purchase_data.qty_in, 0.0) AS qty_in, "
-      "COALESCE(purchase_data.cost, 0.0) AS total_cost "
-      "FROM products p "
-      "LEFT JOIN ("
-      "  SELECT ii.product_id, SUM(ii.quantity) AS qty_out, SUM(ii.total_price) AS revenue "
-      "  FROM invoice_items ii "
-      "  INNER JOIN invoices i ON ii.invoice_id = i.id "
-      "  WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 $dateFilter "
-      "  GROUP BY ii.product_id"
-      ") sales_data ON p.id = sales_data.product_id "
-      "LEFT JOIN ("
-      "  SELECT ii.product_id, SUM(ii.quantity) AS qty_in, SUM(ii.total_price) AS cost "
-      "  FROM invoice_items ii "
-      "  INNER JOIN invoices i ON ii.invoice_id = i.id "
-      "  WHERE i.type = 'purchase' AND i.is_return = 0 $dateFilter "
-      "  GROUP BY ii.product_id"
-      ") purchase_data ON p.id = purchase_data.product_id "
-      "WHERE p.is_active = 1 AND (sales_data.qty_out IS NOT NULL OR purchase_data.qty_in IS NOT NULL) "
-      "ORDER BY p.name_ar",
-      [...args, ...args],
-    );
-  }
-
+  Future<List<Map<String, dynamic>>> getInventoryMovementReport({DateTime? startDate, DateTime? endDate}) => reports.getInventoryMovementReport(startDate: startDate, endDate: endDate);
   /// جلب تقرير تكلفة المخزون
-  /// Returns cost value of current stock per product.
-  Future<List<Map<String, dynamic>>> getInventoryCostReport() async {
-    final db = await database;
-    return await db.rawQuery(
-      "SELECT p.id, p.name_ar, p.item_code, p.barcode, "
-      "p.current_stock, p.cost_price, p.sell_price, "
-      "(p.current_stock * p.cost_price) AS stock_cost_value, "
-      "(p.current_stock * p.sell_price) AS stock_sell_value, "
-      "c.name AS category_name, w.name AS warehouse_name "
-      "FROM products p "
-      "LEFT JOIN categories c ON p.category_id = c.id "
-      "LEFT JOIN warehouses w ON p.warehouse_id = w.id "
-      "WHERE p.is_active = 1 AND p.current_stock > 0 "
-      "ORDER BY stock_cost_value DESC",
-    );
-  }
+  Future<List<Map<String, dynamic>>> getInventoryCostReport() => reports.getInventoryCostReport();
 
   // ══════════════════════════════════════════════════════════════
-  //  Stock Transfer methods (تحويل مخزني)
+  //  Stock Transfer methods (تحويل مخزني) — delegated to StockService
   // ══════════════════════════════════════════════════════════════
 
   /// إدراج تحويل مخزني وتحديث المخزون + تسجيل حركات المخزون
-  Future<int> insertStockTransfer(Map<String, dynamic> transferMap) async {
-    final db = await database;
-    final productId = transferMap['product_id'] as int;
-    final quantity = (transferMap['quantity'] as num).toDouble();
-    final fromWarehouseId = transferMap['from_warehouse_id'] as int;
-    final toWarehouseId = transferMap['to_warehouse_id'] as int;
-
-    return await db.transaction<int>((txn) async {
-      final now = DateTime.now().toIso8601String();
-
-      // إدراج سجل التحويل
-      final id = await txn.insert('stock_transfers', transferMap);
-
-      // جلب متوسط تكلفة المنتج المصدر
-      final sourceProductRow = await txn.query(
-        'products',
-        columns: ['average_cost'],
-        where: 'id = ?',
-        whereArgs: [productId],
-        limit: 1,
-      );
-      final sourceAvgCost = sourceProductRow.isNotEmpty
-          ? MoneyHelper.readMoney(sourceProductRow.first['average_cost'])
-          : 0.0;
-
-      // خصم الكمية من مخزن المصدر
-      final fromProducts = await txn.query(
-        'products',
-        where: 'id = ? AND warehouse_id = ?',
-        whereArgs: [productId, fromWarehouseId],
-        limit: 1,
-      );
-
-      if (fromProducts.isNotEmpty) {
-        final currentStock = (fromProducts.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-        await txn.update(
-          'products',
-          {
-            'current_stock': (currentStock - quantity).clamp(0.0, double.infinity),
-            'updated_at': now,
-          },
-          where: 'id = ?',
-          whereArgs: [productId],
-        );
-      }
-
-      // ── T16: تسجيل حركة مخزون صادر من المصدر ──
-      await txn.insert('stock_movements', {
-        'product_id': productId,
-        'movement_type': 'transfer_out',
-        'quantity': -quantity,
-        'reference_type': 'transfer',
-        'reference_id': id.toString(),
-        'notes': 'تحويل من مخزن #$fromWarehouseId إلى مخزن #$toWarehouseId',
-        'unit_cost': MoneyHelper.toCents(sourceAvgCost)
-        'created_at': now,
-      });
-
-      // إضافة الكمية لمخزن الوجهة
-      final sourceProduct = await txn.query(
-        'products',
-        where: 'id = ?',
-        whereArgs: [productId],
-        limit: 1,
-      );
-
-      if (sourceProduct.isNotEmpty) {
-        final productName = sourceProduct.first['name_ar'] as String;
-        final toProduct = await txn.query(
-          'products',
-          where: 'name_ar = ? AND warehouse_id = ?',
-          whereArgs: [productName, toWarehouseId],
-          limit: 1,
-        );
-
-        if (toProduct.isNotEmpty) {
-          final currentStock = (toProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-          final toProductId = toProduct.first['id'] as int;
-          await txn.update(
-            'products',
-            {
-              'current_stock': currentStock + quantity,
-              'updated_at': now,
-            },
-            where: 'id = ?',
-            whereArgs: [toProductId],
-          );
-          // ── T16: تسجيل حركة مخزون وارد إلى الوجهة (منتج موجود) ──
-          await txn.insert('stock_movements', {
-            'product_id': toProductId,
-            'movement_type': 'transfer_in',
-            'quantity': quantity,
-            'reference_type': 'transfer',
-            'reference_id': id.toString(),
-            'notes': 'تحويل من مخزن #$fromWarehouseId إلى مخزن #$toWarehouseId',
-            'unit_cost': MoneyHelper.toCents(sourceAvgCost)
-            'created_at': now,
-          });
-        } else {
-          // إنشاء نسخة من المنتج في المخزن الهدف
-          final newProduct = Map<String, dynamic>.from(sourceProduct.first);
-          newProduct.remove('id');
-          newProduct['warehouse_id'] = toWarehouseId;
-          newProduct['current_stock'] = quantity;
-          newProduct['created_at'] = now;
-          newProduct['updated_at'] = now;
-          final newProductId = await txn.insert('products', newProduct);
-          // ── T16: تسجيل حركة مخزون وارد إلى الوجهة (منتج جديد) ──
-          await txn.insert('stock_movements', {
-            'product_id': newProductId,
-            'movement_type': 'transfer_in',
-            'quantity': quantity,
-            'reference_type': 'transfer',
-            'reference_id': id.toString(),
-            'notes': 'تحويل من مخزن #$fromWarehouseId إلى مخزن #$toWarehouseId',
-            'unit_cost': MoneyHelper.toCents(sourceAvgCost)
-            'created_at': now,
-          });
-        }
-      }
-
-      return id;
-    });
-  }
-
+  Future<int> insertStockTransfer(Map<String, dynamic> transferMap) => stock.insertStockTransfer(transferMap);
   /// جلب جميع التحويلات المخزنية مع أسماء المستودعات والمنتجات
-  Future<List<Map<String, dynamic>>> getAllStockTransfers() async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT st.*,
-        fw.name AS from_warehouse_name,
-        tw.name AS to_warehouse_name,
-        p.name_ar AS product_name
-      FROM stock_transfers st
-      LEFT JOIN warehouses fw ON st.from_warehouse_id = fw.id
-      LEFT JOIN warehouses tw ON st.to_warehouse_id = tw.id
-      LEFT JOIN products p ON st.product_id = p.id
-      ORDER BY st.created_at DESC
-    ''');
-  }
+  Future<List<Map<String, dynamic>>> getAllStockTransfers() => stock.getAllStockTransfers();
 
   /// جلب كمية المخزون لمنتج في مخزن محدد
   /// Get the stock quantity for a specific product in a specific warehouse.
   /// Returns null if the product doesn't exist in that warehouse.
-  Future<double?> getProductStockInWarehouse(int productId, int warehouseId) async {
-    final db = await database;
-    final results = await db.query(
-      'products',
-      columns: ['current_stock'],
-      where: 'id = ? AND warehouse_id = ?',
-      whereArgs: [productId, warehouseId],
-      limit: 1,
-    );
-    if (results.isEmpty) return null;
-    return (results.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-  }
+  Future<double?> getProductStockInWarehouse(int productId, int warehouseId) => products.getProductStockInWarehouse(productId, warehouseId);
 
   // ══════════════════════════════════════════════════════════════
-  //  Stocktaking methods (جرد المخازن)
+  //  Stocktaking methods (جرد المخازن) — delegated to StockService
   // ══════════════════════════════════════════════════════════════
 
   /// إنشاء جلسة جرد مع عناصرها
-  Future<int> createStocktakingSession(
-    Map<String, dynamic> sessionMap,
-    List<Map<String, dynamic>> items,
-  ) async {
-    final db = await database;
-    return await db.transaction<int>((txn) async {
-      final sessionId = await txn.insert('stocktaking_sessions', sessionMap);
-
-      for (final item in items) {
-        item['session_id'] = sessionId;
-        await txn.insert('stocktaking_items', item);
-      }
-
-      return sessionId;
-    });
-  }
-
+  Future<int> createStocktakingSession(Map<String, dynamic> sessionMap, List<Map<String, dynamic>> items) => stock.createStocktakingSession(sessionMap, items);
   /// إكمال جلسة الجرد وتحديث المخزون الفعلي مع تسجيل الفرق والتدقيق + قيود يومية + حركات مخزون
-  Future<void> completeStocktakingSession(int sessionId) async {
-    final db = await database;
-    // Check if fiscal period is closed before completing stocktaking
-    final sessionRows = await db.query('stocktaking_sessions', where: 'id = ?', whereArgs: [sessionId], limit: 1);
-    if (sessionRows.isNotEmpty) {
-      final sessionDate = sessionRows.first['date'] as String? ?? DateTime.now().toIso8601String();
-      await _checkFiscalPeriodOpen(sessionDate);
-    }
-
-    await db.transaction((txn) async {
-      // جلب عناصر الجرد
-      final items = await txn.query(
-        'stocktaking_items',
-        where: 'session_id = ?',
-        whereArgs: [sessionId],
-      );
-
-      // حساب المطابق وغير المطابق
-      int matched = 0;
-      int mismatched = 0;
-
-      // معرف القيد الموحد لجميع بنود الجرد
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-      final now = DateTime.now().toIso8601String();
-
-      // ── تحديد حسابات تعديل المخزون (إنشاء تلقائي إذا لم تكن موجودة) ──
-      // العملة الافتراضية للجرد هي YER (المنتجات لا تحمل عملة)
-      const stocktakingCurrency = 'YER';
-      const codeOffset = 0; // YER offset
-
-      // حساب المخزون (1300+offset)
-      final inventoryAccountRows = await txn.query(
-        'accounts',
-        where: 'account_code = ? AND currency = ?',
-        whereArgs: [(1300 + codeOffset).toString(), stocktakingCurrency],
-        limit: 1,
-      );
-      final inventoryAccountId = inventoryAccountRows.isNotEmpty
-          ? inventoryAccountRows.first['id'] as int
-          : null;
-
-      // حساب خسارة تفاوت الجرد (5400+offset) — مصروف
-      final varianceLossCode = (5400 + codeOffset).toString();
-      final varianceLossRows = await txn.query(
-        'accounts',
-        where: 'account_code = ? AND currency = ?',
-        whereArgs: [varianceLossCode, stocktakingCurrency],
-        limit: 1,
-      );
-      int? varianceLossAccountId;
-      if (varianceLossRows.isNotEmpty) {
-        varianceLossAccountId = varianceLossRows.first['id'] as int;
-      } else {
-        // إنشاء حساب خسارة تفاوت الجرد تلقائياً
-        varianceLossAccountId = await txn.insert('accounts', {
-          'name_ar': 'خسارة تفاوت الجرد (ر.ي)',
-          'name_en': 'Inventory Variance Loss (YER)',
-          'account_code': varianceLossCode,
-          'account_type': 'EXPENSE',
-          'balance': 0,
-          'currency': stocktakingCurrency,
-          'balance_type': 'debit',
-          'is_active': 1,
-          'is_system': 1,
-          'created_at': now,
-          'updated_at': now,
-        });
-      }
-
-      // حساب إيراد تفاوت الجرد (4400+offset) — إيراد
-      final varianceIncomeCode = (4400 + codeOffset).toString();
-      final varianceIncomeRows = await txn.query(
-        'accounts',
-        where: 'account_code = ? AND currency = ?',
-        whereArgs: [varianceIncomeCode, stocktakingCurrency],
-        limit: 1,
-      );
-      int? varianceIncomeAccountId;
-      if (varianceIncomeRows.isNotEmpty) {
-        varianceIncomeAccountId = varianceIncomeRows.first['id'] as int;
-      } else {
-        // إنشاء حساب إيراد تفاوت الجرد تلقائياً
-        varianceIncomeAccountId = await txn.insert('accounts', {
-          'name_ar': 'إيراد تفاوت الجرد (ر.ي)',
-          'name_en': 'Inventory Variance Income (YER)',
-          'account_code': varianceIncomeCode,
-          'account_type': 'REVENUE',
-          'balance': 0,
-          'currency': stocktakingCurrency,
-          'balance_type': 'credit',
-          'is_active': 1,
-          'is_system': 1,
-          'created_at': now,
-          'updated_at': now,
-        });
-      }
-
-      // تحديث المخزون لكل منتج بالكمية الفعلية + حساب وتسجيل الفرق + سجل التدقيق
-      for (final item in items) {
-        final productId = item['product_id'] as int;
-        final systemQuantity = (item['system_quantity'] as num?)?.toDouble() ?? 0.0;
-        final actualQuantity = (item['actual_quantity'] as num).toDouble();
-        final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
-
-        // حساب الفرق (variance) بين الكمية بالنظام والكمية الفعلية
-        final variance = actualQuantity - systemQuantity;
-
-        // جلب الكمية الحالية وتكلفة المنتج قبل التحديث (للسجل والقيود)
-        final productRows = await txn.query(
-          'products',
-          columns: ['current_stock', 'average_cost'],
-          where: 'id = ?',
-          whereArgs: [productId],
-        );
-        final oldStock = productRows.isNotEmpty
-            ? (productRows.first['current_stock'] as num?)?.toDouble() ?? 0.0
-            : 0.0;
-        final averageCost = productRows.isNotEmpty
-            ? MoneyHelper.readMoney(productRows.first['average_cost'])
-            : 0.0;
-
-        // تحديث المخزون بالكمية الفعلية
-        await txn.update(
-          'products',
-          {
-            'current_stock': actualQuantity,
-            'updated_at': now,
-          },
-          where: 'id = ?',
-          whereArgs: [productId],
-        );
-
-        // تحديث حقل الفرق في عنصر الجرد
-        await txn.update(
-          'stocktaking_items',
-          {'variance': variance},
-          where: 'id = ?',
-          whereArgs: [item['id']],
-        );
-
-        if (variance.abs() < 0.005) {
-          matched++;
-        } else {
-          mismatched++;
-
-          // ── T16: تسجيل حركة المخزون ──
-          await txn.insert('stock_movements', {
-            'product_id': productId,
-            'movement_type': 'adjustment',
-            'quantity': variance,
-            'reference_type': 'stocktaking',
-            'reference_id': sessionId.toString(),
-            'notes': variance > 0 ? 'زيادة جرد' : 'نقص جرد',
-            'unit_cost': MoneyHelper.toCents(averageCost)
-            'created_at': now,
-          });
-
-          // ── إضافة سجل تدقيق لكل منتج تغير مخزونه ──
-          await txn.insert('audit_trail', {
-            'action': 'stocktake_adjust',
-            'table_name': 'products',
-            'record_id': productId,
-            'record_type': 'stock_adjustment',
-            'old_values': oldStock.toString(),
-            'new_values': actualQuantity.toString(),
-            'user_name': null,
-            'shift_id': null,
-            'created_at': now,
-          });
-
-          // ── T15: إنشاء قيود يومية لتعديلات الجرد ──
-          final adjustmentAmount = variance * averageCost;
-          if (adjustmentAmount.abs() >= 0.005) {
-            if (variance > 0) {
-              // زيادة مخزون: مدين = المخزون، دائن = إيراد تفاوت الجرد
-              if (inventoryAccountId != null) {
-                await txn.insert('transactions', {
-                  'account_id': inventoryAccountId,
-                  'journal_id': journalId,
-                  'debit': MoneyHelper.toCents(adjustmentAmount),
-                  'credit': 0,
-                  'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await _updateAccountBalanceWithJournal(txn, inventoryAccountId, adjustmentAmount, 0.0, now);
-              }
-              if (varianceIncomeAccountId != null) {
-                await txn.insert('transactions', {
-                  'account_id': varianceIncomeAccountId,
-                  'journal_id': journalId,
-                  'debit': 0,
-                  'credit': MoneyHelper.toCents(adjustmentAmount),
-                  'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await _updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, adjustmentAmount, now);
-              }
-            } else {
-              // نقص مخزون: مدين = خسارة تفاوت الجرد، دائن = المخزون
-              final lossAmount = adjustmentAmount.abs();
-              if (varianceLossAccountId != null) {
-                await txn.insert('transactions', {
-                  'account_id': varianceLossAccountId,
-                  'journal_id': journalId,
-                  'debit': MoneyHelper.toCents(lossAmount),
-                  'credit': 0,
-                  'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await _updateAccountBalanceWithJournal(txn, varianceLossAccountId, lossAmount, 0.0, now);
-              }
-              if (inventoryAccountId != null) {
-                await txn.insert('transactions', {
-                  'account_id': inventoryAccountId,
-                  'journal_id': journalId,
-                  'debit': 0,
-                  'credit': MoneyHelper.toCents(lossAmount),
-                  'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
-                  'date': now,
-                  'created_at': now,
-                });
-                await _updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, lossAmount, now);
-              }
-            }
-          }
-        }
-      }
-
-      // تحديث حالة الجرد إلى مكتمل
-      await txn.update(
-        'stocktaking_sessions',
-        {
-          'status': 'completed',
-          'matched_items': matched,
-          'mismatched_items': mismatched,
-          'total_items': items.length,
-        },
-        where: 'id = ?',
-        whereArgs: [sessionId],
-      );
-    });
-  }
-
+  Future<void> completeStocktakingSession(int sessionId) => stock.completeStocktakingSession(sessionId);
   /// جلب جميع جلسات الجرد
-  Future<List<Map<String, dynamic>>> getStocktakingSessions() async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT ss.*, w.name AS warehouse_name
-      FROM stocktaking_sessions ss
-      LEFT JOIN warehouses w ON ss.warehouse_id = w.id
-      ORDER BY ss.created_at DESC
-    ''');
-  }
-
+  Future<List<Map<String, dynamic>>> getStocktakingSessions() => stock.getStocktakingSessions();
   /// جلب عناصر جلسة الجرد
-  Future<List<Map<String, dynamic>>> getStocktakingItems(int sessionId) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT si.*, p.name_ar AS product_name, p.current_stock
-      FROM stocktaking_items si
-      LEFT JOIN products p ON si.product_id = p.id
-      WHERE si.session_id = ?
-      ORDER BY p.name_ar ASC
-    ''', [sessionId]);
-  }
+  Future<List<Map<String, dynamic>>> getStocktakingItems(int sessionId) => stock.getStocktakingItems(sessionId);
 
   /// جلب جميع الحركات المحاسبية للتصدير مع اسم الحساب
-  Future<List<Map<String, dynamic>>> getAllTransactionsForExport() async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT t.*, a.name_ar AS account_name
-      FROM transactions t
-      LEFT JOIN accounts a ON t.account_id = a.id
-      ORDER BY t.date DESC
-    ''');
-  }
+  Future<List<Map<String, dynamic>>> getAllTransactionsForExport() => reports.getAllTransactionsForExport();
 
   // ══════════════════════════════════════════════════════════════
-  //  Advanced Statistics / Charts query methods
+  //  Advanced Statistics / Charts query methods — delegated to ReportService
   // ══════════════════════════════════════════════════════════════
 
   /// Monthly sales vs purchases for a given [year].
-  /// Returns 12 rows (one per month) with `month`, `sales`, `purchases` columns.
-  Future<List<Map<String, dynamic>>> getMonthlySalesVsPurchases(int year, {String? currency}) async {
-    final db = await database;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND i.currency = '$currency'" : '';
-    return await db.rawQuery('''
-      SELECT m.month,
-        COALESCE(s.total, 0.0) AS sales,
-        COALESCE(p.total, 0.0) AS purchases
-      FROM (
-        SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
-        SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
-        SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
-      ) m
-      LEFT JOIN (
-        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
-               SUM(total) AS total
-        FROM invoices
-        WHERE type = 'sale' AND is_return = 0
-          AND strftime('%Y', created_at) = '$year'
-          $currencyFilter
-        GROUP BY month
-      ) s ON m.month = s.month
-      LEFT JOIN (
-        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
-               SUM(total) AS total
-        FROM invoices
-        WHERE type = 'purchase' AND is_return = 0
-          AND strftime('%Y', created_at) = '$year'
-          $currencyFilter
-        GROUP BY month
-      ) p ON m.month = p.month
-      ORDER BY m.month
-    ''');
-  }
-
+  Future<List<Map<String, dynamic>>> getMonthlySalesVsPurchases(int year, {String? currency}) => reports.getMonthlySalesVsPurchases(year, currency: currency);
   /// Revenue vs Expense breakdown for a given [year].
-  /// Returns rows with `category`, `total`, `type` columns.
-  Future<List<Map<String, dynamic>>> getRevenueExpenseBreakdown(int year, {String? currency}) async {
-    final db = await database;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
-    final yearStr = year.toString();
-
-    final results = <Map<String, dynamic>>[];
-
-    // Revenue by invoice type
-    final revenueData = await db.rawQuery('''
-      SELECT
-        CASE
-          WHEN type = 'sale' AND is_return = 0 THEN 'مبيعات'
-          WHEN type = 'purchase' AND is_return = 1 THEN 'مرتجع مشتريات'
-          ELSE 'أخرى'
-        END AS category,
-        SUM(total) AS total,
-        'إيرادات' AS type
-      FROM invoices
-      WHERE (type = 'sale' AND is_return = 0 OR type = 'purchase' AND is_return = 1)
-        AND strftime('%Y', created_at) = ?
-        $currencyFilter
-      GROUP BY category
-    ''', [yearStr]);
-    results.addAll(revenueData);
-
-    // Expenses by category
-    final expenseData = await db.rawQuery('''
-      SELECT
-        COALESCE(category, 'مصاريف عامة') AS category,
-        SUM(amount) AS total,
-        'مصروفات' AS type
-      FROM expenses
-      WHERE strftime('%Y', expense_date) = ?
-        $currencyFilter
-      GROUP BY category
-    ''', [yearStr]);
-    results.addAll(expenseData);
-
-    // Purchases as expense category
-    final purchaseData = await db.rawQuery('''
-      SELECT 'مشتريات' AS category,
-        SUM(total) AS total,
-        'مصروفات' AS type
-      FROM invoices
-      WHERE type = 'purchase' AND is_return = 0
-        AND strftime('%Y', created_at) = ?
-        $currencyFilter
-    ''', [yearStr]);
-    results.addAll(purchaseData);
-
-    return results;
-  }
-
+  Future<List<Map<String, dynamic>>> getRevenueExpenseBreakdown(int year, {String? currency}) => reports.getRevenueExpenseBreakdown(year, currency: currency);
   /// Daily sales trend for the last [days] days.
-  /// Returns rows with `date`, `total` columns.
-  Future<List<Map<String, dynamic>>> getDailySalesTrend(int days, {String? currency}) async {
-    final db = await database;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
-    final now = DateTime.now();
-    final startDate = now.subtract(Duration(days: days - 1));
-    final startDateStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
-
-    return await db.rawQuery('''
-      SELECT date(created_at) AS date, COALESCE(SUM(total), 0.0) AS total
-      FROM invoices
-      WHERE type = 'sale' AND is_return = 0
-        AND date(created_at) >= ?
-        $currencyFilter
-      GROUP BY date(created_at)
-      ORDER BY date(created_at) ASC
-    ''', [startDateStr]);
-  }
-
+  Future<List<Map<String, dynamic>>> getDailySalesTrend(int days, {String? currency}) => reports.getDailySalesTrend(days, currency: currency);
   /// Top products by sales amount.
-  /// Returns rows with `product_name`, `total_quantity`, `total_amount` columns.
-  Future<List<Map<String, dynamic>>> getTopProducts(int limit, {String? currency}) async {
-    final db = await database;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND i.currency = '$currency'" : '';
-    return await db.rawQuery('''
-      SELECT ii.product_name,
-        SUM(ii.quantity) AS total_quantity,
-        SUM(ii.total_price) AS total_amount
-      FROM invoice_items ii
-      JOIN invoices i ON ii.invoice_id = i.id
-      WHERE i.type = 'sale' AND i.is_return = 0
-        $currencyFilter
-      GROUP BY ii.product_name
-      ORDER BY total_amount DESC
-      LIMIT ?
-    ''', [limit]);
-  }
-
+  Future<List<Map<String, dynamic>>> getTopProducts(int limit, {String? currency}) => reports.getTopProducts(limit, currency: currency);
   /// Top customer balances.
-  /// Returns rows with `name`, `balance`, `balance_type`, `currency` columns.
-  Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT name, balance, balance_type, currency
-      FROM customers
-      WHERE balance > 0
-      ORDER BY balance DESC
-      LIMIT ?
-    ''', [limit]);
-  }
-
+  Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) => customers.getTopCustomerBalances(limit);
   /// Monthly cash flow (inflow vs outflow) for a given [year].
-  /// Returns 12 rows with `month`, `inflow`, `outflow` columns.
-  Future<List<Map<String, dynamic>>> getMonthlyCashFlow(int year, {String? currency}) async {
-    final db = await database;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
-    return await db.rawQuery('''
-      SELECT m.month,
-        COALESCE(i.inflow, 0.0) AS inflow,
-        COALESCE(o.outflow, 0.0) AS outflow
-      FROM (
-        SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
-        SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
-        SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
-      ) m
-      LEFT JOIN (
-        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
-               SUM(paid_amount) AS inflow
-        FROM invoices
-        WHERE type = 'sale' AND is_return = 0 AND paid_amount > 0
-          AND strftime('%Y', created_at) = '$year'
-          $currencyFilter
-        GROUP BY month
-      ) i ON m.month = i.month
-      LEFT JOIN (
-        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
-               SUM(total) AS outflow
-        FROM expenses
-        WHERE strftime('%Y', expense_date) = '$year'
-          $currencyFilter
-        GROUP BY month
-      ) o ON m.month = o.month
-      ORDER BY m.month
-    ''');
-  }
+  Future<List<Map<String, dynamic>>> getMonthlyCashFlow(int year, {String? currency}) => reports.getMonthlyCashFlow(year, currency: currency);
 
   // ══════════════════════════════════════════════════════════════
-  //  Inventory Voucher Methods (سندات الجرد) - v22
+  //  Inventory Voucher Methods (سندات الجرد) - v22 — delegated to StockService
   // ══════════════════════════════════════════════════════════════
 
-  Future<String> getNextInventoryVoucherNumber() async {
-    final db = await database;
-    final now = DateTime.now();
-    final prefix = 'IV-${now.year}${now.month.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery(
-      "SELECT COUNT(*) as cnt FROM inventory_vouchers WHERE voucher_number LIKE ?",
-      ['$prefix%'],
-    );
-    final count = (result.first['cnt'] as num?)?.toInt() ?? 0;
-    return '$prefix-${(count + 1).toString().padLeft(4, '0')}';
-  }
-
-  Future<int> insertInventoryVoucher(
-    Map<String, dynamic> voucherMap,
-    List<Map<String, dynamic>> items,
-  ) async {
-    // Check if fiscal period is closed before creating inventory voucher
-    final ivDate = voucherMap['date'] as String? ?? DateTime.now().toIso8601String();
-    await _checkFiscalPeriodOpen(ivDate);
-
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-
-    // Determine if stock & journal entries should be applied immediately.
-    // Draft vouchers defer stock changes and journal entries until confirmed.
-    final status = voucherMap['status'] as String? ?? 'approved';
-    final applyStockAndJournal = status == 'approved';
-
-    int voucherId = 0;
-    await db.transaction((txn) async {
-      // Insert voucher header
-      voucherId = await txn.insert('inventory_vouchers', {
-        ...voucherMap,
-        'created_at': voucherMap['created_at'] as String? ?? now,
-        'updated_at': voucherMap['updated_at'] as String? ?? now,
-      });
-
-      double totalIncreaseValue = 0.0;
-      double totalDecreaseValue = 0.0;
-
-      for (final item in items) {
-        final productId = item['product_id'] as int;
-        final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
-        final unitCost = MoneyHelper.readMoney(item['unit_cost']);
-        final totalValue = difference.abs() * unitCost;
-
-        // Insert voucher item
-        await txn.insert('inventory_voucher_items', {
-          'voucher_id': voucherId,
-          'product_id': productId,
-          'system_quantity': (item['system_quantity'] as num?)?.toDouble() ?? 0.0,
-          'actual_quantity': (item['actual_quantity'] as num?)?.toDouble() ?? 0.0,
-          'difference': difference,
-          'unit_cost': MoneyHelper.toCents(unitCost)
-          'total_value': MoneyHelper.toCents(totalValue)
-          'notes': item['notes'] as String?,
-        });
-
-        // Only update product stock when voucher is approved
-        if (applyStockAndJournal) {
-          final product = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-          if (product.isNotEmpty) {
-            final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-            await txn.update('products', {
-              'current_stock': currentStock + difference,
-              'updated_at': now,
-            }, where: 'id = ?', whereArgs: [productId]);
-          }
-
-          // Log stock movement
-          await txn.insert('stock_movements', {
-            'product_id': productId,
-            'movement_type': 'adjustment',
-            'quantity': difference,
-            'reference_type': 'inventory_voucher',
-            'reference_id': voucherId.toString(),
-            'notes': 'سند جرد - تعديل المخزون',
-            'unit_cost': MoneyHelper.toCents(unitCost)
-            'created_at': now,
-          });
-        }
-
-        if (difference > 0) {
-          totalIncreaseValue += totalValue;
-        } else if (difference < 0) {
-          totalDecreaseValue += totalValue;
-        }
-      }
-
-      // Update voucher total value
-      await txn.update('inventory_vouchers', {
-        'total_value': totalIncreaseValue + totalDecreaseValue,
-        'updated_at': now,
-      }, where: 'id = ?', whereArgs: [voucherId]);
-
-      // Only create journal entries when voucher is approved
-      if (applyStockAndJournal) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
-        // Get currency for this voucher
-        final currency = voucherMap['currency'] as String? ?? 'YER';
-
-        // Find accounts by code and currency
-        // Inventory account code = 1300 + offset
-        final inventoryAccount = await _findAccountByCodeAndCurrency(txn, '1300', currency);
-        // COGS account code = 3200 + offset
-        final cogsAccount = await _findAccountByCodeAndCurrency(txn, '3200', currency);
-
-      // Journal entries for inventory increase (difference > 0)
-      if (totalIncreaseValue > 0) {
-        if (inventoryAccount != null) {
-          final invAccId = inventoryAccount['id'] as int;
-          // Debit Inventory (asset increase)
-          await txn.insert('transactions', {
-            'account_id': invAccId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(totalIncreaseValue),
-            'credit': 0,
-            'description': 'سند جرد - زيادة مخزون',
-            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
-        }
-        if (cogsAccount != null) {
-          final cogsAccId = cogsAccount['id'] as int;
-          // Credit COGS (reducing cost of goods sold)
-          await txn.insert('transactions', {
-            'account_id': cogsAccId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(totalIncreaseValue),
-            'description': 'سند جرد - زيادة مخزون',
-            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cogsAccId, 0.0, totalIncreaseValue, now);
-        }
-      }
-
-      // Journal entries for inventory decrease (difference < 0)
-      if (totalDecreaseValue > 0) {
-        if (cogsAccount != null) {
-          final cogsAccId = cogsAccount['id'] as int;
-          // Debit COGS (increasing cost)
-          await txn.insert('transactions', {
-            'account_id': cogsAccId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(totalDecreaseValue),
-            'credit': 0,
-            'description': 'سند جرد - نقص مخزون',
-            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cogsAccId, totalDecreaseValue, 0.0, now);
-        }
-        if (inventoryAccount != null) {
-          final invAccId = inventoryAccount['id'] as int;
-          // Credit Inventory (asset decrease)
-          await txn.insert('transactions', {
-            'account_id': invAccId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(totalDecreaseValue),
-            'description': 'سند جرد - نقص مخزون',
-            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
-        }
-      }
-      } // end if (applyStockAndJournal)
-    });
-
-    return voucherId;
-  }
-
-  /// Helper: find account by base code and currency
-  Future<Map<String, dynamic>?> _findAccountByCodeAndCurrency(Transaction txn, String baseCode, String currency) async {
-    // Determine code offset based on currency
-    String codeOffset = '0';
-    if (currency == 'SAR') {
-      codeOffset = '1';
-    } else if (currency == 'USD') {
-      codeOffset = '2';
-    }
-    final actualCode = (int.parse(baseCode) + int.parse(codeOffset)).toString();
-    final result = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [actualCode, currency], limit: 1);
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  Future<List<Map<String, dynamic>>> getInventoryVouchers({String? searchQuery}) async {
-    final db = await database;
-    String query = '''
-      SELECT iv.*, w.name as warehouse_name
-      FROM inventory_vouchers iv
-      LEFT JOIN warehouses w ON iv.warehouse_id = w.id
-    ''';
-    List<dynamic> args = [];
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      query += ' WHERE iv.voucher_number LIKE ? OR iv.description LIKE ? OR w.name LIKE ?';
-      final likeQuery = '%$searchQuery%';
-      args = [likeQuery, likeQuery, likeQuery];
-    }
-    query += ' ORDER BY iv.created_at DESC';
-    return await db.rawQuery(query, args);
-  }
-
-  Future<Map<String, dynamic>?> getInventoryVoucherDetails(int voucherId) async {
-    final db = await database;
-    final voucherResult = await db.rawQuery('''
-      SELECT iv.*, w.name as warehouse_name
-      FROM inventory_vouchers iv
-      LEFT JOIN warehouses w ON iv.warehouse_id = w.id
-      WHERE iv.id = ?
-    ''', [voucherId]);
-    if (voucherResult.isEmpty) return null;
-
-    final items = await db.rawQuery('''
-      SELECT ivi.*, p.name_ar as product_name, p.barcode, p.item_code
-      FROM inventory_voucher_items ivi
-      LEFT JOIN products p ON ivi.product_id = p.id
-      WHERE ivi.voucher_id = ?
-      ORDER BY ivi.id
-    ''', [voucherId]);
-
-    return {
-      ...voucherResult.first,
-      'items': items,
-    };
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  Inventory Voucher CRUD — getAll / delete / confirm
-  // ══════════════════════════════════════════════════════════════
-
-  /// Get all inventory vouchers with warehouse name and item count.
-  /// Returns aliases `voucher_date` → iv.date, `total_diff_value` → iv.total_value
-  /// so callers can use either the raw column names or the aliases.
-  Future<List<Map<String, dynamic>>> getAllInventoryVouchers() async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT
-        iv.*,
-        iv.date AS voucher_date,
-        iv.total_value AS total_diff_value,
-        w.name AS warehouse_name,
-        (SELECT COUNT(*) FROM inventory_voucher_items ivi WHERE ivi.voucher_id = iv.id) AS item_count
-      FROM inventory_vouchers iv
-      LEFT JOIN warehouses w ON iv.warehouse_id = w.id
-      ORDER BY iv.created_at DESC
-    ''');
-  }
-
-  /// Delete an inventory voucher and its items.
-  /// If the voucher was previously approved, the stock changes are reversed
-  /// (product current_stock is adjusted back) and a reversal stock movement
-  /// is logged for each item.
-  Future<void> deleteInventoryVoucher(int id) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-
-    // Pre-check: verify the inventory voucher's date is not in a closed fiscal period
-    final ivPreCheck = await db.query('inventory_vouchers', where: 'id = ?', whereArgs: [id], limit: 1);
-    if (ivPreCheck.isNotEmpty) {
-      final preCheckDate = ivPreCheck.first['date'] as String? ?? now;
-      await _checkFiscalPeriodOpen(preCheckDate);
-    }
-
-    await db.transaction((txn) async {
-      // Fetch the voucher to check its status
-      final voucherRows = await txn.query(
-        'inventory_vouchers',
-        where: 'id = ?',
-        whereArgs: [id],
-        limit: 1,
-      );
-      if (voucherRows.isEmpty) return;
-
-      final status = voucherRows.first['status'] as String? ?? 'draft';
-
-      // If the voucher was approved, reverse all stock changes
-      if (status == 'approved') {
-        final items = await txn.query(
-          'inventory_voucher_items',
-          where: 'voucher_id = ?',
-          whereArgs: [id],
-        );
-
-        for (final item in items) {
-          final productId = item['product_id'] as int;
-          final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
-          final unitCost = MoneyHelper.readMoney(item['unit_cost']);
-
-          // Reverse: subtract the difference that was added
-          final product = await txn.query(
-            'products',
-            where: 'id = ?',
-            whereArgs: [productId],
-            limit: 1,
-          );
-          if (product.isNotEmpty) {
-            final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-            await txn.update(
-              'products',
-              {
-                'current_stock': currentStock - difference,
-                'updated_at': now,
-              },
-              where: 'id = ?',
-              whereArgs: [productId],
-            );
-          }
-
-          // Log a reversal stock movement
-          await txn.insert('stock_movements', {
-            'product_id': productId,
-            'movement_type': 'adjustment',
-            'quantity': -difference, // reverse the original adjustment
-            'reference_type': 'inventory_voucher',
-            'reference_id': id.toString(),
-            'notes': 'حذف سند جرد - عكس تعديل المخزون',
-            'unit_cost': MoneyHelper.toCents(unitCost)
-            'created_at': now,
-          });
-        }
-
-        // Reverse journal entries for this voucher
-        // Find transactions that were created with a journal_id pattern from this voucher
-        final voucherDate = voucherRows.first['date'] as String? ?? now.substring(0, 10);
-        final voucherCurrency = voucherRows.first['currency'] as String? ?? 'YER';
-        final voucherDesc = 'سند جرد';
-
-        // Find and reverse related transactions by description pattern and date
-        final relatedTxns = await txn.rawQuery(
-          '''SELECT * FROM transactions
-             WHERE date = ? AND description LIKE ?
-             ORDER BY id DESC''',
-          [voucherDate, '%$voucherDesc%'],
-        );
-
-        // Only reverse the exact number of transactions this voucher created (max 4)
-        // Insertions were: up to 2 for increase, up to 2 for decrease
-        final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
-        final exactTxns = relatedTxns.where((t) {
-          final desc = (t['description'] as String?) ?? '';
-          return desc.contains(voucherNumber) || desc.contains('سند جرد');
-        }).take(4).toList();
-
-        for (final txnRow in exactTxns) {
-          final accId = txnRow['account_id'] as int;
-          final debit = MoneyHelper.readMoney(txnRow['debit']);
-          final credit = MoneyHelper.readMoney(txnRow['credit']);
-
-          // Reverse: swap debit and credit
-          await txn.insert('transactions', {
-            'account_id': accId,
-            'journal_id': DateTime.now().millisecondsSinceEpoch,
-            'debit': MoneyHelper.toCents(credit),
-            'credit': MoneyHelper.toCents(debit),
-            'description': 'عكس قيد - حذف سند جرد رقم $voucherNumber',
-            'date': now.substring(0, 10),
-            'created_at': now,
-          });
-
-          // Reverse the account balance
-          await _updateAccountBalanceWithJournal(txn, accId, credit, debit, now);
-        }
-      }
-
-      // Delete items first (though CASCADE should handle it)
-      await txn.delete(
-        'inventory_voucher_items',
-        where: 'voucher_id = ?',
-        whereArgs: [id],
-      );
-
-      // Delete the voucher
-      await txn.delete(
-        'inventory_vouchers',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    });
-  }
-
-  /// Confirm (approve) a draft inventory voucher.
-  /// Updates status to 'approved', adjusts product stock quantities,
-  /// creates stock movements, and generates journal entries.
-  Future<void> confirmInventoryVoucher(int id) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
-
-    await db.transaction((txn) async {
-      // Fetch the voucher
-      final voucherRows = await txn.query(
-        'inventory_vouchers',
-        where: 'id = ?',
-        whereArgs: [id],
-        limit: 1,
-      );
-      if (voucherRows.isEmpty) {
-        throw Exception('سند الجرد غير موجود');
-      }
-
-      final currentStatus = voucherRows.first['status'] as String?;
-      if (currentStatus != 'draft') {
-        throw Exception('لا يمكن تأكيد سند جرد بحالة "$currentStatus" — يجب أن يكون مسودة');
-      }
-
-      final currency = voucherRows.first['currency'] as String? ?? 'YER';
-      final voucherDate = voucherRows.first['date'] as String? ?? now.substring(0, 10);
-
-      // Fetch items
-      final items = await txn.query(
-        'inventory_voucher_items',
-        where: 'voucher_id = ?',
-        whereArgs: [id],
-      );
-
-      double totalIncreaseValue = 0.0;
-      double totalDecreaseValue = 0.0;
-
-      for (final item in items) {
-        final productId = item['product_id'] as int;
-        final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
-        final unitCost = MoneyHelper.readMoney(item['unit_cost']);
-        final totalValue = difference.abs() * unitCost;
-
-        // Update product stock
-        final product = await txn.query(
-          'products',
-          where: 'id = ?',
-          whereArgs: [productId],
-          limit: 1,
-        );
-        if (product.isNotEmpty) {
-          final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-          await txn.update(
-            'products',
-            {
-              'current_stock': currentStock + difference,
-              'updated_at': now,
-            },
-            where: 'id = ?',
-            whereArgs: [productId],
-          );
-        }
-
-        // Create stock movement
-        await txn.insert('stock_movements', {
-          'product_id': productId,
-          'movement_type': 'adjustment',
-          'quantity': difference,
-          'reference_type': 'inventory_voucher',
-          'reference_id': id.toString(),
-          'notes': 'تأكيد سند جرد - تعديل المخزون',
-          'unit_cost': MoneyHelper.toCents(unitCost)
-          'created_at': now,
-        });
-
-        if (difference > 0) {
-          totalIncreaseValue += totalValue;
-        } else if (difference < 0) {
-          totalDecreaseValue += totalValue;
-        }
-      }
-
-      // Find accounts by code and currency
-      final inventoryAccount = await _findAccountByCodeAndCurrency(txn, '1300', currency);
-      final cogsAccount = await _findAccountByCodeAndCurrency(txn, '3200', currency);
-
-      final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
-
-      // Journal entries for inventory increase (difference > 0)
-      if (totalIncreaseValue > 0) {
-        if (inventoryAccount != null) {
-          final invAccId = inventoryAccount['id'] as int;
-          await txn.insert('transactions', {
-            'account_id': invAccId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(totalIncreaseValue),
-            'credit': 0,
-            'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
-            'date': voucherDate,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
-        }
-        if (cogsAccount != null) {
-          final cogsAccId = cogsAccount['id'] as int;
-          await txn.insert('transactions', {
-            'account_id': cogsAccId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(totalIncreaseValue),
-            'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
-            'date': voucherDate,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cogsAccId, 0.0, totalIncreaseValue, now);
-        }
-      }
-
-      // Journal entries for inventory decrease (difference < 0)
-      if (totalDecreaseValue > 0) {
-        if (cogsAccount != null) {
-          final cogsAccId = cogsAccount['id'] as int;
-          await txn.insert('transactions', {
-            'account_id': cogsAccId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(totalDecreaseValue),
-            'credit': 0,
-            'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
-            'date': voucherDate,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cogsAccId, totalDecreaseValue, 0.0, now);
-        }
-        if (inventoryAccount != null) {
-          final invAccId = inventoryAccount['id'] as int;
-          await txn.insert('transactions', {
-            'account_id': invAccId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(totalDecreaseValue),
-            'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
-            'date': voucherDate,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
-        }
-      }
-
-      // Update voucher status to approved
-      await txn.update(
-        'inventory_vouchers',
-        {
-          'status': 'approved',
-          'updated_at': now,
-        },
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    });
-  }
+  Future<String> getNextInventoryVoucherNumber() => stock.getNextInventoryVoucherNumber();
+  Future<int> insertInventoryVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) => stock.insertInventoryVoucher(voucherMap, items);
+  Future<List<Map<String, dynamic>>> getInventoryVouchers({String? searchQuery}) => stock.getInventoryVouchers(searchQuery: searchQuery);
+  Future<Map<String, dynamic>?> getInventoryVoucherDetails(int voucherId) => stock.getInventoryVoucherDetails(voucherId);
+  Future<List<Map<String, dynamic>>> getAllInventoryVouchers() => stock.getAllInventoryVouchers();
+  Future<void> deleteInventoryVoucher(int id) => stock.deleteInventoryVoucher(id);
+  Future<void> confirmInventoryVoucher(int id) => stock.confirmInventoryVoucher(id);
 
   // ══════════════════════════════════════════════════════════════
   //  Annual Posting Methods (الترحيل السنوي) - v22
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> getFiscalYears() async {
-    final db = await database;
-    return await db.query('fiscal_years', orderBy: 'year DESC');
-  }
+  Future<List<Map<String, dynamic>>> getFiscalYears() => accounts.getFiscalYears();
 
-  Future<bool> isFiscalYearClosed(int year) async {
-    final db = await database;
-    final result = await db.query('fiscal_years', where: 'year = ? AND status = ?', whereArgs: [year, 'closed'], limit: 1);
-    return result.isNotEmpty;
-  }
+  Future<bool> isFiscalYearClosed(int year) => accounts.isFiscalYearClosed(year);
 
   /// Check if a date falls in a closed fiscal year
-  Future<bool> isDateInClosedPeriod(DateTime date) async {
-    final db = await database;
-    final year = date.year;
-    final result = await db.query(
-      'fiscal_years',
-      where: 'year = ? AND status = ?',
-      whereArgs: [year, 'closed'],
-      limit: 1,
-    );
-    return result.isNotEmpty;
-  }
+  Future<bool> isDateInClosedPeriod(DateTime date) => accounts.isDateInClosedPeriod(date);
 
   /// Log an audit trail event (non-critical — errors are caught and printed)
   Future<void> logAuditEvent({
@@ -9004,24 +3893,16 @@ class DatabaseHelper {
     String? newValues,
     String? userName,
     int? shiftId,
-  }) async {
-    final db = await database;
-    try {
-      await db.insert('audit_trail', {
-        'action': action,
-        'table_name': tableName,
-        'record_id': recordId,
-        'record_type': recordType,
-        'old_values': oldValues,
-        'new_values': newValues,
-        'user_name': userName,
-        'shift_id': shiftId,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('Audit log error (non-critical): $e');
-    }
-  }
+  }) => audit.logAuditEvent(
+    action: action,
+    tableName: tableName,
+    recordId: recordId,
+    recordType: recordType,
+    oldValues: oldValues,
+    newValues: newValues,
+    userName: userName,
+    shiftId: shiftId,
+  );
 
   // ══════════════════════════════════════════════════════════════
   //  Accounting Safeguards (قفل الفترة، توازن القيد، الترقيم)
@@ -9049,131 +3930,43 @@ class DatabaseHelper {
 
   /// الحصول على الرقم التسلسلي التالي للفواتير بدون فجوات
   /// يستخدم MAX بدلاً من COUNT لضمان عدم وجود فجوات حتى بعد الحذف
-  Future<int> getNextInvoiceSequence(String datePrefix, String invoiceType) async {
-    final db = await database;
-    // البحث عن أكبر رقم تسلسلي موجود لهذا اليوم وهذا النوع
-    final result = await db.rawQuery(
-      "SELECT id FROM invoices WHERE id LIKE ? AND type = ? ORDER BY id DESC LIMIT 1",
-      ['$datePrefix%', invoiceType],
-    );
-    if (result.isEmpty) return 1;
-
-    final lastId = result.first['id'] as String;
-    // استخراج الرقم التسلسلي من المعرف: POS-YYYYMMDD-NNNN → NNNN
-    final parts = lastId.split('-');
-    if (parts.length >= 3) {
-      final lastSeq = int.tryParse(parts.last) ?? 0;
-      return lastSeq + 1;
-    }
-    return 1;
-  }
+  Future<int> getNextInvoiceSequence(String datePrefix, String invoiceType) => invoices.getNextInvoiceSequence(datePrefix, invoiceType);
 
   /// التحقق من تجاوز سقف الدين للعميل
   /// يرجع true إذا تجاوز السقف، false إذا لم يتجاوز
-  Future<bool> isCustomerOverDebtCeiling(int customerId, double additionalAmount) async {
-    final db = await database;
-    final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId], limit: 1);
-    if (customer.isEmpty) return false;
+  Future<bool> isCustomerOverDebtCeiling(int customerId, double additionalAmount) => customers.isCustomerOverDebtCeiling(customerId, additionalAmount);
 
-    final debtCeiling = MoneyHelper.readMoney(customer.first['debt_ceiling']);
-    if (debtCeiling <= 0) return false; // لا يوجد سقف محدد
-
-    final currentBalance = MoneyHelper.readMoney(customer.first['balance']);
-    return (currentBalance + additionalAmount) > debtCeiling;
-  }
-
-  /// التحقق من تجاوز سقف الدين للمورد
-  Future<bool> isSupplierOverDebtCeiling(int supplierId, double additionalAmount) async {
-    final db = await database;
-    final supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId], limit: 1);
-    if (supplier.isEmpty) return false;
-
-    final debtCeiling = MoneyHelper.readMoney(supplier.first['debt_ceiling']);
-    if (debtCeiling <= 0) return false;
-
-    final currentBalance = MoneyHelper.readMoney(supplier.first['balance']);
-    return (currentBalance + additionalAmount) > debtCeiling;
-  }
+  /// التحقق من تجاوز سقف الدين للمورد — delegated to SupplierRepository
+  Future<bool> isSupplierOverDebtCeiling(int supplierId, double additionalAmount) => suppliers.isSupplierOverDebtCeiling(supplierId, additionalAmount);
 
   /// حساب مكاسب/خسائر الصرف الأجنبي
   /// تُحسب عند إقفال الفترة أو عند تسوية حساب بعملة مختلفة
   /// formula: gain/loss = (base_amount * current_rate) - (base_amount * original_rate)
+  /// Delegates to [JournalService.calculateExchangeGainLoss].
   Future<double> calculateExchangeGainLoss({
     required double baseAmount,
     required double originalRate,
     required double currentRate,
-  }) async {
-    if (originalRate <= 0 || currentRate <= 0) return 0.0;
-    final valueAtOriginalRate = baseAmount / originalRate;
-    final valueAtCurrentRate = baseAmount / currentRate;
-    // إذا كان الفرق إيجابياً = مكسب صرف، سلبياً = خسارة صرف
-    return valueAtCurrentRate - valueAtOriginalRate;
-  }
+  }) =>
+      journal.calculateExchangeGainLoss(
+        baseAmount: baseAmount,
+        originalRate: originalRate,
+        currentRate: currentRate,
+      );
 
-  /// إنشاء قيد محاسبي لمكاسب/خسائر الصرف الأجنبي
+  /// Delegates to [JournalService.recordExchangeGainLoss].
   Future<void> recordExchangeGainLoss({
     required int accountId,
     required double gainLossAmount,
     required String currency,
     required String referenceId,
-  }) async {
-    if (gainLossAmount.abs() < 0.01) return;
-
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
-
-    // البحث عن حساب مكاسب/خسائر الصرف (إن وجد) أو استخدام حساب المصاريف
-    var exchangeAccountId = await _getOrCreateExchangeAccount();
-
-    await db.transaction((txn) async {
-      if (gainLossAmount > 0) {
-        // مكسب صرف: مدين = الحساب الأصلي، دائن = حساب مكاسب الصرف
-        await txn.insert('transactions', {
-          'account_id': accountId,
-          'journal_id': journalId,
-          'debit': MoneyHelper.toCents(gainLossAmount.abs()),
-          'credit': 0,
-          'description': 'مكاسب صرف $currency - $referenceId',
-          'date': now.substring(0, 10),
-          'created_at': now,
-        });
-        await txn.insert('transactions', {
-          'account_id': exchangeAccountId,
-          'journal_id': journalId,
-          'debit': 0,
-          'credit': MoneyHelper.toCents(gainLossAmount.abs()),
-          'description': 'مكاسب صرف $currency - $referenceId',
-          'date': now.substring(0, 10),
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, accountId, gainLossAmount.abs(), 0.0, now);
-        await _updateAccountBalanceWithJournal(txn, exchangeAccountId, 0.0, gainLossAmount.abs(), now);
-      } else {
-        // خسارة صرف: مدين = حساب خسائر الصرف، دائن = الحساب الأصلي
-        await txn.insert('transactions', {
-          'account_id': exchangeAccountId,
-          'journal_id': journalId,
-          'debit': MoneyHelper.toCents(gainLossAmount.abs()),
-          'credit': 0,
-          'description': 'خسائر صرف $currency - $referenceId',
-          'date': now.substring(0, 10),
-          'created_at': now,
-        });
-        await txn.insert('transactions', {
-          'account_id': accountId,
-          'journal_id': journalId,
-          'debit': 0,
-          'credit': MoneyHelper.toCents(gainLossAmount.abs()),
-          'description': 'خسائر صرف $currency - $referenceId',
-          'date': now.substring(0, 10),
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, exchangeAccountId, gainLossAmount.abs(), 0.0, now);
-        await _updateAccountBalanceWithJournal(txn, accountId, 0.0, gainLossAmount.abs(), now);
-      }
-    });
-  }
+  }) =>
+      journal.recordExchangeGainLoss(
+        accountId: accountId,
+        gainLossAmount: gainLossAmount,
+        currency: currency,
+        referenceId: referenceId,
+      );
 
   /// الحصول على أو إنشاء حساب مكاسب/خسائر الصرف الأجنبي
   Future<int> _getOrCreateExchangeAccount() async {
@@ -9214,281 +4007,16 @@ class DatabaseHelper {
     }
   }
 
-  Future<Map<String, double>> getYearProfitLoss(int year) async {
-    final db = await database;
-    final yearStart = '$year-01-01';
-    final yearEnd = '$year-12-31';
+  Future<Map<String, double>> getYearProfitLoss(int year) => accounts.getYearProfitLoss(year);
 
-    // Calculate from transactions table instead of cached accounts.balance (BUG FIX)
-    final revenueResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
-      FROM transactions t
-      INNER JOIN accounts a ON t.account_id = a.id
-      WHERE a.account_type = 'REVENUE' AND a.is_active = 1
-      AND t.date >= ? AND t.date <= ?
-    ''', [yearStart, yearEnd]);
-    final totalRevenue = MoneyHelper.readMoney(revenueResult.first['total']);
-
-    final costResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
-      FROM transactions t
-      INNER JOIN accounts a ON t.account_id = a.id
-      WHERE a.account_type = 'COST' AND a.is_active = 1
-      AND t.date >= ? AND t.date <= ?
-    ''', [yearStart, yearEnd]);
-    final totalCosts = MoneyHelper.readMoney(costResult.first['total']);
-
-    final expenseResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
-      FROM transactions t
-      INNER JOIN accounts a ON t.account_id = a.id
-      WHERE a.account_type = 'EXPENSE' AND a.is_active = 1
-      AND t.date >= ? AND t.date <= ?
-    ''', [yearStart, yearEnd]);
-    final totalExpenses = MoneyHelper.readMoney(expenseResult.first['total']);
-
-    final netProfit = totalRevenue - totalCosts - totalExpenses;
-
-    return {
-      'revenue': totalRevenue,
-      'costs': totalCosts,
-      'expenses': totalExpenses,
-      'netProfit': netProfit,
-    };
-  }
-
-  Future<void> performAnnualPosting(int year) async {
-    final db = await database;
-    final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
-    final yearStart = '$year-01-01';
-    final yearEnd = '$year-12-31';
-
-    await db.transaction((txn) async {
-      // Check if already closed
-      final existing = await txn.query('fiscal_years', where: 'year = ? AND status = ?', whereArgs: [year, 'closed'], limit: 1);
-      if (existing.isNotEmpty) {
-        throw Exception('السنة المالية $year مغلقة بالفعل');
-      }
-
-      // Get all revenue accounts
-      final revenueAccounts = await txn.query('accounts', where: 'account_type = ? AND is_active = 1', whereArgs: ['REVENUE']);
-
-      // Get all cost accounts
-      final costAccounts = await txn.query('accounts', where: 'account_type = ? AND is_active = 1', whereArgs: ['COST']);
-
-      // Get all expense accounts
-      final expenseAccounts = await txn.query('accounts', where: 'account_type = ? AND is_active = 1', whereArgs: ['EXPENSE']);
-
-      // Get retained earnings accounts (one per currency)
-      final retainedEarningsAccounts = await txn.query('accounts', where: 'account_code LIKE ? AND is_active = 1', whereArgs: ['290%']);
-
-      /// Calculate account balance from transactions table for the fiscal year
-      /// instead of reading the cached accounts.balance (BUG FIX)
-      Future<double> calcBalanceFromTransactions(int accountId) async {
-        final result = await txn.rawQuery(
-          "SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS balance "
-          "FROM transactions "
-          "WHERE account_id = ? AND date >= ? AND date <= ?",
-          [accountId, yearStart, yearEnd],
-        );
-        return MoneyHelper.readMoney(result.first['balance']);
-      }
-
-      // Calculate net profit per currency using transaction-derived balances
-      final Map<String, double> revenuePerCurrency = {};
-      final Map<String, double> costPerCurrency = {};
-      final Map<String, double> expensePerCurrency = {};
-
-      for (final acc in revenueAccounts) {
-        final currency = acc['currency'] as String? ?? 'YER';
-        final accId = acc['id'] as int;
-        final balance = await calcBalanceFromTransactions(accId);
-        revenuePerCurrency[currency] = (revenuePerCurrency[currency] ?? 0.0) + balance;
-      }
-
-      for (final acc in costAccounts) {
-        final currency = acc['currency'] as String? ?? 'YER';
-        final accId = acc['id'] as int;
-        final balance = await calcBalanceFromTransactions(accId);
-        costPerCurrency[currency] = (costPerCurrency[currency] ?? 0.0) + balance;
-      }
-
-      for (final acc in expenseAccounts) {
-        final currency = acc['currency'] as String? ?? 'YER';
-        final accId = acc['id'] as int;
-        final balance = await calcBalanceFromTransactions(accId);
-        expensePerCurrency[currency] = (expensePerCurrency[currency] ?? 0.0) + balance;
-      }
-
-      // All currencies that have activity
-      final allCurrencies = {...revenuePerCurrency.keys, ...costPerCurrency.keys, ...expensePerCurrency.keys};
-
-      double totalNetProfitYER = 0.0;
-
-      for (final currency in allCurrencies) {
-        final rev = revenuePerCurrency[currency] ?? 0.0;
-        final cost = costPerCurrency[currency] ?? 0.0;
-        final exp = expensePerCurrency[currency] ?? 0.0;
-        final netForCurrency = rev - cost - exp;
-
-        // Find retained earnings account for this currency
-        final reAccount = retainedEarningsAccounts.where((a) => a['currency'] == currency).firstOrNull;
-        if (reAccount == null) continue;
-        final reAccId = reAccount['id'] as int;
-
-        // Close revenue accounts: Debit Revenue, Credit Retained Earnings
-        for (final acc in revenueAccounts.where((a) => a['currency'] == currency)) {
-          final accId = acc['id'] as int;
-          final balance = await calcBalanceFromTransactions(accId);
-          if (balance == 0.0) continue;
-
-          // Revenue accounts have credit balance, to close we debit them
-          await txn.insert('transactions', {
-            'account_id': accId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(balance),
-            'credit': 0,
-            'description': 'إقفال إيرادات السنة $year',
-            'date': '$year-12-31',
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, accId, balance, 0.0, now);
-
-          // Credit Retained Earnings
-          await txn.insert('transactions', {
-            'account_id': reAccId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(balance),
-            'description': 'ترحيل أرباح السنة $year',
-            'date': '$year-12-31',
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, reAccId, 0.0, balance, now);
-        }
-
-        // Close cost accounts: Debit Retained Earnings, Credit Cost
-        for (final acc in costAccounts.where((a) => a['currency'] == currency)) {
-          final accId = acc['id'] as int;
-          final balance = await calcBalanceFromTransactions(accId);
-          if (balance == 0.0) continue;
-
-          // Cost accounts have debit balance, to close we credit them
-          await txn.insert('transactions', {
-            'account_id': accId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(balance),
-            'description': 'إقفال تكاليف السنة $year',
-            'date': '$year-12-31',
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, accId, 0.0, balance, now);
-
-          // Debit Retained Earnings
-          await txn.insert('transactions', {
-            'account_id': reAccId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(balance),
-            'credit': 0,
-            'description': 'ترحيل تكاليف السنة $year',
-            'date': '$year-12-31',
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, reAccId, balance, 0.0, now);
-        }
-
-        // Close expense accounts: Debit Retained Earnings, Credit Expense
-        for (final acc in expenseAccounts.where((a) => a['currency'] == currency)) {
-          final accId = acc['id'] as int;
-          final balance = await calcBalanceFromTransactions(accId);
-          if (balance == 0.0) continue;
-
-          // Expense accounts have debit balance, to close we credit them
-          await txn.insert('transactions', {
-            'account_id': accId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(balance),
-            'description': 'إقفال مصاريف السنة $year',
-            'date': '$year-12-31',
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, accId, 0.0, balance, now);
-
-          // Debit Retained Earnings
-          await txn.insert('transactions', {
-            'account_id': reAccId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(balance),
-            'credit': 0,
-            'description': 'ترحيل مصاريف السنة $year',
-            'date': '$year-12-31',
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, reAccId, balance, 0.0, now);
-        }
-
-        // Accumulate for total (using YER as base)
-        if (currency == 'YER') {
-          totalNetProfitYER += netForCurrency;
-        }
-      }
-
-      // Create or update fiscal year record
-      final existingFY = await txn.query('fiscal_years', where: 'year = ?', whereArgs: [year], limit: 1);
-      if (existingFY.isNotEmpty) {
-        await txn.update('fiscal_years', {
-          'status': 'closed',
-          'net_profit': totalNetProfitYER,
-          'closed_at': now,
-          'updated_at': now,
-        }, where: 'year = ?', whereArgs: [year]);
-      } else {
-        await txn.insert('fiscal_years', {
-          'year': year,
-          'start_date': '$year-01-01',
-          'end_date': '$year-12-31',
-          'status': 'closed',
-          'net_profit': totalNetProfitYER,
-          'closed_at': now,
-          'notes': 'ترحيل سنوي تلقائي',
-          'created_at': now,
-          'updated_at': now,
-        });
-      }
-    });
-  }
+  Future<void> performAnnualPosting(int year) => accounts.performAnnualPosting(year);
 
   // ══════════════════════════════════════════════════════════════
-  //  v33: Held Orders (POS) CRUD methods
+  //  v33: Held Orders (POS) CRUD methods — delegated to ShiftService
   // ══════════════════════════════════════════════════════════════
 
-  Future<int> insertHeldOrder(Map<String, dynamic> order) async {
-    final db = await database;
-    return await db.insert('held_orders', order);
-  }
-
-  Future<List<Map<String, dynamic>>> getHeldOrders({int? shiftId}) async {
-    final db = await database;
-    if (shiftId != null) {
-      return await db.query('held_orders', where: 'shift_id = ?', whereArgs: [shiftId], orderBy: 'created_at DESC');
-    }
-    return await db.query('held_orders', orderBy: 'created_at DESC');
-  }
-
-  Future<int> deleteHeldOrder(int id) async {
-    final db = await database;
-    return await db.delete('held_orders', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<void> clearHeldOrders({int? shiftId}) async {
-    final db = await database;
-    if (shiftId != null) {
-      await db.delete('held_orders', where: 'shift_id = ?', whereArgs: [shiftId]);
-    } else {
-      await db.delete('held_orders');
-    }
-  }
+  Future<int> insertHeldOrder(Map<String, dynamic> order) => shifts.insertHeldOrder(order);
+  Future<List<Map<String, dynamic>>> getHeldOrders({int? shiftId}) => shifts.getHeldOrders(shiftId: shiftId);
+  Future<int> deleteHeldOrder(int id) => shifts.deleteHeldOrder(id);
+  Future<void> clearHeldOrders({int? shiftId}) => shifts.clearHeldOrders(shiftId: shiftId);
 }
