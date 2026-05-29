@@ -183,4 +183,15 @@ class MoneyHelper {
   static const orderItemMoneyFields = [
     'unit_price', 'total_price',
   ];
+
+  static const bankReconciliationMoneyFields = [
+    'statement_balance', 'book_balance', 'deposits_in_transit',
+    'outstanding_checks', 'bank_charges', 'interest_earned',
+    'nsf_checks', 'other_adjustments', 'adjusted_bank_balance',
+    'adjusted_book_balance', 'difference',
+  ];
+
+  static const bankStatementLineMoneyFields = [
+    'amount',
+  ];
 }

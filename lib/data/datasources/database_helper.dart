@@ -18,6 +18,8 @@ import 'services/shift_service.dart';
 import 'repositories/order_repository.dart';
 import 'services/report_service.dart';
 import 'services/audit_service.dart';
+import 'services/costing_engine_service.dart';
+import 'services/bank_reconciliation_service.dart';
 import '../models/account_model.dart';
 import '../models/customer_model.dart';
 import '../models/product_model.dart';
@@ -49,11 +51,13 @@ class DatabaseHelper {
   late final OrderRepository orders = OrderRepository(this);
   late final ReportService reports = ReportService(this);
   late final AuditService audit = AuditService(this);
+  late final CostingEngineService costingEngine = CostingEngineService(this);
+  late final BankReconciliationService bankReconciliation = BankReconciliationService(this);
 
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 37;
+  static const int _databaseVersion = 38;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -169,6 +173,7 @@ class DatabaseHelper {
         show_in_pos INTEGER NOT NULL DEFAULT 1,
         supplier_code TEXT,
         currency TEXT NOT NULL DEFAULT 'YER',
+        costing_method TEXT NOT NULL DEFAULT 'weighted_average',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id),
@@ -956,6 +961,99 @@ class DatabaseHelper {
       )
     ''');
     await db.execute('CREATE INDEX idx_held_orders_shift ON held_orders (shift_id)');
+
+    // Inventory Cost Layers (طبقات تكلفة المخزون) - v38
+    await db.execute('''
+      CREATE TABLE inventory_cost_layers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        warehouse_id INTEGER,
+        quantity_original REAL NOT NULL,
+        quantity_remaining REAL NOT NULL,
+        unit_cost INTEGER NOT NULL DEFAULT 0,
+        acquisition_date TEXT NOT NULL,
+        reference_type TEXT,
+        reference_id TEXT,
+        is_fully_consumed INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_cost_layers_product ON inventory_cost_layers (product_id)');
+    await db.execute('CREATE INDEX idx_cost_layers_fifo ON inventory_cost_layers (product_id, acquisition_date, quantity_remaining) WHERE is_fully_consumed = 0');
+    await db.execute('CREATE INDEX idx_cost_layers_consumed ON inventory_cost_layers (is_fully_consumed)');
+
+    // Movement Cost Allocations (تخصيصات تكلفة الحركة) - v38
+    await db.execute('''
+      CREATE TABLE movement_cost_allocations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        cost_layer_id INTEGER NOT NULL,
+        invoice_id TEXT,
+        quantity_used REAL NOT NULL,
+        unit_cost INTEGER NOT NULL DEFAULT 0,
+        total_cost INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
+        FOREIGN KEY (cost_layer_id) REFERENCES inventory_cost_layers (id)
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_mca_product ON movement_cost_allocations (product_id)');
+    await db.execute('CREATE INDEX idx_mca_layer ON movement_cost_allocations (cost_layer_id)');
+    await db.execute('CREATE INDEX idx_mca_invoice ON movement_cost_allocations (invoice_id)');
+
+    // Bank Reconciliations (التسوية البنكية) - v38
+    await db.execute('''
+      CREATE TABLE bank_reconciliations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reconciliation_number TEXT NOT NULL,
+        cash_box_id INTEGER NOT NULL,
+        statement_date TEXT NOT NULL,
+        statement_balance INTEGER NOT NULL DEFAULT 0,
+        book_balance INTEGER NOT NULL DEFAULT 0,
+        deposits_in_transit INTEGER NOT NULL DEFAULT 0,
+        outstanding_checks INTEGER NOT NULL DEFAULT 0,
+        bank_charges INTEGER NOT NULL DEFAULT 0,
+        interest_earned INTEGER NOT NULL DEFAULT 0,
+        nsf_checks INTEGER NOT NULL DEFAULT 0,
+        other_adjustments INTEGER NOT NULL DEFAULT 0,
+        adjusted_bank_balance INTEGER NOT NULL DEFAULT 0,
+        adjusted_book_balance INTEGER NOT NULL DEFAULT 0,
+        difference INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'draft',
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_bank_recon_cash_box ON bank_reconciliations (cash_box_id)');
+    await db.execute('CREATE INDEX idx_bank_recon_status ON bank_reconciliations (status)');
+    await db.execute('CREATE INDEX idx_bank_recon_number ON bank_reconciliations (reconciliation_number)');
+
+    // Bank Statement Lines (بنود كشف الحساب البنكي) - v38
+    await db.execute('''
+      CREATE TABLE bank_statement_lines (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reconciliation_id INTEGER,
+        cash_box_id INTEGER NOT NULL,
+        transaction_date TEXT NOT NULL,
+        transaction_type TEXT NOT NULL DEFAULT 'debit',
+        amount INTEGER NOT NULL DEFAULT 0,
+        reference TEXT,
+        description TEXT,
+        match_status TEXT NOT NULL DEFAULT 'unmatched',
+        matched_transaction_id INTEGER,
+        is_book_entry INTEGER NOT NULL DEFAULT 0,
+        source_type TEXT,
+        source_id TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_bank_stmt_recon ON bank_statement_lines (reconciliation_id)');
+    await db.execute('CREATE INDEX idx_bank_stmt_cash_box ON bank_statement_lines (cash_box_id)');
+    await db.execute('CREATE INDEX idx_bank_stmt_status ON bank_statement_lines (match_status)');
+    await db.execute('CREATE INDEX idx_bank_stmt_date ON bank_statement_lines (transaction_date)');
 
     // Seed default data
     await _seedCurrencies(db);
@@ -2371,6 +2469,135 @@ class DatabaseHelper {
         await db.execute("ALTER TABLE products ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'");
       } catch (e) {
         logMigrationError("migration", e);
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Migration v38: FIFO/LIFO costing + Bank Reconciliation
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 38) {
+      // 1A: Add costing_method to products
+      try {
+        await db.execute("ALTER TABLE products ADD COLUMN costing_method TEXT NOT NULL DEFAULT 'weighted_average'");
+      } catch (e) {
+        logMigrationError("migration v38 costing_method", e);
+      }
+
+      // 1B: Create inventory_cost_layers table
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS inventory_cost_layers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            warehouse_id INTEGER,
+            quantity_original REAL NOT NULL,
+            quantity_remaining REAL NOT NULL,
+            unit_cost INTEGER NOT NULL DEFAULT 0,
+            acquisition_date TEXT NOT NULL,
+            reference_type TEXT,
+            reference_id TEXT,
+            is_fully_consumed INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+          )
+        ''');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_cost_layers_product ON inventory_cost_layers (product_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_cost_layers_fifo ON inventory_cost_layers (product_id, acquisition_date, quantity_remaining) WHERE is_fully_consumed = 0');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_cost_layers_consumed ON inventory_cost_layers (is_fully_consumed)');
+      } catch (e) {
+        logMigrationError("migration v38 inventory_cost_layers", e);
+      }
+
+      // 1C: Create movement_cost_allocations table
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS movement_cost_allocations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            cost_layer_id INTEGER NOT NULL,
+            invoice_id TEXT,
+            quantity_used REAL NOT NULL,
+            unit_cost INTEGER NOT NULL DEFAULT 0,
+            total_cost INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
+            FOREIGN KEY (cost_layer_id) REFERENCES inventory_cost_layers (id)
+          )
+        ''');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_mca_product ON movement_cost_allocations (product_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_mca_layer ON movement_cost_allocations (cost_layer_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_mca_invoice ON movement_cost_allocations (invoice_id)');
+      } catch (e) {
+        logMigrationError("migration v38 movement_cost_allocations", e);
+      }
+
+      // 2A: Create bank_reconciliations table
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS bank_reconciliations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reconciliation_number TEXT NOT NULL,
+            cash_box_id INTEGER NOT NULL,
+            statement_date TEXT NOT NULL,
+            statement_balance INTEGER NOT NULL DEFAULT 0,
+            book_balance INTEGER NOT NULL DEFAULT 0,
+            deposits_in_transit INTEGER NOT NULL DEFAULT 0,
+            outstanding_checks INTEGER NOT NULL DEFAULT 0,
+            bank_charges INTEGER NOT NULL DEFAULT 0,
+            interest_earned INTEGER NOT NULL DEFAULT 0,
+            nsf_checks INTEGER NOT NULL DEFAULT 0,
+            other_adjustments INTEGER NOT NULL DEFAULT 0,
+            adjusted_bank_balance INTEGER NOT NULL DEFAULT 0,
+            adjusted_book_balance INTEGER NOT NULL DEFAULT 0,
+            difference INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'draft',
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
+          )
+        ''');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_recon_cash_box ON bank_reconciliations (cash_box_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_recon_status ON bank_reconciliations (status)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_recon_number ON bank_reconciliations (reconciliation_number)');
+      } catch (e) {
+        logMigrationError("migration v38 bank_reconciliations", e);
+      }
+
+      // 2A: Create bank_statement_lines table
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS bank_statement_lines (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reconciliation_id INTEGER,
+            cash_box_id INTEGER NOT NULL,
+            transaction_date TEXT NOT NULL,
+            transaction_type TEXT NOT NULL DEFAULT 'debit',
+            amount INTEGER NOT NULL DEFAULT 0,
+            reference TEXT,
+            description TEXT,
+            match_status TEXT NOT NULL DEFAULT 'unmatched',
+            matched_transaction_id INTEGER,
+            is_book_entry INTEGER NOT NULL DEFAULT 0,
+            source_type TEXT,
+            source_id TEXT,
+            created_at TEXT NOT NULL
+          )
+        ''');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_stmt_recon ON bank_statement_lines (reconciliation_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_stmt_cash_box ON bank_statement_lines (cash_box_id)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_stmt_status ON bank_statement_lines (match_status)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_stmt_date ON bank_statement_lines (transaction_date)');
+      } catch (e) {
+        logMigrationError("migration v38 bank_statement_lines", e);
+      }
+
+      // Initialize cost layers for existing products
+      try {
+        final costingEngine = CostingEngineService(this);
+        await costingEngine.initializeCostLayersForExistingProducts();
+      } catch (e) {
+        logMigrationError("migration v38 init_cost_layers", e);
       }
     }
   }

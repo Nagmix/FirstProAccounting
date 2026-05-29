@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../ui/screens/dashboard/dashboard_screen.dart';
 import '../../ui/screens/pos/pos_screen.dart';
+import '../../ui/screens/bank_reconciliation/bank_reconciliation_screen.dart';
 import '../../ui/navigation/main_scaffold.dart';
 
 /// Application router configuration using GoRouter.
@@ -33,6 +34,11 @@ class AppRouter {
         path: '/dashboard',
         name: 'dashboard',
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/bank-reconciliation',
+        name: 'bank_reconciliation',
+        builder: (context, state) => const BankReconciliationScreen(),
       ),
       // Additional routes will be migrated incrementally
       // from the existing named routes in AppRouter.routes

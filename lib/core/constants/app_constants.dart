@@ -143,6 +143,7 @@ class AppConstants {
   static const String salesInvoices = '/invoices/sales';
   static const String purchaseInvoices = '/invoices/purchases';
   static const String invoiceDetail = '/invoices/detail';
+  static const String bankReconciliation = '/bank-reconciliation';
 
   // ── Voucher types ────────────────────────────────────────────
   static const String voucherReceipt = 'receipt';

@@ -2,6 +2,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
+import '../../models/inventory_cost_layer_model.dart';
 
 class ShiftService {
   final DatabaseHelper _dbHelper;
@@ -473,18 +474,36 @@ class ShiftService {
             final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
             if (productId == null) continue;
 
-            // P-06: Prefer stored unit_cost from invoice item (captured at sale time)
+            // P-06 + W-07: Prefer stored unit_cost from invoice item (captured at sale time)
+            // For FIFO/LIFO products, use the costing engine
             double effectiveCost;
+            double itemCogs;
             final storedUnitCost = MoneyHelper.readMoney(item['unit_cost']);
-            if (storedUnitCost > 0) {
-              effectiveCost = storedUnitCost;
+            // Check product's costing method
+            final costingMethodRow = await txn.query('products', columns: ['costing_method'], where: 'id = ?', whereArgs: [productId], limit: 1);
+            final costingMethodStr = costingMethodRow.isNotEmpty ? (costingMethodRow.first['costing_method'] as String? ?? 'weighted_average') : 'weighted_average';
+            final costingMethod = CostingMethodExt.fromValue(costingMethodStr);
+            
+            if (costingMethod != CostingMethod.weightedAverage && storedUnitCost <= 0) {
+              // FIFO/LIFO: use costing engine for accurate COGS
+              itemCogs = await _dbHelper.costingEngine.calculateCOGSInTransaction(
+                txn,
+                productId: productId,
+                baseQuantity: baseQuantity,
+                invoiceId: invoiceId,
+                codeOffset: codeOffset,
+              );
             } else {
-              final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-              if (productRow.isEmpty) continue;
-              final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-              effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+              if (storedUnitCost > 0) {
+                effectiveCost = storedUnitCost;
+              } else {
+                final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+                if (productRow.isEmpty) continue;
+                final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+                effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+              }
+              itemCogs = effectiveCost * baseQuantity;
             }
-            final itemCogs = effectiveCost * baseQuantity;
             if (itemCogs.abs() < 0.005) continue;
 
             // P-01: Resolve product-specific accounts

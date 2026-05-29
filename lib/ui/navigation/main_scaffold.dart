@@ -113,6 +113,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     _DrawerMenuItem(icon: Icons.local_shipping, label: 'الموردين', route: AppConstants.suppliers, color: AppColors.info),
     _DrawerMenuItem(icon: Icons.warehouse, label: 'المستودعات', route: AppConstants.warehouses, color: AppColors.secondaryDark),
     _DrawerMenuItem(icon: Icons.pie_chart, label: 'دليل الحسابات', route: AppConstants.chartOfAccounts, color: AppColors.primary),
+    _DrawerMenuItem(icon: Icons.balance, label: 'التسوية البنكية', route: AppConstants.bankReconciliation, color: Color(0xFF00897B)),
     _DrawerMenuItem(icon: Icons.attach_money, label: 'إدارة العملات', route: AppConstants.currencies, color: AppColors.success),
     _DrawerMenuItem(icon: Icons.show_chart, label: 'تقرير المبيعات اليومية', route: AppConstants.dailySalesReport, color: AppColors.warning),
     _DrawerMenuItem(icon: Icons.settings, label: 'الإعدادات', route: AppConstants.settings, color: AppColors.textSecondary),
@@ -597,6 +598,13 @@ class _MoreTab extends StatelessWidget {
             subtitle: 'سندات القبض والصرف والتسوية',
             color: const Color(0xFF7B1FA2),
             onTap: () => AppRouter.push(context, AppConstants.vouchers),
+          ),
+          _MoreTile(
+            icon: Icons.balance,
+            title: 'التسوية البنكية',
+            subtitle: 'تسوية كشوفات الحسابات البنكية',
+            color: const Color(0xFF00897B),
+            onTap: () => AppRouter.push(context, AppConstants.bankReconciliation),
           ),
           _MoreTile(
             icon: Icons.pie_chart,

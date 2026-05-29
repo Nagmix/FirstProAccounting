@@ -2,6 +2,7 @@ import 'dart:io';
 import '../../../core/utils/money_helper.dart';
 
 import 'package:flutter/material.dart';
+import '../../../data/models/inventory_cost_layer_model.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -113,6 +114,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   bool _allowNegative = false;
   bool _sellRetail = true;
   bool _showInPos = true;
+  CostingMethod _costingMethod = CostingMethod.weightedAverage;
 
   // Sale unit checkbox: 0 = base unit, 1 = purchase unit
   int _saleUnitSource = 0;
@@ -314,6 +316,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _allowNegative = p.allowNegative;
     _sellRetail = p.sellRetail;
     _showInPos = p.showInPos;
+    _costingMethod = p.costingMethod;
 
     _expiryDate = p.expiryDate;
     _imagePath = p.imagePath;
@@ -629,6 +632,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
       allowNegative: _allowNegative,
       sellRetail: _sellRetail,
       showInPos: _showInPos,
+      costingMethod: _costingMethod,
       imagePath: _imagePath,
       supplierCode: _supplierCodeController.text.trim().isNotEmpty
           ? _supplierCodeController.text.trim()
@@ -2451,6 +2455,54 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   ))
               .toList(),
           onChanged: isLocked ? null : (v) => setState(() => _selectedCogsAccountId = v),
+        ),
+        const SizedBox(height: 14),
+
+        // طريقة احتساب التكلفة (W-07)
+        DropdownButtonFormField<String>(
+          value: _costingMethod.value,
+          isDense: true,
+          decoration: const InputDecoration(
+            labelText: 'طريقة احتساب التكلفة',
+            prefixIcon: Icon(Icons.calculate),
+          ),
+          items: CostingMethod.values
+              .map((m) => DropdownMenuItem<String>(
+                    value: m.value,
+                    child: Text(m.nameAr),
+                  ))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            final method = CostingMethodExt.fromValue(v);
+            if (method == CostingMethod.lifo) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  icon: const Icon(Icons.warning, color: AppColors.warning, size: 40),
+                  title: const Text('تنبيه'),
+                  content: const Text(
+                    'تنبيه: طريقة LIFO محظورة بموجب معايير IFRS (IAS 2). هذه الطريقة مسموحة فقط ضمن US GAAP. استخدامها قد يؤدي لقوائم مالية غير متوافقة مع المعايير الدولية.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        setState(() => _costingMethod = method);
+                      },
+                      child: const Text('فهمت، استمر'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('إلغاء'),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              setState(() => _costingMethod = method);
+            }
+          },
         ),
         const SizedBox(height: 14),
 

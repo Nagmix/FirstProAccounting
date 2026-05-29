@@ -44,6 +44,8 @@ import '../screens/vouchers/inventory_voucher_screen.dart';
 import '../screens/reports/annual_posting_screen.dart';
 import '../screens/reports/trial_balance_screen.dart';
 import '../screens/reports/financial_statements_screen.dart';
+import '../screens/bank_reconciliation/bank_reconciliation_screen.dart';
+import '../screens/bank_reconciliation/bank_reconciliation_detail_screen.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../data/models/account_model.dart';
@@ -101,6 +103,7 @@ class AppRouter {
         AppConstants.annualPosting: (_) => const AnnualPostingScreen(),
         AppConstants.trialBalance: (_) => const TrialBalanceScreen(),
         AppConstants.financialStatements: (_) => const FinancialStatementsScreen(),
+        AppConstants.bankReconciliation: (_) => const BankReconciliationScreen(),
       };
 
   static Future<T?> push<T extends Object?>(BuildContext context, String routeName, {Object? arguments}) {
@@ -129,6 +132,13 @@ class AppRouter {
   static Future<void> pushExpenseAccountDetail(BuildContext context, Map<String, dynamic> account) {
     return Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ExpenseAccountDetailScreen(account: account)),
+    );
+  }
+
+  /// Push the BankReconciliationDetailScreen directly.
+  static Future<void> pushBankReconciliationDetail(BuildContext context, int reconciliationId) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => BankReconciliationDetailScreen(reconciliationId: reconciliationId)),
     );
   }
 }

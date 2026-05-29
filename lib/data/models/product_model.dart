@@ -1,4 +1,5 @@
 import '../../core/utils/money_helper.dart';
+import 'inventory_cost_layer_model.dart';
 
 class Product {
   final int? id;
@@ -46,6 +47,7 @@ class Product {
   final String? imagePath;
   final String? supplierCode; // Supplier's code for this product
   final String currency; // Product's currency
+  final CostingMethod costingMethod; // FIFO/LIFO/Weighted Average
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -95,6 +97,7 @@ class Product {
     this.imagePath,
     this.supplierCode,
     this.currency = 'YER',
+    this.costingMethod = CostingMethod.weightedAverage,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -150,6 +153,7 @@ class Product {
       'image_path': imagePath,
       'supplier_code': supplierCode,
       'currency': currency,
+      'costing_method': costingMethod.value,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -204,6 +208,7 @@ class Product {
       imagePath: map['image_path'],
       supplierCode: map['supplier_code'],
       currency: map['currency'] as String? ?? 'YER',
+      costingMethod: CostingMethodExt.fromValue(map['costing_method'] as String? ?? 'weighted_average'),
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
     );
@@ -255,6 +260,7 @@ class Product {
     String? imagePath,
     String? supplierCode,
     String? currency,
+    CostingMethod? costingMethod,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -304,6 +310,7 @@ class Product {
       imagePath: imagePath ?? this.imagePath,
       supplierCode: supplierCode ?? this.supplierCode,
       currency: currency ?? this.currency,
+      costingMethod: costingMethod ?? this.costingMethod,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

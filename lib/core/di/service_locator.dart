@@ -15,6 +15,8 @@ import '../../data/datasources/services/stock_service.dart';
 import '../../data/datasources/services/shift_service.dart';
 import '../../data/datasources/services/report_service.dart';
 import '../../data/datasources/services/audit_service.dart';
+import '../../data/datasources/services/costing_engine_service.dart';
+import '../../data/datasources/services/bank_reconciliation_service.dart';
 
 final GetIt locator = GetIt.instance;
 
@@ -68,5 +70,11 @@ Future<void> setupLocator() async {
   );
   locator.registerLazySingleton<AuditService>(
     () => AuditService(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<CostingEngineService>(
+    () => CostingEngineService(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<BankReconciliationService>(
+    () => BankReconciliationService(locator<DatabaseHelper>()),
   );
 }
