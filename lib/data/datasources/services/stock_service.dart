@@ -148,8 +148,71 @@ class StockService {
         }
       }
 
+      // ── C-08: إنشاء قيود يومية للتحويل المخزني ──
+      final transferValue = quantity * sourceAvgCost;
+      final transferCurrency = (transferMap['currency'] as String?) ?? 'YER';
+
+      if (transferValue.abs() >= 0.005) {
+        final journalId = DateTime.now().millisecondsSinceEpoch;
+        final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+
+        // محاولة استخدام حساب المخزون المرتبط بالمستودع، أو الافتراضي
+        int? fromInventoryAccountId;
+        int? toInventoryAccountId;
+
+        final fromWarehouseRow = await txn.query('warehouses', where: 'id = ?', whereArgs: [fromWarehouseId], limit: 1);
+        if (fromWarehouseRow.isNotEmpty) {
+          fromInventoryAccountId = fromWarehouseRow.first['inventory_account_id'] as int?;
+        }
+        fromInventoryAccountId ??= await _getDefaultInventoryAccountId(txn, codeOffset, transferCurrency);
+
+        final toWarehouseRow = await txn.query('warehouses', where: 'id = ?', whereArgs: [toWarehouseId], limit: 1);
+        if (toWarehouseRow.isNotEmpty) {
+          toInventoryAccountId = toWarehouseRow.first['inventory_account_id'] as int?;
+        }
+        toInventoryAccountId ??= await _getDefaultInventoryAccountId(txn, codeOffset, transferCurrency);
+
+        // إذا كان المستودعان مرتبطين بنفس الحساب، لا حاجة لقيود تحويل
+        if (fromInventoryAccountId != null && toInventoryAccountId != null && fromInventoryAccountId != toInventoryAccountId) {
+          // مدين: حساب المخزون الوجهة (زيادة أصول)
+          await txn.insert('transactions', {
+            'account_id': toInventoryAccountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(transferValue),
+            'credit': 0,
+            'description': 'تحويل مخزني من مستودع #$fromWarehouseId إلى #$toWarehouseId - منتج #$productId',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, toInventoryAccountId, transferValue, 0.0, now);
+
+          // دائن: حساب المخزون المصدر (نقص أصول)
+          await txn.insert('transactions', {
+            'account_id': fromInventoryAccountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(transferValue),
+            'description': 'تحويل مخزني من مستودع #$fromWarehouseId إلى #$toWarehouseId - منتج #$productId',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromInventoryAccountId, 0.0, transferValue, now);
+        }
+      }
+
+      // ── W-05: إعادة حساب متوسط التكلفة المرجح في المستودع الوجهة ──
+      // تم التعامل معه كجزء من إنشاء المنتج في الوجهة أعلاه
+      // حيث يحتفظ بنفس التكلفة من المصدر
+
       return id;
     });
+  }
+
+  /// Helper: Get default inventory account ID by code offset and currency
+  Future<int?> _getDefaultInventoryAccountId(Transaction txn, int codeOffset, String currency) async {
+    final accountCode = (1300 + codeOffset).toString();
+    final rows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [accountCode, currency], limit: 1);
+    return rows.isNotEmpty ? rows.first['id'] as int : null;
   }
 
   /// جلب جميع التحويلات المخزنية مع أسماء المستودعات والمنتجات
@@ -560,9 +623,9 @@ class StockService {
         }
       }
 
-      // Update voucher total value
+      // ── M-09: تحديث إجمالي قيمة السند بالفرق الصافي بدل المجموع ──
       await txn.update('inventory_vouchers', {
-        'total_value': MoneyHelper.toCents(totalIncreaseValue + totalDecreaseValue),
+        'total_value': MoneyHelper.toCents(totalIncreaseValue - totalDecreaseValue),
         'updated_at': now,
       }, where: 'id = ?', whereArgs: [voucherId]);
 
@@ -572,17 +635,73 @@ class StockService {
         // Get currency for this voucher
         final currency = voucherMap['currency'] as String? ?? 'YER';
 
-        // Find accounts by code and currency
-        // Inventory account code = 1300 + offset
-        final inventoryAccount = await _dbHelper.journal.findAccountByCodeAndCurrency(txn, '1300', currency);
-        // COGS account code = 3200 + offset
-        final cogsAccount = await _dbHelper.journal.findAccountByCodeAndCurrency(txn, '3200', currency);
+        // ── C-05: استخدام حسابات تفاوت الجرد بدل COGS ──
+        // COGS يجب أن يعكس تكلفة البضاعة المباعة فقط وليس فروقات الجرد
+        final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
 
-      // Journal entries for inventory increase (difference > 0)
+        // حساب المخزون (1300+offset)
+        final inventoryAccount = await _dbHelper.journal.findAccountByCodeAndCurrency(txn, '1300', currency);
+
+        // حساب إيراد تفاوت الجرد (4400+offset)
+        final varianceIncomeCode = (4400 + codeOffset).toString();
+        final varianceIncomeRows = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [varianceIncomeCode, currency],
+          limit: 1,
+        );
+        int? varianceIncomeAccountId;
+        if (varianceIncomeRows.isNotEmpty) {
+          varianceIncomeAccountId = varianceIncomeRows.first['id'] as int;
+        } else {
+          // إنشاء حساب إيراد تفاوت الجرد تلقائياً
+          varianceIncomeAccountId = await txn.insert('accounts', {
+            'name_ar': 'إيراد تفاوت الجرد ($currency)',
+            'name_en': 'Inventory Variance Income ($currency)',
+            'account_code': varianceIncomeCode,
+            'account_type': 'REVENUE',
+            'balance': 0,
+            'currency': currency,
+            'balance_type': 'credit',
+            'is_active': 1,
+            'is_system': 1,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+
+        // حساب خسارة تفاوت الجرد (5400+offset)
+        final varianceLossCode = (5400 + codeOffset).toString();
+        final varianceLossRows = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [varianceLossCode, currency],
+          limit: 1,
+        );
+        int? varianceLossAccountId;
+        if (varianceLossRows.isNotEmpty) {
+          varianceLossAccountId = varianceLossRows.first['id'] as int;
+        } else {
+          // إنشاء حساب خسارة تفاوت الجرد تلقائياً
+          varianceLossAccountId = await txn.insert('accounts', {
+            'name_ar': 'خسارة تفاوت الجرد ($currency)',
+            'name_en': 'Inventory Variance Loss ($currency)',
+            'account_code': varianceLossCode,
+            'account_type': 'EXPENSE',
+            'balance': 0,
+            'currency': currency,
+            'balance_type': 'debit',
+            'is_active': 1,
+            'is_system': 1,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+
+      // C-05: قيود زيادة المخزون — مدين المخزون / دائن إيراد تفاوت الجرد
       if (totalIncreaseValue > 0) {
         if (inventoryAccount != null) {
           final invAccId = inventoryAccount['id'] as int;
-          // Debit Inventory (asset increase)
           await txn.insert('transactions', {
             'account_id': invAccId,
             'journal_id': journalId,
@@ -594,11 +713,9 @@ class StockService {
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
         }
-        if (cogsAccount != null) {
-          final cogsAccId = cogsAccount['id'] as int;
-          // Credit COGS (reducing cost of goods sold)
+        if (varianceIncomeAccountId != null) {
           await txn.insert('transactions', {
-            'account_id': cogsAccId,
+            'account_id': varianceIncomeAccountId,
             'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(totalIncreaseValue),
@@ -606,17 +723,15 @@ class StockService {
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccId, 0.0, totalIncreaseValue, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
         }
       }
 
-      // Journal entries for inventory decrease (difference < 0)
+      // C-05: قيود نقص المخزون — مدين خسارة تفاوت الجرد / دائن المخزون
       if (totalDecreaseValue > 0) {
-        if (cogsAccount != null) {
-          final cogsAccId = cogsAccount['id'] as int;
-          // Debit COGS (increasing cost)
+        if (varianceLossAccountId != null) {
           await txn.insert('transactions', {
-            'account_id': cogsAccId,
+            'account_id': varianceLossAccountId,
             'journal_id': journalId,
             'debit': MoneyHelper.toCents(totalDecreaseValue),
             'credit': 0,
@@ -624,11 +739,10 @@ class StockService {
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccId, totalDecreaseValue, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
         }
         if (inventoryAccount != null) {
           final invAccId = inventoryAccount['id'] as int;
-          // Credit Inventory (asset decrease)
           await txn.insert('transactions', {
             'account_id': invAccId,
             'journal_id': journalId,
@@ -779,29 +893,19 @@ class StockService {
           });
         }
 
-        // Reverse journal entries for this voucher
-        // Find transactions that were created with a journal_id pattern from this voucher
-        final voucherDate = voucherRows.first['date'] as String? ?? now.substring(0, 10);
-        final voucherCurrency = voucherRows.first['currency'] as String? ?? 'YER';
-        final voucherDesc = 'سند جرد';
+        // ── W-08: عكس القيود بدقة باستخدام رقم السند ──
+        // البحث عن القيود المرتبطة برقم السند بالضبط بدل التاريخ والوصف
+        final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
 
-        // Find and reverse related transactions by description pattern and date
         final relatedTxns = await txn.rawQuery(
           '''SELECT * FROM transactions
-             WHERE date = ? AND description LIKE ?
+             WHERE (description LIKE ? OR description LIKE ?)
              ORDER BY id DESC''',
-          [voucherDate, '%$voucherDesc%'],
+          ['%$voucherNumber%', '%سند جرد%$id%'],
         );
 
-        // Only reverse the exact number of transactions this voucher created (max 4)
-        // Insertions were: up to 2 for increase, up to 2 for decrease
-        final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
-        final exactTxns = relatedTxns.where((t) {
-          final desc = (t['description'] as String?) ?? '';
-          return desc.contains(voucherNumber) || desc.contains('سند جرد');
-        }).take(4).toList();
-
-        for (final txnRow in exactTxns) {
+        // عكس جميع القيود المرتبطة (وليس فقط أول 4)
+        for (final txnRow in relatedTxns) {
           final accId = txnRow['account_id'] as int;
           final debit = MoneyHelper.readMoney(txnRow['debit']);
           final credit = MoneyHelper.readMoney(txnRow['credit']);
@@ -921,13 +1025,69 @@ class StockService {
         }
       }
 
-      // Find accounts by code and currency
+      // ── C-05: استخدام حسابات تفاوت الجرد بدل COGS في تأكيد السند ──
+      final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+
+      // حساب المخزون (1300+offset)
       final inventoryAccount = await _dbHelper.journal.findAccountByCodeAndCurrency(txn, '1300', currency);
-      final cogsAccount = await _dbHelper.journal.findAccountByCodeAndCurrency(txn, '3200', currency);
+
+      // حساب إيراد تفاوت الجرد (4400+offset)
+      final varianceIncomeCode = (4400 + codeOffset).toString();
+      final varianceIncomeRows = await txn.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [varianceIncomeCode, currency],
+        limit: 1,
+      );
+      int? varianceIncomeAccountId;
+      if (varianceIncomeRows.isNotEmpty) {
+        varianceIncomeAccountId = varianceIncomeRows.first['id'] as int;
+      } else {
+        varianceIncomeAccountId = await txn.insert('accounts', {
+          'name_ar': 'إيراد تفاوت الجرد ($currency)',
+          'name_en': 'Inventory Variance Income ($currency)',
+          'account_code': varianceIncomeCode,
+          'account_type': 'REVENUE',
+          'balance': 0,
+          'currency': currency,
+          'balance_type': 'credit',
+          'is_active': 1,
+          'is_system': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+
+      // حساب خسارة تفاوت الجرد (5400+offset)
+      final varianceLossCode = (5400 + codeOffset).toString();
+      final varianceLossRows = await txn.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [varianceLossCode, currency],
+        limit: 1,
+      );
+      int? varianceLossAccountId;
+      if (varianceLossRows.isNotEmpty) {
+        varianceLossAccountId = varianceLossRows.first['id'] as int;
+      } else {
+        varianceLossAccountId = await txn.insert('accounts', {
+          'name_ar': 'خسارة تفاوت الجرد ($currency)',
+          'name_en': 'Inventory Variance Loss ($currency)',
+          'account_code': varianceLossCode,
+          'account_type': 'EXPENSE',
+          'balance': 0,
+          'currency': currency,
+          'balance_type': 'debit',
+          'is_active': 1,
+          'is_system': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
 
       final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
 
-      // Journal entries for inventory increase (difference > 0)
+      // C-05: قيود زيادة المخزون — مدين المخزون / دائن إيراد تفاوت الجرد
       if (totalIncreaseValue > 0) {
         if (inventoryAccount != null) {
           final invAccId = inventoryAccount['id'] as int;
@@ -942,10 +1102,9 @@ class StockService {
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
         }
-        if (cogsAccount != null) {
-          final cogsAccId = cogsAccount['id'] as int;
+        if (varianceIncomeAccountId != null) {
           await txn.insert('transactions', {
-            'account_id': cogsAccId,
+            'account_id': varianceIncomeAccountId,
             'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(totalIncreaseValue),
@@ -953,16 +1112,15 @@ class StockService {
             'date': voucherDate,
             'created_at': now,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccId, 0.0, totalIncreaseValue, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
         }
       }
 
-      // Journal entries for inventory decrease (difference < 0)
+      // C-05: قيود نقص المخزون — مدين خسارة تفاوت الجرد / دائن المخزون
       if (totalDecreaseValue > 0) {
-        if (cogsAccount != null) {
-          final cogsAccId = cogsAccount['id'] as int;
+        if (varianceLossAccountId != null) {
           await txn.insert('transactions', {
-            'account_id': cogsAccId,
+            'account_id': varianceLossAccountId,
             'journal_id': journalId,
             'debit': MoneyHelper.toCents(totalDecreaseValue),
             'credit': 0,
@@ -970,7 +1128,7 @@ class StockService {
             'date': voucherDate,
             'created_at': now,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccId, totalDecreaseValue, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
         }
         if (inventoryAccount != null) {
           final invAccId = inventoryAccount['id'] as int;

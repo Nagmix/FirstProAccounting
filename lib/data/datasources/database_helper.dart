@@ -3627,6 +3627,8 @@ class DatabaseHelper {
   Future<int> deleteInvoice(String id) => invoices.deleteInvoice(id);
   /// M-14: Delete invoice with CASCADE (deletes related items, transactions, stock movements).
   Future<int> deleteInvoiceWithCascade(String invoiceId) => invoices.deleteInvoiceWithCascade(invoiceId);
+  /// C-07: Cancel invoice with full reversal of journal entries and stock movements.
+  Future<void> cancelInvoice(String invoiceId) => invoices.cancelInvoice(invoiceId);
   Future<void> recordInvoicePayment({
     required String invoiceId,
     required double amount,

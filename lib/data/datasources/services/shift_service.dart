@@ -120,7 +120,15 @@ class ShiftService {
       final isReturn = (invoice['is_return'] as int?) == 1;
       final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
       final cashBoxId = invoice['cash_box_id'] as int?;
-      final transportCharges = MoneyHelper.readMoney(invoice['transport_charges']);
+      final taxAmount = MoneyHelper.readMoney(invoice['tax_amount']);
+
+      // C-02: دعم الدفعات الجزئية — استخدام paid_amount و remaining
+      final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
+      final remainingAmount = MoneyHelper.readMoney(invoice['remaining']);
+      // المبلغ المدفوع فعلياً: إذا كان cash واستلم جزئياً = paid_amount، إذا كان credit = 0
+      final effectivePaid = paymentMechanism == 'credit' ? 0.0 : (paidAmount > 0 ? paidAmount : total);
+      final effectiveRemaining = paymentMechanism == 'credit' ? total : (remainingAmount > 0 ? remainingAmount : 0.0);
+      final isPartialCash = paymentMechanism == 'cash' && effectivePaid > 0.005 && effectivePaid < total - 0.005;
 
       await db.transaction((txn) async {
         final journalId = DateTime.now().millisecondsSinceEpoch;
@@ -128,65 +136,324 @@ class ShiftService {
         // تحديد إزاحة كود الحساب حسب العملة
         final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
 
-        // جلب معرفات الحسابات
-        final salesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(4100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-        final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), invoiceCurrency], limit: 1);
+        // جلب معرفات الحسابات (دفعة واحدة — H-10)
+        final accountCodes = [
+          (4100 + codeOffset).toString(), // Sales
+          (3100 + codeOffset).toString(), // Purchases
+          (1200 + codeOffset).toString(), // Customers
+          (2100 + codeOffset).toString(), // Suppliers
+          (1100 + codeOffset).toString(), // Cash & Banks
+          (3300 + codeOffset).toString(), // VAT
+        ];
+        final placeholders = accountCodes.map((_) => '?').join(',');
+        final accountRows = await txn.query(
+          'accounts',
+          where: 'account_code IN ($placeholders) AND currency = ?',
+          whereArgs: [...accountCodes, invoiceCurrency],
+        );
+        final accountByCode = <String, Map<String, dynamic>>{};
+        for (final row in accountRows) {
+          final code = row['account_code'] as String?;
+          if (code != null) accountByCode[code] = row;
+        }
+        final salesAccountId = accountByCode[accountCodes[0]]?['id'] as int?;
+        final purchasesAccountId = accountByCode[accountCodes[1]]?['id'] as int?;
+        final customersAccountId = accountByCode[accountCodes[2]]?['id'] as int?;
+        final suppliersAccountId = accountByCode[accountCodes[3]]?['id'] as int?;
+        final cashBanksAccountId = accountByCode[accountCodes[4]]?['id'] as int?;
+        final vatAccountId = accountByCode[accountCodes[5]]?['id'] as int?;
 
-        final salesAccountId = salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
-        final purchasesAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
-        final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
-        final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
-        final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-
-        int? debitAccountId;
-        int? creditAccountId;
-
+        // ── C-02: إنشاء القيود المحاسبية مع دعم الدفعات الجزئية ──
         if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
           if (isReturn) {
-            debitAccountId = salesAccountId;
-            creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+            // مرتجع مبيعات: مدين المبيعات / دائن النقدية أو العملاء
+            final debitAccountId = salesAccountId;
+            final creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+            if (debitAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': debitAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(total),
+                'credit': 0,
+                'description': 'فاتورة مبيعات - مرتجع - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+            }
+            if (creditAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': creditAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(total),
+                'description': 'فاتورة مبيعات - مرتجع - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+            }
+          } else if (isPartialCash) {
+            // C-02: دفع جزئي — مدين: نقدية (المدفوع) + عملاء (المتبقي) / دائن: مبيعات (الإجمالي)
+            if (cashBanksAccountId != null && effectivePaid > 0) {
+              await txn.insert('transactions', {
+                'account_id': cashBanksAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(effectivePaid),
+                'credit': 0,
+                'description': 'فاتورة مبيعات (مدفوع) - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, effectivePaid, 0.0, now);
+            }
+            if (customersAccountId != null && effectiveRemaining > 0) {
+              await txn.insert('transactions', {
+                'account_id': customersAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(effectiveRemaining),
+                'credit': 0,
+                'description': 'فاتورة مبيعات (آجل) - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, effectiveRemaining, 0.0, now);
+            }
+            if (salesAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': salesAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(total),
+                'description': 'فاتورة مبيعات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
+            }
           } else {
-            debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-            creditAccountId = salesAccountId;
+            // بيع عادي: كاش كامل أو آجل كامل
+            final debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+            if (debitAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': debitAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(total),
+                'credit': 0,
+                'description': 'فاتورة مبيعات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+            }
+            if (salesAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': salesAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(total),
+                'description': 'فاتورة مبيعات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
+            }
           }
         } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
           if (isReturn) {
-            debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-            creditAccountId = purchasesAccountId;
+            // مرتجع مشتريات
+            final debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+            if (debitAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': debitAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(total),
+                'credit': 0,
+                'description': 'فاتورة مشتريات - مرتجع - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+            }
+            if (purchasesAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(total),
+                'description': 'فاتورة مشتريات - مرتجع - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, total, now);
+            }
+          } else if (isPartialCash) {
+            // C-02: شراء بدفع جزئي — مدين: مشتريات (الإجمالي) / دائن: نقدية (المدفوع) + موردين (المتبقي)
+            if (purchasesAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(total),
+                'credit': 0,
+                'description': 'فاتورة مشتريات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
+            }
+            if (cashBanksAccountId != null && effectivePaid > 0) {
+              await txn.insert('transactions', {
+                'account_id': cashBanksAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(effectivePaid),
+                'description': 'فاتورة مشتريات (مدفوع) - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, effectivePaid, now);
+            }
+            if (suppliersAccountId != null && effectiveRemaining > 0) {
+              await txn.insert('transactions', {
+                'account_id': suppliersAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(effectiveRemaining),
+                'description': 'فاتورة مشتريات (آجل) - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, effectiveRemaining, now);
+            }
           } else {
-            debitAccountId = purchasesAccountId;
-            creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+            // شراء عادي: كاش كامل أو آجل كامل
+            if (purchasesAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(total),
+                'credit': 0,
+                'description': 'فاتورة مشتريات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
+            }
+            final creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+            if (creditAccountId != null && total > 0) {
+              await txn.insert('transactions', {
+                'account_id': creditAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(total),
+                'description': 'فاتورة مشتريات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+            }
           }
         }
 
-        // إنشاء القيود المحاسبية
-        if (debitAccountId != null && total > 0) {
-          await txn.insert('transactions', {
-            'account_id': debitAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(total),
-            'credit': 0,
-            'description': '${(invoiceType == 'sale' || invoiceType == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
-            'date': now,
-            'created_at': now,
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
-        }
-
-        if (creditAccountId != null && total > 0) {
-          await txn.insert('transactions', {
-            'account_id': creditAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(total),
-            'description': '${(invoiceType == 'sale' || invoiceType == 'pos') ? 'فاتورة مبيعات' : 'فاتورة مشتريات'}${isReturn ? ' - مرتجع' : ''} - $invoiceId',
-            'date': now,
-            'created_at': now,
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+        // ── C-01: قيود ضريبة القيمة المضافة (VAT) في ترحيل الورديات ──
+        if (taxAmount.abs() >= 0.005 && vatAccountId != null) {
+          if ((invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
+            // مبيعات عليها ضريبة: مدين المبيعات (تخفيض الإيراد) / دائن ضريبة مستحقة
+            if (salesAccountId != null) {
+              await txn.insert('transactions', {
+                'account_id': salesAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(taxAmount),
+                'credit': 0,
+                'description': 'ضريبة قيمة مضافة مبيعات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, taxAmount, 0.0, now);
+            }
+            await txn.insert('transactions', {
+              'account_id': vatAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(taxAmount),
+              'description': 'ضريبة قيمة مضافة مستحقة - $invoiceId',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
+          } else if ((invoiceType == 'sale' || invoiceType == 'pos') && isReturn) {
+            // عكس ضريبة مرتجع مبيعات
+            await txn.insert('transactions', {
+              'account_id': vatAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(taxAmount),
+              'credit': 0,
+              'description': 'عكس ضريبة مرتجع مبيعات - $invoiceId',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, taxAmount, 0.0, now);
+            if (salesAccountId != null) {
+              await txn.insert('transactions', {
+                'account_id': salesAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(taxAmount),
+                'description': 'عكس ضريبة مرتجع مبيعات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, taxAmount, now);
+            }
+          } else if (invoiceType == 'purchase' && !isReturn) {
+            // مشتريات عليها ضريبة: مدين ضريبة مستحقة / دائن المشتريات (تخفيض التكلفة)
+            await txn.insert('transactions', {
+              'account_id': vatAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(taxAmount),
+              'credit': 0,
+              'description': 'ضريبة قيمة مضافة مشتريات - $invoiceId',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, taxAmount, 0.0, now);
+            if (purchasesAccountId != null) {
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(taxAmount),
+                'description': 'ضريبة قيمة مضافة مشتريات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, taxAmount, now);
+            }
+          } else if (invoiceType == 'purchase' && isReturn) {
+            // عكس ضريبة مرتجع مشتريات
+            if (purchasesAccountId != null) {
+              await txn.insert('transactions', {
+                'account_id': purchasesAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(taxAmount),
+                'credit': 0,
+                'description': 'عكس ضريبة مرتجع مشتريات - $invoiceId',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, taxAmount, 0.0, now);
+            }
+            await txn.insert('transactions', {
+              'account_id': vatAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(taxAmount),
+              'description': 'عكس ضريبة مرتجع مشتريات - $invoiceId',
+              'date': now,
+              'created_at': now,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
+          }
         }
 
         // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
@@ -381,39 +648,44 @@ class ShiftService {
         // The main journal entries and cash box update above already account for transport correctly.
         // No separate transport journal entries are needed here to avoid double-counting.
 
-        // تحديث رصيد العميل/المورد
-        // NOTE: `total` already includes transport charges, so no need to add them again
+        // ── C-03 + M-03: تحديث رصيد العميل/المورد مع دعم الدفعات الجزئية ──
         if (invoice['customer_id'] != null) {
           final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'pos' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-          // For credit payments, customer owes the full total (already includes transport)
-          // For cash payments, customer balance should not change (they paid)
-          final customerAmount = paymentMechanism == 'credit' ? total : 0.0;
-          if (isDebit) {
-            await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
-          } else {
-            await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
+          // C-02/M-03: الدفع الجزئي — المتبقي يُضاف لرصيد العميل
+          final customerAmount = isPartialCash ? effectiveRemaining : (paymentMechanism == 'credit' ? total : 0.0);
+          if (customerAmount.abs() >= 0.005) {
+            if (isDebit) {
+              await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
+            } else {
+              await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
+            }
           }
         }
 
         if (invoice['supplier_id'] != null) {
           final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-          // For credit purchases, supplier is owed the full total (already includes transport)
-          // For cash purchases, supplier balance should not change (we paid)
-          final supplierAmount = paymentMechanism == 'credit' ? total : 0.0;
-          if (isCreditToSupplier) {
-            await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
-          } else {
-            await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
+          // C-02/M-03: الدفع الجزئي — المتبقي يُضاف لرصيد المورد
+          final supplierAmount = isPartialCash ? effectiveRemaining : (paymentMechanism == 'credit' ? total : 0.0);
+          if (supplierAmount.abs() >= 0.005) {
+            if (isCreditToSupplier) {
+              await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
+            } else {
+              await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
+            }
           }
         }
 
-        // تحديث رصيد الصندوق
+        // ── C-03: تحديث رصيد الصندوق بالمبلغ المدفوع فعلياً وليس الإجمالي ──
         if (cashBoxId != null) {
           final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
-          if (isCashIn) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(total), now, cashBoxId]);
-          } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(total), now, cashBoxId]);
+          // C-03: استخدام effectivePaid بدل total — لمنع تضخم الصندوق في حالات البيع الآجل
+          final cashAmount = paymentMechanism == 'credit' ? 0.0 : (isPartialCash ? effectivePaid : total);
+          if (cashAmount.abs() >= 0.005) {
+            if (isCashIn) {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
+            } else {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
+            }
           }
         }
 

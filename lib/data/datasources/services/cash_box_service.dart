@@ -140,54 +140,36 @@ class CashBoxService {
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromCashBanksAccountId, 0.0, fromAmount, now);
       }
 
-      // معالجة أرباح/خسائر الصرافة
+      // ── C-04: معالجة أرباح/خسائر الصرافة باستخدام حساب فروقات الصرف (5300) ──
+      // لا نستخدم حساب المبيعات (4100) أو المصاريف العامة (5100) لأنها ليست إيراد تشغيلي
       if (gainLoss > 0) {
+        // استخدام حساب فروقات الصرف من journal_service (5300)
+        final exchangeAccountId = await _dbHelper.journal.getOrCreateExchangeAccount();
+
         if (gainLossType == 'gain') {
-          // أرباح صرافة: دائن حساب أرباح الصرافة
-          final gainCodeOffset = 0; // أرباح الصرافة تُسجل بالعملة الأساسية
-          final gainAccount = await txn.query(
-            'accounts',
-            where: 'account_code = ? AND currency = ?',
-            whereArgs: [(4100 + gainCodeOffset).toString(), 'YER'],
-            limit: 1,
-          );
-          final gainAccountId = gainAccount.isNotEmpty ? gainAccount.first['id'] as int : null;
-
-          if (gainAccountId != null) {
-            await txn.insert('transactions', {
-              'account_id': gainAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(gainLoss),
-              'description': 'أرباح صرافة - ${exchangeMap['exchange_number']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, gainAccountId, 0.0, gainLoss, now);
-          }
+          // أرباح صرافة: دائن حساب فروقات الصرف (إيراد)
+          await txn.insert('transactions', {
+            'account_id': exchangeAccountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(gainLoss),
+            'description': 'أرباح صرافة - ${exchangeMap['exchange_number']}',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, exchangeAccountId, 0.0, gainLoss, now);
         } else if (gainLossType == 'loss') {
-          // خسائر صرافة: مدين حساب خسائر الصرافة
-          final lossCodeOffset = 0; // خسائر الصرافة تُسجل بالعملة الأساسية (YER)
-          final lossAccount = await txn.query(
-            'accounts',
-            where: 'account_code = ? AND currency = ?',
-            whereArgs: [(5100 + lossCodeOffset).toString(), 'YER'],
-            limit: 1,
-          );
-          final lossAccountId = lossAccount.isNotEmpty ? lossAccount.first['id'] as int : null;
-
-          if (lossAccountId != null) {
-            await txn.insert('transactions', {
-              'account_id': lossAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(gainLoss),
-              'credit': 0,
-              'description': 'خسائر صرافة - ${exchangeMap['exchange_number']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, lossAccountId, gainLoss, 0.0, now);
-          }
+          // خسائر صرافة: مدين حساب فروقات الصرف (مصروف)
+          await txn.insert('transactions', {
+            'account_id': exchangeAccountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(gainLoss),
+            'credit': 0,
+            'description': 'خسائر صرافة - ${exchangeMap['exchange_number']}',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, exchangeAccountId, gainLoss, 0.0, now);
         }
       }
 

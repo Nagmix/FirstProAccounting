@@ -105,7 +105,7 @@ class JournalService {
   // ══════════════════════════════════════════════════════════════
 
   /// Validate that total debits equal total credits for a journal entry (C-03).
-  ///
+  /// ── W-03: في نظام cents (أعداد صحيحة)، الفرق يجب أن يكون صفراً ──
   /// Throws an exception if the journal entry is unbalanced.
   void validateJournalBalance(List<Map<String, dynamic>> entries) {
     double totalDebit = 0.0;
@@ -115,7 +115,8 @@ class JournalService {
       totalCredit += MoneyHelper.readMoney(entry['credit']);
     }
     final difference = (totalDebit - totalCredit).abs();
-    if (difference > 0.01) {
+    // W-03: في نظام التخزين بالسنتات (أعداد صحيحة)، لا يجب وجود أي فرق
+    if (difference > 0.005) {
       debugPrint(
         '⚠️ UNBALANCED JOURNAL ENTRY: Debit=$totalDebit, Credit=$totalCredit, Diff=$difference',
       );
@@ -172,13 +173,29 @@ class JournalService {
   }
 
   /// Get current balance of an account (computed from transactions).
+  /// ── W-02: يعتبر طبيعة الحساب (مدين/دائن) ──
+  /// لحسابات ذات طبيعة دائنة (إيرادات، خصوم، حقوق ملكية): الرصيد = دائن - مدين
+  /// لحسابات ذات طبيعة مدينة (أصول، تكاليف): الرصيد = مدين - دائن
   Future<double> getAccountBalance(int accountId) async {
     final db = await _db;
+    // جلب نوع رصيد الحساب
+    final accountRow = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+    if (accountRow.isEmpty) return 0.0;
+    final balanceType = accountRow.first['balance_type'] as String? ?? 'credit';
+
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(debit) - SUM(credit), 0) AS balance FROM transactions WHERE account_id = ?",
+      "SELECT COALESCE(SUM(debit), 0) AS total_debit, COALESCE(SUM(credit), 0) AS total_credit FROM transactions WHERE account_id = ?",
       [accountId],
     );
-    return MoneyHelper.readMoney(result.first['balance']);
+    final totalDebit = MoneyHelper.readMoney(result.first['total_debit']);
+    final totalCredit = MoneyHelper.readMoney(result.first['total_credit']);
+
+    // الرصيد حسب طبيعة الحساب
+    if (balanceType == 'debit') {
+      return totalDebit - totalCredit; // أصول وتكاليف: الرصيد الطبيعي مدين
+    } else {
+      return totalCredit - totalDebit; // خصوم وإيرادات وحقوق ملكية: الرصيد الطبيعي دائن
+    }
   }
 
   /// Get all transactions for an account with running balance calculated.

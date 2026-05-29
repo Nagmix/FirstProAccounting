@@ -645,8 +645,10 @@ class _ReportsScreenState extends State<ReportsScreen>
       }
     } catch (e) {
       debugPrint('COGS calculation error: $e');
-      // Fallback: use simple purchase-based estimate
-      cogs = netPurchases;
+      // ── C-09: احتياطي محاسبي صحيح — صفر بدل netPurchases ──
+      // صافي المشتريات ≠ تكلفة البضاعة المباعة (الفرق = تغير المخزون)
+      // إذا فشل حساب COGS، الأفضل عرض صفر مع تنبيه بدل رقم مضلل
+      cogs = 0.0;
     }
 
     final grossProfit = netSales - cogs;

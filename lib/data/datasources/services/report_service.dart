@@ -459,17 +459,10 @@ class ReportService {
     ''', [yearStr]);
     results.addAll(expenseData);
 
-    // Purchases as expense category
-    final purchaseData = await db.rawQuery('''
-      SELECT 'مشتريات' AS category,
-        SUM(total) AS total,
-        'مصروفات' AS type
-      FROM invoices
-      WHERE type = 'purchase' AND is_return = 0
-        AND strftime('%Y', created_at) = ?
-        $currencyFilter
-    ''', [yearStr]);
-    results.addAll(purchaseData);
+    // ── M-06: إزالة المشتريات من فئة المصروفات ──
+    // المشتريات تُرحّل بالكامل إلى المخزون عبر القيود المحاسبية
+    // إضافتها كمصاريف يُضاعف المصروفات (COGS محسوب بالفعل من تكلفة الأصناف المباعة)
+    // لذا لا نضيف المشتريات كمصاريف مستقلة
 
     return results;
   }

@@ -956,6 +956,156 @@ class InvoiceRepository {
     return await db.update('invoices', {'status': 'cancelled'}, where: 'id = ?', whereArgs: [id]);
   }
 
+  /// ── C-07: إلغاء فاتورة مع عكس القيود المحاسبية وحركات المخزون ──
+  /// بدلاً من الحذف المادي، يتم عكس جميع القيود وتحديث الأرصدة ثم وضع علامة ملغاة.
+  Future<void> cancelInvoice(String invoiceId) async {
+    final db = await _db;
+    final now = DateTime.now().toIso8601String();
+
+    // جلب بيانات الفاتورة
+    final invoiceRows = await db.query('invoices', where: 'id = ?', whereArgs: [invoiceId], limit: 1);
+    if (invoiceRows.isEmpty) return;
+    final invoice = invoiceRows.first;
+
+    // تحقق من الفترة المالية
+    final invoiceDate = invoice['created_at'] as String? ?? now;
+    await _dbHelper.journal.checkFiscalPeriodOpen(invoiceDate);
+
+    final total = MoneyHelper.readMoney(invoice['total']);
+    final invoiceType = (invoice['type'] as String?) ?? 'sale';
+    final isReturn = (invoice['is_return'] as int?) == 1;
+    final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
+    final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
+    final taxAmount = MoneyHelper.readMoney(invoice['tax_amount']);
+    final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
+    final remainingAmount = MoneyHelper.readMoney(invoice['remaining']);
+    final effectivePaid = paymentMechanism == 'credit' ? 0.0 : (paidAmount > 0 ? paidAmount : total);
+    final effectiveRemaining = paymentMechanism == 'credit' ? total : (remainingAmount > 0 ? remainingAmount : 0.0);
+    final isPartialCash = paymentMechanism == 'cash' && effectivePaid > 0.005 && effectivePaid < total - 0.005;
+
+    await db.transaction((txn) async {
+      final reversalJournalId = DateTime.now().millisecondsSinceEpoch;
+
+      // ── 1. عكس حركات المخزون ──
+      final items = await txn.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
+      for (final item in items) {
+        final productId = (item['product_id'] as num?)?.toInt();
+        final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+        final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
+        if (productId == null) continue;
+
+        final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+        if (productRow.isEmpty) continue;
+        final currentStock = (productRow.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+        final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+
+        if (invoiceType == 'sale' || invoiceType == 'pos') {
+          // إعادة المخزون (عكس البيع) أو إخراجه (عكس المرتجع)
+          final stockAdjustment = isReturn ? -baseQuantity : baseQuantity;
+          await txn.update('products', {
+            'current_stock': (currentStock + stockAdjustment).clamp(0.0, double.infinity),
+            'updated_at': now,
+          }, where: 'id = ?', whereArgs: [productId]);
+          await txn.insert('stock_movements', {
+            'product_id': productId,
+            'movement_type': 'cancellation',
+            'quantity': stockAdjustment,
+            'reference_type': 'invoice_cancel',
+            'reference_id': invoiceId,
+            'unit_cost': MoneyHelper.toCents(averageCost),
+            'created_at': now,
+          });
+        } else if (invoiceType == 'purchase') {
+          // إخراج المخزون (عكس الشراء) أو إعادته (عكس مرتجع الشراء)
+          final stockAdjustment = isReturn ? baseQuantity : -baseQuantity;
+          await txn.update('products', {
+            'current_stock': (currentStock + stockAdjustment).clamp(0.0, double.infinity),
+            'updated_at': now,
+          }, where: 'id = ?', whereArgs: [productId]);
+          await txn.insert('stock_movements', {
+            'product_id': productId,
+            'movement_type': 'cancellation',
+            'quantity': stockAdjustment,
+            'reference_type': 'invoice_cancel',
+            'reference_id': invoiceId,
+            'unit_cost': MoneyHelper.toCents(averageCost),
+            'created_at': now,
+          });
+        }
+      }
+
+      // ── 2. عكس القيود المحاسبية ──
+      // البحث عن جميع القيود المرتبطة بهذه الفاتورة
+      final relatedTxns = await txn.rawQuery(
+        "SELECT * FROM transactions WHERE description LIKE ? ORDER BY id ASC",
+        ['%$invoiceId%'],
+      );
+
+      for (final txnRow in relatedTxns) {
+        final accId = txnRow['account_id'] as int;
+        final debit = MoneyHelper.readMoney(txnRow['debit']);
+        final credit = MoneyHelper.readMoney(txnRow['credit']);
+
+        if (debit.abs() < 0.005 && credit.abs() < 0.005) continue;
+
+        // عكس القيد: swap debit and credit
+        await txn.insert('transactions', {
+          'account_id': accId,
+          'journal_id': reversalJournalId,
+          'debit': MoneyHelper.toCents(credit),
+          'credit': MoneyHelper.toCents(debit),
+          'description': 'إلغاء فاتورة - عكس قيد - $invoiceId',
+          'date': now,
+          'created_at': now,
+        });
+        // عكس تحديث الرصيد
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accId, credit, debit, now);
+      }
+
+      // ── 3. عكس تحديث رصيد العميل/المورد ──
+      if (invoice['customer_id'] != null) {
+        final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'pos' && !isReturn);
+        final customerAmount = isPartialCash ? effectiveRemaining : (paymentMechanism == 'credit' ? total : 0.0);
+        if (customerAmount.abs() >= 0.005) {
+          if (isDebit) {
+            await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
+          } else {
+            await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
+          }
+        }
+      }
+
+      if (invoice['supplier_id'] != null) {
+        final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn);
+        final supplierAmount = isPartialCash ? effectiveRemaining : (paymentMechanism == 'credit' ? total : 0.0);
+        if (supplierAmount.abs() >= 0.005) {
+          if (isCreditToSupplier) {
+            await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
+          } else {
+            await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
+          }
+        }
+      }
+
+      // ── 4. عكس تحديث رصيد الصندوق ──
+      final cashBoxId = invoice['cash_box_id'] as int?;
+      if (cashBoxId != null) {
+        final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
+        final cashAmount = paymentMechanism == 'credit' ? 0.0 : (isPartialCash ? effectivePaid : total);
+        if (cashAmount.abs() >= 0.005) {
+          if (isCashIn) {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
+          } else {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
+          }
+        }
+      }
+
+      // ── 5. وضع علامة ملغاة على الفاتورة ──
+      await txn.update('invoices', {'status': 'cancelled', 'updated_at': now}, where: 'id = ?', whereArgs: [invoiceId]);
+    });
+  }
+
   /// Delete an invoice and all its related records (CASCADE behavior).
   /// M-14: Ensures data consistency when deleting invoices.
   Future<int> deleteInvoiceWithCascade(String invoiceId) async {
