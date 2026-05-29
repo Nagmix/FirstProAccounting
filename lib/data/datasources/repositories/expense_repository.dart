@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
 
@@ -96,6 +97,13 @@ class ExpenseRepository {
 
     final db = await _db;
     final amountBase = MoneyHelper.readMoney(expenseMap['amount_base']);
+    // B-06: Auto-calculate amount_base if exchange_rate is provided and amount_base seems wrong
+    final amount = MoneyHelper.readMoney(expenseMap['amount']);
+    final exchangeRate = (expenseMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+    final expectedBase = amount * exchangeRate;
+    if (amountBase <= 0 && expectedBase > 0) {
+      expenseMap['amount_base'] = MoneyHelper.toCents(expectedBase);
+    }
     final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
     final operationType = (expenseMap['operation_type'] as String?) ?? 'صرف';
     final now = DateTime.now().toIso8601String();
@@ -106,7 +114,7 @@ class ExpenseRepository {
       await txn.insert('expenses', dbExpenseMap);
 
       // Post journal entry
-      final journalId = DateTime.now().millisecondsSinceEpoch;
+      final journalId = generateUniqueJournalId();
 
       // Determine currency-specific account code offset
       final codeOffset = expenseCurrency == 'SAR' ? 1 : (expenseCurrency == 'USD' ? 2 : 0);
@@ -172,59 +180,33 @@ class ExpenseRepository {
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, 0.0, amountBase, now);
         }
       } else {
-        // ── M-08: قبض (استرداد مصروف) — استخدام حساب إيرادات أخرى بدل خصم المصروفات ──
-        // القيد الصحيح: مدين النقدية / دائن إيرادات أخرى (لا نخصم المصروفات)
-        // البحث عن حساب "إيرادات أخرى" أو إنشاؤه
-        final otherIncomeCode = (4900 + codeOffset).toString();
-        final otherIncomeRows = await txn.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [otherIncomeCode, expenseCurrency],
-          limit: 1,
-        );
-        int? otherIncomeAccountId;
-        if (otherIncomeRows.isNotEmpty) {
-          otherIncomeAccountId = otherIncomeRows.first['id'] as int;
-        } else {
-          // إنشاء حساب إيرادات أخرى تلقائياً
-          otherIncomeAccountId = await txn.insert('accounts', {
-            'name_ar': 'إيرادات أخرى ($expenseCurrency)',
-            'name_en': 'Other Income ($expenseCurrency)',
-            'account_code': otherIncomeCode,
-            'account_type': 'REVENUE',
-            'balance': 0,
-            'currency': expenseCurrency,
-            'balance_type': 'credit',
-            'is_active': 1,
-            'is_system': 1,
-            'created_at': now,
-            'updated_at': now,
-          });
-        }
-
+        // ── A-05: قبض (استرداد مصروف) — خصم من حساب المصروفات الأصلي ──
+        // القيد الصحيح: مدين النقدية / دائن حساب المصروفات (تخفيض المصروف)
+        // هذا يقلل المصروفات الفعلية بدلاً من إنشاء إيراد وهمي
         if (cashAccountId != null && amountBase > 0) {
           await txn.insert('transactions', {
             'account_id': cashAccountId,
             'journal_id': journalId,
             'debit': MoneyHelper.toCents(amountBase),
             'credit': 0,
-            'description': 'استرداد: $title',
+            'description': 'استرداد مصروف: $title',
             'date': now,
             'created_at': now,
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, amountBase, 0.0, now);
         }
-        if (otherIncomeAccountId != null && amountBase > 0) {
+        // Credit the expense account to reduce the expense (reverse of disbursement)
+        if (expenseAccId != null && amountBase > 0) {
           await txn.insert('transactions', {
-            'account_id': otherIncomeAccountId,
+            'account_id': expenseAccId,
             'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(amountBase),
-            'description': 'استرداد: $title',
+            'description': 'استرداد مصروف: $title',
             'date': now,
             'created_at': now,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, otherIncomeAccountId, 0.0, amountBase, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccId, 0.0, amountBase, now);
         }
       }
 

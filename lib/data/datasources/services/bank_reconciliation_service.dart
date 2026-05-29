@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/journal_id_helper.dart';
 import '../database_helper.dart';
 import '../../models/bank_reconciliation_model.dart';
 
@@ -281,7 +282,7 @@ class BankReconciliationService {
     final calculated = await calculateAdjustedBalances(recon);
 
     await db.transaction((txn) async {
-      final journalId = DateTime.now().millisecondsSinceEpoch;
+      final journalId = generateUniqueJournalId();
       final cashBoxId = recon.cashBoxId;
 
       // Get cash box and linked account
@@ -298,7 +299,7 @@ class BankReconciliationService {
 
       // Bank charges: Dr. Bank Charges Expense / Cr. Cash
       if (calculated.bankCharges.abs() >= 0.005) {
-        final expenseCode = (5200 + codeOffset).toString();
+        final expenseCode = (5250 + codeOffset).toString();
         final expenseAccount = await txn.query('accounts',
             where: 'account_code = ? AND currency = ?',
             whereArgs: [expenseCode, currency],

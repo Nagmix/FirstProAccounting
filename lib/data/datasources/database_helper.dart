@@ -57,7 +57,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 39;
+  static const int _databaseVersion = 40;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -94,6 +94,10 @@ class DatabaseHelper {
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       password: encryptionKey,
+      onConfigure: (db) async {
+        // C-06: Enable foreign key enforcement early (before onCreate/onUpgrade)
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onOpen: (db) async {
         // Enable foreign key enforcement (M-06)
         // SQLite doesn't enforce FK constraints by default
@@ -299,6 +303,7 @@ class DatabaseHelper {
         description TEXT,
         date TEXT NOT NULL,
         created_at TEXT NOT NULL,
+        balance_type TEXT,
         FOREIGN KEY (account_id) REFERENCES accounts (id)
       )
     ''');
@@ -2609,6 +2614,59 @@ class DatabaseHelper {
     // ══════════════════════════════════════════════════════════════
     if (oldVersion < 39) {
       await _migrateV39(db);
+    }
+
+    // ── v40: C-05 + C-07: Add UNIQUE constraint on invoice numbers, add balance_type to transactions ──
+    if (oldVersion < 40) {
+      try {
+        // C-05: Add UNIQUE index on invoice id to prevent duplicates
+        // Since id is already PRIMARY KEY, we add a UNIQUE index on a composite to catch duplicates
+        await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_unique_id ON invoices(id)');
+        
+        // C-07: Add balance_type column to transactions table
+        // Records the account's balance_type at the time of the transaction,
+        // preventing historical data corruption if account balance_type changes later
+        await db.execute('ALTER TABLE transactions ADD COLUMN balance_type TEXT');
+        
+        // Backfill balance_type from accounts table
+        await db.execute('''
+          UPDATE transactions SET balance_type = (
+            SELECT a.balance_type FROM accounts a WHERE a.id = transactions.account_id
+          )
+        ''');
+        
+        // B-01: Create Bank Charges Expense account (5250) for each currency
+        // This separates bank charges from transport charges (5200)
+        final currencies = ['YER', 'SAR', 'USD'];
+        final currencySymbols = {'YER': 'ر.ي', 'SAR': 'ر.س', 'USD': r'$'};
+        for (int i = 0; i < currencies.length; i++) {
+          final currency = currencies[i];
+          final codeOffset = i;
+          final bankChargesCode = (5250 + codeOffset).toString();
+          // Check if account already exists
+          final existing = await db.rawQuery(
+            'SELECT id FROM accounts WHERE account_code = ? AND currency = ?',
+            [bankChargesCode, currency],
+          );
+          if (existing.isEmpty) {
+            await db.insert('accounts', {
+              'name_ar': 'رسوم بنكية ($currency)',
+              'name_en': 'Bank Charges Expense ($currency)',
+              'account_code': bankChargesCode,
+              'account_type': 'EXPENSE',
+              'balance': 0,
+              'currency': currency,
+              'balance_type': 'debit',
+              'is_active': 1,
+              'is_system': 1,
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+          }
+        }
+      } catch (e) {
+        logMigrationError('v40', e);
+      }
     }
   }
 

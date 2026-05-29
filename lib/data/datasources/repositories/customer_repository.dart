@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../models/customer_model.dart';
 import '../database_helper.dart';
@@ -27,7 +28,7 @@ class CustomerRepository {
 
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
+        final journalId = generateUniqueJournalId();
         final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
 
         final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), customerCurrency], limit: 1);
@@ -107,6 +108,79 @@ class CustomerRepository {
 
   Future<int> updateCustomer(int id, Map<String, dynamic> customerMap) async {
     final db = await _db;
+    final now = DateTime.now().toIso8601String();
+
+    // B-04: Create journal entry for balance change when updating customer
+    final oldCustomer = await getCustomerById(id);
+    if (oldCustomer != null && customerMap.containsKey('balance')) {
+      final oldBalance = MoneyHelper.readMoney(oldCustomer['balance']);
+      final newBalance = MoneyHelper.readMoney(customerMap['balance']);
+      final balanceDiff = newBalance - oldBalance;
+
+      if (balanceDiff.abs() >= 0.005) {
+        final customerCurrency = customerMap['currency'] as String? ?? oldCustomer['currency'] as String? ?? 'YER';
+        final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+        final journalId = generateUniqueJournalId();
+
+        final customersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), customerCurrency], limit: 1);
+        final openingBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2200 + codeOffset).toString(), customerCurrency], limit: 1);
+
+        final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
+        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
+
+        if (customersAccountId != null && openingBalanceAccountId != null) {
+          await db.transaction((txn) async {
+            if (balanceDiff > 0) {
+              // Balance increased: Debit Customers, Credit Opening Balance
+              await txn.insert('transactions', {
+                'account_id': customersAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(balanceDiff),
+                'credit': 0,
+                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(balanceDiff),
+                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, balanceDiff, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, balanceDiff, now);
+            } else {
+              // Balance decreased: Credit Customers, Debit Opening Balance
+              final absDiff = balanceDiff.abs();
+              await txn.insert('transactions', {
+                'account_id': customersAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(absDiff),
+                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(absDiff),
+                'credit': 0,
+                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, absDiff, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, absDiff, 0.0, now);
+            }
+          });
+        }
+      }
+    }
+
     return await db.update('customers', MoneyHelper.toCentsMap(customerMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/journal_id_helper.dart';
 import '../database_helper.dart';
 
 /// Service responsible for journal-entry operations, account-balance updates,
@@ -271,7 +272,7 @@ class JournalService {
 
     final db = await _db;
     final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
+    final journalId = generateUniqueJournalId();
 
     // Fix #5: Use separate gain/loss accounts with correct account types
     final exchangeAccountId = await getOrCreateExchangeAccount(isGain: gainLossAmount > 0);
@@ -344,7 +345,10 @@ class JournalService {
   Future<void> checkFiscalPeriodOpen(String dateStr) async {
     final db = await _db;
     final date = DateTime.tryParse(dateStr);
-    if (date == null) return;
+    // C-04: Reject invalid dates instead of allowing the operation
+    if (date == null) {
+      throw Exception('تاريخ غير صالح: "$dateStr". لا يمكن إجراء عمليات بتاريخ غير معروف.');
+    }
     final year = date.year;
 
     // تحقق من وجود سنة مالية مقفلة لهذه الفترة

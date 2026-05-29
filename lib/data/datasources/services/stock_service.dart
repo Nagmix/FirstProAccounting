@@ -1,6 +1,7 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/journal_id_helper.dart';
 import '../database_helper.dart';
 
 class StockService {
@@ -31,17 +32,31 @@ class StockService {
       // إدراج سجل التحويل
       final id = await txn.insert('stock_transfers', transferMap);
 
-      // جلب متوسط تكلفة المنتج المصدر
+      // جلب تكلفة المنتج المصدر — A-09: استخدام محرك التكلفة لـ FIFO/LIFO
       final sourceProductRow = await txn.query(
         'products',
-        columns: ['average_cost'],
+        columns: ['average_cost', 'costing_method', 'cost_price'],
         where: 'id = ?',
         whereArgs: [productId],
         limit: 1,
       );
-      final sourceAvgCost = sourceProductRow.isNotEmpty
-          ? MoneyHelper.readMoney(sourceProductRow.first['average_cost'])
-          : 0.0;
+      double sourceAvgCost;
+      if (sourceProductRow.isNotEmpty) {
+        final costingMethodStr = sourceProductRow.first['costing_method'] as String? ?? 'weighted_average';
+        // A-09: For FIFO/LIFO products, use the costing engine for actual cost
+        if (costingMethodStr != 'weighted_average') {
+          try {
+            final avgCost = MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
+            sourceAvgCost = avgCost > 0 ? avgCost : MoneyHelper.readMoney(sourceProductRow.first['cost_price']);
+          } catch (_) {
+            sourceAvgCost = MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
+          }
+        } else {
+          sourceAvgCost = MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
+        }
+      } else {
+        sourceAvgCost = 0.0;
+      }
 
       // خصم الكمية من مخزن المصدر
       final fromProducts = await txn.query(
@@ -170,7 +185,7 @@ class StockService {
       final transferCurrency = (transferMap['currency'] as String?) ?? 'YER';
 
       if (transferValue.abs() >= 0.005) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
+        final journalId = generateUniqueJournalId();
         final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
 
         // محاولة استخدام حساب المخزون المرتبط بالمستودع، أو الافتراضي
@@ -293,7 +308,7 @@ class StockService {
       int mismatched = 0;
 
       // معرف القيد الموحد لجميع بنود الجرد
-      final journalId = DateTime.now().millisecondsSinceEpoch;
+      final journalId = generateUniqueJournalId();
       final now = DateTime.now().toIso8601String();
 
       // ── تحديد حسابات تعديل المخزون (إنشاء تلقائي إذا لم تكن موجودة) ──
@@ -648,7 +663,7 @@ class StockService {
 
       // Only create journal entries when voucher is approved
       if (applyStockAndJournal) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
+        final journalId = generateUniqueJournalId();
         // Get currency for this voucher
         final currency = voucherMap['currency'] as String? ?? 'YER';
 
@@ -930,7 +945,7 @@ class StockService {
           // Reverse: swap debit and credit
           await txn.insert('transactions', {
             'account_id': accId,
-            'journal_id': DateTime.now().millisecondsSinceEpoch,
+            'journal_id': generateUniqueJournalId(),
             'debit': MoneyHelper.toCents(credit),
             'credit': MoneyHelper.toCents(debit),
             'description': 'عكس قيد - حذف سند جرد رقم $voucherNumber',
@@ -965,7 +980,7 @@ class StockService {
   Future<void> confirmInventoryVoucher(int id) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
+    final journalId = generateUniqueJournalId();
 
     await db.transaction((txn) async {
       // Fetch the voucher

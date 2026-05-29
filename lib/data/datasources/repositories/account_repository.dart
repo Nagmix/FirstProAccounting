@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../models/account_model.dart';
 import '../database_helper.dart';
@@ -141,7 +142,7 @@ class AccountRepository {
       // Create double-entry opening balance transaction if > 0
       // Must include contra-entry to Opening Balance Equity account (3900+offset)
       if (openingBalance > 0) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
+        final journalId = generateUniqueJournalId();
 
         // Find the Opening Balance Equity account for this currency
         final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[currency] ?? 0;
@@ -334,7 +335,7 @@ class AccountRepository {
   Future<void> performAnnualPosting(int year) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
+    final journalId = generateUniqueJournalId();
     final yearStart = '$year-01-01';
     final yearEnd = '$year-12-31';
 
@@ -343,6 +344,18 @@ class AccountRepository {
       final existing = await txn.query('fiscal_years', where: 'year = ? AND status = ?', whereArgs: [year, 'closed'], limit: 1);
       if (existing.isNotEmpty) {
         throw Exception('السنة المالية $year مغلقة بالفعل');
+      }
+
+      // B-03: Check for existing annual posting entries to prevent double-posting
+      // If closing entries already exist for this year (journal entries on Dec 31 with closing descriptions),
+      // throw an error to prevent double-posting retained earnings
+      final existingClosingEntries = await txn.rawQuery(
+        "SELECT COUNT(*) as cnt FROM transactions WHERE date = ? AND (description LIKE ? OR description LIKE ? OR description LIKE ?)",
+        ['$year-12-31', '%إقفال إيرادات السنة $year%', '%إقفال تكاليف السنة $year%', '%إقفال مصاريف السنة $year%'],
+      );
+      final closingCount = (existingClosingEntries.first['cnt'] as num?)?.toInt() ?? 0;
+      if (closingCount > 0) {
+        throw Exception('يوجد قيود إقفال سابقة للسنة $year. لا يمكن إعادة الترحيل.');
       }
 
       // Get all revenue accounts
@@ -512,9 +525,23 @@ class AccountRepository {
           await _updateAccountBalanceWithJournal(txn, reAccId, balance, 0.0, now);
         }
 
-        // Accumulate for total (using YER as base)
+        // A-08: Accumulate for total, converting foreign currencies to YER
         if (currency == 'YER') {
           totalNetProfitYER += netForCurrency;
+        } else {
+          // Convert foreign currency profit to YER using exchange rate from currencies table
+          try {
+            final currencyRow = await txn.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+            if (currencyRow.isNotEmpty) {
+              final rate = (currencyRow.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+              if (rate > 0) {
+                totalNetProfitYER += netForCurrency * rate;
+              }
+            }
+          } catch (_) {
+            // If currency table or rate not available, accumulate without conversion
+            totalNetProfitYER += netForCurrency;
+          }
         }
       }
 

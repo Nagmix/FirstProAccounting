@@ -1,6 +1,7 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/journal_id_helper.dart';
 import '../database_helper.dart';
 import '../../models/inventory_cost_layer_model.dart';
 
@@ -136,7 +137,7 @@ class ShiftService {
       final isPartialCash = paymentMechanism == 'cash' && effectivePaid > 0.005 && effectivePaid < total - 0.005;
 
       await db.transaction((txn) async {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
+        final journalId = generateUniqueJournalId();
 
         // تحديد إزاحة كود الحساب حسب العملة
         final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
@@ -266,8 +267,14 @@ class ShiftService {
           }
         } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
           if (isReturn) {
-            // مرتجع مشتريات
+            // A-04: مرتجع مشتريات — مدين المورد/النقدية، دائن المخزون (وليس المشتريات)
+            // في نظام الجرد المستمر، مرتجع المشتريات يقلل المخزون مباشرة
             final debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+            // Resolve inventory account for this currency
+            final inventoryCode = (1300 + codeOffset).toString();
+            final invRows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [inventoryCode, invoiceCurrency], limit: 1);
+            final returnInvAccountId = invRows.isNotEmpty ? invRows.first['id'] as int : null;
+
             if (debitAccountId != null && total > 0) {
               await txn.insert('transactions', {
                 'account_id': debitAccountId,
@@ -280,17 +287,17 @@ class ShiftService {
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
             }
-            if (purchasesAccountId != null && total > 0) {
+            if (returnInvAccountId != null && total > 0) {
               await txn.insert('transactions', {
-                'account_id': purchasesAccountId,
+                'account_id': returnInvAccountId,
                 'journal_id': journalId,
                 'debit': 0,
                 'credit': MoneyHelper.toCents(total),
-                'description': 'فاتورة مشتريات - مرتجع - $invoiceId',
+                'description': 'تخفيض مخزون مرتجع مشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, total, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, returnInvAccountId, 0.0, total, now);
             }
           } else if (isPartialCash) {
             // C-02: شراء بدفع جزئي — مدين: مشتريات (الإجمالي) / دائن: نقدية (المدفوع) + موردين (المتبقي)
@@ -637,26 +644,8 @@ class ShiftService {
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccountId, totalPurchaseCost, 0.0, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchAccountId, 0.0, totalPurchaseCost, now);
             } else {
-              await txn.insert('transactions', {
-                'account_id': purchAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(totalPurchaseCost),
-                'credit': 0,
-                'description': 'عكس تحويل مشتريات مرتجعة - $invoiceId',
-                'date': now,
-                'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': invAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(totalPurchaseCost),
-                'description': 'تخفيض مخزون مرتجع مشتريات - $invoiceId',
-                'date': now,
-                'created_at': now,
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchAccountId, totalPurchaseCost, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccountId, 0.0, totalPurchaseCost, now);
+              // A-04: Purchase return inventory transfer now handled in main entry
+              // (Debit Cash/Supplier, Credit Inventory directly). No separate transfer needed.
             }
           }
         }

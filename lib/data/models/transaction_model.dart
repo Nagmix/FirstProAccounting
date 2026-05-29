@@ -9,6 +9,7 @@ class Transaction {
   final String? description;
   final DateTime date;
   final DateTime createdAt;
+  final String? balanceType;
 
   Transaction({
     this.id,
@@ -19,6 +20,7 @@ class Transaction {
     this.description,
     required this.date,
     DateTime? createdAt,
+    this.balanceType,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
@@ -31,6 +33,7 @@ class Transaction {
       'description': description,
       'date': date.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
+      'balance_type': balanceType,
     };
   }
 
@@ -44,6 +47,7 @@ class Transaction {
       description: map['description'],
       date: DateTime.parse(map['date']),
       createdAt: DateTime.parse(map['created_at']),
+      balanceType: map['balance_type'] as String?,
     );
   }
 
@@ -56,6 +60,7 @@ class Transaction {
     String? description,
     DateTime? date,
     DateTime? createdAt,
+    String? balanceType,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -66,6 +71,7 @@ class Transaction {
       description: description ?? this.description,
       date: date ?? this.date,
       createdAt: createdAt ?? this.createdAt,
+      balanceType: balanceType ?? this.balanceType,
     );
   }
 }
