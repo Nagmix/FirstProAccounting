@@ -220,9 +220,9 @@ class ReportService {
     try {
       final receiptsResult = await db.rawQuery(
         "SELECT COALESCE(SUM(total_amount), 0.0) AS total FROM vouchers "
-        "WHERE voucher_type LIKE '%receipt%' OR voucher_type LIKE '%قبض%' "
+        "WHERE (voucher_type LIKE '%receipt%' OR voucher_type LIKE '%قبض%') "
         "AND date >= ? AND date < ?",
-        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
+        [startStr, endStr],
       );
       summary['total_receipts'] = MoneyHelper.readMoney(receiptsResult.first['total']);
     } catch (e) { DatabaseHelper.logMigrationError("migration", e); }
@@ -233,7 +233,7 @@ class ReportService {
         "SELECT COALESCE(SUM(total_amount), 0.0) AS total FROM vouchers "
         "WHERE (voucher_type LIKE '%payment%' OR voucher_type LIKE '%صرف%') "
         "AND date >= ? AND date < ?",
-        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
+        [startStr, endStr],
       );
       summary['total_payments'] = MoneyHelper.readMoney(paymentsResult.first['total']);
     } catch (e) { DatabaseHelper.logMigrationError("migration", e); }
@@ -296,7 +296,7 @@ class ReportService {
       "LEFT JOIN suppliers s ON i.supplier_id = s.id "
       "LEFT JOIN invoice_items ii ON ii.invoice_id = i.id "
       "LEFT JOIN products p ON ii.product_id = p.id "
-      "WHERE i.is_return = 0 AND i.type IN ('sale', 'pos', 'purchase') "
+      "WHERE i.is_return = 0 AND i.type IN ('sale', 'pos') "
       "$dateFilter "
       "GROUP BY i.id "
       "ORDER BY i.created_at DESC",
@@ -387,7 +387,19 @@ class ReportService {
   /// Returns 12 rows (one per month) with `month`, `sales`, `purchases` columns.
   Future<List<Map<String, dynamic>>> getMonthlySalesVsPurchases(int year, {String? currency}) async {
     final db = await _db;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND i.currency = '$currency'" : '';
+    final yearStr = year.toString();
+    List<dynamic> args = [yearStr];
+    String currencyFilter = '';
+    if (currency != null && currency.isNotEmpty) {
+      currencyFilter = ' AND i.currency = ?';
+      args.add(currency);
+    }
+    // Need separate sub-queries with separate arg lists
+    final salesArgs = [yearStr, if (currency != null && currency.isNotEmpty) currency];
+    final purchasesArgs = [yearStr, if (currency != null && currency.isNotEmpty) currency];
+    final salesCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND currency = ?' : '';
+    final purchasesCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND currency = ?' : '';
+
     return await db.rawQuery('''
       SELECT m.month,
         COALESCE(s.total, 0.0) AS sales,
@@ -402,8 +414,8 @@ class ReportService {
                SUM(total) AS total
         FROM invoices
         WHERE type = 'sale' AND is_return = 0
-          AND strftime('%Y', created_at) = '$year'
-          $currencyFilter
+          AND strftime('%Y', created_at) = ?
+          $salesCurrencyFilter
         GROUP BY month
       ) s ON m.month = s.month
       LEFT JOIN (
@@ -411,20 +423,25 @@ class ReportService {
                SUM(total) AS total
         FROM invoices
         WHERE type = 'purchase' AND is_return = 0
-          AND strftime('%Y', created_at) = '$year'
-          $currencyFilter
+          AND strftime('%Y', created_at) = ?
+          $purchasesCurrencyFilter
         GROUP BY month
       ) p ON m.month = p.month
       ORDER BY m.month
-    ''');
+    ''', [...salesArgs, ...purchasesArgs]);
   }
 
   /// Revenue vs Expense breakdown for a given [year].
   /// Returns rows with `category`, `total`, `type` columns.
   Future<List<Map<String, dynamic>>> getRevenueExpenseBreakdown(int year, {String? currency}) async {
     final db = await _db;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
     final yearStr = year.toString();
+    String currencyFilter = '';
+    List<dynamic> currencyArgs = [];
+    if (currency != null && currency.isNotEmpty) {
+      currencyFilter = ' AND currency = ?';
+      currencyArgs = [currency];
+    }
 
     final results = <Map<String, dynamic>>[];
 
@@ -443,7 +460,7 @@ class ReportService {
         AND strftime('%Y', created_at) = ?
         $currencyFilter
       GROUP BY category
-    ''', [yearStr]);
+    ''', [yearStr, ...currencyArgs]);
     results.addAll(revenueData);
 
     // Expenses by category
@@ -456,7 +473,7 @@ class ReportService {
       WHERE strftime('%Y', expense_date) = ?
         $currencyFilter
       GROUP BY category
-    ''', [yearStr]);
+    ''', [yearStr, ...currencyArgs]);
     results.addAll(expenseData);
 
     // ── M-06: إزالة المشتريات من فئة المصروفات ──
@@ -471,7 +488,12 @@ class ReportService {
   /// Returns rows with `date`, `total` columns.
   Future<List<Map<String, dynamic>>> getDailySalesTrend(int days, {String? currency}) async {
     final db = await _db;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
+    String currencyFilter = '';
+    List<dynamic> args = [];
+    if (currency != null && currency.isNotEmpty) {
+      currencyFilter = ' AND currency = ?';
+      args.add(currency);
+    }
     final now = DateTime.now();
     final startDate = now.subtract(Duration(days: days - 1));
     final startDateStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
@@ -484,14 +506,19 @@ class ReportService {
         $currencyFilter
       GROUP BY date(created_at)
       ORDER BY date(created_at) ASC
-    ''', [startDateStr]);
+    ''', [startDateStr, ...args]);
   }
 
   /// Top products by sales amount.
   /// Returns rows with `product_name`, `total_quantity`, `total_amount` columns.
   Future<List<Map<String, dynamic>>> getTopProducts(int limit, {String? currency}) async {
     final db = await _db;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND i.currency = '$currency'" : '';
+    String currencyFilter = '';
+    List<dynamic> args = [];
+    if (currency != null && currency.isNotEmpty) {
+      currencyFilter = ' AND i.currency = ?';
+      args.add(currency);
+    }
     return await db.rawQuery('''
       SELECT ii.product_name,
         SUM(ii.quantity) AS total_quantity,
@@ -503,7 +530,7 @@ class ReportService {
       GROUP BY ii.product_name
       ORDER BY total_amount DESC
       LIMIT ?
-    ''', [limit]);
+    ''', [...args, limit]);
   }
 
   /// Top customer balances.
@@ -514,7 +541,15 @@ class ReportService {
   /// Returns 12 rows with `month`, `inflow`, `outflow` columns.
   Future<List<Map<String, dynamic>>> getMonthlyCashFlow(int year, {String? currency}) async {
     final db = await _db;
-    final currencyFilter = currency != null && currency.isNotEmpty ? " AND currency = '$currency'" : '';
+    final yearStr = year.toString();
+    String currencyFilter = '';
+    List<dynamic> inflowArgs = [yearStr];
+    List<dynamic> outflowArgs = [yearStr];
+    if (currency != null && currency.isNotEmpty) {
+      currencyFilter = ' AND currency = ?';
+      inflowArgs.add(currency);
+      outflowArgs.add(currency);
+    }
     return await db.rawQuery('''
       SELECT m.month,
         COALESCE(i.inflow, 0.0) AS inflow,
@@ -529,7 +564,7 @@ class ReportService {
                SUM(paid_amount) AS inflow
         FROM invoices
         WHERE type = 'sale' AND is_return = 0 AND paid_amount > 0
-          AND strftime('%Y', created_at) = '$year'
+          AND strftime('%Y', created_at) = ?
           $currencyFilter
         GROUP BY month
       ) i ON m.month = i.month
@@ -537,11 +572,11 @@ class ReportService {
         SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
                SUM(total) AS outflow
         FROM expenses
-        WHERE strftime('%Y', expense_date) = '$year'
+        WHERE strftime('%Y', expense_date) = ?
           $currencyFilter
         GROUP BY month
       ) o ON m.month = o.month
       ORDER BY m.month
-    ''');
+    ''', [...inflowArgs, ...outflowArgs]);
   }
 }

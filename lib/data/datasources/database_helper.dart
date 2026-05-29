@@ -3642,7 +3642,6 @@ class DatabaseHelper {
     paymentMethod: paymentMethod,
     notes: notes,
   );
-  Future<void> cancelInvoice(String id) => invoices.cancelInvoice(id);
   Future<Map<String, String>> checkReturnLimits(String originalInvoiceId, List<Map<String, dynamic>> returnItems) => invoices.checkReturnLimits(originalInvoiceId, returnItems);
 
   // ══════════════════════════════════════════════════════════════
@@ -3775,6 +3774,7 @@ class DatabaseHelper {
   Future<double> getTotalSalesForDate(DateTime date) => invoices.getTotalSalesForDate(date);
   Future<double> getTotalPurchasesThisMonth() => invoices.getTotalPurchasesThisMonth();
   Future<double> getTotalSalesThisMonth() => invoices.getTotalSalesThisMonth();
+  Future<double> getCOGSThisMonth() => invoices.getCOGSThisMonth();
   Future<int> getInvoiceCountForDate(DateTime date) => invoices.getInvoiceCountForDate(date);
 
   Future<double> getCashBalance() => invoices.getCashBalance();

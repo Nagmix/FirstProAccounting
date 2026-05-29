@@ -54,6 +54,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
         db.getCustomerCount(),
         db.getCashBalance(),
         db.getRecentInvoices(limit: 5),
+        db.getCOGSThisMonth(),  // Real COGS from invoice_items
       ]);
 
       final dbInstance = await db.database;
@@ -82,7 +83,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
           _monthSales = MoneyHelper.readMoney(results[0]);
           _monthPurchases = MoneyHelper.readMoney(results[1]);
           _monthExpenses = MoneyHelper.readMoney(results[2]);
-          _monthCOGS = MoneyHelper.readMoney(results[1]); // TODO: replace with actual COGS query
+          _monthCOGS = MoneyHelper.readMoney(results[6]); // Real COGS from invoice_items
           _cashBalance = MoneyHelper.readMoney(results[4]);
           _recentActivity = results[5] as List<Map<String, dynamic>>;
           _topCustomers = topCustomersResult;

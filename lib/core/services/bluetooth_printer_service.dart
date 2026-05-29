@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
-import '../../../core/utils/esc_pos_commands.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../utils/esc_pos_commands.dart';
+import '../../data/datasources/database_helper.dart';
 import '../utils/money_helper.dart';
 
 /// Bluetooth printer device info.

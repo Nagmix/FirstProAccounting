@@ -267,9 +267,9 @@ class AccountRepository {
     final yearStart = '$year-01-01';
     final yearEnd = '$year-12-31';
 
-    // Calculate from transactions table instead of cached accounts.balance (BUG FIX)
+    // REVENUE accounts have credit normal balance → revenue = credit - debit
     final revenueResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
+      SELECT COALESCE(SUM(t.credit) - SUM(t.debit), 0.0) as total
       FROM transactions t
       INNER JOIN accounts a ON t.account_id = a.id
       WHERE a.account_type = 'REVENUE' AND a.is_active = 1
@@ -277,6 +277,7 @@ class AccountRepository {
     ''', [yearStart, yearEnd]);
     final totalRevenue = MoneyHelper.readMoney(revenueResult.first['total']);
 
+    // COST accounts have debit normal balance → cost = debit - credit
     final costResult = await db.rawQuery('''
       SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
       FROM transactions t
@@ -286,6 +287,7 @@ class AccountRepository {
     ''', [yearStart, yearEnd]);
     final totalCosts = MoneyHelper.readMoney(costResult.first['total']);
 
+    // EXPENSE accounts have debit normal balance → expense = debit - credit
     final expenseResult = await db.rawQuery('''
       SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
       FROM transactions t
@@ -356,15 +358,23 @@ class AccountRepository {
       final retainedEarningsAccounts = await txn.query('accounts', where: 'account_code LIKE ? AND is_active = 1', whereArgs: ['290%']);
 
       /// Calculate account balance from transactions table for the fiscal year
-      /// instead of reading the cached accounts.balance (BUG FIX)
-      Future<double> calcBalanceFromTransactions(int accountId) async {
+      /// Returns the NORMAL balance: positive for debit-type (ASSET, EXPENSE, COST),
+      /// positive for credit-type (REVENUE, LIABILITY, EQUITY).
+      Future<double> calcNormalBalance(int accountId, String accountType) async {
         final result = await txn.rawQuery(
-          "SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS balance "
+          "SELECT COALESCE(SUM(debit), 0) AS total_debit, COALESCE(SUM(credit), 0) AS total_credit "
           "FROM transactions "
           "WHERE account_id = ? AND date >= ? AND date <= ?",
           [accountId, yearStart, yearEnd],
         );
-        return MoneyHelper.readMoney(result.first['balance']);
+        final totalDebit = MoneyHelper.readMoney(result.first['total_debit']);
+        final totalCredit = MoneyHelper.readMoney(result.first['total_credit']);
+        // Credit-type accounts: normal balance = credit - debit (positive)
+        // Debit-type accounts: normal balance = debit - credit (positive)
+        const creditTypes = ['REVENUE', 'LIABILITY', 'EQUITY'];
+        return creditTypes.contains(accountType)
+            ? (totalCredit - totalDebit)
+            : (totalDebit - totalCredit);
       }
 
       // Calculate net profit per currency using transaction-derived balances
@@ -375,21 +385,21 @@ class AccountRepository {
       for (final acc in revenueAccounts) {
         final currency = acc['currency'] as String? ?? 'YER';
         final accId = acc['id'] as int;
-        final balance = await calcBalanceFromTransactions(accId);
+        final balance = await calcNormalBalance(accId, 'REVENUE');
         revenuePerCurrency[currency] = (revenuePerCurrency[currency] ?? 0.0) + balance;
       }
 
       for (final acc in costAccounts) {
         final currency = acc['currency'] as String? ?? 'YER';
         final accId = acc['id'] as int;
-        final balance = await calcBalanceFromTransactions(accId);
+        final balance = await calcNormalBalance(accId, 'COST');
         costPerCurrency[currency] = (costPerCurrency[currency] ?? 0.0) + balance;
       }
 
       for (final acc in expenseAccounts) {
         final currency = acc['currency'] as String? ?? 'YER';
         final accId = acc['id'] as int;
-        final balance = await calcBalanceFromTransactions(accId);
+        final balance = await calcNormalBalance(accId, 'EXPENSE');
         expensePerCurrency[currency] = (expensePerCurrency[currency] ?? 0.0) + balance;
       }
 
@@ -412,10 +422,10 @@ class AccountRepository {
         // Close revenue accounts: Debit Revenue, Credit Retained Earnings
         for (final acc in revenueAccounts.where((a) => a['currency'] == currency)) {
           final accId = acc['id'] as int;
-          final balance = await calcBalanceFromTransactions(accId);
+          final balance = await calcNormalBalance(accId, 'REVENUE');
           if (balance == 0.0) continue;
 
-          // Revenue accounts have credit balance, to close we debit them
+          // Revenue accounts have credit normal balance, to close we debit them
           await txn.insert('transactions', {
             'account_id': accId,
             'journal_id': journalId,
@@ -443,10 +453,10 @@ class AccountRepository {
         // Close cost accounts: Debit Retained Earnings, Credit Cost
         for (final acc in costAccounts.where((a) => a['currency'] == currency)) {
           final accId = acc['id'] as int;
-          final balance = await calcBalanceFromTransactions(accId);
+          final balance = await calcNormalBalance(accId, 'COST');
           if (balance == 0.0) continue;
 
-          // Cost accounts have debit balance, to close we credit them
+          // Cost accounts have debit normal balance, to close we credit them
           await txn.insert('transactions', {
             'account_id': accId,
             'journal_id': journalId,
@@ -474,7 +484,7 @@ class AccountRepository {
         // Close expense accounts: Debit Retained Earnings, Credit Expense
         for (final acc in expenseAccounts.where((a) => a['currency'] == currency)) {
           final accId = acc['id'] as int;
-          final balance = await calcBalanceFromTransactions(accId);
+          final balance = await calcNormalBalance(accId, 'EXPENSE');
           if (balance == 0.0) continue;
 
           // Expense accounts have debit balance, to close we credit them
