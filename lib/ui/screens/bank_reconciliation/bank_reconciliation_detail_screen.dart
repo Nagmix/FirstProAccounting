@@ -393,7 +393,7 @@ class _BankReconciliationDetailScreenState
                                       child: _infoField(
                                           'تاريخ الكشف',
                                           _formatDate(
-                                              recon.statementDate)),
+                                              recon.statementDate.toIso8601String())),
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(
