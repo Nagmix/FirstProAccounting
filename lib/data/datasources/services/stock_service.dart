@@ -96,10 +96,27 @@ class StockService {
         if (toProduct.isNotEmpty) {
           final currentStock = (toProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
           final toProductId = toProduct.first['id'] as int;
+          final newStock = currentStock + quantity;
+
+          // ── W-05: إعادة حساب متوسط التكلفة المرجح في المستودع الوجهة ──
+          // حسب IAS 2: تكلفة المخزون تشمل كل تكاليف الشراء
+          double toAvgCost = MoneyHelper.readMoney(toProduct.first['average_cost']);
+          double newAvgCost;
+          if (currentStock > 0 && toAvgCost > 0) {
+            // المتوسط المرجح = (رصيد حالي × متوسط تكلفة حالي + كمية محولة × متوسط تكلفة مصدر) ÷ الرصيد الجديد
+            final totalValue = (currentStock * toAvgCost) + (quantity * sourceAvgCost);
+            newAvgCost = totalValue / newStock;
+          } else {
+            // لا يوجد مخزون مسبق: نستخدم تكلفة المصدر
+            newAvgCost = sourceAvgCost;
+          }
+
           await txn.update(
             'products',
             {
-              'current_stock': currentStock + quantity,
+              'current_stock': newStock,
+              'average_cost': MoneyHelper.toCents(newAvgCost),
+              'cost_price': MoneyHelper.toCents(newAvgCost),
               'updated_at': now,
             },
             where: 'id = ?',

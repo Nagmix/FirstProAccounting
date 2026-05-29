@@ -88,6 +88,16 @@ class InvoiceRepository {
       // ── Stock management ──
       // Sale/POS: decrement stock; Purchase: increment stock; Returns do the opposite
       // Also logs stock movements and updates weighted average cost on purchases
+
+      // ── M-05: حساب إجمالي الكميات الأساسية لتوزيع مصاريف النقل ──
+      double totalBaseQuantityForTransport = 0.0;
+      if (transportCharges > 0) {
+        for (final item in items) {
+          final bq = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          totalBaseQuantityForTransport += bq;
+        }
+      }
+
       for (final item in items) {
         final productId = (item['product_id'] as num?)?.toInt();
         final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
@@ -150,16 +160,26 @@ class InvoiceRepository {
               'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
               [baseQuantity, now, productId],
             );
-            // Update weighted average cost on purchase
+            // ── M-05: تحديث متوسط التكلفة المرجح مع مصاريف الاستلام ──
+            // حسب IAS 2: تكلفة المخزون تشمل كل تكاليف الشراء بما فيها النقل والتأمين
+            // المبلغ الإجمالي لكل وحدة = سعر الشراء + الحصة النسبية من مصاريف النقل
             final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
             if (productRow.isNotEmpty) {
               final currentStock = (productRow.first['current_stock'] as num?)?.toDouble() ?? 0.0;
               final currentAvgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
               // current_stock already updated above, so subtract the new qty to get the old stock
               final oldStock = currentStock - baseQuantity;
-              final newTotalValue = (oldStock * currentAvgCost) + (baseQuantity * unitPrice);
+              // M-05: توزيع مصاريف النقل على الكميات المشتراة (تناسبياً)
+              // حسب IAS 2: تكلفة المخزون تشمل كل تكاليف الشراء بما فيها النقل والتأمين
+              double effectiveUnitCost = unitPrice;
+              if (transportCharges > 0 && totalBaseQuantityForTransport > 0) {
+                // توزيع متناسب: حصة الصنف من مصاريف النقل = (كمية الصنف / إجمالي الكميات) × إجمالي مصاريف النقل
+                final itemTransportShare = (baseQuantity / totalBaseQuantityForTransport) * transportCharges;
+                effectiveUnitCost = unitPrice + (itemTransportShare / baseQuantity);
+              }
+              final newTotalValue = (oldStock * currentAvgCost) + (baseQuantity * effectiveUnitCost);
               final newTotalStock = currentStock; // already includes new qty
-              final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : unitPrice;
+              final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : effectiveUnitCost;
               await txn.update(
                 'products',
                 {
@@ -772,10 +792,125 @@ class InvoiceRepository {
         }
       }
 
-      // ── Transport Charges ──
-      // NOTE: Transport charges are already included in `total` (total = subtotal - discount + tax + transportCharges).
-      // The main journal entries and cash box update above already account for transport correctly.
-      // No separate transport journal entries are needed here to avoid double-counting.
+      // ── M-01 + M-02: قيود الخصومات والنقل المستقلة ──
+      // حسب المعايير المحاسبية: يجب الإفصاح عن الإيرادات الإجمالية والخصومات بشكل منفصل
+      // ومصاريف/إيرادات النقل في حساب مستقل بدل تضمينها في المبيعات
+
+      // M-01: الخصومات — إنشاء قيد مستقل لحساب "خصم مسموح به"
+      final discountAmount = MoneyHelper.readMoney(invoiceMap['discount_amount']);
+      if (discountAmount.abs() >= 0.005 && (invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
+        // البحث عن حساب خصم مسموح به (4500+offset) أو إنشاؤه
+        final discountCode = (4500 + codeOffset).toString();
+        final discountAccount = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [discountCode, journalCurrency],
+          limit: 1,
+        );
+        int? discountAccountId;
+        if (discountAccount.isNotEmpty) {
+          discountAccountId = discountAccount.first['id'] as int;
+        } else {
+          discountAccountId = await txn.insert('accounts', {
+            'name_ar': 'خصم مسموح به ($journalCurrency)',
+            'name_en': 'Discount Allowed ($journalCurrency)',
+            'account_code': discountCode,
+            'account_type': 'EXPENSE',
+            'balance': 0,
+            'currency': journalCurrency,
+            'balance_type': 'debit',
+            'is_active': 1,
+            'is_system': 1,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+
+        final yerDiscount = needsYerConversion ? discountAmount * exchangeRate : discountAmount;
+        // مدين: خصم مسموح به (مصروف) / دائن: المبيعات (تخفيض الإيراد بقيمة الخصم)
+        // المبيعات أعلاه سُجلت بالإجمالي (شامل الخصم)، هنا نعكس الخصم
+        if (discountAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': discountAccountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(yerDiscount),
+            'credit': 0,
+            'description': 'خصم مسموح به - ${invoiceMap['id']}',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountAccountId, yerDiscount, 0.0, now);
+        }
+        if (salesAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': salesAccountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(yerDiscount),
+            'description': 'تخفيض مبيعات بقيمة الخصم - ${invoiceMap['id']}',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, yerDiscount, now);
+        }
+      }
+
+      // M-02: مصاريف/إيرادات النقل — إنشاء قيد مستقل لحساب "أجور النقل"
+      if (transportCharges.abs() >= 0.005 && (invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
+        final transportCode = (5200 + codeOffset).toString();
+        final transportAccount = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [transportCode, journalCurrency],
+          limit: 1,
+        );
+        int? transportAccountId;
+        if (transportAccount.isNotEmpty) {
+          transportAccountId = transportAccount.first['id'] as int;
+        } else {
+          transportAccountId = await txn.insert('accounts', {
+            'name_ar': 'أجور النقل ($journalCurrency)',
+            'name_en': 'Transport Charges ($journalCurrency)',
+            'account_code': transportCode,
+            'account_type': 'EXPENSE',
+            'balance': 0,
+            'currency': journalCurrency,
+            'balance_type': 'debit',
+            'is_active': 1,
+            'is_system': 1,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+
+        final yerTransport = needsYerConversion ? transportCharges * exchangeRate : transportCharges;
+        // مدين: أجور النقل (مصروف) / دائن: المبيعات (تخفيض الإيراد بقيمة النقل)
+        // المبيعات أعلاه سُجلت بالإجمالي (شامل النقل)، هنا نفصل النقل
+        if (transportAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': transportAccountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(yerTransport),
+            'credit': 0,
+            'description': 'مصاريف نقل - ${invoiceMap['id']}',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, transportAccountId, yerTransport, 0.0, now);
+        }
+        if (salesAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': salesAccountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(yerTransport),
+            'description': 'تخفيض مبيعات بقيمة النقل - ${invoiceMap['id']}',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, yerTransport, now);
+        }
+      }
 
       // ── Validate journal balance (C-03): debits must equal credits ──
       final journalEntries = await txn.query(

@@ -791,13 +791,26 @@ class _ReportsScreenState extends State<ReportsScreen>
       " ORDER BY date ASC, created_at ASC",
       args,
     );
+
+    // ── W-01: احتساب الرصيد الجاري حسب طبيعة الحساب ──
+    // حسابات ذات طبيعة مدينة (أصول، تكاليف): الرصيد = مدين - دائن
+    // حسابات ذات طبيعة دائنة (خصوم، إيرادات، حقوق ملكية): الرصيد = دائن - مدين
+    final accountRow = await database.query('accounts', where: 'id = ?', whereArgs: [_selectedAccountId!], limit: 1);
+    final balanceType = accountRow.isNotEmpty ? (accountRow.first['balance_type'] as String? ?? 'credit') : 'credit';
+    final isDebitNature = balanceType == 'debit';
+
     double running = 0;
     double totalDebit = 0, totalCredit = 0;
     _reportRows = [];
     for (final tx in transactions) {
       final debit = MoneyHelper.readMoney(tx['debit']);
       final credit = MoneyHelper.readMoney(tx['credit']);
-      running += (debit - credit);
+      // W-01: حساب الرصيد حسب طبيعة الحساب
+      if (isDebitNature) {
+        running += (debit - credit); // أصول وتكاليف: المدين يزيد والدائن ينقص
+      } else {
+        running += (credit - debit); // خصوم وإيرادات وحقوق ملكية: الدائن يزيد والمدين ينقص
+      }
       totalDebit += debit;
       totalCredit += credit;
       _reportRows.add({

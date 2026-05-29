@@ -438,20 +438,23 @@ class CashBoxService {
       final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
       final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
 
+      // ── M-07: تحديث رصيد العميل/المورد حسب الطريقة المعتمدة عالمياً ──
+      // سند قبض من عميل = العميل يدفع → رصيده ينقص (ذمته تقل)
+      // سند صرف لعميل = نعيد للعميل أموال → رصيده ينقص (ذمته تقل)
+      // سند صرف لمورد = ندفع للمورد → رصيده ينقص (ما علينا يقل)
+      // سند قبض من مورد = المورد يعيد لنا أموال → رصيده ينقص (ما علينا يقل)
       if (customerId != null && totalAmount > 0) {
-        if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
-        } else if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
-        }
+        // في كلتا الحالتين (قبض أو صرف) رصيد العميل ينقص:
+        // قبض: العميل سدد دينه → ينقص
+        // صرف: أعدنا أموال للعميل → ذمته تقل → ينقص
+        await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
       }
 
       if (supplierId != null && totalAmount > 0) {
-        if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
-        } else if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
-        }
+        // في كلتا الحالتين (قبض أو صرف) رصيد المورد ينقص:
+        // صرف: سددنا ديننا للمورد → ينقص
+        // قبض: المورد أعاد لنا أموال → ما علينا يقل → ينقص
+        await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
       }
     });
     return voucherId;
@@ -536,22 +539,17 @@ class CashBoxService {
         }
       }
 
-      // عكس تأثير رصيد العميل/المورد
+      // ── M-07: عكس تأثير رصيد العميل/المورد (عكس العملية الأصلية) ──
+      // العكس: حيث أن العملية الأصلية كانت تنقص الرصيد، فالعكس يزيد الرصيد
       final customerId = voucherData['customer_id'];
       final supplierId = voucherData['supplier_id'];
       if (customerId != null && totalAmount > 0) {
-        if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
-        } else if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
-        }
+        // عكس العملية الأصلية: كان ينقص → الآن يزيد
+        await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
       }
       if (supplierId != null && totalAmount > 0) {
-        if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
-        } else if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
-        }
+        // عكس العملية الأصلية: كان ينقص → الآن يزيد
+        await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
       }
 
       // حذف بنود السند ثم السند نفسه
