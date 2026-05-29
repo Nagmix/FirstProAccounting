@@ -231,8 +231,17 @@ class JournalService {
   /// Calculate foreign-exchange gains or losses.
   ///
   /// Used when closing a period or settling an account in a different
-  /// currency.  Formula: gain/loss = (base_amount / current_rate) -
-  /// (base_amount / original_rate).
+  /// currency.
+  ///
+  /// [baseAmount] is in LOCAL currency (YER).
+  /// [originalRate] and [currentRate] are quoted as local units per foreign unit
+  /// (e.g. 500 YER/USD).
+  ///
+  /// Fix #3: The result must be in LOCAL currency (YER), not foreign.
+  /// Correct formula:
+  ///   foreignAmount = baseAmount / originalRate
+  ///   valueAtCurrentRate = foreignAmount * currentRate = (baseAmount / originalRate) * currentRate
+  ///   gainLoss = valueAtCurrentRate - baseAmount
   ///
   /// A positive result = exchange gain; negative = exchange loss.
   Future<double> calculateExchangeGainLoss({
@@ -241,10 +250,14 @@ class JournalService {
     required double currentRate,
   }) async {
     if (originalRate <= 0 || currentRate <= 0) return 0.0;
-    final valueAtOriginalRate = baseAmount / originalRate;
-    final valueAtCurrentRate = baseAmount / currentRate;
-    // إذا كان الفرق إيجابياً = مكسب صرف، سلبياً = خسارة صرف
-    return valueAtCurrentRate - valueAtOriginalRate;
+    // Fix #3: Convert to local currency correctly
+    // baseAmount is in local currency (YER)
+    // We convert to foreign: foreignAmount = baseAmount / originalRate
+    // Then convert back at current rate: valueNow = foreignAmount * currentRate
+    // The difference in local currency = valueNow - baseAmount
+    final foreignAmount = baseAmount / originalRate;
+    final valueAtCurrentRate = foreignAmount * currentRate;
+    return valueAtCurrentRate - baseAmount;
   }
 
   /// Create a journal entry for foreign-exchange gains/losses.
@@ -260,12 +273,12 @@ class JournalService {
     final now = DateTime.now().toIso8601String();
     final journalId = DateTime.now().millisecondsSinceEpoch;
 
-    // البحث عن حساب مكاسب/خسائر الصرف (إن وجد) أو استخدام حساب المصاريف
-    var exchangeAccountId = await getOrCreateExchangeAccount();
+    // Fix #5: Use separate gain/loss accounts with correct account types
+    final exchangeAccountId = await getOrCreateExchangeAccount(isGain: gainLossAmount > 0);
 
     await db.transaction((txn) async {
       if (gainLossAmount > 0) {
-        // مكسب صرف: مدين = الحساب الأصلي، دائن = حساب مكاسب الصرف
+        // مكسب صرف: مدين = الحساب الأصلي، دائن = حساب مكاسب الصرف (REVENUE/credit)
         await txn.insert('transactions', {
           'account_id': accountId,
           'journal_id': journalId,
@@ -291,7 +304,7 @@ class JournalService {
           txn, exchangeAccountId, 0.0, gainLossAmount.abs(), now,
         );
       } else {
-        // خسارة صرف: مدين = حساب خسائر الصرف، دائن = الحساب الأصلي
+        // خسارة صرف: مدين = حساب خسائر الصرف (EXPENSE/debit)، دائن = الحساب الأصلي
         await txn.insert('transactions', {
           'account_id': exchangeAccountId,
           'journal_id': journalId,
@@ -350,33 +363,59 @@ class JournalService {
 
   /// Get or create the exchange-rate gains/losses system account.
   ///
-  /// Returns the account id of the existing or newly-created account.
-  Future<int> getOrCreateExchangeAccount() async {
+  /// Fix #5: Separate gain and loss into two accounts with correct types:
+  /// - Exchange Gains: REVENUE / balance_type: 'credit'
+  /// - Exchange Losses: EXPENSE / balance_type: 'debit'
+  /// Both share code prefix 53xx to be findable together.
+  ///
+  /// Returns the account id of the GAINS account (for credits) or the
+  /// LOSSES account (for debits), depending on [isGain].
+  Future<int> getOrCreateExchangeAccount({bool isGain = true}) async {
     final db = await _db;
-    // البحث عن حساب مكاسب/خسائر الصرف
+    final code = isGain ? '5310' : '5300';
     final existing = await db.query(
       'accounts',
-      where: "account_code LIKE '53%' AND is_system = 1",
+      where: 'account_code = ? AND is_system = 1',
+      whereArgs: [code],
       limit: 1,
     );
     if (existing.isNotEmpty) return existing.first['id'] as int;
 
-    // إنشاء حساب جديد
+    // Create new account
     final now = DateTime.now().toIso8601String();
-    final id = await db.insert('accounts', {
-      'name_ar': 'مكاسب/خسائر فروقات الصرف',
-      'name_en': 'Exchange Rate Gains/Losses',
-      'account_code': '5300',
-      'account_type': 'EXPENSE',
-      'balance': 0,
-      'currency': 'YER',
-      'balance_type': 'credit',
-      'is_active': 1,
-      'is_system': 1,
-      'created_at': now,
-      'updated_at': now,
-    });
-    return id;
+    if (isGain) {
+      // Exchange Gains → REVENUE / credit nature
+      final id = await db.insert('accounts', {
+        'name_ar': 'مكاسب فروقات الصرف',
+        'name_en': 'Exchange Rate Gains',
+        'account_code': '5310',
+        'account_type': 'REVENUE',
+        'balance': 0,
+        'currency': 'YER',
+        'balance_type': 'credit',
+        'is_active': 1,
+        'is_system': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+      return id;
+    } else {
+      // Exchange Losses → EXPENSE / debit nature
+      final id = await db.insert('accounts', {
+        'name_ar': 'خسائر فروقات الصرف',
+        'name_en': 'Exchange Rate Losses',
+        'account_code': '5300',
+        'account_type': 'EXPENSE',
+        'balance': 0,
+        'currency': 'YER',
+        'balance_type': 'debit',
+        'is_active': 1,
+        'is_system': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+      return id;
+    }
   }
 
   /// Get account by code and currency.

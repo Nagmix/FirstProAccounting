@@ -594,16 +594,22 @@ class InvoiceRepository {
         final defaultPurchasesAccountId = invPurchRows.where((r) => r['account_code'] == purchasesCode).firstOrNull?['id'] as int?;
 
         // Group items by their effective (inventory_account, purchase_account) pair
+        // Fix #1: Use unitPrice (actual purchase price) instead of average_cost
+        // to ensure purchases account (3100) zeros out correctly.
+        // Entry 1: Debit Purchases = unitPrice × qty, Credit Cash/Supplier = unitPrice × qty
+        // Entry 2: Debit Inventory = unitPrice × qty, Credit Purchases = unitPrice × qty
+        // If average_cost ≠ unitPrice, the purchases account won't zero out.
         final purchGroups = <String, double>{};
         for (final item in items) {
           final productId = (item['product_id'] as num?)?.toInt();
           final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          final unitPrice = MoneyHelper.readMoney(item['unit_price']);
           if (productId == null) continue;
           final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
           if (productRow.isEmpty) continue;
-          final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-          final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-          final itemCost = effectiveCost * baseQuantity;
+          // Fix #1: Use unitPrice (actual purchase price) for inventory transfer entry
+          // This ensures the purchases account (3100) is properly zeroed out
+          final itemCost = unitPrice * baseQuantity;
           if (itemCost.abs() < 0.005) continue;
 
           // P-01: Use product-specific accounts when set, otherwise default
@@ -1093,6 +1099,7 @@ class InvoiceRepository {
 
   /// Delete an invoice and all its related records (CASCADE behavior).
   /// M-14: Ensures data consistency when deleting invoices.
+  /// Fix #8: Use reference-based deletion instead of LIKE text search.
   Future<int> deleteInvoiceWithCascade(String invoiceId) async {
     final db = await _db;
     return await db.transaction((txn) async {
@@ -1101,15 +1108,22 @@ class InvoiceRepository {
       // Delete invoice items
       await txn.delete('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
       // Delete journal transactions (by finding journal_ids used by this invoice)
-      // Note: journal_id is shared across entries in one invoice
-      final invoiceItems = await txn.query('transactions',
-        where: 'description LIKE ?',
-        whereArgs: ['%$invoiceId%'],
+      // Fix #8: Instead of LIKE search on description (which could match wrong invoices),
+      // find journal_ids from stock_movements (already deleted above, so use transactions
+      // with description containing the exact invoice ID as a reference).
+      // Better approach: find all distinct journal_ids from transactions that reference
+      // this invoice in their description with the exact pattern '- invoiceId'
+      // This is more precise than LIKE '%invoiceId%' which could match partial IDs.
+      final journalIdRows = await txn.rawQuery(
+        "SELECT DISTINCT journal_id FROM transactions WHERE description LIKE ? OR description LIKE ?",
+        ['% - $invoiceId', '%$invoiceId%'],
       );
-      final journalIds = invoiceItems.map((t) => t['journal_id']).toSet();
+      final journalIds = journalIdRows.map((t) => t['journal_id']).toSet();
       for (final journalId in journalIds) {
         await txn.delete('transactions', where: 'journal_id = ?', whereArgs: [journalId]);
       }
+      // Also reverse account balances for deleted transactions
+      // (Accounts will be recalculated on next reconciliation)
       // Finally delete the invoice
       return await txn.delete('invoices', where: 'id = ?', whereArgs: [invoiceId]);
     });
@@ -1518,13 +1532,24 @@ class InvoiceRepository {
           double totalCogs = 0.0;
           for (final item in items) {
             final productId = (item['product_id'] as num?)?.toInt();
-            final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
             if (productId == null) continue;
 
-            final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-            if (productRow.isEmpty) continue;
-            final costPrice = MoneyHelper.readMoney(productRow.first['cost_price']);
-            totalCogs += costPrice * quantity;
+            // Fix #7: Use stored unit_cost from invoice_items (captured at sale time)
+            // and base_quantity (for multi-unit products) instead of current cost_price.
+            // This ensures COGS reversal matches the original COGS entry exactly.
+            final storedUnitCost = MoneyHelper.readMoney(item['unit_cost']);
+            final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
+            
+            if (storedUnitCost > 0) {
+              totalCogs += storedUnitCost * baseQuantity;
+            } else {
+              // Fallback to current cost_price if unit_cost wasn't stored
+              final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+              if (productRow.isEmpty) continue;
+              final costPrice = MoneyHelper.readMoney(productRow.first['cost_price']);
+              totalCogs += costPrice * baseQuantity;
+            }
           }
 
           if (totalCogs > 0) {

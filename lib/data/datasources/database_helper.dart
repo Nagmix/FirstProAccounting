@@ -57,7 +57,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 38;
+  static const int _databaseVersion = 39;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -118,7 +118,10 @@ class DatabaseHelper {
         is_active INTEGER NOT NULL DEFAULT 1,
         is_system INTEGER NOT NULL DEFAULT 0,
         debt_ceiling INTEGER NOT NULL DEFAULT 0,
-        balance_type TEXT NOT NULL DEFAULT 'credit',
+        balance_type TEXT NOT NULL DEFAULT 'debit',
+        -- Fix #9: Default 'debit' is correct for ASSET/EXPENSE which are the most common
+        -- newly created accounts. LIABILITY/REVENUE/EQUITY accounts use 'credit' but
+        -- those are typically seeded or set explicitly during creation.
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (parent_id) REFERENCES accounts (id)
@@ -2600,6 +2603,79 @@ class DatabaseHelper {
         logMigrationError("migration v38 init_cost_layers", e);
       }
     }
+  }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Migration v39: Fix balance_type for all accounts
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 39) {
+      await _migrateV39(db);
+    }
+  }
+
+  /// Migration v39: Fix #9 — Set correct balance_type for existing accounts
+  /// and ensure default accounts have the right balance_type.
+  ///
+  /// ASSET, EXPENSE → 'debit' (increase on debit side)
+  /// LIABILITY, REVENUE, EQUITY → 'credit' (increase on credit side)
+  Future<void> _migrateV39(Database db) async {
+    await db.transaction((txn) async {
+      // Fix balance_type for ASSET accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('ASSET') AND balance_type != 'debit'",
+        );
+      } catch (e) {
+        logMigrationError("migration v39 fix_asset_balance_type", e);
+      }
+
+      // Fix balance_type for EXPENSE accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('EXPENSE') AND balance_type != 'debit'",
+        );
+      } catch (e) {
+        logMigrationError("migration v39 fix_expense_balance_type", e);
+      }
+
+      // Fix balance_type for LIABILITY accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('LIABILITY') AND balance_type != 'credit'",
+        );
+      } catch (e) {
+        logMigrationError("migration v39 fix_liability_balance_type", e);
+      }
+
+      // Fix balance_type for REVENUE accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('REVENUE') AND balance_type != 'credit'",
+        );
+      } catch (e) {
+        logMigrationError("migration v39 fix_revenue_balance_type", e);
+      }
+
+      // Fix balance_type for EQUITY accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('EQUITY') AND balance_type != 'credit'",
+        );
+      } catch (e) {
+        logMigrationError("migration v39 fix_equity_balance_type", e);
+      }
+
+      // Fix old exchange account (5300) that was EXPENSE/credit → now should be EXPENSE/debit
+      // The new separate accounts (5300=losses/debit, 5310=gains/credit) will be created automatically
+      // when getOrCreateExchangeAccount is called next time.
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'debit' WHERE account_code = '5300' AND account_type = 'EXPENSE' AND balance_type = 'credit'",
+        );
+      } catch (e) {
+        logMigrationError("migration v39 fix_exchange_account", e);
+      }
+    });
   }
 
   /// C-06: Migrate all REAL monetary columns to INTEGER (cents).

@@ -539,21 +539,26 @@ class ReportService {
 
   /// Monthly cash flow (inflow vs outflow) for a given [year].
   /// Returns 12 rows with `month`, `inflow`, `outflow` columns.
+  /// Fix #6: Include purchase payments and voucher payments in outflow.
   Future<List<Map<String, dynamic>>> getMonthlyCashFlow(int year, {String? currency}) async {
     final db = await _db;
     final yearStr = year.toString();
     String currencyFilter = '';
     List<dynamic> inflowArgs = [yearStr];
     List<dynamic> outflowArgs = [yearStr];
+    List<dynamic> purchaseOutflowArgs = [yearStr];
+    List<dynamic> voucherOutflowArgs = [yearStr];
     if (currency != null && currency.isNotEmpty) {
       currencyFilter = ' AND currency = ?';
       inflowArgs.add(currency);
       outflowArgs.add(currency);
+      purchaseOutflowArgs.add(currency);
+      voucherOutflowArgs.add(currency);
     }
     return await db.rawQuery('''
       SELECT m.month,
         COALESCE(i.inflow, 0.0) AS inflow,
-        COALESCE(o.outflow, 0.0) AS outflow
+        COALESCE(o.outflow, 0.0) + COALESCE(p.purchase_outflow, 0.0) + COALESCE(v.voucher_outflow, 0.0) AS outflow
       FROM (
         SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
         SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
@@ -569,14 +574,34 @@ class ReportService {
         GROUP BY month
       ) i ON m.month = i.month
       LEFT JOIN (
-        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
+        SELECT CAST(strftime('%m', expense_date) AS INTEGER) AS month,
                SUM(total) AS outflow
         FROM expenses
         WHERE strftime('%Y', expense_date) = ?
           $currencyFilter
         GROUP BY month
       ) o ON m.month = o.month
+      LEFT JOIN (
+        -- Fix #6: Include cash purchase payments in outflow
+        SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
+               SUM(paid_amount) AS purchase_outflow
+        FROM invoices
+        WHERE type = 'purchase' AND is_return = 0 AND payment_mechanism = 'cash' AND paid_amount > 0
+          AND strftime('%Y', created_at) = ?
+          $currencyFilter
+        GROUP BY month
+      ) p ON m.month = p.month
+      LEFT JOIN (
+        -- Fix #6: Include payment voucher outflows (سندات صرف)
+        SELECT CAST(strftime('%m', v.date) AS INTEGER) AS month,
+               SUM(v.total_amount) AS voucher_outflow
+        FROM vouchers v
+        WHERE v.voucher_type = 'payment'
+          AND strftime('%Y', v.date) = ?
+          $currencyFilter
+        GROUP BY month
+      ) v ON m.month = v.month
       ORDER BY m.month
-    ''', [...inflowArgs, ...outflowArgs]);
+    ''', [...inflowArgs, ...outflowArgs, ...purchaseOutflowArgs, ...voucherOutflowArgs]);
   }
 }

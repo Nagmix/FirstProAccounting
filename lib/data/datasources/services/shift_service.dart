@@ -61,16 +61,20 @@ class ShiftService {
 
   Future<void> updateShiftTotals(int shiftId, double saleAmount, double returnAmount, double discountAmount) async {
     final db = await _db;
+    // Fix #2: Remove double-counting of saleAmount and discountAmount in expected_amount.
+    // In SQLite SET clause, total_sales is updated FIRST (total_sales + saleAmount),
+    // then expected_amount reads the ALREADY-UPDATED total_sales.
+    // So adding saleAmount again would double-count it. Same for discountAmount.
     await db.rawUpdate('''
       UPDATE shifts SET 
         total_sales = total_sales + ?,
         total_returns = total_returns + ?,
         total_discounts = total_discounts + ?,
         transaction_count = transaction_count + 1,
-        expected_amount = opening_amount + total_sales + ? - total_returns - total_discounts - ?,
+        expected_amount = opening_amount + total_sales - total_returns - total_discounts,
         updated_at = ?
       WHERE id = ?
-    ''', [MoneyHelper.toCents(saleAmount), MoneyHelper.toCents(returnAmount), MoneyHelper.toCents(discountAmount), MoneyHelper.toCents(saleAmount), MoneyHelper.toCents(discountAmount), DateTime.now().toIso8601String(), shiftId]);
+    ''', [MoneyHelper.toCents(saleAmount), MoneyHelper.toCents(returnAmount), MoneyHelper.toCents(discountAmount), DateTime.now().toIso8601String(), shiftId]);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -585,17 +589,12 @@ class ShiftService {
             final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
             if (productId == null) continue;
 
-            double effectiveCost;
-            final storedUnitCost = MoneyHelper.readMoney(item['unit_cost']);
-            if (storedUnitCost > 0) {
-              effectiveCost = storedUnitCost;
-            } else {
-              final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-              if (productRow.isEmpty) continue;
-              final avgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-              effectiveCost = avgCost > 0 ? avgCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-            }
-            final itemCost = effectiveCost * baseQuantity;
+            // Fix #1 (shift): Use unit_price (actual purchase price) for inventory transfer
+            // to ensure purchases account (3100) zeros out correctly.
+            // unit_price is the actual purchase price per unit, which matches the
+            // debit to Purchases account in the original entry.
+            final unitPrice = MoneyHelper.readMoney(item['unit_price']);
+            final itemCost = unitPrice * baseQuantity;
             if (itemCost.abs() < 0.005) continue;
 
             // P-01: Resolve product-specific accounts

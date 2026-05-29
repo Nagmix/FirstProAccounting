@@ -156,8 +156,11 @@ class MoneyHelper {
     'balance', 'opening_balance',
   ];
 
+  // Fix #4: Include 'total_amount' — the vouchers table stores the amount
+  // in a column named 'total_amount', not 'amount'. Without this, the
+  // toCentsMap conversion would skip the field entirely, causing a ×100 error.
   static const voucherMoneyFields = [
-    'amount',
+    'total_amount', 'amount',
   ];
 
   static const shiftMoneyFields = [
