@@ -885,6 +885,24 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
     }
   }
 
+  String _getInvoiceTypeAr(String type, bool isReturn) {
+    if (type == 'purchase' && !isReturn) return 'فاتورة مشتريات';
+    if (type == 'purchase' && isReturn) return 'مرتجع مشتريات';
+    if (type == 'sale' && !isReturn) return 'فاتورة مبيعات';
+    if (type == 'sale' && isReturn) return 'مرتجع مبيعات';
+    return 'فاتورة';
+  }
+
+  String _getVoucherTypeAr(String vType) {
+    switch (vType) {
+      case 'receipt': return 'سند قبض';
+      case 'payment': return 'سند صرف';
+      case 'settlement': return 'قيد عام';
+      case 'compound': return 'قيد متعدد';
+      default: return 'سند';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
