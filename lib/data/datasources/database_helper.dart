@@ -2603,7 +2603,6 @@ class DatabaseHelper {
         logMigrationError("migration v38 init_cost_layers", e);
       }
     }
-  }
 
     // ══════════════════════════════════════════════════════════════
     //  Migration v39: Fix balance_type for all accounts
