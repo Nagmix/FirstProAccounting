@@ -278,19 +278,22 @@ class ReportService {
 
     // Use ii.unit_cost (stored at time of sale) for accurate COGS,
     // falling back to p.cost_price only if unit_cost is 0 (legacy items)
+    // FIX: CAST to INTEGER so MoneyHelper.readMoney() correctly divides by 100.
+    // Without CAST, SQLite returns REAL (because base_quantity is REAL),
+    // causing readMoney to treat it as a legacy double and skip the ÷100 conversion.
     return await db.rawQuery(
       "SELECT i.id AS invoice_id, i.type, i.total AS sale_total, i.currency, i.created_at, "
       "CASE WHEN i.customer_id IS NOT NULL THEN COALESCE(c.name, 'بدون عميل') "
       "WHEN i.supplier_id IS NOT NULL THEN COALESCE(s.name, 'بدون مورد') "
       "ELSE 'بدون عميل' END AS entity_name, "
-      "COALESCE(SUM("
+      "CAST(COALESCE(SUM("
       "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
       "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
-      "), 0) AS cost_total, "
-      "i.total - COALESCE(SUM("
+      "), 0) AS INTEGER) AS cost_total, "
+      "CAST(i.total - COALESCE(SUM("
       "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
       "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
-      "), 0) AS profit "
+      "), 0) AS INTEGER) AS profit "
       "FROM invoices i "
       "LEFT JOIN customers c ON i.customer_id = c.id "
       "LEFT JOIN suppliers s ON i.supplier_id = s.id "
@@ -355,9 +358,12 @@ class ReportService {
   Future<List<Map<String, dynamic>>> getInventoryCostReport() async {
     final db = await _db;
     return await db.rawQuery(
+      // FIX: Use COALESCE(average_cost, cost_price) instead of cost_price alone.
+      // average_cost reflects the weighted average after multiple purchases at different prices,
+      // while cost_price may be outdated. This ensures accurate inventory valuation.
       "SELECT p.id, p.name_ar, p.item_code, p.barcode, "
-      "p.current_stock, p.cost_price, p.sell_price, "
-      "CAST(ROUND(p.current_stock * p.cost_price) AS INTEGER) AS stock_cost_value, "
+      "p.current_stock, COALESCE(NULLIF(p.average_cost, 0), p.cost_price) AS cost_price, p.sell_price, "
+      "CAST(ROUND(p.current_stock * COALESCE(NULLIF(p.average_cost, 0), p.cost_price)) AS INTEGER) AS stock_cost_value, "
       "CAST(ROUND(p.current_stock * p.sell_price) AS INTEGER) AS stock_sell_value, "
       "c.name AS category_name, w.name AS warehouse_name "
       "FROM products p "

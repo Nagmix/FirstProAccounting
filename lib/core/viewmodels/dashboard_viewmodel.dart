@@ -68,12 +68,15 @@ class DashboardViewModel extends ChangeNotifier {
       totalExpenses = MoneyHelper.readMoney(expensesResult.first['total']);
 
       // Today's COGS (cost of goods sold) - calculated from invoice_items
+      // FIX: CAST to INTEGER so readMoney divides by 100 correctly.
+      // Without CAST, SQLite returns REAL (base_quantity is REAL),
+      // causing readMoney to treat it as legacy double and skip ÷100.
       try {
         final cogsResult = await db.rawQuery(
-          "SELECT COALESCE(SUM("
+          "SELECT CAST(COALESCE(SUM("
           "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
           "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
-          "), 0) AS total_cogs "
+          "), 0) AS INTEGER) AS total_cogs "
           "FROM invoice_items ii "
           "INNER JOIN invoices i ON ii.invoice_id = i.id "
           "LEFT JOIN products p ON ii.product_id = p.id "

@@ -179,15 +179,22 @@ class InvoiceRepository {
               // A-07: oldStock is now read BEFORE the stock update above, no need to recompute
               // M-05: توزيع مصاريف النقل على الكميات المشتراة (تناسبياً)
               // حسب IAS 2: تكلفة المخزون تشمل كل تكاليف الشراء بما فيها النقل والتأمين
-              double effectiveUnitCost = unitPrice;
+              //
+              // FIX: Use `quantity * unitPrice` for total purchase value (not `baseQuantity * unitPrice`).
+              // When purchasing 1 carton at 1500 with conversion_factor=20:
+              //   - quantity = 1 (carton), unitPrice = 1500 (per carton)
+              //   - baseQuantity = 20 (pieces)
+              //   - Total value = 1 * 1500 = 1500 (CORRECT)
+              //   - Old formula: 20 * 1500 = 30000 (WRONG - pieces × carton-price)
+              // Average cost per BASE UNIT = totalValue / baseQuantity
+              double itemTransportShare = 0.0;
               if (transportCharges > 0 && totalBaseQuantityForTransport > 0) {
-                // توزيع متناسب: حصة الصنف من مصاريف النقل = (كمية الصنف / إجمالي الكميات) × إجمالي مصاريف النقل
-                final itemTransportShare = (baseQuantity / totalBaseQuantityForTransport) * transportCharges;
-                effectiveUnitCost = unitPrice + (itemTransportShare / baseQuantity);
+                itemTransportShare = (baseQuantity / totalBaseQuantityForTransport) * transportCharges;
               }
-              final newTotalValue = (oldStock * currentAvgCost) + (baseQuantity * effectiveUnitCost);
-              final newTotalStock = currentStock; // already includes new qty
-              final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : effectiveUnitCost;
+              final totalPurchaseValue = (quantity * unitPrice) + itemTransportShare;
+              final newTotalValue = (oldStock * currentAvgCost) + totalPurchaseValue;
+              final newTotalStock = currentStock; // already includes new qty (in base units)
+              final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : (baseQuantity > 0 ? totalPurchaseValue / baseQuantity : unitPrice);
               await txn.update(
                 'products',
                 {
@@ -619,14 +626,17 @@ class InvoiceRepository {
         final purchGroups = <String, double>{};
         for (final item in items) {
           final productId = (item['product_id'] as num?)?.toInt();
-          final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
           final unitPrice = MoneyHelper.readMoney(item['unit_price']);
           if (productId == null) continue;
           final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
           if (productRow.isEmpty) continue;
           // Fix #1: Use unitPrice (actual purchase price) for inventory transfer entry
-          // This ensures the purchases account (3100) is properly zeroed out
-          final itemCost = unitPrice * baseQuantity;
+          // FIX: Use `quantity * unitPrice` (not `baseQuantity * unitPrice`).
+          // When purchasing 1 carton at 1500 with conversion_factor=20:
+          //   quantity=1, unitPrice=1500, baseQuantity=20
+          //   Total = 1 × 1500 = 1500 (CORRECT), not 20 × 1500 = 30000 (WRONG)
+          final itemCost = quantity * unitPrice;
           if (itemCost.abs() < 0.005) continue;
 
           // P-01: Use product-specific accounts when set, otherwise default
@@ -1818,17 +1828,18 @@ class InvoiceRepository {
   }
 
   /// Calculate Cost of Goods Sold (COGS) for the current month.
-  /// COGS = SUM(quantity * unit_cost) for sale/pos invoice items this month.
+  /// COGS = SUM(base_quantity * unit_cost) for sale/pos invoice items this month.
+  /// FIX: CAST to INTEGER so readMoney divides by 100 correctly.
   Future<double> getCOGSThisMonth() async {
     final db = await _db;
     final now = DateTime.now();
     final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
     try {
       final result = await db.rawQuery(
-        "SELECT COALESCE(SUM("
+        "SELECT CAST(COALESCE(SUM("
         "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
         "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
-        "), 0) AS total_cogs "
+        "), 0) AS INTEGER) AS total_cogs "
         "FROM invoice_items ii "
         "INNER JOIN invoices i ON ii.invoice_id = i.id "
         "LEFT JOIN products p ON ii.product_id = p.id "

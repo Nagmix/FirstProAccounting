@@ -609,11 +609,14 @@ class _ReportsScreenState extends State<ReportsScreen>
       if (_dateTo != null) { cogsDateF += ' AND i.created_at < ?'; cogsSaleArgs.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
       if (_currencyCode() != null) { cogsDateF += ' AND i.currency = ?'; cogsSaleArgs.add(_currencyCode()!); }
 
+      // FIX: CAST to INTEGER so MoneyHelper.readMoney() correctly divides by 100.
+      // Without CAST, SQLite returns REAL (base_quantity is REAL),
+      // causing readMoney to treat it as legacy double and skip ÷100.
       final cogsRes = await database.rawQuery(
-        "SELECT COALESCE(SUM("
+        "SELECT CAST(COALESCE(SUM("
         "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
         "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
-        "), 0) AS total_cogs "
+        "), 0) AS INTEGER) AS total_cogs "
         "FROM invoice_items ii "
         "INNER JOIN invoices i ON ii.invoice_id = i.id "
         "LEFT JOIN products p ON ii.product_id = p.id "
@@ -631,10 +634,10 @@ class _ReportsScreenState extends State<ReportsScreen>
         if (_currencyCode() != null) { cogsRetF += ' AND i.currency = ?'; cogsRetArgs.add(_currencyCode()!); }
 
         final cogsRetRes = await database.rawQuery(
-          "SELECT COALESCE(SUM("
+          "SELECT CAST(COALESCE(SUM("
           "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
           "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
-          "), 0) AS total_cogs "
+          "), 0) AS INTEGER) AS total_cogs "
           "FROM invoice_items ii "
           "INNER JOIN invoices i ON ii.invoice_id = i.id "
           "LEFT JOIN products p ON ii.product_id = p.id "
@@ -706,12 +709,13 @@ class _ReportsScreenState extends State<ReportsScreen>
     }
 
     // Include cost and profit per product using unit_cost from invoice_items
+    // FIX: CAST cost_total to INTEGER so MoneyHelper.readMoney() divides by 100 correctly
     final results = await database.rawQuery(
       "SELECT ii.product_name, SUM(ii.quantity) AS qty, SUM(ii.total_price) AS revenue, "
-      "SUM("
+      "CAST(SUM("
       "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
       "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
-      ") AS cost_total, "
+      ") AS INTEGER) AS cost_total, "
       "COUNT(DISTINCT ii.invoice_id) AS inv_count "
       "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id=i.id "
       "LEFT JOIN products p ON ii.product_id=p.id $catJoin "
@@ -1090,7 +1094,9 @@ class _ReportsScreenState extends State<ReportsScreen>
     if (_selectedCategoryId != null) { whereExtra += ' AND p.category_id=?'; args.add(_selectedCategoryId!); }
 
     final results = await database.rawQuery(
-      "SELECT p.name_ar, p.barcode, p.item_code, p.current_stock, p.cost_price, p.sell_price, "
+      // FIX: Use COALESCE(average_cost, cost_price) for accurate inventory valuation
+      "SELECT p.name_ar, p.barcode, p.item_code, p.current_stock, "
+      "COALESCE(NULLIF(p.average_cost, 0), p.cost_price) AS cost_price, p.sell_price, "
       "p.min_stock, p.currency, w.name AS warehouse_name, c.name AS category_name "
       "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
       "LEFT JOIN categories c ON p.category_id=c.id "

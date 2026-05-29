@@ -46,6 +46,25 @@ class MoneyHelper {
     return fallback;
   }
 
+  /// Read a calculated SQL result that is always in cents.
+  ///
+  /// Use this for SQL-calculated values like `SUM(base_quantity * unit_cost)`
+  /// or `current_stock * cost_price`. SQLite may return these as REAL (double)
+  /// because one operand is REAL, but the value is still in cents.
+  /// Unlike [readMoney] which treats doubles as "legacy" (already divided),
+  /// this method ALWAYS divides by 100 regardless of type.
+  ///
+  /// Example: `SUM(base_quantity * unit_cost)` returns 67500.0 (REAL in cents)
+  /// → readCalculatedMoney(67500.0) = 675.0 (correct)
+  /// → readMoney(67500.0) = 67500.0 (WRONG - treats as legacy)
+  static double readCalculatedMoney(dynamic value, {double fallback = 0.0}) {
+    if (value == null) return fallback;
+    if (value is int) return fromCents(value);
+    if (value is double) return fromCents(value.round());
+    if (value is num) return fromCents(value.round());
+    return fallback;
+  }
+
   /// Round a double to 2 decimal places — useful for intermediate calcs.
   static double round2(double value) {
     return (value * scaleFactor).roundToDouble() / scaleFactor;
