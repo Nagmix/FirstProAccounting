@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/models/unit_model.dart';
 
@@ -294,14 +294,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
   Future<void> _deleteUnit(Unit unit) async {
     // Pre-check: verify no products reference this unit before showing confirmation
     try {
-      final database = await locator<DatabaseHelper>().database;
-      final productsWithUnit = await database.query(
-        'products',
-        columns: ['id', 'name_ar'],
-        where: 'base_unit_id = ? OR purchase_unit_id = ? OR sale_unit_id = ? OR unit_id = ?',
-        whereArgs: [unit.id, unit.id, unit.id, unit.id],
-        limit: 5,
-      );
+      final productsWithUnit = await locator<ProductRepository>().getProductsByUnitId(unit.id!);
       if (productsWithUnit.isNotEmpty) {
         if (!mounted) return;
         final productNames = productsWithUnit.map((p) => p['name_ar'] as String? ?? '').join('، ');

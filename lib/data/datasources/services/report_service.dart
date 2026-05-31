@@ -1081,6 +1081,382 @@ class ReportService {
     return await _dbHelper.getAllShifts(orderBy: 'opened_at DESC');
   }
 
+  // ── 13. Sales Report (invoices with entity names) ─────────────
+
+  /// تقرير المبيعات/المشتريات/المرتجعات — returns invoice rows
+  /// with entity name (customer or supplier).
+  /// [typeFilter] is the WHERE clause fragment, e.g.
+  /// `"type IN ('sale','pos') AND is_return=0"`.
+  Future<List<Map<String, dynamic>>> getSalesReport({
+    required String typeFilter,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+    int? cashBoxId,
+  }) async {
+    final db = await _db;
+    final args = <dynamic>[];
+    String whereClause = typeFilter;
+
+    if (dateFrom != null) {
+      whereClause += ' AND created_at >= ?';
+      args.add(dateFrom.toIso8601String());
+    }
+    if (dateTo != null) {
+      whereClause += ' AND created_at < ?';
+      args.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+    }
+    if (currency != null && currency.isNotEmpty) {
+      whereClause += ' AND currency = ?';
+      args.add(currency);
+    }
+    if (cashBoxId != null) {
+      whereClause += ' AND cash_box_id = ?';
+      args.add(cashBoxId);
+    }
+
+    return await db.rawQuery(
+      "SELECT i.id, i.type, i.is_return, i.total, i.subtotal, i.discount_amount, i.paid_amount, "
+      "i.remaining, i.currency, i.created_at, i.cash_box_id, "
+      "COALESCE(c.name, s.name, 'بدون') AS entity_name "
+      "FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id "
+      "LEFT JOIN suppliers s ON i.supplier_id=s.id "
+      "WHERE $whereClause ORDER BY i.created_at DESC",
+      args,
+    );
+  }
+
+  // ── 14. All Account Movement ──────────────────────────────────
+
+  /// حركة جميع الحسابات — returns all transactions with account info.
+  Future<List<Map<String, dynamic>>> getAllAccountMovementReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+    String? accountType,
+  }) async {
+    final db = await _db;
+    final args = <dynamic>[];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
+    args.addAll(dateArgs);
+    String cf = '';
+    if (currency != null && currency.isNotEmpty) {
+      cf = ' AND a.currency = ?';
+      args.add(currency);
+    }
+    if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+      cf += ' AND a.account_type = ?';
+      args.add(accountType);
+    }
+
+    return await db.rawQuery(
+      "SELECT t.id, t.account_id, t.debit, t.credit, t.description, t.date, t.created_at, "
+      "a.name_ar AS account_name, a.account_code, a.currency "
+      "FROM transactions t LEFT JOIN accounts a ON t.account_id=a.id "
+      "WHERE 1=1$df$cf "
+      "ORDER BY t.date DESC, t.created_at DESC",
+      args,
+    );
+  }
+
+  // ── 15. Trial Balance ─────────────────────────────────────────
+
+  /// ميزان المراجعة — returns accounts with their date-filtered
+  /// debit/credit balances. Each row has:
+  /// `account_code`, `name_ar`, `account_type`, `currency`,
+  /// `debit`, `credit` (raw INTEGER cents).
+  Future<List<Map<String, dynamic>>> getTrialBalanceReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+    String? accountType,
+  }) async {
+    final db = await _db;
+    final accounts = await _dbHelper.accounts.getAllAccounts();
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'date');
+
+    final results = <Map<String, dynamic>>[];
+    for (final account in accounts) {
+      if (currency != null && currency.isNotEmpty && account['currency'] != currency) continue;
+      if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+        if (account['account_type'] != accountType) continue;
+      }
+      final accountId = account['id'] as int;
+
+      final balanceArgs = <dynamic>[accountId];
+      balanceArgs.addAll(dateArgs);
+      final result = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS balance "
+        "FROM transactions "
+        "WHERE account_id = ?$df",
+        balanceArgs,
+      );
+      final balance = result.first['balance'] as int? ?? 0;
+      if (balance == 0) continue;
+
+      final isDebit = balance > 0;
+      results.add({
+        'account_code': account['account_code'],
+        'name_ar': account['name_ar'],
+        'account_type': account['account_type'],
+        'currency': account['currency'],
+        'debit': isDebit ? balance.abs() : 0,
+        'credit': isDebit ? 0 : balance.abs(),
+      });
+    }
+    return results;
+  }
+
+  // ── 16. Customer Statement ────────────────────────────────────
+
+  /// كشف حساب عميل — finds the customer's receivable account and
+  /// returns its transactions. Returns empty list if no linked
+  /// account is found.
+  Future<List<Map<String, dynamic>>> getCustomerStatementReport({
+    required int customerId,
+    required String customerName,
+    required String customerCurrency,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+
+    // Try to find the customer's receivable account
+    var acctRes = await db.rawQuery(
+      "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1",
+      [customerName, customerCurrency],
+    );
+    if (acctRes.isEmpty && customerName.isNotEmpty) {
+      acctRes = await db.rawQuery(
+        "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
+        ['%$customerName%', '%$customerName%', customerCurrency],
+      );
+    }
+    if (acctRes.isEmpty) return [];
+
+    final accountId = acctRes.first['id'] as int;
+    final args = <dynamic>[accountId];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
+    args.addAll(dateArgs);
+
+    return await db.rawQuery(
+      "SELECT t.date, t.description, t.debit, t.credit, t.created_at "
+      "FROM transactions t WHERE t.account_id=?$df ORDER BY t.date ASC, t.created_at ASC",
+      args,
+    );
+  }
+
+  // ── 17. Inventory Report ──────────────────────────────────────
+
+  /// تقرير المخزون — returns all active products with stock info.
+  Future<List<Map<String, dynamic>>> getInventoryReport({
+    int? warehouseId,
+    int? categoryId,
+  }) async {
+    final db = await _db;
+    String whereExtra = '';
+    final args = <dynamic>[];
+    if (warehouseId != null) {
+      whereExtra += ' AND p.warehouse_id=?';
+      args.add(warehouseId);
+    }
+    if (categoryId != null) {
+      whereExtra += ' AND p.category_id=?';
+      args.add(categoryId);
+    }
+
+    return await db.rawQuery(
+      "SELECT p.name_ar, p.barcode, p.item_code, p.current_stock, "
+      "CAST(COALESCE(NULLIF(p.average_cost, 0), p.cost_price) AS INTEGER) AS cost_price, "
+      "CAST(p.sell_price AS INTEGER) AS sell_price, "
+      "p.min_stock, p.currency, w.name AS warehouse_name, c.name AS category_name "
+      "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
+      "LEFT JOIN categories c ON p.category_id=c.id "
+      "WHERE p.is_active=1$whereExtra ORDER BY p.name_ar",
+      args,
+    );
+  }
+
+  // ── 18. Out of Stock ──────────────────────────────────────────
+
+  /// الأصناف المنتهية — products with zero or negative stock.
+  Future<List<Map<String, dynamic>>> getOutOfStockReport({
+    int? warehouseId,
+    int? categoryId,
+  }) async {
+    final db = await _db;
+    String whereExtra = '';
+    final args = <dynamic>[];
+    if (warehouseId != null) {
+      whereExtra += ' AND p.warehouse_id=?';
+      args.add(warehouseId);
+    }
+    if (categoryId != null) {
+      whereExtra += ' AND p.category_id=?';
+      args.add(categoryId);
+    }
+
+    return await db.rawQuery(
+      "SELECT p.name_ar, p.barcode, p.item_code, p.cost_price, p.sell_price, "
+      "w.name AS warehouse_name, c.name AS category_name "
+      "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
+      "LEFT JOIN categories c ON p.category_id=c.id "
+      "WHERE p.is_active=1 AND p.current_stock <= 0$whereExtra ORDER BY p.name_ar",
+      args,
+    );
+  }
+
+  // ── 19. Low Stock ─────────────────────────────────────────────
+
+  /// الأصناف قاربت على النفاد — products with stock <= min_stock.
+  Future<List<Map<String, dynamic>>> getLowStockReport({
+    int? warehouseId,
+    int? categoryId,
+  }) async {
+    final db = await _db;
+    String whereExtra = '';
+    final args = <dynamic>[];
+    if (warehouseId != null) {
+      whereExtra += ' AND p.warehouse_id=?';
+      args.add(warehouseId);
+    }
+    if (categoryId != null) {
+      whereExtra += ' AND p.category_id=?';
+      args.add(categoryId);
+    }
+
+    return await db.rawQuery(
+      "SELECT p.name_ar, p.barcode, p.current_stock, p.min_stock, p.cost_price, p.sell_price, "
+      "w.name AS warehouse_name, c.name AS category_name "
+      "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
+      "LEFT JOIN categories c ON p.category_id=c.id "
+      "WHERE p.is_active=1 AND p.current_stock > 0 AND p.current_stock <= p.min_stock$whereExtra ORDER BY p.name_ar",
+      args,
+    );
+  }
+
+  // ── 20. Cash Transfers ────────────────────────────────────────
+
+  /// تحويلات الصناديق — returns cash transfer rows with box names.
+  Future<List<Map<String, dynamic>>> getCashTransfersReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'ct.created_at');
+
+    return await db.rawQuery(
+      "SELECT ct.*, cb1.name AS from_name, cb2.name AS to_name "
+      "FROM cash_transfers ct LEFT JOIN cash_boxes cb1 ON ct.from_cash_box_id=cb1.id "
+      "LEFT JOIN cash_boxes cb2 ON ct.to_cash_box_id=cb2.id "
+      "WHERE 1=1$df ORDER BY ct.created_at DESC",
+      dateArgs,
+    );
+  }
+
+  // ── 21. Accounts Without Movement ─────────────────────────────
+
+  /// حسابات بدون حركة — accounts with zero transaction count.
+  Future<List<Map<String, dynamic>>> getAccountsWithoutMovementReport({
+    String? currency,
+    String? accountType,
+  }) async {
+    final accounts = await _dbHelper.accounts.getAccountsWithoutMovements();
+    // Apply optional filters
+    return accounts.where((a) {
+      if (currency != null && currency.isNotEmpty && a['currency'] != currency) return false;
+      if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+        if (a['account_type'] != accountType) return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  // ── 22. Trial Balance Data (for trial_balance_screen.dart) ────
+
+  /// Fetches trial balance data with currency and date filters.
+  /// Returns raw rows with account info and total_debit/total_credit (INTEGER cents).
+  Future<List<Map<String, dynamic>>> getTrialBalanceData({
+    String? currency,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+    final args = <dynamic>[];
+    String currencyFilter = '';
+    if (currency != null) {
+      currencyFilter = ' AND a.currency = ?';
+      args.add(currency);
+    }
+    String dateFilter = '';
+    if (dateFrom != null) {
+      dateFilter += ' AND t.date >= ?';
+      args.add(dateFrom.toIso8601String());
+    }
+    if (dateTo != null) {
+      dateFilter += ' AND t.date < ?';
+      args.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+    }
+
+    return await db.rawQuery(
+      "SELECT a.id, a.account_code, a.name_ar, a.account_type, a.balance_type, a.currency, "
+      "COALESCE(SUM(t.debit), 0) as total_debit, "
+      "COALESCE(SUM(t.credit), 0) as total_credit "
+      "FROM accounts a "
+      "LEFT JOIN transactions t ON t.account_id = a.id$dateFilter "
+      "WHERE a.is_active = 1$currencyFilter "
+      "GROUP BY a.id "
+      "HAVING total_debit > 0 OR total_credit > 0 "
+      "ORDER BY a.account_code",
+      args,
+    );
+  }
+
+  // ── 23. Financial Statements Data (for financial_statements_screen.dart) ─
+
+  /// Fetches financial statements data with account type, currency, and date filters.
+  /// Returns raw rows with account info and total_debit/total_credit (INTEGER cents).
+  Future<List<Map<String, dynamic>>> getFinancialStatementsData({
+    required List<String> accountTypes,
+    String? currency,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+
+    final dateArgs = <dynamic>[];
+    String dateFilter = '';
+    if (dateFrom != null) {
+      dateFilter += ' AND t.date >= ?';
+      dateArgs.add(dateFrom.toIso8601String());
+    }
+    if (dateTo != null) {
+      dateFilter += ' AND t.date < ?';
+      dateArgs.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+    }
+
+    final args = <dynamic>[];
+    String currencyFilter = '';
+    if (currency != null) {
+      currencyFilter = ' AND a.currency = ?';
+      args.add(currency);
+    }
+    args.addAll(dateArgs);
+
+    return await db.rawQuery(
+      "SELECT a.id, a.account_code, a.name_ar, a.account_type, a.balance_type, a.currency, "
+      "COALESCE(SUM(t.debit), 0) as total_debit, "
+      "COALESCE(SUM(t.credit), 0) as total_credit "
+      "FROM accounts a "
+      "LEFT JOIN transactions t ON t.account_id = a.id$dateFilter "
+      "WHERE a.is_active = 1 AND a.account_type IN (${accountTypes.map((_) => '?').join(',')})$currencyFilter "
+      "GROUP BY a.id "
+      "HAVING total_debit > 0 OR total_credit > 0 "
+      "ORDER BY a.account_code",
+      [...accountTypes, ...args],
+    );
+  }
+
   // ══════════════════════════════════════════════════════════════
   //  Aggregate query methods
   // ══════════════════════════════════════════════════════════════

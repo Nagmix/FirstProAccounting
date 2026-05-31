@@ -307,6 +307,16 @@ class ReferenceDataRepository {
   }
 
   // ══════════════════════════════════════════════════════════════
+  //  Fiscal Year methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// Insert a new fiscal year record.
+  Future<int> insertFiscalYear(Map<String, dynamic> fiscalYearMap) async {
+    final db = await _db;
+    return await db.insert('fiscal_years', fiscalYearMap);
+  }
+
+  // ══════════════════════════════════════════════════════════════
   //  Settings methods
   // ══════════════════════════════════════════════════════════════
 

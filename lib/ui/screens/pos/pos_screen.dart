@@ -13,17 +13,21 @@ import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/repositories/product_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/datasources/repositories/invoice_repository.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/shift_service.dart';
-import '../../../data/datasources/services/journal_service.dart';
 import '../../../data/datasources/services/report_service.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
+import 'pos_models.dart';
+import 'widgets/pos_product_card.dart';
+import 'widgets/pos_cart_item_tile.dart';
+import 'widgets/pos_payment_method_selector.dart';
+import 'widgets/pos_totals_section.dart';
+import 'widgets/pos_action_buttons.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  POS SCREEN – FirstPro Arabic Accounting App
@@ -44,7 +48,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   bool _isSearching = false;
 
   // ── Cart state ────────────────────────────────────────────────────
-  final List<_CartItem> _cart = [];
+  final List<CartItem> _cart = [];
   double _orderDiscount = 0;
   DiscountType _discountType = DiscountType.fixed;
   int? _selectedCustomerId;
@@ -53,7 +57,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ── Checkout phase (replaces _isCheckingOut + showDialog) ──────────
   // Using a state-based overlay instead of showDialog prevents
   // dialog stacking which caused the multi-click bug.
-  _CheckoutPhase _checkoutPhase = _CheckoutPhase.idle;
+  CheckoutPhase _checkoutPhase = CheckoutPhase.idle;
   String _lastInvoiceId = '';
   double _capturedTotal = 0;
   String _capturedCustomerName = '';
@@ -64,11 +68,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   double _capturedTax = 0;
 
   // ── Payment state ─────────────────────────────────────────────────
-  final List<_PaymentEntry> _payments = [];
+  final List<PaymentEntry> _payments = [];
   String _activePaymentMethod = 'cash';
 
   // ── Held orders ───────────────────────────────────────────────────
-  final List<_HeldOrder> _heldOrders = [];
+  final List<HeldOrder> _heldOrders = [];
 
   // ── Data from DB ──────────────────────────────────────────────────
   List<Map<String, dynamic>> _categories = [];
@@ -211,7 +215,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       for (final row in dbOrders) {
         final cartData = jsonDecode(row['cart_data'] as String) as List;
         final paymentsData = jsonDecode(row['payments_data'] as String) as List;
-        final cartItems = cartData.map((item) => _CartItem(
+        final cartItems = cartData.map((item) => CartItem(
           productId: item['productId'] as int,
           name: item['productName'] as String,
           quantity: (item['quantity'] as num).toInt(),
@@ -219,12 +223,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           unitName: item['unitName'] as String? ?? 'قطعة',
           conversionFactor: (item['conversionFactor'] as num?)?.toDouble() ?? 1.0, // conversion_factor is non-monetary
         )).toList();
-        final payments = paymentsData.map((p) => _PaymentEntry(
+        final payments = paymentsData.map((p) => PaymentEntry(
           amount: MoneyHelper.readMoney(p['amount']),
           method: p['method'] as String? ?? 'cash',
         )).toList();
         final discountTypeStr = row['discount_type'] as String? ?? 'fixed';
-        _heldOrders.add(_HeldOrder(
+        _heldOrders.add(HeldOrder(
           items: cartItems,
           paymentMethod: row['payment_method'] as String? ?? 'cash',
           payments: payments,
@@ -354,7 +358,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   // AbsorbPointer prevents taps from leaking through
                   // to main content when a checkout overlay is active.
                   AbsorbPointer(
-                    absorbing: _checkoutPhase != _CheckoutPhase.idle,
+                    absorbing: _checkoutPhase != CheckoutPhase.idle,
                     child: Column(
                       children: [
                         if (_activeShift != null) _buildShiftInfoBar(),
@@ -374,7 +378,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       bottom: 0,
                       top: 0,
                       child: AbsorbPointer(
-                        absorbing: _checkoutPhase != _CheckoutPhase.idle,
+                        absorbing: _checkoutPhase != CheckoutPhase.idle,
                         child: _buildDraggableCartSheet(),
                       ),
                     ),
@@ -385,15 +389,15 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   // Each overlay uses GestureDetector to absorb ALL taps
                   // (including on the transparent background), preventing
                   // any tap-through to widgets below.
-                  if (_checkoutPhase == _CheckoutPhase.confirming)
+                  if (_checkoutPhase == CheckoutPhase.confirming)
                     _buildCheckoutConfirmationOverlay(),
-                  if (_checkoutPhase == _CheckoutPhase.completed)
+                  if (_checkoutPhase == CheckoutPhase.completed)
                     _buildCheckoutCompletedOverlay(),
                 ],
               ),
         floatingActionButton: _activeShift != null
             ? FloatingActionButton(
-                onPressed: _checkoutPhase != _CheckoutPhase.idle ? null : _scanBarcode,
+                onPressed: _checkoutPhase != CheckoutPhase.idle ? null : _scanBarcode,
                 backgroundColor: AppColors.secondary,
                 foregroundColor: Colors.white,
                 tooltip: 'مسح باركود',
@@ -895,7 +899,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             ),
             itemCount: products.length,
             itemBuilder: (context, index) {
-              return _ProductCard(
+              return PosProductCard(
                 product: products[index],
                 onTap: () => _addToCartWithUnit(products[index]),
               );
@@ -978,13 +982,34 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     ..._cart.asMap().entries.map((entry) {
                       final idx = entry.key;
                       final item = entry.value;
-                      return _buildCartItemTile(idx, item);
+                      return PosCartItemTile(
+                        name: item.name,
+                        unitPrice: item.unitPrice,
+                        quantity: item.quantity,
+                        unitName: item.unitName,
+                        total: item.total,
+                        onIncrement: () => _incrementCart(idx),
+                        onDecrement: () => _decrementCart(idx),
+                        onEditQuantity: () => _editQuantity(idx),
+                        onDelete: () => setState(() => _cart.removeAt(idx)),
+                      );
                     }),
 
                   const Divider(height: 1),
 
                   // ── Payment method selector ───────────────────
-                  _buildPaymentMethodSelector(),
+                  PosPaymentMethodSelector(
+                    activeMethod: _activePaymentMethod,
+                    onMethodChanged: (method) {
+                      setState(() {
+                        _activePaymentMethod = method;
+                        if (method != 'credit') {
+                          _selectedCustomerId = null;
+                          _selectedCustomerName = '';
+                        }
+                      });
+                    },
+                  ),
 
                   // ── Payment details for active method ────────
                   if (_activePaymentMethod == 'credit')
@@ -998,10 +1023,45 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   if (_payments.isNotEmpty) _buildMultiPaymentSummary(),
 
                   // ── Totals ──────────────────────────────────
-                  _buildTotalsSection(),
+                  PosTotalsSection(
+                    subtotal: _subtotal,
+                    discount: _effectiveDiscount,
+                    discountType: _discountType,
+                    orderDiscount: _orderDiscount,
+                    tax: _tax,
+                    total: _total,
+                    vatRate: AppConstants.defaultVatRate,
+                  ),
 
                   // ── Action buttons ──────────────────────────
-                  _buildActionButtons(),
+                  PosActionButtons(
+                    cartLength: _cart.length,
+                    total: _total,
+                    activePaymentMethod: _activePaymentMethod,
+                    paymentsLength: _payments.length,
+                    remaining: _remaining,
+                    checkoutPhase: _checkoutPhase,
+                    paymentLabel: _paymentLabel,
+                    onAddPayment: () => _addPayment(_activePaymentMethod, _total),
+                    onAddPartialPayment: _showAddPartialPaymentDialog,
+                    onStartCheckout: _startCheckout,
+                    onHoldOrder: _holdOrder,
+                    onClearInvoice: () {
+                      setState(() {
+                        _cart.clear();
+                        _payments.clear();
+                        _orderDiscount = 0;
+                        _discountType = DiscountType.fixed;
+                        _selectedCustomerId = null;
+                        _selectedCustomerName = '';
+                        _activePaymentMethod = 'cash';
+                        _searchController.clear();
+                        _isSearching = false;
+                      });
+                      _sheetController.animateTo(0.12,
+                          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+                    },
+                  ),
                 ],
               ],
             ),
@@ -1070,212 +1130,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               color: AppColors.textSecondary,
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  // ── Individual cart item tile ────────────────────────────────────
-  Widget _buildCartItemTile(int index, _CartItem item) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: Card(
-        margin: EdgeInsets.zero,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: AppColors.border.withOpacity(0.5)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            children: [
-              // Product info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${CurrencyFormatter.format(item.unitPrice)} × ${item.quantity} ${item.unitName}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: context.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Quantity controls
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _qtyButton(
-                      icon: Icons.remove,
-                      onTap: () => _decrementCart(index),
-                    ),
-                    Container(
-                      width: 40,
-                      alignment: Alignment.center,
-                      child: GestureDetector(
-                        onTap: () => _editQuantity(index),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${item.quantity}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    _qtyButton(
-                      icon: Icons.add,
-                      onTap: () => _incrementCart(index),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 8),
-
-              // Total price
-              SizedBox(
-                width: 70,
-                child: Text(
-                  CurrencyFormatter.format(item.total),
-                  textAlign: TextAlign.left,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-
-              // Delete
-              IconButton(
-                onPressed: () => setState(() => _cart.removeAt(index)),
-                icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                tooltip: 'حذف',
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _qtyButton({required IconData icon, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Icon(icon, size: 14),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  PAYMENT METHOD SELECTOR
-  // ═══════════════════════════════════════════════════════════════════
-  Widget _buildPaymentMethodSelector() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'طريقة الدفع',
-            style: context.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: context.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              _payMethodChip('نقدي', 'cash', Icons.payments),
-              const SizedBox(width: 4),
-              _payMethodChip('آجل', 'credit', Icons.access_time),
-              const SizedBox(width: 4),
-              _payMethodChip('بطاقة', 'card', Icons.credit_card),
-              const SizedBox(width: 4),
-              _payMethodChip('محفظة', 'ewallet', Icons.account_balance_wallet),
-              const SizedBox(width: 4),
-              _payMethodChip('تحويل', 'bank_transfer', Icons.business),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _payMethodChip(String label, String method, IconData icon) {
-    final selected = _activePaymentMethod == method;
-    return Expanded(
-      child: SizedBox(
-        height: 36,
-        child: OutlinedButton(
-          onPressed: () => setState(() {
-            _activePaymentMethod = method;
-            if (method != 'credit') {
-              _selectedCustomerId = null;
-              _selectedCustomerName = '';
-            }
-          }),
-          style: OutlinedButton.styleFrom(
-            backgroundColor: selected ? AppColors.primary.withOpacity(0.1) : null,
-            side: BorderSide(
-              color: selected ? AppColors.primary : AppColors.border,
-              width: selected ? 2 : 1,
-            ),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 13, color: selected ? AppColors.primary : null),
-              const SizedBox(width: 2),
-              Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? AppColors.primary : null,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -1647,181 +1501,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Totals section ───────────────────────────────────────────────
-  Widget _buildTotalsSection() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Column(
-        children: [
-          _totalRow('المجموع الفرعي', CurrencyFormatter.format(_subtotal)),
-          if (_effectiveDiscount > 0) ...[
-            const SizedBox(height: 3),
-            _totalRow(
-              'الخصم${_discountType == DiscountType.percentage ? ' (${_orderDiscount.toStringAsFixed(0)}%)' : ''}',
-              '- ${CurrencyFormatter.format(_effectiveDiscount)}',
-              valueColor: AppColors.error,
-            ),
-          ],
-          if (_tax > 0) ...[
-            const SizedBox(height: 3),
-            _totalRow(
-              'الضريبة (${AppConstants.defaultVatRate.toStringAsFixed(0)}%)',
-              CurrencyFormatter.format(_tax),
-            ),
-          ],
-          const Divider(height: 12),
-          _totalRow(
-            'الإجمالي',
-            CurrencyFormatter.format(_total),
-            valueStyle: context.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _totalRow(String label, String value, {Color? valueColor, TextStyle? valueStyle}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: context.textTheme.bodyMedium),
-        Text(
-          value,
-          style: valueStyle ??
-              context.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: valueColor,
-              ),
-        ),
-      ],
-    );
-  }
-
-  // ── Action buttons ───────────────────────────────────────────────
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
-      child: Column(
-        children: [
-          // Add payment button
-          if (_cart.isNotEmpty && _payments.isEmpty)
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: OutlinedButton.icon(
-                onPressed: () => _addPayment(_activePaymentMethod, _total),
-                icon: const Icon(Icons.add, size: 18),
-                label: Text('إضافة دفعة: ${_paymentLabel(_activePaymentMethod)}'),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-
-          // Add partial payment (multi-payment)
-          if (_cart.isNotEmpty && _payments.isNotEmpty && _remaining > 0.01)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: SizedBox(
-                width: double.infinity,
-                height: 40,
-                child: OutlinedButton.icon(
-                  onPressed: () => _showAddPartialPaymentDialog(),
-                  icon: const Icon(Icons.add_circle, size: 16),
-                  label: const Text('إضافة دفعة أخرى'),
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 8),
-
-          // Checkout button
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: (_cart.isEmpty || _checkoutPhase != _CheckoutPhase.idle) ? null : _startCheckout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.check_circle, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'إنهاء البيع  ${CurrencyFormatter.format(_total)}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Hold order button
-          SizedBox(
-            width: double.infinity,
-            height: 42,
-            child: OutlinedButton.icon(
-              onPressed: _cart.isEmpty ? null : _holdOrder,
-              icon: const Icon(Icons.pause_circle, size: 18),
-              label: const Text('تعليق الطلب'),
-              style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Clear invoice button
-          SizedBox(
-            width: double.infinity,
-            height: 42,
-            child: OutlinedButton.icon(
-              onPressed: (_cart.isEmpty || _checkoutPhase != _CheckoutPhase.idle) ? null : () {
-                setState(() {
-                  _cart.clear();
-                  _payments.clear();
-                  _orderDiscount = 0;
-                  _discountType = DiscountType.fixed;
-                  _selectedCustomerId = null;
-                  _selectedCustomerName = '';
-                  _activePaymentMethod = 'cash';
-                  _searchController.clear();
-                  _isSearching = false;
-                });
-                _sheetController.animateTo(0.12,
-                    duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-              },
-              icon: const Icon(Icons.delete_outline, size: 18),
-              label: const Text('مسح الفاتورة'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.error,
-                side: const BorderSide(color: AppColors.error),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ═══════════════════════════════════════════════════════════════════
   //  OPEN SHIFT DIALOG
   // ═══════════════════════════════════════════════════════════════════
@@ -2160,114 +1839,18 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     try {
                       final shiftId = _activeShift!['id'] as int;
                       final cashBoxId = _activeShift!['cash_box_id'] as int;
-                      final now = DateTime.now();
-                      final dbInstance = await locator<DatabaseHelper>().database;
+                      final reason = reasonController.text.trim().isNotEmpty
+                          ? reasonController.text.trim()
+                          : (isCashIn ? 'إيداع نقدي في الوردية' : 'سحب نقدي من الوردية');
 
-                      // Update cash box balance
-                      final cashBox = await locator<CashBoxService>().getCashBoxById(cashBoxId);
-                      if (cashBox != null) {
-                        final currentBalance = MoneyHelper.readMoney(cashBox['balance']);
-                        final newBalance = isCashIn
-                            ? currentBalance + amount
-                            : currentBalance - amount;
-                        await dbInstance.update(
-                          'cash_boxes',
-                          MoneyHelper.toCentsMap({
-                            'balance': newBalance.abs(),
-                            'balance_type': newBalance >= 0 ? 'credit' : 'debit',
-                            'updated_at': now.toIso8601String(),
-                          }, MoneyHelper.cashBoxMoneyFields),
-                          where: 'id = ?',
-                          whereArgs: [cashBoxId],
-                        );
-                      }
-
-                      // Create journal entries for the cash in/out
-                      final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[_selectedCurrency] ?? 0;
-                      final cashAccountCode = 1100 + codeOffset;
-                      final cashAccount = await locator<JournalService>().getAccountByCodeAndCurrency(
-                        cashAccountCode.toString(), _selectedCurrency,
+                      await locator<ShiftService>().recordCashInOut(
+                        shiftId: shiftId,
+                        cashBoxId: cashBoxId,
+                        amount: amount,
+                        isCashIn: isCashIn,
+                        reason: reason,
+                        currency: _selectedCurrency,
                       );
-                      final expenseAccountCode = 5000 + codeOffset;
-                      final expenseAccount = await locator<JournalService>().getAccountByCodeAndCurrency(
-                        expenseAccountCode.toString(), _selectedCurrency,
-                      );
-
-                      if (cashAccount != null && expenseAccount != null) {
-                        final cashAccountId = cashAccount['id'] as int;
-                        final expenseAccountId = expenseAccount['id'] as int;
-                        final reason = reasonController.text.trim().isNotEmpty
-                            ? reasonController.text.trim()
-                            : (isCashIn ? 'إيداع نقدي في الوردية' : 'سحب نقدي من الوردية');
-
-                        // Journal entry: Debit and Credit
-                        if (isCashIn) {
-                          // إيداع: مدين (الصندوق) / دائن (مصاريف متنوعة)
-                          await dbInstance.insert('transactions', {
-                            'account_id': cashAccountId,
-                            'debit': MoneyHelper.toCents(amount),
-                            'credit': 0,
-                            'description': reason,
-                            'date': now.toIso8601String(),
-                            'created_at': now.toIso8601String(),
-                          });
-                          await dbInstance.insert('transactions', {
-                            'account_id': expenseAccountId,
-                            'debit': 0,
-                            'credit': MoneyHelper.toCents(amount),
-                            'description': reason,
-                            'date': now.toIso8601String(),
-                            'created_at': now.toIso8601String(),
-                          });
-                          // Update account balances
-                          await locator<JournalService>().updateAccountBalance(cashAccountId, amount, isDebit: true);
-                          await locator<JournalService>().updateAccountBalance(expenseAccountId, amount, isDebit: false);
-                        } else {
-                          // سحب: مدين (مصاريف متنوعة) / دائن (الصندوق)
-                          await dbInstance.insert('transactions', {
-                            'account_id': expenseAccountId,
-                            'debit': MoneyHelper.toCents(amount),
-                            'credit': 0,
-                            'description': reason,
-                            'date': now.toIso8601String(),
-                            'created_at': now.toIso8601String(),
-                          });
-                          await dbInstance.insert('transactions', {
-                            'account_id': cashAccountId,
-                            'debit': 0,
-                            'credit': MoneyHelper.toCents(amount),
-                            'description': reason,
-                            'date': now.toIso8601String(),
-                            'created_at': now.toIso8601String(),
-                          });
-                          // Update account balances
-                          await locator<JournalService>().updateAccountBalance(expenseAccountId, amount, isDebit: true);
-                          await locator<JournalService>().updateAccountBalance(cashAccountId, amount, isDebit: false);
-                        }
-                      }
-
-                      // Update shift totals — cash in/out are operational, not sales/discounts
-                      if (isCashIn) {
-                        await dbInstance.update(
-                          'shifts',
-                          {
-                            'transaction_count': ((_activeShift!['transaction_count'] as int?) ?? 0) + 1,
-                            'updated_at': now.toIso8601String(),
-                          },
-                          where: 'id = ?',
-                          whereArgs: [shiftId],
-                        );
-                      } else {
-                        await dbInstance.update(
-                          'shifts',
-                          {
-                            'transaction_count': ((_activeShift!['transaction_count'] as int?) ?? 0) + 1,
-                            'updated_at': now.toIso8601String(),
-                          },
-                          where: 'id = ?',
-                          whereArgs: [shiftId],
-                        );
-                      }
 
                       // Refresh shift data
                       await _loadActiveShift();
@@ -3049,7 +2632,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       });
     } else {
       setState(() {
-        _cart.add(_CartItem(
+        _cart.add(CartItem(
           productId: product.id!,
           name: product.nameAr,
           unitPrice: unitPrice,
@@ -3063,7 +2646,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // Auto-add a default payment if none exists
     if (_payments.isEmpty && _activePaymentMethod != 'credit') {
-      _payments.add(_PaymentEntry(
+      _payments.add(PaymentEntry(
         method: _activePaymentMethod,
         amount: _total,
       ));
@@ -3172,7 +2755,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       });
     } else {
       setState(() {
-        _cart.add(_CartItem(
+        _cart.add(CartItem(
           productId: product.id!,
           name: product.nameAr,
           unitPrice: product.sellPrice,
@@ -3183,7 +2766,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // Auto-add a default payment if none exists
     if (_payments.isEmpty && _activePaymentMethod != 'credit') {
-      _payments.add(_PaymentEntry(
+      _payments.add(PaymentEntry(
         method: _activePaymentMethod,
         amount: _total,
       ));
@@ -3279,7 +2862,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   void _addPayment(String method, double amount) {
     setState(() {
-      _payments.add(_PaymentEntry(
+      _payments.add(PaymentEntry(
         method: method,
         amount: amount,
       ));
@@ -3359,7 +2942,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   /// Step 1: Start checkout – capture values and show confirmation overlay
   void _startCheckout() async {
-    if (_checkoutPhase != _CheckoutPhase.idle) return;
+    if (_checkoutPhase != CheckoutPhase.idle) return;
     if (_activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً قبل إتمام عملية البيع');
       return;
@@ -3397,7 +2980,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       _capturedTotal = _total;
       _capturedCustomerName = _selectedCustomerName;
       _capturedPaymentLabel = _paymentLabel(primaryMethod);
-      _checkoutPhase = _CheckoutPhase.confirming;
+      _checkoutPhase = CheckoutPhase.confirming;
     });
   }
 
@@ -3406,11 +2989,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     // GUARD: Prevent double-execution from rapid taps.
     // setState is async (rebuild happens next frame), so a second tap
     // could call this method again before the overlay is removed.
-    if (_checkoutPhase != _CheckoutPhase.confirming) return;
+    if (_checkoutPhase != CheckoutPhase.confirming) return;
 
     final primaryMethod = _payments.isNotEmpty ? _payments.first.method : _activePaymentMethod;
 
-    setState(() => _checkoutPhase = _CheckoutPhase.saving);
+    setState(() => _checkoutPhase = CheckoutPhase.saving);
 
     try {
       final invoiceId = await _generateInvoiceId();
@@ -3484,10 +3067,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       _refreshProducts();
 
       // Show completion overlay
-      setState(() => _checkoutPhase = _CheckoutPhase.completed);
+      setState(() => _checkoutPhase = CheckoutPhase.completed);
     } catch (e) {
       if (mounted) {
-        setState(() => _checkoutPhase = _CheckoutPhase.idle);
+        setState(() => _checkoutPhase = CheckoutPhase.idle);
         context.showErrorSnackBar('حدث خطأ أثناء حفظ الفاتورة');
       }
     }
@@ -3495,12 +3078,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   /// Cancel checkout – go back to idle
   void _cancelCheckout() {
-    setState(() => _checkoutPhase = _CheckoutPhase.idle);
+    setState(() => _checkoutPhase = CheckoutPhase.idle);
   }
 
   /// Dismiss completion overlay – go back to idle
   void _dismissCompletion() {
-    setState(() => _checkoutPhase = _CheckoutPhase.idle);
+    setState(() => _checkoutPhase = CheckoutPhase.idle);
   }
 
   // ── Checkout Confirmation Overlay ──────────────────────────────────
@@ -3842,7 +3425,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;
     }
-    _heldOrders.add(_HeldOrder(
+    _heldOrders.add(HeldOrder(
       items: List.from(_cart),
       paymentMethod: _activePaymentMethod,
       payments: List.from(_payments),
@@ -4023,213 +3606,4 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  DATA MODELS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-enum DiscountType { fixed, percentage }
-
-/// Checkout phase enum – controls which overlay is shown.
-/// Using a single enum guarantees only ONE phase is active at a time,
-/// making it impossible for multiple dialogs to stack up.
-enum _CheckoutPhase {
-  idle,        // Normal state – no overlay
-  confirming,  // Showing confirmation overlay
-  saving,      // Saving invoice (no overlay, brief processing)
-  completed,   // Showing sale complete overlay
-}
-
-class _CartItem {
-  final int productId;
-  final String name;
-  final double unitPrice;
-  final int quantity;
-  final String unitName;           // e.g., 'كرتون' or 'قطعة'
-  final double conversionFactor;   // 1.0 for base unit, 24.0 for carton
-  final String? unitBarcode;       // barcode for this specific unit
-
-  _CartItem({
-    required this.productId,
-    required this.name,
-    required this.unitPrice,
-    required this.quantity,
-    this.unitName = 'قطعة',
-    this.conversionFactor = 1.0,
-    this.unitBarcode,
-  });
-
-  double get total => unitPrice * quantity;
-  /// Equivalent quantity in base units (for stock deduction)
-  double get baseQuantity => quantity * conversionFactor;
-
-  _CartItem copyWith({int? quantity}) {
-    return _CartItem(
-      productId: productId,
-      name: name,
-      unitPrice: unitPrice,
-      quantity: quantity ?? this.quantity,
-      unitName: unitName,
-      conversionFactor: conversionFactor,
-      unitBarcode: unitBarcode,
-    );
-  }
-}
-
-class _PaymentEntry {
-  final String method;
-  final double amount;
-  final String? providerName;
-  final String? referenceNumber;
-  final String? imagePath;
-
-  _PaymentEntry({
-    required this.method,
-    required this.amount,
-    this.providerName,
-    this.referenceNumber,
-    this.imagePath,
-  });
-
-  _PaymentEntry copyWith({
-    double? amount,
-    String? providerName,
-    String? referenceNumber,
-    String? imagePath,
-  }) {
-    return _PaymentEntry(
-      method: method,
-      amount: amount ?? this.amount,
-      providerName: providerName ?? this.providerName,
-      referenceNumber: referenceNumber ?? this.referenceNumber,
-      imagePath: imagePath ?? this.imagePath,
-    );
-  }
-}
-
-class _HeldOrder {
-  final List<_CartItem> items;
-  final String paymentMethod;
-  final List<_PaymentEntry> payments;
-  final double discount;
-  final DiscountType discountType;
-  final int? customerId;
-  final String customerName;
-  final DateTime createdAt;
-  final int? dbId; // Database row ID for persistence
-
-  _HeldOrder({
-    required this.items,
-    required this.paymentMethod,
-    required this.payments,
-    required this.discount,
-    required this.discountType,
-    required this.customerId,
-    required this.customerName,
-    required this.createdAt,
-    this.dbId,
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  PRODUCT CARD WIDGET
-// ═══════════════════════════════════════════════════════════════════════════════
-class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product, required this.onTap});
-
-  final Product product;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final lowStock = product.currentStock <= product.minStock && product.currentStock > 0;
-    final outOfStock = product.currentStock <= 0 && !product.allowNegative;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Product icon
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.inventory_2,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(height: 6),
-
-              // Name
-              Text(
-                product.nameAr,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 3),
-
-              // Price
-              Text(
-                CurrencyFormatter.format(product.sellPrice),
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 3),
-
-              // Stock badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: outOfStock
-                      ? AppColors.errorLight
-                      : lowStock
-                          ? AppColors.warningLight
-                          : product.currentStock <= 0
-                              ? AppColors.warningLight
-                              : AppColors.successLight,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Text(
-                  outOfStock
-                      ? 'نفذ'
-                      : product.currentStock <= 0
-                          ? 'مسموح'
-                          : lowStock
-                              ? 'منخفض'
-                              : '${product.currentStock.toStringAsFixed(0)}',
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w600,
-                    color: outOfStock
-                        ? AppColors.error
-                        : lowStock || product.currentStock <= 0
-                            ? AppColors.warning
-                            : AppColors.success,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 

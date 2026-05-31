@@ -4,7 +4,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/journal_service.dart';
 import '../../../data/models/cash_box_model.dart';
@@ -190,56 +189,14 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
           final openingBalanceAccountId = openingBalanceAccount?['id'] as int?;
 
           if (openingBalanceAccountId != null) {
-            final now = DateTime.now().toIso8601String();
-            final journalId = DateTime.now().millisecondsSinceEpoch;
-            final database = await locator<DatabaseHelper>().database;
             final name = _nameController.text.trim();
-
-            if (_balanceType == 'debit') {
-              // Debit Cash & Banks, Credit Opening Balance Equity
-              await database.insert('transactions', {
-                'account_id': _linkedAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(openingBalance),
-                'credit': 0,
-                'description': 'رصيد افتتاحي صندوق - $name',
-                'date': now,
-                'created_at': now,
-              });
-              await database.insert('transactions', {
-                'account_id': openingBalanceAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(openingBalance),
-                'description': 'رصيد افتتاحي صندوق - $name',
-                'date': now,
-                'created_at': now,
-              });
-              await locator<JournalService>().updateAccountBalance(_linkedAccountId!, openingBalance, isDebit: true);
-              await locator<JournalService>().updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: false);
-            } else {
-              // Credit Cash & Banks, Debit Opening Balance Equity
-              await database.insert('transactions', {
-                'account_id': _linkedAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(openingBalance),
-                'description': 'رصيد افتتاحي صندوق - $name',
-                'date': now,
-                'created_at': now,
-              });
-              await database.insert('transactions', {
-                'account_id': openingBalanceAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(openingBalance),
-                'credit': 0,
-                'description': 'رصيد افتتاحي صندوق - $name',
-                'date': now,
-                'created_at': now,
-              });
-              await locator<JournalService>().updateAccountBalance(_linkedAccountId!, openingBalance, isDebit: false);
-              await locator<JournalService>().updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: true);
-            }
+            await locator<CashBoxService>().recordCashBoxOpeningBalance(
+              linkedAccountId: _linkedAccountId!,
+              openingBalanceAccountId: openingBalanceAccountId,
+              openingBalance: openingBalance,
+              balanceType: _balanceType,
+              cashBoxName: name,
+            );
           }
         }
       }

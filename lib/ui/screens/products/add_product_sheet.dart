@@ -9,7 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
 import '../../../data/datasources/repositories/product_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
@@ -645,186 +644,49 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
 
     try {
-      final db = await locator<DatabaseHelper>().database;
-      int? savedProductId;
+      // Build unit conversions list for repository
+      final unitConversionMaps = _unitConversions
+          .where((uc) => uc.unitId != null)
+          .map((uc) {
+        final unitName = _unitNameById(uc.unitId);
+        final baseUnitName = _unitNameById(_selectedBaseUnitId);
+        return {
+          'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
+          'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
+          'from_unit_id': uc.unitId,
+          'to_unit_id': _selectedBaseUnitId,
+          'conversion_factor': uc.factor,
+          'barcode': uc.barcode,
+          'sell_price': uc.sellPrice,
+          'cost_price': uc.costPrice,
+        };
+      }).toList();
 
-      // Use a transaction to ensure atomicity
-      await db.transaction((txn) async {
-        if (_isEditMode) {
-          final updateMap = product.toMap();
-          // Lock system-managed fields (stock and warehouse), but allow account changes
-          updateMap['current_stock'] = widget.existing!.currentStock;
-          updateMap['warehouse_id'] = widget.existing!.warehouseId;
-          updateMap['image_path'] = _imagePath;
-          await txn.update('products', MoneyHelper.toCentsMap(updateMap, MoneyHelper.productMoneyFields), where: 'id = ?', whereArgs: [widget.existing!.id!]);
-
-          // Replace unit conversions
-          final productId = widget.existing!.id!;
-          await txn.delete('unit_conversions', where: 'product_id = ?', whereArgs: [productId]);
-          for (final uc in _unitConversions) {
-            if (uc.unitId == null) continue;
-            final unitName = _unitNameById(uc.unitId);
-            final baseUnitName = _unitNameById(_selectedBaseUnitId);
-            try {
-              await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
-                'product_id': productId,
-                'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
-                'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
-                'from_unit_id': uc.unitId,
-                'to_unit_id': _selectedBaseUnitId,
-                'conversion_factor': uc.factor,
-                'barcode': uc.barcode,
-                'sell_price': uc.sellPrice,
-                'cost_price': uc.costPrice,
-                'is_active': 1,
-                'created_at': DateTime.now().toIso8601String(),
-                'updated_at': DateTime.now().toIso8601String(),
-              }, ['sell_price', 'cost_price']));
-            } catch (e) {
-              debugPrint('Unit conversion insert error (edit, non-critical): $e');
-              try {
-                await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
-                  'product_id': productId,
-                  'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
-                  'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
-                  'conversion_factor': uc.factor,
-                  'barcode': uc.barcode,
-                  'sell_price': uc.sellPrice,
-                  'cost_price': uc.costPrice,
-                  'is_active': 1,
-                  'created_at': DateTime.now().toIso8601String(),
-                  'updated_at': DateTime.now().toIso8601String(),
-                }, ['sell_price', 'cost_price']));
-              } catch (e2) {
-                debugPrint('Unit conversion insert error (edit, fallback): $e2');
-              }
-            }
-          }
-        } else {
-          final map = product.toMap();
-          // Remove 'id' so SQLite auto-generates it
-          map.remove('id');
-          map['image_path'] = _imagePath;
-          savedProductId = await txn.insert('products', MoneyHelper.toCentsMap(map, MoneyHelper.productMoneyFields));
-
-          // Save unit conversions
-          if (savedProductId != null && savedProductId! > 0) {
-            for (final uc in _unitConversions) {
-              if (uc.unitId == null) continue;
-              final unitName = _unitNameById(uc.unitId);
-              final baseUnitName = _unitNameById(_selectedBaseUnitId);
-              try {
-                await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
-                  'product_id': savedProductId,
-                  'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
-                  'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
-                  'from_unit_id': uc.unitId,
-                  'to_unit_id': _selectedBaseUnitId,
-                  'conversion_factor': uc.factor,
-                  'barcode': uc.barcode,
-                  'sell_price': uc.sellPrice,
-                  'cost_price': uc.costPrice,
-                  'is_active': 1,
-                  'created_at': DateTime.now().toIso8601String(),
-                  'updated_at': DateTime.now().toIso8601String(),
-                }, ['sell_price', 'cost_price']));
-              } catch (e) {
-                debugPrint('Unit conversion insert error (non-critical): $e');
-                // Try without from_unit_id / to_unit_id in case DB schema is outdated
-                try {
-                  await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
-                    'product_id': savedProductId,
-                    'from_unit': unitName.isNotEmpty ? unitName : 'unknown',
-                    'to_unit': baseUnitName.isNotEmpty ? baseUnitName : 'unknown',
-                    'conversion_factor': uc.factor,
-                    'barcode': uc.barcode,
-                    'sell_price': uc.sellPrice,
-                    'cost_price': uc.costPrice,
-                    'is_active': 1,
-                    'created_at': DateTime.now().toIso8601String(),
-                    'updated_at': DateTime.now().toIso8601String(),
-                  }, ['sell_price', 'cost_price']));
-                } catch (e2) {
-                  debugPrint('Unit conversion insert error (fallback): $e2');
-                }
-              }
-            }
-          }
-        }
-        // ── Opening balance: stock movement + journal entries INSIDE the transaction ──
-        // This ensures atomicity — if journal entry fails, the product insert is rolled back too.
-        if (!_isEditMode && savedProductId != null) {
-          final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
-          if (openingQty > 0 && _trackStock) {
-            try {
-              final now = DateTime.now().toIso8601String();
-              // Log stock movement directly via txn
-              await txn.insert('stock_movements', {
-                'product_id': savedProductId!,
-                'movement_type': 'opening',
-                'quantity': openingQty,
-                'reference_type': null,
-                'reference_id': null,
-                'notes': 'رصيد افتتاحي',
-                'unit_cost': MoneyHelper.toCents(baseCostPrice),
-                'created_at': now,
-              });
-
-              // Create journal entries for opening balance: Debit Inventory / Credit Opening Balance
-              final totalValue = openingQty * baseCostPrice;
-              if (totalValue > 0) {
-                final codeOffset = _defaultCurrencyCode == 'SAR' ? 1 : (_defaultCurrencyCode == 'USD' ? 2 : 0);
-                final currency = _defaultCurrencyCode ?? 'YER';
-
-                // Find inventory account (1300 + offset)
-                final inventoryAccount = await txn.query(
-                  'accounts',
-                  where: 'account_code = ? AND currency = ?',
-                  whereArgs: [(1300 + codeOffset).toString(), currency],
-                  limit: 1,
-                );
-                // Find opening balance equity account (2901 + offset)
-                final openingBalanceAccount = await txn.query(
-                  'accounts',
-                  where: 'account_code = ? AND currency = ?',
-                  whereArgs: [(2901 + codeOffset).toString(), currency],
-                  limit: 1,
-                );
-
-                if (inventoryAccount.isNotEmpty && openingBalanceAccount.isNotEmpty) {
-                  final inventoryAccountId = inventoryAccount.first['id'] as int;
-                  final openingBalanceAccountId = openingBalanceAccount.first['id'] as int;
-
-                  // Journal entry: Debit Inventory / Credit Opening Balance
-                  await txn.insert('transactions', {
-                    'account_id': inventoryAccountId,
-                    'debit': MoneyHelper.toCents(totalValue),
-                    'credit': 0,
-                    'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
-                    'date': now,
-                    'created_at': now,
-                  });
-                  await txn.insert('transactions', {
-                    'account_id': openingBalanceAccountId,
-                    'debit': 0,
-                    'credit': MoneyHelper.toCents(totalValue),
-                    'description': 'رصيد افتتاحي - منتج: ${_nameArController.text.trim()}',
-                    'date': now,
-                    'created_at': now,
-                  });
-
-                  // P-03: Use updateAccountBalanceWithJournal for correct balance calculation
-                  // instead of manual balance calculation that doesn't handle EQUITY correctly
-                  await locator<DatabaseHelper>().journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalValue, 0.0, now);
-                  await locator<DatabaseHelper>().journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, totalValue, now);
-                }
-              }
-            } catch (e) {
-              debugPrint('Opening balance journal entry error (non-critical): $e');
-            }
-          }
-        }
-      });
+      if (_isEditMode) {
+        final updateMap = product.toMap();
+        // Lock system-managed fields (stock and warehouse), but allow account changes
+        updateMap['current_stock'] = widget.existing!.currentStock;
+        updateMap['warehouse_id'] = widget.existing!.warehouseId;
+        updateMap['image_path'] = _imagePath;
+        await locator<ProductRepository>().updateProductWithConversions(
+          productId: widget.existing!.id!,
+          updateMap: updateMap,
+          unitConversions: unitConversionMaps,
+        );
+      } else {
+        final map = product.toMap();
+        map['image_path'] = _imagePath;
+        final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
+        await locator<ProductRepository>().saveProductWithConversions(
+          productMap: map,
+          unitConversions: unitConversionMaps,
+          openingStock: openingQty > 0 && _trackStock ? openingQty : null,
+          warehouseId: _selectedWarehouseId,
+          baseCostPrice: baseCostPrice,
+          currency: _defaultCurrencyCode ?? 'YER',
+          productName: _nameArController.text.trim(),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);

@@ -3,7 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/services/report_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Financial Statements Screen (القوائم المالية)
@@ -87,42 +87,15 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final database = await locator<DatabaseHelper>().database;
       final cc = _currencyCode();
 
-      // Build date filter for transactions
-      final dateArgs = <dynamic>[];
-      String dateFilter = '';
-      if (_dateFrom != null) {
-        dateFilter += ' AND t.date >= ?';
-        dateArgs.add(_dateFrom!.toIso8601String());
-      }
-      if (_dateTo != null) {
-        dateFilter += ' AND t.date < ?';
-        dateArgs.add(_dateTo!.add(const Duration(days: 1)).toIso8601String());
-      }
-
-      // ── Income Statement Data ──
+      // Build date filter args for ReportService
       final accountTypes = ['REVENUE', 'COST', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY'];
-      final args = <dynamic>[];
-      String currencyFilter = '';
-      if (cc != null) {
-        currencyFilter = ' AND a.currency = ?';
-        args.add(cc);
-      }
-      args.addAll(dateArgs);
-
-      final results = await database.rawQuery(
-        "SELECT a.id, a.account_code, a.name_ar, a.account_type, a.balance_type, a.currency, "
-        "COALESCE(SUM(t.debit), 0) as total_debit, "
-        "COALESCE(SUM(t.credit), 0) as total_credit "
-        "FROM accounts a "
-        "LEFT JOIN transactions t ON t.account_id = a.id$dateFilter "
-        "WHERE a.is_active = 1 AND a.account_type IN (${accountTypes.map((_) => '?').join(',')})$currencyFilter "
-        "GROUP BY a.id "
-        "HAVING total_debit > 0 OR total_credit > 0 "
-        "ORDER BY a.account_code",
-        [...accountTypes, ...args],
+      final results = await locator<ReportService>().getFinancialStatementsData(
+        accountTypes: accountTypes,
+        currency: cc,
+        dateFrom: _dateFrom,
+        dateTo: _dateTo,
       );
 
       double revenue = 0, cost = 0, expenses = 0;

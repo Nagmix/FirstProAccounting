@@ -25,10 +25,13 @@ import '../../../core/services/bluetooth_printer_service.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
 import '../../../data/models/invoice_item_model.dart';
 import '../../../data/models/invoice_model.dart';
-import '../../widgets/invoice_item_card.dart';
 import '../customers/add_customer_sheet.dart';
 import '../suppliers/add_supplier_sheet.dart';
 import 'add_invoice_item_sheet.dart';
+import 'widgets/invoice_payment_section.dart';
+import 'widgets/invoice_entity_section.dart';
+import 'widgets/invoice_items_section.dart';
+import 'widgets/invoice_summary_section.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
   const CreateInvoiceScreen({super.key, required this.invoiceType, this.existingInvoice});
@@ -88,19 +91,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   double _selectedExchangeRate = 1.0;
   bool _isLoading = true;
   bool _showEntityDropdown = false;
-
-  // E-wallet providers list
-  static const List<String> _ewalletProviders = [
-    'جيب', 'فلوسك', 'كاش', 'ون كاش', 'جوالي', 'الكريمي',
-    'موبايل موني', 'محفظتي', 'شامل موني', 'سبأ كاش', 'ايزي', 'يمن والت', 'أخرى',
-  ];
-
-  // Bank transfer providers list
-  static const List<String> _bankTransferProviders = [
-    'الامتياز', 'النجم', 'يمن اكسبرس', 'الحزمي اكسبرس', 'الاكوع كوني',
-    'السريع للحوالات', 'ياه موني', 'عامري كاش', 'الناصر اكسبرس',
-    'المحيط اكسبرس', 'تحويل', 'أخرى',
-  ];
 
   bool get _isSale => widget.invoiceType == 'sale';
 
@@ -263,39 +253,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     end: Alignment.centerLeft,
   );
 
-  Widget _sectionHeader(String title, {IconData icon = Icons.label_important_rounded, Widget? trailing}) {
-    final isDark = context.isDarkMode;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 22,
-            decoration: BoxDecoration(
-              gradient: _primaryGradient,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Icon(icon, size: 20, color: _accentBlue),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(title,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                letterSpacing: 0.3,
-                color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
-              ),
-            ),
-          ),
-          if (trailing != null) trailing,
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDarkMode;
@@ -311,20 +268,156 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Partial payment warning
-                      if (!_autoPay && _paymentMechanism == 'cash' && _paidAmount > 0 && _remaining > 0.005)
-                        _buildPartialPaymentWarning(),
-                      // Payment Section
-                      _buildPaymentSection(isDark),
+                      // Payment Section (includes partial payment warning when applicable)
+                      InvoicePaymentSection(
+                        isDark: isDark,
+                        paymentMechanism: _paymentMechanism,
+                        paymentMethod: _paymentMethod,
+                        isReturn: _isReturn,
+                        autoPay: _autoPay,
+                        selectedCurrency: _selectedCurrency,
+                        selectedExchangeRate: _selectedExchangeRate,
+                        selectedCashBoxId: _selectedCashBoxId,
+                        selectedEwalletProvider: _selectedEwalletProvider,
+                        selectedBankTransferProvider: _selectedBankTransferProvider,
+                        attachmentPath: _attachmentPath,
+                        originalInvoiceId: _originalInvoiceId,
+                        originalInvoiceDisplay: _originalInvoiceDisplay,
+                        currencies: _currencies,
+                        cashBoxes: _cashBoxes,
+                        paidController: _paidController,
+                        transferNumberController: _transferNumberController,
+                        total: _total,
+                        paidAmount: _paidAmount,
+                        remaining: _remaining,
+                        isSale: _isSale,
+                        showPartialPaymentWarning: !_autoPay && _paymentMechanism == 'cash' && _paidAmount > 0 && _remaining > 0.005,
+                        onToggleReturn: () => setState(() => _isReturn = !_isReturn),
+                        onSetCashMechanism: () => setState(() => _paymentMechanism = 'cash'),
+                        onSetCreditMechanism: () => setState(() {
+                          _paymentMechanism = 'credit';
+                          _selectedCashBoxId = null;
+                          _autoPay = false;
+                          _paidController.text = '0';
+                        }),
+                        onPaymentMethodChanged: (method) => setState(() {
+                          _paymentMethod = method;
+                          if (method != 'ewallet') _selectedEwalletProvider = null;
+                          if (method != 'bank_transfer') {
+                            _selectedBankTransferProvider = null;
+                            _transferNumberController.clear();
+                          }
+                          if (method != 'ewallet' && method != 'bank_transfer') {
+                            _attachmentPath = null;
+                          }
+                        }),
+                        onCurrencyChanged: (val) {
+                          setState(() {
+                            _selectedCurrency = val;
+                            final currency = _currencies.where((c) => c['code'] == val).firstOrNull;
+                            if (currency != null) {
+                              _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+                            }
+                          });
+                        },
+                        onCashBoxChanged: (val) => setState(() => _selectedCashBoxId = val),
+                        onEwalletProviderChanged: (val) => setState(() => _selectedEwalletProvider = val),
+                        onBankTransferProviderChanged: (val) => setState(() => _selectedBankTransferProvider = val),
+                        onPickImageFromGallery: _pickImageFromGallery,
+                        onPickImageFromCamera: _pickImageFromCamera,
+                        onRemoveAttachment: () => setState(() => _attachmentPath = null),
+                        onToggleAutoPay: () {
+                          setState(() {
+                            _autoPay = !_autoPay;
+                            if (_autoPay) {
+                              _paidController.text = _total.toStringAsFixed(2);
+                            }
+                          });
+                        },
+                        onShowOriginalInvoiceSelector: _showOriginalInvoiceSelector,
+                        onClearOriginalInvoice: () => setState(() {
+                          _originalInvoiceId = null;
+                          _originalInvoiceDisplay = null;
+                        }),
+                        onPaidChanged: () => setState(() {}),
+                      ),
                       const SizedBox(height: 16),
                       // Entity Section
-                      _buildEntitySection(isDark),
+                      InvoiceEntitySection(
+                        isDark: isDark,
+                        showEntityDropdown: _showEntityDropdown,
+                        selectedEntityId: _selectedEntityId,
+                        selectedEntityType: _selectedEntityType,
+                        selectedEntityName: _selectedEntityName,
+                        filteredEntities: _filteredEntities,
+                        entitySearchController: _entitySearchController,
+                        isEntityRequired: _isEntityRequired,
+                        isSale: _isSale,
+                        paymentMechanism: _paymentMechanism,
+                        onToggleDropdown: () => setState(() => _showEntityDropdown = !_showEntityDropdown),
+                        onEntitySelected: (id, type) {
+                          setState(() {
+                            _selectedEntityId = id;
+                            _selectedEntityType = type;
+                            _showEntityDropdown = false;
+                            _entitySearchController.clear();
+                            _filteredEntities = List.from(_combinedEntities);
+                          });
+                        },
+                        onClearEntity: () => setState(() {
+                          _selectedEntityId = null;
+                          _selectedEntityType = null;
+                        }),
+                        onAddNewEntity: _addNewEntity,
+                        onFilterEntities: _filterEntities,
+                      ),
                       const SizedBox(height: 16),
                       // Items section
-                      _buildItemsSection(isDark),
+                      InvoiceItemsSection(
+                        isDark: isDark,
+                        items: _items,
+                        onQuantityChanged: (index, qty) {
+                          setState(() {
+                            final item = _items[index];
+                            _items[index] = item.copyWith(quantity: qty, totalPrice: qty * item.unitPrice);
+                            _updateAutoPay();
+                          });
+                        },
+                        onDeleteItem: (index) {
+                          setState(() {
+                            _items.removeAt(index);
+                            _updateAutoPay();
+                          });
+                        },
+                        onAddItem: _addItem,
+                      ),
                       const SizedBox(height: 16),
                       // Summary & Notes
-                      _buildSummarySection(isDark),
+                      InvoiceSummarySection(
+                        isDark: isDark,
+                        subtotal: _subtotal,
+                        discountAmount: _discountAmount,
+                        taxAmount: _taxAmount,
+                        transportCharges: _transportCharges,
+                        total: _total,
+                        paidAmount: _paidAmount,
+                        remaining: _remaining,
+                        totalInBaseCurrency: _totalInBaseCurrency,
+                        paidAmountInBaseCurrency: _paidAmountInBaseCurrency,
+                        remainingInBaseCurrency: _remainingInBaseCurrency,
+                        selectedCurrency: _selectedCurrency,
+                        discountController: _discountController,
+                        transportChargesController: _transportChargesController,
+                        notesController: _notesController,
+                        onDiscountChanged: () {
+                          setState(() {});
+                          _updateAutoPay();
+                        },
+                        onTransportChanged: () {
+                          setState(() {});
+                          _updateAutoPay();
+                        },
+                      ),
                       const SizedBox(height: 90), // Bottom padding for scroll
                     ],
                   ),
@@ -493,423 +586,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Partial payment warning ──────────────────────────────────────
-  Widget _buildPartialPaymentWarning() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.warning.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.warning.withOpacity(0.25)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32, height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.warning.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 18),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'المبلغ المدفوع أقل من المستحق. المتبقي سيتم تسجيله كرصد آجل',
-              style: context.textTheme.bodySmall?.copyWith(
-                color: AppColors.warning,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Payment Section (Currency + Return + Payment Mechanism) ──────
-  Widget _buildPaymentSection(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionHeader('تفاصيل الدفع', icon: Icons.payment_rounded),
-          // Currency + Return in one row
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: _buildModernDropdown<String>(
-                  value: _selectedCurrency,
-                  label: 'العملة',
-                  icon: Icons.monetization_on_rounded,
-                  items: _currencies.map((c) => DropdownMenuItem<String>(
-                    value: c['code'] as String,
-                    child: Text('${c['code']}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  )).toList(),
-                  onChanged: (val) {
-                    if (val == null) return;
-                    setState(() {
-                      _selectedCurrency = val;
-                      final currency = _currencies.where((c) => c['code'] == val).firstOrNull;
-                      if (currency != null) {
-                        _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-                      }
-                    });
-                  },
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildReturnToggle(isDark),
-              ),
-            ],
-          ),
-          // Original invoice selector (only when _isReturn is true)
-          if (_isReturn) ...[
-            const SizedBox(height: 12),
-            _buildOriginalInvoiceSelector(isDark),
-          ],
-          if (_selectedCurrency != 'YER')
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _accentBlue.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.swap_vert_rounded, size: 14, color: _accentBlue),
-                    const SizedBox(width: 4),
-                    Text(
-                      'سعر الصرف: $_selectedExchangeRate',
-                      style: context.textTheme.bodySmall?.copyWith(color: _accentBlue, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 16),
-          // Payment mechanism segmented control
-          _buildPaymentMechanismControl(isDark),
-          // Credit info
-          if (_paymentMechanism == 'credit') ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.accentOrange.withOpacity(0.08), AppColors.accentOrange.withOpacity(0.03)],
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.accentOrange.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 26, height: 26,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentOrange.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.info_outline_rounded, color: AppColors.accentOrange, size: 14),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'سيتم تسجيل المبلغ كرصيد على الحساب',
-                      style: context.textTheme.bodySmall?.copyWith(color: AppColors.accentOrange, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          // Payment method pills (only when cash)
-          if (_paymentMechanism == 'cash') ...[
-            const SizedBox(height: 14),
-            _buildPaymentMethodRow(isDark),
-          ],
-          // E-wallet / bank transfer sections
-          if (_paymentMechanism == 'cash' && _paymentMethod == 'ewallet')
-            _buildEwalletSection(isDark),
-          if (_paymentMechanism == 'cash' && _paymentMethod == 'bank_transfer')
-            _buildBankTransferSection(isDark),
-          // Cash box + paid amount
-          if (_paymentMechanism == 'cash') ...[
-            const SizedBox(height: 14),
-            _buildCashBoxAndPaidRow(isDark),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ── Modern dropdown helper ────────────────────────────────────────
-  Widget _buildModernDropdown<T>({
-    required T? value,
-    required String label,
-    required IconData icon,
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?> onChanged,
-    String? Function(T?)? validator,
-    bool isDark = false,
-  }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      isDense: true,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Container(
-          margin: const EdgeInsets.only(left: 8),
-          child: Icon(icon, size: 20, color: _accentBlue),
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _accentBlue, width: 1.5),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
-      ),
-      items: items,
-      onChanged: onChanged,
-      validator: validator,
-    );
-  }
-
-  // ── Return toggle ─────────────────────────────────────────────────
-  Widget _buildReturnToggle(bool isDark) {
-    return GestureDetector(
-      onTap: () => setState(() => _isReturn = !_isReturn),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.fastOutSlowIn,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        decoration: BoxDecoration(
-          color: _isReturn
-              ? AppColors.error.withOpacity(isDark ? 0.12 : 0.06)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3)),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _isReturn ? AppColors.error : (isDark ? AppColors.darkBorder : AppColors.border),
-            width: _isReturn ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                _isReturn ? Icons.undo_rounded : Icons.undo_outlined,
-                key: ValueKey(_isReturn),
-                size: 16,
-                color: _isReturn ? AppColors.error : AppColors.textHint,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text('مرتجع', style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: _isReturn ? AppColors.error : AppColors.textHint,
-            )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Payment mechanism segmented control ──────────────────────────
-  Widget _buildPaymentMechanismControl(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildMechanismSegment(
-              icon: Icons.payments_rounded,
-              label: 'نقداً',
-              isSelected: _paymentMechanism == 'cash',
-              color: AppColors.success,
-              onTap: () => setState(() => _paymentMechanism = 'cash'),
-              isDark: isDark,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: _buildMechanismSegment(
-              icon: Icons.schedule_rounded,
-              label: 'أجل',
-              isSelected: _paymentMechanism == 'credit',
-              color: AppColors.accentOrange,
-              onTap: () => setState(() {
-                _paymentMechanism = 'credit';
-                _selectedCashBoxId = null;
-                _autoPay = false;
-                _paidController.text = '0';
-              }),
-              isDark: isDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMechanismSegment({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required Color color,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.fastOutSlowIn,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? color.withOpacity(isDark ? 0.2 : 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-          border: isSelected
-              ? Border.all(color: color.withOpacity(0.3), width: 1)
-              : null,
-          boxShadow: isSelected
-              ? [BoxShadow(color: color.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(icon,
-                key: ValueKey(isSelected),
-                size: 18,
-                color: isSelected ? color : AppColors.textHint,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                color: isSelected ? color : AppColors.textSecondary,
-                fontSize: 14,
-              ),
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 6),
-              Icon(Icons.check_circle_rounded, size: 14, color: color),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Original Invoice Selector (for returns) ────────────────────────
-  Widget _buildOriginalInvoiceSelector(bool isDark) {
-    return GestureDetector(
-      onTap: _showOriginalInvoiceSelector,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: _originalInvoiceId != null
-              ? AppColors.error.withOpacity(isDark ? 0.08 : 0.04)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3)),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _originalInvoiceId != null
-                ? AppColors.error.withOpacity(0.4)
-                : (isDark ? AppColors.darkBorder : AppColors.border),
-            width: _originalInvoiceId != null ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 28, height: 28,
-              decoration: BoxDecoration(
-                color: (_originalInvoiceId != null ? AppColors.error : AppColors.textHint).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.link_rounded,
-                size: 14,
-                color: _originalInvoiceId != null ? AppColors.error : AppColors.textHint,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _originalInvoiceDisplay ?? 'اختر الفاتورة الأصلية...',
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: _originalInvoiceId != null ? AppColors.textPrimary : AppColors.textHint,
-                  fontWeight: _originalInvoiceId != null ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
-            ),
-            if (_originalInvoiceId != null)
-              GestureDetector(
-                onTap: () => setState(() {
-                  _originalInvoiceId = null;
-                  _originalInvoiceDisplay = null;
-                }),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.close_rounded, size: 14, color: AppColors.error),
-                ),
-              )
-            else
-              Icon(Icons.arrow_drop_down_rounded, size: 22, color: AppColors.textHint),
-          ],
-        ),
-      ),
-    );
-  }
-
+  // ── Original invoice selector dialog ─────────────────────────────
   void _showOriginalInvoiceSelector() async {
     // Get recent non-return invoices of the same type (sale or purchase)
     final invoices = await locator<InvoiceRepository>().getInvoicesByType(widget.invoiceType);
@@ -1040,759 +717,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  // ── Payment method pills ──────────────────────────────────────────
-  Widget _buildPaymentMethodRow(bool isDark) {
-    const methods = [
-      ('cash', 'نقدي', Icons.payments_rounded, AppColors.success),
-      ('check', 'شيك', Icons.sticky_note_2_rounded, AppColors.accentBlue),
-      ('transfer', 'حوالة', Icons.swap_horiz_rounded, AppColors.accentOrange),
-      ('bank', 'بنك', Icons.account_balance_rounded, Color(0xFF4F6AF0)),
-      ('ewallet', 'محفظة', Icons.account_balance_wallet_rounded, AppColors.accentGreen),
-      ('bank_transfer', 'حوالة مصرفية', Icons.business_rounded, Color(0xFF6A1B9A)),
-    ];
-
-    return Wrap(
-      spacing: 6,
-      runSpacing: 8,
-      children: methods.map((m) {
-        final selected = _paymentMethod == m.$1;
-        return GestureDetector(
-          onTap: () => setState(() {
-            _paymentMethod = m.$1;
-            if (m.$1 != 'ewallet') _selectedEwalletProvider = null;
-            if (m.$1 != 'bank_transfer') {
-              _selectedBankTransferProvider = null;
-              _transferNumberController.clear();
-            }
-            if (m.$1 != 'ewallet' && m.$1 != 'bank_transfer') {
-              _attachmentPath = null;
-            }
-          }),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.fastOutSlowIn,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected
-                  ? m.$4.withOpacity(isDark ? 0.18 : 0.08)
-                  : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: selected ? m.$4 : (isDark ? AppColors.darkBorder : AppColors.border),
-                width: selected ? 1.5 : 1,
-              ),
-              boxShadow: selected
-                  ? [BoxShadow(color: m.$4.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 2))]
-                  : null,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(m.$3, size: 15, color: selected ? m.$4 : AppColors.textHint),
-                const SizedBox(width: 5),
-                Text(
-                  m.$2,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? m.$4 : AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  // ── E-wallet section ─────────────────────────────────────────────
-  Widget _buildEwalletSection(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.accentGreen.withOpacity(0.06), AppColors.accentGreen.withOpacity(0.02)],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.accentGreen.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DropdownButtonFormField<String>(
-            value: _selectedEwalletProvider,
-            isDense: true,
-            decoration: InputDecoration(
-              labelText: 'اختر المحفظة الإلكترونية',
-              prefixIcon: Container(
-                margin: const EdgeInsets.only(left: 8),
-                child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.accentGreen, size: 18),
-              ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.accentGreen.withOpacity(0.3)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.accentGreen, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              filled: true,
-              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-            ),
-            items: _ewalletProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 13)))).toList(),
-            onChanged: (val) => setState(() => _selectedEwalletProvider = val),
-          ),
-          const SizedBox(height: 10),
-          _buildAttachmentButtons(),
-        ],
-      ),
-    );
-  }
-
-  // ── Bank transfer section ────────────────────────────────────────
-  Widget _buildBankTransferSection(bool isDark) {
-    const purpleColor = Color(0xFF6A1B9A);
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [purpleColor.withOpacity(0.06), purpleColor.withOpacity(0.02)],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: purpleColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DropdownButtonFormField<String>(
-            value: _selectedBankTransferProvider,
-            isDense: true,
-            decoration: InputDecoration(
-              labelText: 'اختر شركة الحوالة',
-              prefixIcon: Container(
-                margin: const EdgeInsets.only(left: 8),
-                child: const Icon(Icons.business_rounded, color: purpleColor, size: 18),
-              ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor.withOpacity(0.3)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              filled: true,
-              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-            ),
-            items: _bankTransferProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 13)))).toList(),
-            onChanged: (val) => setState(() => _selectedBankTransferProvider = val),
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: _transferNumberController,
-            keyboardType: TextInputType.text,
-            textInputAction: TextInputAction.next,
-            decoration: InputDecoration(
-              isDense: true,
-              labelText: 'رقم الحوالة (اختياري)',
-              prefixIcon: Container(
-                margin: const EdgeInsets.only(left: 8),
-                child: const Icon(Icons.tag_rounded, color: purpleColor, size: 18),
-              ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor.withOpacity(0.3)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              filled: true,
-              fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildAttachmentButtons(isBankTransfer: true),
-        ],
-      ),
-    );
-  }
-
-  // ── Attachment buttons ───────────────────────────────────────────
-  Widget _buildAttachmentButtons({bool isBankTransfer = false}) {
-    return Column(
-      children: [
-        if (_attachmentPath != null) ...[
-          Container(
-            height: 100,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.divider),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              children: [
-                Image.file(File(_attachmentPath!), width: double.infinity, height: 100, fit: BoxFit.cover),
-                Positioned(
-                  top: 6, left: 6,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _attachmentPath = null),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _accentBlue.withOpacity(0.3)),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _pickImageFromGallery,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.image_rounded, size: 16, color: _accentBlue),
-                          const SizedBox(width: 6),
-                          Text(isBankTransfer ? 'رفق إشعار' : 'رفق صورة',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _accentBlue),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _accentBlue.withOpacity(0.3)),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _pickImageFromCamera,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.camera_alt_rounded, size: 16, color: _accentBlue),
-                          const SizedBox(width: 6),
-                          Text('تصوير',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _accentBlue),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // ── Cash box + Paid amount row ───────────────────────────────────
-  Widget _buildCashBoxAndPaidRow(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Cash box dropdown
-        _buildModernDropdown<int>(
-          value: _selectedCashBoxId,
-          label: 'الصندوق *',
-          icon: Icons.account_balance_wallet_rounded,
-          items: _cashBoxes.map((cb) {
-            final balance = MoneyHelper.readMoney(cb['balance']);
-            final bt = cb['balance_type'] as String? ?? 'credit';
-            return DropdownMenuItem<int>(
-              value: cb['id'] as int,
-              child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})', style: const TextStyle(fontSize: 12)),
-            );
-          }).toList(),
-          onChanged: (val) => setState(() => _selectedCashBoxId = val),
-          validator: (v) => v == null ? 'يجب اختيار الصندوق' : null,
-          isDark: isDark,
-        ),
-        const SizedBox(height: 12),
-        // Paid amount + Auto-pay checkbox
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _paidController,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.left,
-                enabled: !_autoPay,
-                decoration: InputDecoration(
-                  isDense: true,
-                  labelText: 'المدفوع',
-                  prefixIcon: Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    child: const Icon(Icons.payments_rounded, size: 18, color: _accentBlue),
-                  ),
-                  suffixText: _selectedCurrency,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
-                  ),
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.border.withOpacity(0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: _accentBlue, width: 1.5),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  filled: _autoPay,
-                  fillColor: _autoPay
-                      ? (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant).withOpacity(0.5)
-                      : null,
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Auto-pay toggle
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _autoPay = !_autoPay;
-                      if (_autoPay) {
-                        _paidController.text = _total.toStringAsFixed(2);
-                      }
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 44,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: _autoPay ? _accentBlue : (isDark ? AppColors.darkSurfaceVariant : AppColors.border),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: AnimatedAlign(
-                      duration: const Duration(milliseconds: 200),
-                      alignment: _autoPay ? Alignment.centerLeft : Alignment.centerRight,
-                      child: Container(
-                        width: 20, height: 20,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 1))],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text('مدفوع', style: context.textTheme.labelSmall?.copyWith(
-                  fontSize: 10,
-                  color: _autoPay ? _accentBlue : AppColors.textHint,
-                  fontWeight: _autoPay ? FontWeight.w700 : FontWeight.w400,
-                )),
-              ],
-            ),
-          ],
-        ),
-        // Remaining amount
-        if (!_autoPay && _remaining.abs() > 0.005) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: _remaining > 0.005
-                  ? AppColors.error.withOpacity(0.06)
-                  : AppColors.success.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _remaining > 0.005
-                    ? AppColors.error.withOpacity(0.2)
-                    : AppColors.success.withOpacity(0.2),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _remaining > 0.005 ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
-                      size: 14,
-                      color: _remaining > 0.005 ? AppColors.error : AppColors.success,
-                    ),
-                    const SizedBox(width: 6),
-                    Text('المتبقي', style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                Text(
-                  CurrencyFormatter.format(_remaining),
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: _remaining > 0.005 ? AppColors.error : AppColors.success,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  // ── Entity Section (modern search with avatars) ──────────────────
-  Widget _buildEntitySection(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionHeader(
-            'اسم الحساب',
-            icon: Icons.person_rounded,
-            trailing: _isEntityRequired
-                ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text('مطلوب', style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.w700)),
-                  )
-                : Text('(اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint, fontSize: 11)),
-          ),
-          // Entity selection field
-          GestureDetector(
-            onTap: () => setState(() => _showEntityDropdown = !_showEntityDropdown),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: _showEntityDropdown
-                      ? _accentBlue
-                      : (_selectedEntityId != null ? _accentBlue.withOpacity(0.3) : (isDark ? AppColors.darkBorder : AppColors.border)),
-                  width: _showEntityDropdown ? 1.5 : 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  // Avatar circle
-                  _buildEntityAvatar(isDark),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _selectedEntityName ?? 'اختر حساب...',
-                      style: context.textTheme.bodyMedium?.copyWith(
-                        color: _selectedEntityId != null
-                            ? (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)
-                            : AppColors.textHint,
-                        fontWeight: _selectedEntityId != null ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                  if (_selectedEntityId != null)
-                    GestureDetector(
-                      onTap: () => setState(() {
-                        _selectedEntityId = null;
-                        _selectedEntityType = null;
-                      }),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.close_rounded, size: 14, color: AppColors.error),
-                      ),
-                    )
-                  else
-                    Icon(Icons.arrow_drop_down_rounded, size: 22, color: _accentBlue),
-                ],
-              ),
-            ),
-          ),
-          // Dropdown with search
-          if (_showEntityDropdown) ...[
-            const SizedBox(height: 6),
-            Container(
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _accentBlue.withOpacity(0.2)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Search field
-                  Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: TextField(
-                      controller: _entitySearchController,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: 'بحث عن حساب...',
-                        prefixIcon: Icon(Icons.search_rounded, size: 18, color: _accentBlue),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: _accentBlue, width: 1.5),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
-                      ),
-                      onChanged: _filterEntities,
-                    ),
-                  ),
-                  // Add new button
-                  InkWell(
-                    onTap: () => _addNewEntity(),
-                    borderRadius: BorderRadius.circular(0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        border: Border(top: BorderSide(color: isDark ? AppColors.darkDivider : AppColors.divider)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 28, height: 28,
-                            decoration: BoxDecoration(
-                              gradient: _primaryGradient,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            _isSale ? 'إضافة عميل جديد' : 'إضافة مورد جديد',
-                            style: context.textTheme.bodyMedium?.copyWith(
-                              color: _accentBlue,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Entity list
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      itemCount: _filteredEntities.length,
-                      separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? AppColors.darkDivider : AppColors.divider),
-                      itemBuilder: (context, index) {
-                        final entity = _filteredEntities[index];
-                        final isSelected = _selectedEntityId == entity['id'] && _selectedEntityType == entity['type'];
-                        final isCustomer = entity['type'] == 'customer';
-                        final balance = MoneyHelper.readMoney(entity['balance']);
-                        final bt = entity['balance_type'] as String? ?? 'credit';
-
-                        return InkWell(
-                          onTap: () {
-                            setState(() {
-                              _selectedEntityId = entity['id'] as int;
-                              _selectedEntityType = entity['type'] as String;
-                              _showEntityDropdown = false;
-                              _entitySearchController.clear();
-                              _filteredEntities = List.from(_combinedEntities);
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            color: isSelected ? _accentBlue.withOpacity(0.06) : null,
-                            child: Row(
-                              children: [
-                                // Avatar circle for entity
-                                Container(
-                                  width: 32, height: 32,
-                                  decoration: BoxDecoration(
-                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    isCustomer ? Icons.person_rounded : Icons.local_shipping_rounded,
-                                    size: 16,
-                                    color: isCustomer ? AppColors.success : const Color(0xFF3B82F6),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    entity['name'] ?? '',
-                                    style: context.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-                                if (balance != 0)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: (bt == 'credit' ? AppColors.success : AppColors.error).withOpacity(0.08),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      '${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'}',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        color: bt == 'credit' ? AppColors.success : AppColors.error,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                const SizedBox(width: 6),
-                                // Type badge
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    isCustomer ? 'عميل' : 'مورد',
-                                    style: context.textTheme.labelSmall?.copyWith(
-                                      color: isCustomer ? AppColors.success : const Color(0xFF3B82F6),
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if (_isEntityRequired && _selectedEntityId == null && _paymentMechanism == 'credit')
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline_rounded, size: 12, color: AppColors.error),
-                  const SizedBox(width: 4),
-                  Text('الحساب مطلوب للفاتورة الآجلة', style: context.textTheme.bodySmall?.copyWith(color: AppColors.error, fontSize: 11)),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEntityAvatar(bool isDark) {
-    if (_selectedEntityId == null) {
-      return Container(
-        width: 34, height: 34,
-        decoration: BoxDecoration(
-          color: (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(Icons.person_outline_rounded, size: 18, color: AppColors.textHint),
-      );
-    }
-    final isCustomer = _selectedEntityType == 'customer';
-    final name = _selectedEntityName ?? '';
-    final initial = name.isNotEmpty ? name[0] : '?';
-    return Container(
-      width: 34, height: 34,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isCustomer
-              ? [const Color(0xFF22C55E), const Color(0xFF4ADE80)]
-              : [const Color(0xFF3B82F6), const Color(0xFF60A5FA)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: (isCustomer ? const Color(0xFF22C55E) : const Color(0xFF3B82F6)).withOpacity(0.25),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(initial,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
-        ),
-      ),
-    );
-  }
-
   // ── Add new entity ───────────────────────────────────────────────
   Future<void> _addNewEntity() async {
     _showEntityDropdown = false;
@@ -1820,408 +744,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       _suppliers = results[1];
       _buildCombinedEntities();
     });
-  }
-
-  // ── Items Section ────────────────────────────────────────────────
-  Widget _buildItemsSection(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionHeader(
-            'الأصناف',
-            icon: Icons.inventory_2_rounded,
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                gradient: _primaryGradient,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text('${_items.length}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
-              ),
-            ),
-          ),
-          if (_items.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.border,
-                  style: BorderStyle.solid,
-                ),
-              ),
-              child: Center(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 56, height: 56,
-                      decoration: BoxDecoration(
-                        color: _accentBlue.withOpacity(0.06),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.shopping_cart_outlined, size: 28, color: _accentBlue.withOpacity(0.4)),
-                    ),
-                    const SizedBox(height: 10),
-                    Text('لم يتم إضافة أصناف بعد',
-                      style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            ..._items.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              return InvoiceItemCard(
-                item: item,
-                onQuantityChanged: (qty) {
-                  setState(() {
-                    _items[index] = item.copyWith(quantity: qty, totalPrice: qty * item.unitPrice);
-                    _updateAutoPay();
-                  });
-                },
-                onDelete: () {
-                  setState(() {
-                    _items.removeAt(index);
-                    _updateAutoPay();
-                  });
-                },
-              );
-            }),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _accentBlue.withOpacity(0.3)),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _addItem,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 24, height: 24,
-                          decoration: BoxDecoration(
-                            color: _accentBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(7),
-                          ),
-                          child: const Icon(Icons.add_rounded, size: 16, color: _accentBlue),
-                        ),
-                        const SizedBox(width: 8),
-                        Text('إضافة صنف',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: _accentBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Summary Section ──────────────────────────────────────────────
-  Widget _buildSummarySection(bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Gradient accent header
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  _accentBlue.withOpacity(isDark ? 0.15 : 0.08),
-                  _accentPurple.withOpacity(isDark ? 0.08 : 0.03),
-                ],
-                begin: Alignment.centerRight,
-                end: Alignment.centerLeft,
-              ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 30, height: 30,
-                  decoration: BoxDecoration(
-                    gradient: _primaryGradient,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(Icons.summarize_rounded, size: 16, color: Colors.white),
-                ),
-                const SizedBox(width: 10),
-                Text('ملخص الفاتورة',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Summary body
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _summaryRow('المجموع الفرعي', CurrencyFormatter.format(_subtotal), isDark),
-                const SizedBox(height: 8),
-                // Discount inline
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.discount_rounded, size: 14, color: AppColors.textSecondary),
-                        const SizedBox(width: 4),
-                        Text('الخصم', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                    SizedBox(
-                      width: 130,
-                      child: TextField(
-                        controller: _discountController,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.left,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                          suffixText: _selectedCurrency,
-                          hintText: '0.00',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: _accentBlue, width: 1.5),
-                          ),
-                          filled: true,
-                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
-                        ),
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        onChanged: (_) {
-                          setState(() {});
-                          _updateAutoPay();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                if (AppConstants.defaultVatRate > 0) ...[
-                  const SizedBox(height: 8),
-                  _summaryRow('الضريبة (${AppConstants.defaultVatRate.toStringAsFixed(0)}%)', CurrencyFormatter.format(_taxAmount), isDark),
-                ],
-                // Transport inline
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.local_shipping_rounded, size: 14, color: AppColors.textSecondary),
-                        const SizedBox(width: 4),
-                        Text('أجور النقل', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                    SizedBox(
-                      width: 130,
-                      child: TextField(
-                        controller: _transportChargesController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        textAlign: TextAlign.left,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                          suffixText: _selectedCurrency,
-                          hintText: '0.00',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: _accentBlue, width: 1.5),
-                          ),
-                          filled: true,
-                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
-                        ),
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        onChanged: (_) {
-                          setState(() {});
-                          _updateAutoPay();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Total divider
-                Container(
-                  height: 1,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.transparent, _accentBlue.withOpacity(0.2), Colors.transparent],
-                      begin: Alignment.centerRight,
-                      end: Alignment.centerLeft,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Total with gradient accent
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        _accentBlue.withOpacity(isDark ? 0.12 : 0.06),
-                        _accentPurple.withOpacity(isDark ? 0.06 : 0.02),
-                      ],
-                      begin: Alignment.centerRight,
-                      end: Alignment.centerLeft,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _accentBlue.withOpacity(0.15)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('الإجمالي',
-                        style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      Text(CurrencyFormatter.format(_total),
-                        style: context.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          color: _accentBlue,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_selectedCurrency != 'YER') ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.info.withOpacity(0.2)),
-                    ),
-                    child: Column(
-                      children: [
-                        _summaryRow('المعادل بالريال اليمني', '${CurrencyFormatter.format(_totalInBaseCurrency)} ر.ي', isDark,
-                            valueStyle: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.info)),
-                        if (_paidAmount > 0.005) ...[
-                          const SizedBox(height: 4),
-                          _summaryRow('المدفوع (ر.ي)', '${CurrencyFormatter.format(_paidAmountInBaseCurrency)} ر.ي', isDark,
-                              valueStyle: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.success)),
-                        ],
-                        if (_remaining > 0.005) ...[
-                          const SizedBox(height: 4),
-                          _summaryRow('المتبقي (ر.ي)', '${CurrencyFormatter.format(_remainingInBaseCurrency)} ر.ي', isDark,
-                              valueStyle: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.error)),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                // Notes
-                TextFormField(
-                  controller: _notesController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    labelText: 'ملاحظات',
-                    prefixIcon: Container(
-                      margin: const EdgeInsets.only(left: 8),
-                      child: const Icon(Icons.edit_note_rounded, size: 18, color: _accentBlue),
-                    ),
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: _accentBlue, width: 1.5),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    filled: true,
-                    fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryRow(String label, String value, bool isDark, {TextStyle? valueStyle, Color? valueColor}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: context.textTheme.bodySmall?.copyWith(
-          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-        )),
-        Text(value, style: valueStyle ?? context.textTheme.bodySmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: valueColor ?? (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
-        )),
-      ],
-    );
   }
 
   // ── Add item ─────────────────────────────────────────────────────

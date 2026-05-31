@@ -743,4 +743,130 @@ class ShiftService {
       await db.delete('held_orders');
     }
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Cash In/Out during a shift
+  // ══════════════════════════════════════════════════════════════
+
+  /// Record a cash in/out transaction during an active shift.
+  ///
+  /// Updates the cash box balance, creates journal entries, updates account
+  /// balances, and increments the shift transaction count.
+  Future<void> recordCashInOut({
+    required int shiftId,
+    required int cashBoxId,
+    required double amount,
+    required bool isCashIn,
+    required String reason,
+    required String currency,
+  }) async {
+    final db = await _db;
+    final now = DateTime.now().toIso8601String();
+
+    await db.transaction((txn) async {
+      // ── 1. Update cash box balance ──
+      final cashBoxRow = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+      if (cashBoxRow.isNotEmpty) {
+        final currentBalance = MoneyHelper.readMoney(cashBoxRow.first['balance']);
+        final newBalance = isCashIn ? currentBalance + amount : currentBalance - amount;
+        await txn.update(
+          'cash_boxes',
+          MoneyHelper.toCentsMap({
+            'balance': newBalance.abs(),
+            'balance_type': newBalance >= 0 ? 'credit' : 'debit',
+            'updated_at': now,
+          }, MoneyHelper.cashBoxMoneyFields),
+          where: 'id = ?',
+          whereArgs: [cashBoxId],
+        );
+      }
+
+      // ── 2. Create journal entries ──
+      final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+      final cashAccountCode = 1100 + codeOffset;
+      final expenseAccountCode = 5000 + codeOffset;
+
+      // Find cash/bank account
+      final cashAccountRow = await txn.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [cashAccountCode.toString(), currency],
+        limit: 1,
+      );
+      // Find expense account
+      final expenseAccountRow = await txn.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [expenseAccountCode.toString(), currency],
+        limit: 1,
+      );
+
+      if (cashAccountRow.isNotEmpty && expenseAccountRow.isNotEmpty) {
+        final cashAccountId = cashAccountRow.first['id'] as int;
+        final expenseAccountId = expenseAccountRow.first['id'] as int;
+
+        if (isCashIn) {
+          // إيداع: مدين (الصندوق) / دائن (مصاريف متنوعة)
+          await txn.insert('transactions', {
+            'account_id': cashAccountId,
+            'debit': MoneyHelper.toCents(amount),
+            'credit': 0,
+            'description': reason,
+            'date': now,
+            'created_at': now,
+          });
+          await txn.insert('transactions', {
+            'account_id': expenseAccountId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(amount),
+            'description': reason,
+            'date': now,
+            'created_at': now,
+          });
+          // Update account balances
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, amount, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccountId, 0.0, amount, now);
+        } else {
+          // سحب: مدين (مصاريف متنوعة) / دائن (الصندوق)
+          await txn.insert('transactions', {
+            'account_id': expenseAccountId,
+            'debit': MoneyHelper.toCents(amount),
+            'credit': 0,
+            'description': reason,
+            'date': now,
+            'created_at': now,
+          });
+          await txn.insert('transactions', {
+            'account_id': cashAccountId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(amount),
+            'description': reason,
+            'date': now,
+            'created_at': now,
+          });
+          // Update account balances
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccountId, amount, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, 0.0, amount, now);
+        }
+      }
+
+      // ── 3. Update shift transaction count ──
+      await txn.update(
+        'shifts',
+        {
+          'transaction_count': (await _getShiftTransactionCount(txn, shiftId)) + 1,
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [shiftId],
+      );
+    });
+  }
+
+  /// Helper to get current transaction count for a shift within a transaction.
+  Future<int> _getShiftTransactionCount(Transaction txn, int shiftId) async {
+    final rows = await txn.query('shifts', columns: ['transaction_count'], where: 'id = ?', whereArgs: [shiftId], limit: 1);
+    if (rows.isEmpty) return 0;
+    return (rows.first['transaction_count'] as int?) ?? 0;
+  }
 }

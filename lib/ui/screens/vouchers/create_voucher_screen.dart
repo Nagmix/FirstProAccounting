@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite_sqlcipher/sqflite.dart' show Transaction;
 import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/voucher_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 
 class CreateVoucherScreen extends StatefulWidget {
@@ -215,7 +214,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
       }
 
       // إنشاء السند مع القيود اليومية وتحديث الأرصدة في معاملة واحدة
-      await _saveVoucherWithJournalEntries(voucherMap, items);
+      await locator<VoucherRepository>().saveVoucherWithJournalEntry(voucherMap, items);
 
       if (mounted) {
         context.showSuccessSnackBar('تم حفظ السند بنجاح');
@@ -228,112 +227,6 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
-  }
-
-  /// حفظ السند مع إنشاء قيود يومية وتحديث أرصدة الحسابات والصندوق
-  Future<void> _saveVoucherWithJournalEntries(
-    Map<String, dynamic> voucherMap,
-    List<Map<String, dynamic>> items,
-  ) async {
-    final db = await locator<DatabaseHelper>().database;
-    final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
-    final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
-    final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
-    final dateStr = voucherMap['date'] as String? ?? now;
-
-    await db.transaction((txn) async {
-      // 1. إدراج السند
-      final voucherId = await txn.insert('vouchers', MoneyHelper.toCentsMap(voucherMap, MoneyHelper.voucherMoneyFields));
-
-      // 2. إدراج بنود السند وإنشاء قيود يومية لكل بند وتحديث رصيد الحساب
-      for (final item in items) {
-        final itemMap = Map<String, dynamic>.from(item);
-        itemMap['voucher_id'] = voucherId;
-        itemMap['created_at'] = now;
-        await txn.insert('voucher_items', MoneyHelper.toCentsMap(itemMap, MoneyHelper.transactionMoneyFields));
-
-        // إنشاء قيد يومي لكل بند
-        final accountId = (item['account_id'] as num?)?.toInt();
-        final debit = MoneyHelper.readMoney(item['debit']);
-        final credit = MoneyHelper.readMoney(item['credit']);
-        if (accountId != null && (debit > 0 || credit > 0)) {
-          await txn.insert('transactions', {
-            'account_id': accountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(debit),
-            'credit': MoneyHelper.toCents(credit),
-            'description': item['description'] ?? voucherMap['description'] ?? 'سند ${voucherMap['voucher_number']}',
-            'date': dateStr,
-            'created_at': now,
-          });
-
-          // تحديث رصيد الحساب
-          await _updateAccountBalance(txn, accountId, debit, credit, now);
-        }
-      }
-
-      // 3. تحديث رصيد الصندوق للسندات من نوع قبض أو صرف
-      final cashBoxId = voucherMap['cash_box_id'];
-      if (cashBoxId != null && totalAmount > 0 &&
-          (voucherType == 'receipt' || voucherType == 'payment')) {
-        if (voucherType == 'receipt') {
-          // سند قبض: زيادة رصيد الصندوق
-          await txn.rawUpdate(
-            'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(totalAmount), now, cashBoxId],
-          );
-        } else if (voucherType == 'payment') {
-          // سند صرف: نقص رصيد الصندوق
-          await txn.rawUpdate(
-            'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(totalAmount), now, cashBoxId],
-          );
-        }
-      }
-    });
-  }
-
-  /// تحديث رصيد الحساب باستخدام منطق المدين والدائن
-  /// المدين يزيد حسابات الأصول والتكاليف والمصاريف
-  /// الدائن يزيد حسابات الخصوم والإيرادات
-  Future<void> _updateAccountBalance(
-    Transaction txn,
-    int accountId,
-    double debit,
-    double credit,
-    String now,
-  ) async {
-    final accountRow = await txn.query(
-      'accounts',
-      where: 'id = ?',
-      whereArgs: [accountId],
-      limit: 1,
-    );
-    if (accountRow.isEmpty) return;
-
-    final account = accountRow.first;
-    final accountType = account['account_type'] as String? ?? '';
-    // حسابات الأصول والتكاليف والمصاريف: طبيعتها مدينة
-    // حسابات الخصوم والإيرادات: طبيعتها دائنة
-    final effectiveType =
-        (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE')
-            ? 'debit'
-            : 'credit';
-
-    double currentBalance = MoneyHelper.readMoney(account['balance']);
-    if (effectiveType == 'debit') {
-      currentBalance = currentBalance + debit - credit;
-    } else {
-      currentBalance = currentBalance + credit - debit;
-    }
-
-    await txn.update(
-      'accounts',
-      {'balance': MoneyHelper.toCents(currentBalance), 'updated_at': now},
-      where: 'id = ?',
-      whereArgs: [accountId],
-    );
   }
 
   @override

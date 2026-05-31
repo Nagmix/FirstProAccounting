@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/repositories/product_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/models/product_model.dart';
@@ -247,14 +246,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                                   // Check if any products use this category before deleting
                                   final catId = cat['id'] as int;
                                   try {
-                                    final database = await locator<DatabaseHelper>().database;
-                                    final productsWithCategory = await database.query(
-                                      'products',
-                                      columns: ['id', 'name_ar'],
-                                      where: 'category_id = ?',
-                                      whereArgs: [catId],
-                                      limit: 5,
-                                    );
+                                    final productsWithCategory = await locator<ProductRepository>().getProductsByCategoryId(catId);
                                     if (productsWithCategory.isNotEmpty) {
                                       final productNames = productsWithCategory.map((p) => p['name_ar'] as String? ?? '').join('، ');
                                       final extra = productsWithCategory.length > 5 ? ' وغيرها...' : '';

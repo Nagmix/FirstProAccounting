@@ -6,7 +6,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/voucher_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import 'create_voucher_screen.dart';
 
@@ -210,16 +210,16 @@ class _VouchersScreenState extends State<VouchersScreen>
     if (!mounted) return;
 
     // Get account names for items
-    final database = await locator<DatabaseHelper>().database;
+    final voucherRepo = locator<VoucherRepository>();
     final List<Map<String, dynamic>> enrichedItems = [];
     for (final item in items) {
       final accountId = (item['account_id'] as num?)?.toInt();
       String accountName = 'غير معروف';
       if (accountId != null) {
         try {
-          final acct = await database.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
-          if (acct.isNotEmpty) {
-            accountName = acct.first['name_ar'] as String? ?? accountName;
+          final acct = await voucherRepo.getAccountById(accountId);
+          if (acct != null) {
+            accountName = acct['name_ar'] as String? ?? accountName;
           }
         } catch (_) {}
       }

@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:sqflite_sqlcipher/sqflite.dart' show Transaction;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -10,7 +9,6 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
 import '../../../data/datasources/repositories/expense_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
@@ -764,326 +762,21 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     };
 
     if (_isEditing && widget.expenseId != null) {
-      await _editExpenseWithReversal(widget.expenseId!, expenseMap, effectiveExpenseAccountId);
+      await locator<ExpenseRepository>().updateExpenseWithJournalEntry(
+        widget.expenseId!,
+        _existingExpense!,
+        expenseMap,
+        effectiveExpenseAccountId,
+      );
     } else {
       expenseMap['created_at'] = now;
-      // Save expense with journal entries, using the expense account for the transaction
-      await _saveExpenseWithAccountTransaction(expenseMap, effectiveExpenseAccountId);
+      // Save expense with journal entries via repository
+      await locator<ExpenseRepository>().saveExpenseWithJournalEntry(expenseMap);
     }
 
     if (mounted) {
       context.showSuccessSnackBar(_isEditing ? 'تم تحديث المصروف بنجاح' : 'تم حفظ المصروف بنجاح');
       Navigator.pop(context, true);
     }
-  }
-
-  Future<void> _saveExpenseWithAccountTransaction(Map<String, dynamic> expenseMap, int? expenseAccountId) async {
-    final db = await locator<DatabaseHelper>().database;
-    final amountBase = MoneyHelper.readMoney(expenseMap['amount_base']);
-    final now = DateTime.now().toIso8601String();
-
-    await db.transaction((txn) async {
-      // Insert expense
-      await txn.insert('expenses', MoneyHelper.toCentsMap(expenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']));
-
-      if (expenseAccountId == null || amountBase <= 0) return;
-
-      final journalId = DateTime.now().millisecondsSinceEpoch;
-      final title = expenseMap['title'] as String? ?? 'مصروف';
-      final isSarf = expenseMap['operation_type'] == 'صرف';
-
-      // Get cash/bank account (the other side of the double-entry)
-      final codeOffset = _selectedCurrency == 'SAR' ? 1 : (_selectedCurrency == 'USD' ? 2 : 0);
-      int? cashBankAccountId;
-      final cashBoxId = expenseMap['cash_box_id'] as int?;
-      if (cashBoxId != null) {
-        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-        if (cashBox.isNotEmpty) {
-          final linkedAccountId = cashBox.first['linked_account_id'] as int?;
-          if (linkedAccountId != null) {
-            cashBankAccountId = linkedAccountId;
-          }
-        }
-      }
-      if (cashBankAccountId == null) {
-        final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), _selectedCurrency], limit: 1);
-        cashBankAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-      }
-
-      if (isSarf) {
-        // صرف (disburse): Debit expense account, Credit cash/bank
-        await txn.insert('transactions', {
-          'account_id': expenseAccountId,
-          'journal_id': journalId,
-          'debit': MoneyHelper.toCents(amountBase),
-          'credit': 0,
-          'description': 'مصروف: $title',
-          'date': now,
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, expenseAccountId, amountBase, 0.0, now, codeOffset);
-
-        if (cashBankAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': cashBankAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(amountBase),
-            'description': 'مصروف: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cashBankAccountId, 0.0, amountBase, now, codeOffset);
-        }
-      } else {
-        // قبض (receive): Debit cash/bank, Credit expense account
-        if (cashBankAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': cashBankAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(amountBase),
-            'credit': 0,
-            'description': 'قبض: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, cashBankAccountId, amountBase, 0.0, now, codeOffset);
-        }
-        await txn.insert('transactions', {
-          'account_id': expenseAccountId,
-          'journal_id': journalId,
-          'debit': 0,
-          'credit': MoneyHelper.toCents(amountBase),
-          'description': 'قبض: $title',
-          'date': now,
-          'created_at': now,
-        });
-        await _updateAccountBalanceWithJournal(txn, expenseAccountId, 0.0, amountBase, now, codeOffset);
-      }
-
-      // Update cash box balance
-      if (cashBoxId != null && amountBase > 0) {
-        if (isSarf) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
-        } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
-        }
-      }
-    });
-  }
-
-  /// Edit an expense: reverse old journal entries, update the record, create new entries.
-  Future<void> _editExpenseWithReversal(
-    int expenseId,
-    Map<String, dynamic> newExpenseMap,
-    int? newExpenseAccountId,
-  ) async {
-    final db = await locator<DatabaseHelper>().database;
-    final now = DateTime.now().toIso8601String();
-
-    await db.transaction((txn) async {
-      // ── 1. Reverse old journal entries ──
-      if (_existingExpense != null) {
-        final oldAmountBase = MoneyHelper.readMoney(_existingExpense!['amount_base']);
-        final oldOperationType = _existingExpense!['operation_type'] as String? ?? 'صرف';
-        final oldCurrency = _existingExpense!['currency'] as String? ?? 'YER';
-        final oldCodeOffset = oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
-        final oldExpenseAccountId = (_existingExpense!['expense_account_id'] as int?) ?? (_existingExpense!['account_id'] as int?);
-        final oldCashBoxId = _existingExpense!['cash_box_id'] as int?;
-        final oldTitle = _existingExpense!['title'] as String? ?? 'مصروف';
-        final oldIsSarf = oldOperationType == 'صرف';
-
-        if (oldAmountBase > 0 && oldExpenseAccountId != null) {
-          // Get old cash/bank account
-          int? oldCashBankAccountId;
-          if (oldCashBoxId != null) {
-            final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [oldCashBoxId], limit: 1);
-            if (cashBox.isNotEmpty) {
-              final linkedAccountId = cashBox.first['linked_account_id'] as int?;
-              if (linkedAccountId != null) {
-                oldCashBankAccountId = linkedAccountId;
-              }
-            }
-          }
-          if (oldCashBankAccountId == null) {
-            final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + oldCodeOffset).toString(), oldCurrency], limit: 1);
-            oldCashBankAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-          }
-
-          final reverseJournalId = DateTime.now().millisecondsSinceEpoch;
-
-          // Reverse: swap debit ↔ credit of the original entry
-          if (oldIsSarf) {
-            // Original was: Debit expense, Credit cash → Reverse: Credit expense, Debit cash
-            await txn.insert('transactions', {
-              'account_id': oldExpenseAccountId,
-              'journal_id': reverseJournalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(oldAmountBase),
-              'description': 'تعديل/عكس مصروف: $oldTitle',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, oldExpenseAccountId, 0.0, oldAmountBase, now, oldCodeOffset);
-
-            if (oldCashBankAccountId != null) {
-              await txn.insert('transactions', {
-                'account_id': oldCashBankAccountId,
-                'journal_id': reverseJournalId,
-                'debit': MoneyHelper.toCents(oldAmountBase),
-                'credit': 0,
-                'description': 'تعديل/عكس مصروف: $oldTitle',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, oldCashBankAccountId, oldAmountBase, 0.0, now, oldCodeOffset);
-            }
-          } else {
-            // Original was: Debit cash, Credit expense → Reverse: Credit cash, Debit expense
-            if (oldCashBankAccountId != null) {
-              await txn.insert('transactions', {
-                'account_id': oldCashBankAccountId,
-                'journal_id': reverseJournalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(oldAmountBase),
-                'description': 'تعديل/عكس قبض: $oldTitle',
-                'date': now,
-                'created_at': now,
-              });
-              await _updateAccountBalanceWithJournal(txn, oldCashBankAccountId, 0.0, oldAmountBase, now, oldCodeOffset);
-            }
-            await txn.insert('transactions', {
-              'account_id': oldExpenseAccountId,
-              'journal_id': reverseJournalId,
-              'debit': MoneyHelper.toCents(oldAmountBase),
-              'credit': 0,
-              'description': 'تعديل/عكس قبض: $oldTitle',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, oldExpenseAccountId, oldAmountBase, 0.0, now, oldCodeOffset);
-          }
-
-          // Reverse old cash box balance change
-          if (oldCashBoxId != null && oldAmountBase > 0) {
-            if (oldIsSarf) {
-              // Original decreased cash box → reverse: increase
-              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
-            } else {
-              // Original increased cash box → reverse: decrease
-              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
-            }
-          }
-        }
-      }
-
-      // ── 2. Update expense record ──
-      await txn.update('expenses', MoneyHelper.toCentsMap(newExpenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']), where: 'id = ?', whereArgs: [expenseId]);
-
-      // ── 3. Create new journal entries ──
-      final newAmountBase = MoneyHelper.readMoney(newExpenseMap['amount_base']);
-      if (newExpenseAccountId != null && newAmountBase > 0) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
-        final title = newExpenseMap['title'] as String? ?? 'مصروف';
-        final isSarf = newExpenseMap['operation_type'] == 'صرف';
-        final codeOffset = _selectedCurrency == 'SAR' ? 1 : (_selectedCurrency == 'USD' ? 2 : 0);
-
-        // Get cash/bank account for the new entry
-        int? cashBankAccountId;
-        final cashBoxId = newExpenseMap['cash_box_id'] as int?;
-        if (cashBoxId != null) {
-          final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-          if (cashBox.isNotEmpty) {
-            final linkedAccountId = cashBox.first['linked_account_id'] as int?;
-            if (linkedAccountId != null) {
-              cashBankAccountId = linkedAccountId;
-            }
-          }
-        }
-        if (cashBankAccountId == null) {
-          final cashBanksAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1100 + codeOffset).toString(), _selectedCurrency], limit: 1);
-          cashBankAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
-        }
-
-        if (isSarf) {
-          // صرف (disburse): Debit expense account, Credit cash/bank
-          await txn.insert('transactions', {
-            'account_id': newExpenseAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(newAmountBase),
-            'credit': 0,
-            'description': 'مصروف: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, newExpenseAccountId, newAmountBase, 0.0, now, codeOffset);
-
-          if (cashBankAccountId != null) {
-            await txn.insert('transactions', {
-              'account_id': cashBankAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(newAmountBase),
-              'description': 'مصروف: $title',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, cashBankAccountId, 0.0, newAmountBase, now, codeOffset);
-          }
-        } else {
-          // قبض (receive): Debit cash/bank, Credit expense account
-          if (cashBankAccountId != null) {
-            await txn.insert('transactions', {
-              'account_id': cashBankAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(newAmountBase),
-              'credit': 0,
-              'description': 'قبض: $title',
-              'date': now,
-              'created_at': now,
-            });
-            await _updateAccountBalanceWithJournal(txn, cashBankAccountId, newAmountBase, 0.0, now, codeOffset);
-          }
-          await txn.insert('transactions', {
-            'account_id': newExpenseAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(newAmountBase),
-            'description': 'قبض: $title',
-            'date': now,
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, newExpenseAccountId, 0.0, newAmountBase, now, codeOffset);
-        }
-
-        // Update cash box balance for the new entry
-        if (cashBoxId != null && newAmountBase > 0) {
-          if (isSarf) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
-          } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
-          }
-        }
-      }
-    });
-  }
-
-  /// Helper to update account balance with proper debit/credit nature handling
-  Future<void> _updateAccountBalanceWithJournal(Transaction txn, int accountId, double debit, double credit, String now, int codeOffset) async {
-    final accountRow = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
-    if (accountRow.isEmpty) return;
-    final account = accountRow.first;
-    final balanceType = (account['balance_type'] as String?) ?? 'debit';
-    // Use effectiveBalanceType logic: ASSET/COST/EXPENSE → debit, LIABILITY/REVENUE → credit
-    final accountType = account['account_type'] as String? ?? '';
-    final effectiveType = (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE') ? 'debit' : 'credit';
-    
-    double currentBalance = MoneyHelper.readMoney(account['balance']);
-    if (effectiveType == 'debit') {
-      currentBalance = currentBalance + debit - credit;
-    } else {
-      currentBalance = currentBalance + credit - debit;
-    }
-    await txn.update('accounts', {'balance': MoneyHelper.toCents(currentBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
   }
 }

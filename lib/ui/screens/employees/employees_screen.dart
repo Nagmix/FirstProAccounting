@@ -3,7 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/employee_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
 
@@ -424,7 +424,6 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
 
       // If opening balance > 0, post journal entry
       if (balance > 0 && accountId != null) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
         // Get cash box account for this currency
         int cashCodeSuffix = _currency == 'YER' ? 1100 : (_currency == 'SAR' ? 1101 : 1102);
         final cashAccount = accounts.where((a) => a['account_code'] == cashCodeSuffix.toString()).firstOrNull;
@@ -433,42 +432,24 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         if (_balanceType == 'credit') {
           // له - الموظف له رصيد: مدين = الموظف، دائن = الصندوق
           if (cashAccountId != null) {
-            await (await locator<DatabaseHelper>().database).transaction((txn) async {
-              await txn.insert('transactions', {
-                'account_id': accountId, 'journal_id': journalId,
-                'debit': MoneyHelper.toCents(balance), 'credit': 0,
-                'description': 'رصيد افتتاحي موظف - ${_nameController.text}',
-                'date': now, 'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': cashAccountId, 'journal_id': journalId,
-                'debit': 0, 'credit': MoneyHelper.toCents(balance),
-                'description': 'رصيد افتتاحي موظف - ${_nameController.text}',
-                'date': now, 'created_at': now,
-              });
-              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(balance), now, accountId]);
-              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(balance), now, cashAccountId]);
-            });
+            await locator<EmployeeRepository>().recordSalaryPayment(
+              accountId: accountId,
+              cashAccountId: cashAccountId,
+              balance: balance,
+              balanceType: 'credit',
+              employeeName: _nameController.text,
+            );
           }
         } else {
           // عليه - الموظف عليه رصيد: مدين = الصندوق، دائن = الموظف
           if (cashAccountId != null) {
-            await (await locator<DatabaseHelper>().database).transaction((txn) async {
-              await txn.insert('transactions', {
-                'account_id': cashAccountId, 'journal_id': journalId,
-                'debit': MoneyHelper.toCents(balance), 'credit': 0,
-                'description': 'رصيد افتتاحي موظف (عليه) - ${_nameController.text}',
-                'date': now, 'created_at': now,
-              });
-              await txn.insert('transactions', {
-                'account_id': accountId, 'journal_id': journalId,
-                'debit': 0, 'credit': MoneyHelper.toCents(balance),
-                'description': 'رصيد افتتاحي موظف (عليه) - ${_nameController.text}',
-                'date': now, 'created_at': now,
-              });
-              await txn.rawUpdate('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(balance), now, cashAccountId]);
-              await txn.rawUpdate('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(balance), now, accountId]);
-            });
+            await locator<EmployeeRepository>().recordSalaryPayment(
+              accountId: accountId,
+              cashAccountId: cashAccountId,
+              balance: balance,
+              balanceType: 'debit',
+              employeeName: _nameController.text,
+            );
           }
         }
       }

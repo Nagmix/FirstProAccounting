@@ -6,7 +6,6 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
@@ -249,28 +248,6 @@ class _ReportsScreenState extends State<ReportsScreen>
       case r'$': return 'USD';
       default: return null;
     }
-  }
-
-  String _dateFilter({String column = 'created_at'}) {
-    String f = '';
-    if (_dateFrom != null) f += ' AND $column >= ?';
-    if (_dateTo != null) f += ' AND $column < ?';
-    return f;
-  }
-
-  List<dynamic> _dateArgs() {
-    final args = <dynamic>[];
-    if (_dateFrom != null) args.add(_dateFrom!.toIso8601String());
-    if (_dateTo != null) args.add(_dateTo!.add(const Duration(days: 1)).toIso8601String());
-    return args;
-  }
-
-  String _currencyFilter({String column = 'currency'}) {
-    return _currencyCode() != null ? ' AND $column = ?' : '';
-  }
-
-  List<dynamic> _currencyArgs() {
-    return _currencyCode() != null ? [_currencyCode()!] : [];
   }
 
   String _fmtDate(String? iso) {
@@ -527,23 +504,12 @@ class _ReportsScreenState extends State<ReportsScreen>
   // ══════════════════════════════════════════════════════════════
 
   Future<void> _loadSalesReport({required String typeFilter}) async {
-    final database = await locator<DatabaseHelper>().database;
-    final args = <dynamic>[];
-    String whereClause = typeFilter;
-
-    if (_dateFrom != null) { whereClause += ' AND created_at >= ?'; args.add(_dateFrom!.toIso8601String()); }
-    if (_dateTo != null) { whereClause += ' AND created_at < ?'; args.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
-    if (_currencyCode() != null) { whereClause += ' AND currency = ?'; args.add(_currencyCode()!); }
-    if (_selectedCashBoxId != null) { whereClause += ' AND cash_box_id = ?'; args.add(_selectedCashBoxId!); }
-
-    final results = await database.rawQuery(
-      "SELECT i.id, i.type, i.is_return, i.total, i.subtotal, i.discount_amount, i.paid_amount, "
-      "i.remaining, i.currency, i.created_at, i.cash_box_id, "
-      "COALESCE(c.name, s.name, 'بدون') AS entity_name "
-      "FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id "
-      "LEFT JOIN suppliers s ON i.supplier_id=s.id "
-      "WHERE $whereClause ORDER BY i.created_at DESC",
-      args,
+    final results = await locator<ReportService>().getSalesReport(
+      typeFilter: typeFilter,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      currency: _currencyCode(),
+      cashBoxId: _selectedCashBoxId,
     );
 
     double totalAmount = 0, totalPaid = 0, totalRemaining = 0;
@@ -569,97 +535,25 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadProfitLossReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final allArgs = [..._dateArgs(), ..._currencyArgs()];
-    final df = _dateFilter();
-    final cf = _currencyFilter();
-
-    final revRes = await database.rawQuery(
-      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS t FROM invoices WHERE type IN ('sale','pos') AND is_return=0$df$cf", allArgs);
-    final revenue = MoneyHelper.readCalculatedMoney(revRes.first['t']);
-
-    final purRes = await database.rawQuery(
-      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS t FROM invoices WHERE type='purchase' AND is_return=0$df$cf", allArgs);
-    final purchases = MoneyHelper.readCalculatedMoney(purRes.first['t']);
-
-    final retSaleRes = await database.rawQuery(
-      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS t FROM invoices WHERE type IN ('sale','pos') AND is_return=1$df$cf", allArgs);
-    final salesReturns = MoneyHelper.readCalculatedMoney(retSaleRes.first['t']);
-
-    final retPurRes = await database.rawQuery(
-      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS t FROM invoices WHERE type='purchase' AND is_return=1$df$cf", allArgs);
-    final purchaseReturns = MoneyHelper.readCalculatedMoney(retPurRes.first['t']);
-
-    final expArgs = <dynamic>[];
-    if (_dateFrom != null) expArgs.add(_dateFrom!.toIso8601String());
-    if (_dateTo != null) expArgs.add(_dateTo!.add(const Duration(days: 1)).toIso8601String());
-    expArgs.addAll(_currencyArgs());
-    final expRes = await database.rawQuery(
-      "SELECT CAST(COALESCE(SUM(amount), 0) AS INTEGER) AS t FROM expenses WHERE 1=1${_dateFilter(column: 'expense_date')}$cf", expArgs);
-    final expenses = MoneyHelper.readCalculatedMoney(expRes.first['t']);
+    final reportData = await locator<ReportService>().getProfitLossReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      currency: _currencyCode(),
+    );
+    // Extract values from report data (raw DB integers)
+    final dataMap = <String, dynamic>{};
+    for (final row in reportData) {
+      dataMap[row['item'] as String] = row['amount'];
+    }
+    final revenue = MoneyHelper.readCalculatedMoney(dataMap['revenue']);
+    final purchases = MoneyHelper.readCalculatedMoney(dataMap['purchases']);
+    final salesReturns = MoneyHelper.readCalculatedMoney(dataMap['sales_returns']);
+    final purchaseReturns = MoneyHelper.readCalculatedMoney(dataMap['purchase_returns']);
+    final expenses = MoneyHelper.readCalculatedMoney(dataMap['expenses']);
+    final cogs = MoneyHelper.readCalculatedMoney(dataMap['cogs']);
 
     final netSales = revenue - salesReturns;
     final netPurchases = purchases - purchaseReturns;
-
-    // ── COGS Calculation ──
-    // Method: Calculate COGS directly from invoice_items using stored unit_cost
-    // This is more accurate than the inventory-based formula because:
-    // 1. unit_cost is captured at time of sale (not current cost_price which may have changed)
-    // 2. It handles partial-period correctly without needing beginning inventory
-    // 3. Works even when stock_movements data is incomplete
-    double cogs = 0.0;
-    try {
-      // COGS from sales: sum of (base_quantity * unit_cost) for all sale/pos items
-      final cogsSaleArgs = <dynamic>[];
-      String cogsDateF = '';
-      if (_dateFrom != null) { cogsDateF += ' AND i.created_at >= ?'; cogsSaleArgs.add(_dateFrom!.toIso8601String()); }
-      if (_dateTo != null) { cogsDateF += ' AND i.created_at < ?'; cogsSaleArgs.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
-      if (_currencyCode() != null) { cogsDateF += ' AND i.currency = ?'; cogsSaleArgs.add(_currencyCode()!); }
-
-      // FIX: CAST to INTEGER so MoneyHelper.readMoney() correctly divides by 100.
-      // Without CAST, SQLite returns REAL (base_quantity is REAL),
-      // causing readMoney to treat it as legacy double and skip ÷100.
-      final cogsRes = await database.rawQuery(
-        "SELECT CAST(COALESCE(SUM("
-        "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
-        "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
-        "), 0) AS INTEGER) AS total_cogs "
-        "FROM invoice_items ii "
-        "INNER JOIN invoices i ON ii.invoice_id = i.id "
-        "LEFT JOIN products p ON ii.product_id = p.id "
-        "WHERE i.type IN ('sale','pos') AND i.is_return = 0$cogsDateF",
-        cogsSaleArgs,
-      );
-      cogs = MoneyHelper.readCalculatedMoney(cogsRes.first['total_cogs']);
-
-      // Subtract COGS from sales returns (inventory comes back)
-      if (salesReturns > 0) {
-        final cogsRetArgs = <dynamic>[];
-        String cogsRetF = '';
-        if (_dateFrom != null) { cogsRetF += ' AND i.created_at >= ?'; cogsRetArgs.add(_dateFrom!.toIso8601String()); }
-        if (_dateTo != null) { cogsRetF += ' AND i.created_at < ?'; cogsRetArgs.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
-        if (_currencyCode() != null) { cogsRetF += ' AND i.currency = ?'; cogsRetArgs.add(_currencyCode()!); }
-
-        final cogsRetRes = await database.rawQuery(
-          "SELECT CAST(COALESCE(SUM("
-          "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
-          "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
-          "), 0) AS INTEGER) AS total_cogs "
-          "FROM invoice_items ii "
-          "INNER JOIN invoices i ON ii.invoice_id = i.id "
-          "LEFT JOIN products p ON ii.product_id = p.id "
-          "WHERE i.type IN ('sale','pos') AND i.is_return = 1$cogsRetF",
-          cogsRetArgs,
-        );
-        cogs -= MoneyHelper.readCalculatedMoney(cogsRetRes.first['total_cogs']);
-      }
-    } catch (e) {
-      debugPrint('COGS calculation error: $e');
-      // ── C-09: احتياطي محاسبي صحيح — صفر بدل netPurchases ──
-      // صافي المشتريات ≠ تكلفة البضاعة المباعة (الفرق = تغير المخزون)
-      // إذا فشل حساب COGS، الأفضل عرض صفر مع تنبيه بدل رقم مضلل
-      cogs = 0.0;
-    }
 
     final grossProfit = netSales - cogs;
     final netProfit = grossProfit - expenses;
@@ -704,37 +598,11 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadSalesByProductReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final args = <dynamic>[];
-    String dateF = '';
-    if (_dateFrom != null) { dateF += ' AND i.created_at >= ?'; args.add(_dateFrom!.toIso8601String()); }
-    if (_dateTo != null) { dateF += ' AND i.created_at < ?'; args.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
-    String curF = '';
-    if (_currencyCode() != null) { curF = ' AND i.currency = ?'; args.add(_currencyCode()!); }
-
-    String catJoin = '';
-    String catFilter = '';
-    if (_selectedCategoryId != null) {
-      catJoin = ' INNER JOIN products p2 ON ii.product_id=p2.id';
-      catFilter = ' AND p2.category_id=?';
-      args.add(_selectedCategoryId!);
-    }
-
-    // Include cost and profit per product using unit_cost from invoice_items
-    // FIX: CAST cost_total to INTEGER so MoneyHelper.readMoney() divides by 100 correctly
-    final results = await database.rawQuery(
-      "SELECT ii.product_name, SUM(ii.quantity) AS qty, "
-      "CAST(SUM(ii.total_price) AS INTEGER) AS revenue, "
-      "CAST(SUM("
-      "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
-      "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
-      ") AS INTEGER) AS cost_total, "
-      "COUNT(DISTINCT ii.invoice_id) AS inv_count "
-      "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id=i.id "
-      "LEFT JOIN products p ON ii.product_id=p.id $catJoin "
-      "WHERE i.type IN ('sale','pos') AND i.is_return=0$dateF$curF$catFilter "
-      "GROUP BY ii.product_id ORDER BY revenue DESC",
-      args,
+    final results = await locator<ReportService>().getSalesByProductReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      currency: _currencyCode(),
+      categoryId: _selectedCategoryId,
     );
     double totalRevenue = 0, totalCost = 0, totalProfit = 0;
     int totalQty = 0;
@@ -761,24 +629,10 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadSalesByCustomerReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final args = <dynamic>[];
-    String dateF = '';
-    if (_dateFrom != null) { dateF += ' AND i.created_at >= ?'; args.add(_dateFrom!.toIso8601String()); }
-    if (_dateTo != null) { dateF += ' AND i.created_at < ?'; args.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
-    String curF = '';
-    if (_currencyCode() != null) { curF = ' AND i.currency = ?'; args.add(_currencyCode()!); }
-
-    final results = await database.rawQuery(
-      "SELECT COALESCE(c.name, 'بدون عميل') AS customer_name, c.currency, "
-      "COUNT(i.id) AS inv_count, "
-      "CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total_sales, "
-      "CAST(COALESCE(SUM(i.paid_amount), 0) AS INTEGER) AS total_paid, "
-      "CAST(COALESCE(SUM(i.remaining), 0) AS INTEGER) AS total_remaining "
-      "FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id "
-      "WHERE i.type IN ('sale','pos') AND i.is_return=0$dateF$curF "
-      "GROUP BY i.customer_id ORDER BY total_sales DESC",
-      args,
+    final results = await locator<ReportService>().getSalesByCustomerReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      currency: _currencyCode(),
     );
     double totalSales = 0;
     _reportRows = results.map((r) {
@@ -800,24 +654,12 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Future<void> _loadAccountMovementReport() async {
     if (_selectedAccountId == null) return;
-    // Use raw query with date filter instead of getAccountTransactions
-    // which ignores date range completely (BUG FIX)
-    final database = await locator<DatabaseHelper>().database;
-    final args = <dynamic>[_selectedAccountId!];
-    args.addAll(_dateArgs());
-    final transactions = await database.rawQuery(
-      "SELECT id, account_id, debit, credit, description, date, created_at "
-      "FROM transactions "
-      "WHERE account_id = ?${_dateFilter(column: 'date')}"
-      " ORDER BY date ASC, created_at ASC",
-      args,
+    final transactions = await locator<ReportService>().getAccountMovementReport(
+      accountId: _selectedAccountId!,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
     );
-
-    // ── W-01: احتساب الرصيد الجاري حسب طبيعة الحساب ──
-    // حسابات ذات طبيعة مدينة (أصول، تكاليف): الرصيد = مدين - دائن
-    // حسابات ذات طبيعة دائنة (خصوم، إيرادات، حقوق ملكية): الرصيد = دائن - مدين
-    final accountRow = await database.query('accounts', where: 'id = ?', whereArgs: [_selectedAccountId!], limit: 1);
-    final balanceType = accountRow.isNotEmpty ? (accountRow.first['balance_type'] as String? ?? 'credit') : 'credit';
+    final balanceType = await locator<ReportService>().getAccountBalanceType(_selectedAccountId!);
     final isDebitNature = balanceType == 'debit';
 
     double running = 0;
@@ -846,20 +688,17 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadAllAccountMovementReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final args = [..._dateArgs()];
-    String cf = '';
-    if (_currencyCode() != null) { cf = ' AND a.currency = ?'; args.add(_currencyCode()!); }
+    String? typeCode;
     if (_selectedAccountType != 'الكل') {
-      final typeCode = _accountTypes.firstWhere((e) => e.key == _selectedAccountType, orElse: () => const MapEntry('الكل', 'الكل')).value;
-      if (typeCode != 'الكل') { cf += ' AND a.account_type = ?'; args.add(typeCode); }
+      typeCode = _accountTypes.firstWhere((e) => e.key == _selectedAccountType, orElse: () => const MapEntry('الكل', 'الكل')).value;
+      if (typeCode == 'الكل') typeCode = null;
     }
-    final allTx = await database.rawQuery(
-      "SELECT t.id, t.account_id, t.debit, t.credit, t.description, t.date, t.created_at, "
-      "a.name_ar AS account_name, a.account_code, a.currency "
-      "FROM transactions t LEFT JOIN accounts a ON t.account_id=a.id "
-      "WHERE 1=1${_dateFilter(column: 't.created_at')}$cf "
-      "ORDER BY t.date DESC, t.created_at DESC", args);
+    final allTx = await locator<ReportService>().getAllAccountMovementReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      currency: _currencyCode(),
+      accountType: typeCode,
+    );
     double totalDebit = 0, totalCredit = 0;
     _reportRows = allTx.map((tx) {
       final debit = MoneyHelper.readMoney(tx['debit']);
@@ -880,81 +719,51 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadTrialBalanceReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final accounts = await locator<AccountRepository>().getAllAccounts();
-    final cc = _currencyCode();
+    String? typeCode;
+    if (_selectedAccountType != 'الكل') {
+      typeCode = _accountTypes.firstWhere((e) => e.key == _selectedAccountType, orElse: () => const MapEntry('الكل', 'الكل')).value;
+      if (typeCode == 'الكل') typeCode = null;
+    }
+    final results = await locator<ReportService>().getTrialBalanceReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      currency: _currencyCode(),
+      accountType: typeCode,
+    );
     double totalDebit = 0, totalCredit = 0;
-    _reportRows = [];
-
-    // Build date filter for trial balance query
-    final dateFilter = _dateFilter(column: 'date');
-    final dateArgs = _dateArgs();
-
-    for (final account in accounts) {
-      if (cc != null && account['currency'] != cc) continue;
-      if (_selectedAccountType != 'الكل') {
-        final typeCode = _accountTypes.firstWhere((e) => e.key == _selectedAccountType, orElse: () => const MapEntry('الكل', 'الكل')).value;
-        if (typeCode != 'الكل' && account['account_type'] != typeCode) continue;
-      }
-      final accountId = account['id'] as int;
-
-      // Calculate balance from transactions with date filter
-      // instead of using cached accounts.balance or getAccountBalance
-      // which ignores date range (BUG FIX)
-      final balanceArgs = <dynamic>[accountId];
-      balanceArgs.addAll(dateArgs);
-      final result = await database.rawQuery(
-        "SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS balance "
-        "FROM transactions "
-        "WHERE account_id = ?$dateFilter",
-        balanceArgs,
-      );
-      final balance = MoneyHelper.readCalculatedMoney(result.first['balance']);
-
-      if (balance == 0.0) continue;
-      final isDebit = balance > 0;
-      final debit = isDebit ? balance.abs() : 0.0;
-      final credit = isDebit ? 0.0 : balance.abs();
+    _reportRows = results.map((r) {
+      final debit = MoneyHelper.readCalculatedMoney(r['debit']);
+      final credit = MoneyHelper.readCalculatedMoney(r['credit']);
       totalDebit += debit;
       totalCredit += credit;
-      _reportRows.add({
-        'كود الحساب': account['account_code'] as String? ?? '',
-        'اسم الحساب': account['name_ar'] as String? ?? '',
-        'نوع الحساب': _accountTypeAr(account['account_type'] as String? ?? ''),
-        'العملة': account['currency'] as String? ?? 'YER',
+      return {
+        'كود الحساب': r['account_code'] as String? ?? '',
+        'اسم الحساب': r['name_ar'] as String? ?? '',
+        'نوع الحساب': _accountTypeAr(r['account_type'] as String? ?? ''),
+        'العملة': r['currency'] as String? ?? 'YER',
         'مدين': debit,
         'دائن': credit,
-      });
-    }
+      };
+    }).toList();
     _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الفرق': (totalDebit - totalCredit).abs(), 'عدد الحسابات': _reportRows.length.toDouble()};
   }
 
   Future<void> _loadCashBoxReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
-    final cc = _currencyCode();
+    final cashBoxes = await locator<ReportService>().getCashBoxesReport(
+      currency: _currencyCode(),
+      cashBoxId: _selectedCashBoxId,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+    );
     double totalBalance = 0;
     _reportRows = [];
     for (final cb in cashBoxes) {
-      if (cc != null && cb['currency'] != cc) continue;
-      if (_selectedCashBoxId != null && cb['id'] != _selectedCashBoxId) continue;
-      final cbId = cb['id'] as int;
       final balance = MoneyHelper.readMoney(cb['balance']);
       final isCredit = (cb['balance_type'] as String? ?? 'credit') == 'credit';
       final signedBalance = isCredit ? balance : -balance;
       totalBalance += signedBalance;
-
-      final invRes = await database.rawQuery(
-        "SELECT type, CAST(COALESCE(SUM(total), 0) AS INTEGER) as total FROM invoices WHERE cash_box_id=? AND is_return=0${_dateFilter()} GROUP BY type",
-        [cbId, ..._dateArgs()]);
-      double salesTotal = 0, purchaseTotal = 0;
-      for (final inv in invRes) {
-        final t = inv['type'] as String? ?? '';
-        final tot = MoneyHelper.readCalculatedMoney(inv['total']);
-        if (t == 'sale' || t == 'pos') salesTotal = tot;
-        else if (t == 'purchase') purchaseTotal = tot;
-      }
-
+      final salesTotal = MoneyHelper.readCalculatedMoney(cb['sales_total']);
+      final purchaseTotal = MoneyHelper.readCalculatedMoney(cb['purchase_total']);
       _reportRows.add({
         'الصندوق': cb['name'] as String? ?? '',
         'النوع': cb['type'] == 'bank' ? 'بنك' : 'صندوق',
@@ -965,11 +774,14 @@ class _ReportsScreenState extends State<ReportsScreen>
         'المشتريات': purchaseTotal,
       });
     }
-    _reportTotals = {'إجمالي الأرصدة': totalBalance.abs(), 'عدد الصناديق': _reportRows.length.toDouble()}; // totalBalance is computed from already-converted values
+    _reportTotals = {'إجمالي الأرصدة': totalBalance.abs(), 'عدد الصناديق': _reportRows.length.toDouble()};
   }
 
   Future<void> _loadAccountsWithoutMovementReport() async {
-    final accounts = await locator<AccountRepository>().getAccountsWithoutMovements();
+    final accounts = await locator<ReportService>().getAccountsWithoutMovementReport(
+      currency: _currencyCode(),
+      accountType: _selectedAccountType != 'الكل' ? _selectedAccountType : null,
+    );
     _reportRows = accounts.map((a) => {
       'كود الحساب': a['account_code'] as String? ?? '',
       'اسم الحساب': a['name_ar'] as String? ?? '',
@@ -981,36 +793,18 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Future<void> _loadCustomerStatementReport() async {
     if (_selectedCustomerId == null) return;
-    final database = await locator<DatabaseHelper>().database;
-    final args = <dynamic>[_selectedCustomerId!];
-    String dateF = '';
-    if (_dateFrom != null) { dateF += ' AND t.created_at >= ?'; args.add(_dateFrom!.toIso8601String()); }
-    if (_dateTo != null) { dateF += ' AND t.created_at < ?'; args.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
-
-    // Get customer's linked account(s)
+    // Get customer info
     final customer = await locator<CustomerRepository>().getAllCustomers();
     final cust = customer.firstWhere((c) => c['id'] == _selectedCustomerId, orElse: () => <String, dynamic>{});
     final custName = cust['name'] as String? ?? '';
     final custCurrency = cust['currency'] as String? ?? 'YER';
 
-    // Try to find the customer's receivable account by exact name first, then fallback to LIKE
-    var acctRes = await database.rawQuery(
-      "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1", [custName, custCurrency]);
-    if (acctRes.isEmpty && custName.isNotEmpty) {
-      acctRes = await database.rawQuery(
-        "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
-        ['%$custName%', '%$custName%', custCurrency]);
-    }
-    if (acctRes.isEmpty) {
-      _reportRows = [];
-      return;
-    }
-    final accountId = acctRes.first['id'] as int;
-    final txArgs = <dynamic>[accountId, ...args.sublist(1)];
-    final txs = await database.rawQuery(
-      "SELECT t.date, t.description, t.debit, t.credit, t.created_at "
-      "FROM transactions t WHERE t.account_id=?$dateF ORDER BY t.date ASC, t.created_at ASC",
-      txArgs,
+    final txs = await locator<ReportService>().getCustomerStatementReport(
+      customerId: _selectedCustomerId!,
+      customerName: custName,
+      customerCurrency: custCurrency,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
     );
     double running = 0, totalDebit = 0, totalCredit = 0;
     _reportRows = txs.map((tx) {
@@ -1036,31 +830,19 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Future<void> _loadSupplierStatementReport() async {
     if (_selectedSupplierId == null) return;
-    final database = await locator<DatabaseHelper>().database;
     final suppliers = await locator<SupplierRepository>().getAllSuppliers();
     final sup = suppliers.firstWhere((s) => s['id'] == _selectedSupplierId, orElse: () => <String, dynamic>{});
     final supName = sup['name'] as String? ?? '';
     final supCurrency = sup['currency'] as String? ?? 'YER';
 
-    // Try to find the supplier's payable account by exact name first, then fallback to LIKE
-    var acctRes = await database.rawQuery(
-      "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1", [supName, supCurrency]);
-    if (acctRes.isEmpty && supName.isNotEmpty) {
-      acctRes = await database.rawQuery(
-        "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
-        ['%$supName%', '%$supName%', supCurrency]);
-    }
-    if (acctRes.isEmpty) { _reportRows = []; return; }
-
-    final accountId = acctRes.first['id'] as int;
-    final args = <dynamic>[accountId];
-    String dateF = '';
-    if (_dateFrom != null) { dateF += ' AND t.created_at >= ?'; args.add(_dateFrom!.toIso8601String()); }
-    if (_dateTo != null) { dateF += ' AND t.created_at < ?'; args.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
-
-    final txs = await database.rawQuery(
-      "SELECT t.date, t.description, t.debit, t.credit, t.created_at "
-      "FROM transactions t WHERE t.account_id=?$dateF ORDER BY t.date ASC, t.created_at ASC", args);
+    final txs = await locator<ReportService>().getSupplierMovementReport(
+      supplierId: _selectedSupplierId!,
+      supplierName: supName,
+      supplierCurrency: supCurrency,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+    );
+    if (txs.isEmpty) { _reportRows = []; return; }
     double running = 0, totalDebit = 0, totalCredit = 0;
     _reportRows = txs.map((tx) {
       final debit = MoneyHelper.readMoney(tx['debit']);
@@ -1084,16 +866,11 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadExpensesReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final args = <dynamic>[];
-    String whereClause = '1=1';
-    if (_dateFrom != null) { whereClause += ' AND expense_date >= ?'; args.add(_dateFrom!.toIso8601String()); }
-    if (_dateTo != null) { whereClause += ' AND expense_date < ?'; args.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
-    if (_currencyCode() != null) { whereClause += ' AND currency = ?'; args.add(_currencyCode()!); }
-
-    final results = await database.rawQuery(
-      "SELECT title, amount, currency, expense_date, category, payment_method, beneficiary "
-      "FROM expenses WHERE $whereClause ORDER BY expense_date DESC", args);
+    final results = await locator<ReportService>().getExpensesReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      currency: _currencyCode(),
+    );
     double totalAmount = 0;
     _reportRows = results.map((r) {
       final amount = MoneyHelper.readMoney(r['amount']);
@@ -1112,21 +889,10 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadInventoryReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    String whereExtra = '';
-    final args = <dynamic>[];
-    if (_selectedWarehouseId != null) { whereExtra += ' AND p.warehouse_id=?'; args.add(_selectedWarehouseId!); }
-    if (_selectedCategoryId != null) { whereExtra += ' AND p.category_id=?'; args.add(_selectedCategoryId!); }
-
-    final results = await database.rawQuery(
-      // FIX: Use COALESCE(average_cost, cost_price) for accurate inventory valuation
-      "SELECT p.name_ar, p.barcode, p.item_code, p.current_stock, "
-      "CAST(COALESCE(NULLIF(p.average_cost, 0), p.cost_price) AS INTEGER) AS cost_price, "
-      "CAST(p.sell_price AS INTEGER) AS sell_price, "
-      "p.min_stock, p.currency, w.name AS warehouse_name, c.name AS category_name "
-      "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
-      "LEFT JOIN categories c ON p.category_id=c.id "
-      "WHERE p.is_active=1$whereExtra ORDER BY p.name_ar", args);
+    final results = await locator<ReportService>().getInventoryReport(
+      warehouseId: _selectedWarehouseId,
+      categoryId: _selectedCategoryId,
+    );
     double totalValue = 0;
     _reportRows = results.map((p) {
       final stock = (p['current_stock'] as num?)?.toDouble() ?? 0;
@@ -1195,18 +961,10 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadOutOfStockReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    String whereExtra = '';
-    final args = <dynamic>[];
-    if (_selectedWarehouseId != null) { whereExtra += ' AND p.warehouse_id=?'; args.add(_selectedWarehouseId!); }
-    if (_selectedCategoryId != null) { whereExtra += ' AND p.category_id=?'; args.add(_selectedCategoryId!); }
-
-    final results = await database.rawQuery(
-      "SELECT p.name_ar, p.barcode, p.item_code, p.cost_price, p.sell_price, "
-      "w.name AS warehouse_name, c.name AS category_name "
-      "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
-      "LEFT JOIN categories c ON p.category_id=c.id "
-      "WHERE p.is_active=1 AND p.current_stock <= 0$whereExtra ORDER BY p.name_ar", args);
+    final results = await locator<ReportService>().getOutOfStockReport(
+      warehouseId: _selectedWarehouseId,
+      categoryId: _selectedCategoryId,
+    );
     _reportRows = results.map((p) => {
       'الصنف': p['name_ar'] as String? ?? '',
       'الباركود': p['barcode'] as String? ?? '',
@@ -1219,18 +977,10 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadLowStockReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    String whereExtra = '';
-    final args = <dynamic>[];
-    if (_selectedWarehouseId != null) { whereExtra += ' AND p.warehouse_id=?'; args.add(_selectedWarehouseId!); }
-    if (_selectedCategoryId != null) { whereExtra += ' AND p.category_id=?'; args.add(_selectedCategoryId!); }
-
-    final results = await database.rawQuery(
-      "SELECT p.name_ar, p.barcode, p.current_stock, p.min_stock, p.cost_price, p.sell_price, "
-      "w.name AS warehouse_name, c.name AS category_name "
-      "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
-      "LEFT JOIN categories c ON p.category_id=c.id "
-      "WHERE p.is_active=1 AND p.current_stock > 0 AND p.current_stock <= p.min_stock$whereExtra ORDER BY p.name_ar", args);
+    final results = await locator<ReportService>().getLowStockReport(
+      warehouseId: _selectedWarehouseId,
+      categoryId: _selectedCategoryId,
+    );
     _reportRows = results.map((p) {
       final stock = (p['current_stock'] as num?)?.toDouble() ?? 0;
       final min = (p['min_stock'] as num?)?.toDouble() ?? 0;
@@ -1288,13 +1038,10 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadCashTransfersReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final args = [..._dateArgs()];
-    final results = await database.rawQuery(
-      "SELECT ct.*, cb1.name AS from_name, cb2.name AS to_name "
-      "FROM cash_transfers ct LEFT JOIN cash_boxes cb1 ON ct.from_cash_box_id=cb1.id "
-      "LEFT JOIN cash_boxes cb2 ON ct.to_cash_box_id=cb2.id "
-      "WHERE 1=1${_dateFilter(column: 'ct.created_at')} ORDER BY ct.created_at DESC", args);
+    final results = await locator<ReportService>().getCashTransfersReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+    );
     double totalAmount = 0;
     _reportRows = results.map((r) {
       final amount = MoneyHelper.readMoney(r['amount']);
@@ -1312,13 +1059,10 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadCurrencyExchangesReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final args = [..._dateArgs()];
-    final results = await database.rawQuery(
-      "SELECT ce.*, cb1.name AS from_name, cb2.name AS to_name "
-      "FROM currency_exchanges ce LEFT JOIN cash_boxes cb1 ON ce.from_cash_box_id=cb1.id "
-      "LEFT JOIN cash_boxes cb2 ON ce.to_cash_box_id=cb2.id "
-      "WHERE 1=1${_dateFilter(column: 'ce.created_at')} ORDER BY ce.created_at DESC", args);
+    final results = await locator<ReportService>().getCurrencyExchangesReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+    );
     _reportRows = results.map((r) => {
       'من عملة': r['from_currency'] as String? ?? '',
       'إلى عملة': r['to_currency'] as String? ?? '',
@@ -1333,12 +1077,10 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadVouchersReport() async {
-    final database = await locator<DatabaseHelper>().database;
-    final args = [..._dateArgs()];
-    final results = await database.rawQuery(
-      "SELECT v.*, cb.name AS cash_box_name "
-      "FROM vouchers v LEFT JOIN cash_boxes cb ON v.cash_box_id=cb.id "
-      "WHERE 1=1${_dateFilter(column: 'v.created_at')} ORDER BY v.created_at DESC", args);
+    final results = await locator<ReportService>().getVouchersReport(
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+    );
     double totalAmount = 0;
     _reportRows = results.map((r) {
       final amount = MoneyHelper.readMoney(r['total_amount']);
@@ -1364,7 +1106,7 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadShiftsReport() async {
-    final results = await locator<ShiftService>().getAllShifts(orderBy: 'opened_at DESC');
+    final results = await locator<ReportService>().getShiftsReport();
     _reportRows = results.map((r) => {
       'رقم الوردية': r['shift_number'] as String? ?? '',
       'الكاشير': r['cashier_name'] as String? ?? '',

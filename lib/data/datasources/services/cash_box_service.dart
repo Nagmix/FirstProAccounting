@@ -568,6 +568,69 @@ class CashBoxService {
     return result.isNotEmpty ? result.first : null;
   }
 
+  /// Record opening balance journal entry for a new cash box.
+  ///
+  /// Creates double-entry transactions and updates account balances:
+  /// - For debit balance: Debit Cash & Banks, Credit Opening Balance Equity
+  /// - For credit balance: Credit Cash & Banks, Debit Opening Balance Equity
+  Future<void> recordCashBoxOpeningBalance({
+    required int linkedAccountId,
+    required int openingBalanceAccountId,
+    required double openingBalance,
+    required String balanceType,
+    required String cashBoxName,
+  }) async {
+    final db = await _db;
+    final now = DateTime.now().toIso8601String();
+    final journalId = generateUniqueJournalId();
+
+    if (balanceType == 'debit') {
+      // Debit Cash & Banks, Credit Opening Balance Equity
+      await db.insert('transactions', {
+        'account_id': linkedAccountId,
+        'journal_id': journalId,
+        'debit': MoneyHelper.toCents(openingBalance),
+        'credit': 0,
+        'description': 'رصيد افتتاحي صندوق - $cashBoxName',
+        'date': now,
+        'created_at': now,
+      });
+      await db.insert('transactions', {
+        'account_id': openingBalanceAccountId,
+        'journal_id': journalId,
+        'debit': 0,
+        'credit': MoneyHelper.toCents(openingBalance),
+        'description': 'رصيد افتتاحي صندوق - $cashBoxName',
+        'date': now,
+        'created_at': now,
+      });
+      await _dbHelper.journal.updateAccountBalance(linkedAccountId, openingBalance, isDebit: true);
+      await _dbHelper.journal.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: false);
+    } else {
+      // Credit Cash & Banks, Debit Opening Balance Equity
+      await db.insert('transactions', {
+        'account_id': linkedAccountId,
+        'journal_id': journalId,
+        'debit': 0,
+        'credit': MoneyHelper.toCents(openingBalance),
+        'description': 'رصيد افتتاحي صندوق - $cashBoxName',
+        'date': now,
+        'created_at': now,
+      });
+      await db.insert('transactions', {
+        'account_id': openingBalanceAccountId,
+        'journal_id': journalId,
+        'debit': MoneyHelper.toCents(openingBalance),
+        'credit': 0,
+        'description': 'رصيد افتتاحي صندوق - $cashBoxName',
+        'date': now,
+        'created_at': now,
+      });
+      await _dbHelper.journal.updateAccountBalance(linkedAccountId, openingBalance, isDebit: false);
+      await _dbHelper.journal.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: true);
+    }
+  }
+
   /// توليد رقم السند التالي حسب النوع
   Future<String> getNextVoucherNumber(String type) async {
     final db = await _db;

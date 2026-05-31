@@ -3,8 +3,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 
 class FiscalYearScreen extends StatefulWidget {
   const FiscalYearScreen({super.key});
@@ -173,17 +173,15 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                       }
 
                       try {
-                        final db = await locator<DatabaseHelper>().database;
-                        final nowStr = DateTime.now().toIso8601String();
-                        await db.insert('fiscal_years', {
+                        await locator<ReferenceDataRepository>().insertFiscalYear({
                           'year': selectedYear,
                           'start_date': '$selectedYear-01-01',
                           'end_date': '$selectedYear-12-31',
                           'status': 'open',
                           'net_profit': 0,
                           'notes': notes.isEmpty ? 'السنة المالية $selectedYear' : notes,
-                          'created_at': nowStr,
-                          'updated_at': nowStr,
+                          'created_at': DateTime.now().toIso8601String(),
+                          'updated_at': DateTime.now().toIso8601String(),
                         });
 
                         if (mounted) {

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../models/product_model.dart';
@@ -290,5 +291,224 @@ class ProductRepository {
   Future<Product?> getProductObjectById(int id) async {
     final map = await getProductById(id);
     return map != null ? Product.fromMap(map) : null;
+  }
+
+  /// Check if any products reference a given category ID.
+  /// Returns a list of matching products (up to [limit]).
+  Future<List<Map<String, dynamic>>> getProductsByCategoryId(int categoryId, {int limit = 5}) async {
+    final db = await _db;
+    return await db.query(
+      'products',
+      columns: ['id', 'name_ar'],
+      where: 'category_id = ?',
+      whereArgs: [categoryId],
+      limit: limit,
+    );
+  }
+
+  /// Check if any products reference a given unit ID (in any unit column).
+  /// Returns a list of matching products (up to [limit]).
+  Future<List<Map<String, dynamic>>> getProductsByUnitId(int unitId, {int limit = 5}) async {
+    final db = await _db;
+    return await db.query(
+      'products',
+      columns: ['id', 'name_ar'],
+      where: 'base_unit_id = ? OR purchase_unit_id = ? OR sale_unit_id = ? OR unit_id = ?',
+      whereArgs: [unitId, unitId, unitId, unitId],
+      limit: limit,
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Product + Unit Conversions + Opening Stock (transactional)
+  // ══════════════════════════════════════════════════════════════
+
+  /// Save a new product with unit conversions and optional opening stock journal entry.
+  /// Returns the inserted product ID.
+  ///
+  /// [productMap] should NOT contain 'id' — it will be auto-generated.
+  /// [unitConversions] is a list of maps with keys:
+  ///   from_unit, to_unit, from_unit_id, to_unit_id, conversion_factor,
+  ///   barcode, sell_price, cost_price
+  /// [openingStock] if > 0 and [warehouseId] is provided, creates a stock
+  ///   movement and journal entries for the opening balance.
+  /// [baseCostPrice] is the cost price per base unit (for opening stock valuation).
+  /// [currency] is the default currency code (e.g. 'YER', 'SAR', 'USD').
+  /// [productName] is used in the journal entry description.
+  Future<int> saveProductWithConversions({
+    required Map<String, dynamic> productMap,
+    required List<Map<String, dynamic>> unitConversions,
+    double? openingStock,
+    int? warehouseId,
+    double baseCostPrice = 0.0,
+    String currency = 'YER',
+    String productName = '',
+  }) async {
+    final db = await _db;
+    int? savedProductId;
+
+    await db.transaction((txn) async {
+      // Remove 'id' so SQLite auto-generates it
+      final map = Map<String, dynamic>.from(productMap);
+      map.remove('id');
+      savedProductId = await txn.insert('products', MoneyHelper.toCentsMap(map, MoneyHelper.productMoneyFields));
+
+      // Save unit conversions
+      if (savedProductId != null && savedProductId! > 0) {
+        for (final uc in unitConversions) {
+          try {
+            await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
+              'product_id': savedProductId,
+              ...uc,
+              'is_active': 1,
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            }, ['sell_price', 'cost_price']));
+          } catch (e) {
+            debugPrint('Unit conversion insert error (non-critical): $e');
+            // Try without from_unit_id / to_unit_id in case DB schema is outdated
+            try {
+              final fallbackUc = Map<String, dynamic>.from(uc);
+              fallbackUc.remove('from_unit_id');
+              fallbackUc.remove('to_unit_id');
+              await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
+                'product_id': savedProductId,
+                ...fallbackUc,
+                'is_active': 1,
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              }, ['sell_price', 'cost_price']));
+            } catch (e2) {
+              debugPrint('Unit conversion insert error (fallback): $e2');
+            }
+          }
+        }
+      }
+
+      // Opening balance: stock movement + journal entries
+      if (savedProductId != null && openingStock != null && openingStock > 0) {
+        try {
+          final now = DateTime.now().toIso8601String();
+          // Log stock movement
+          await txn.insert('stock_movements', {
+            'product_id': savedProductId!,
+            'movement_type': 'opening',
+            'quantity': openingStock,
+            'reference_type': null,
+            'reference_id': null,
+            'notes': 'رصيد افتتاحي',
+            'unit_cost': MoneyHelper.toCents(baseCostPrice),
+            'created_at': now,
+          });
+
+          // Create journal entries for opening balance: Debit Inventory / Credit Opening Balance
+          final totalValue = openingStock * baseCostPrice;
+          if (totalValue > 0) {
+            final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+
+            // Find inventory account (1300 + offset)
+            final inventoryAccount = await txn.query(
+              'accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(1300 + codeOffset).toString(), currency],
+              limit: 1,
+            );
+            // Find opening balance equity account (2901 + offset)
+            final openingBalanceAccount = await txn.query(
+              'accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(2901 + codeOffset).toString(), currency],
+              limit: 1,
+            );
+
+            if (inventoryAccount.isNotEmpty && openingBalanceAccount.isNotEmpty) {
+              final inventoryAccountId = inventoryAccount.first['id'] as int;
+              final openingBalanceAccountId = openingBalanceAccount.first['id'] as int;
+
+              // Journal entry: Debit Inventory / Credit Opening Balance
+              await txn.insert('transactions', {
+                'account_id': inventoryAccountId,
+                'debit': MoneyHelper.toCents(totalValue),
+                'credit': 0,
+                'description': 'رصيد افتتاحي - منتج: $productName',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(totalValue),
+                'description': 'رصيد افتتاحي - منتج: $productName',
+                'date': now,
+                'created_at': now,
+              });
+
+              // Update account balances using JournalService
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalValue, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, totalValue, now);
+            }
+          }
+        } catch (e) {
+          debugPrint('Opening balance journal entry error (non-critical): $e');
+        }
+      }
+    });
+
+    return savedProductId!;
+  }
+
+  /// Update an existing product with unit conversions.
+  ///
+  /// [productId] is the ID of the product to update.
+  /// [updateMap] is the updated product data (will be converted to cents).
+  /// [unitConversions] is a list of maps with keys:
+  ///   from_unit, to_unit, from_unit_id, to_unit_id, conversion_factor,
+  ///   barcode, sell_price, cost_price
+  Future<void> updateProductWithConversions({
+    required int productId,
+    required Map<String, dynamic> updateMap,
+    required List<Map<String, dynamic>> unitConversions,
+  }) async {
+    final db = await _db;
+
+    await db.transaction((txn) async {
+      // Update product
+      await txn.update(
+        'products',
+        MoneyHelper.toCentsMap(updateMap, MoneyHelper.productMoneyFields),
+        where: 'id = ?',
+        whereArgs: [productId],
+      );
+
+      // Replace unit conversions: delete old, insert new
+      await txn.delete('unit_conversions', where: 'product_id = ?', whereArgs: [productId]);
+      for (final uc in unitConversions) {
+        try {
+          await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
+            'product_id': productId,
+            ...uc,
+            'is_active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          }, ['sell_price', 'cost_price']));
+        } catch (e) {
+          debugPrint('Unit conversion insert error (edit, non-critical): $e');
+          try {
+            final fallbackUc = Map<String, dynamic>.from(uc);
+            fallbackUc.remove('from_unit_id');
+            fallbackUc.remove('to_unit_id');
+            await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
+              'product_id': productId,
+              ...fallbackUc,
+              'is_active': 1,
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            }, ['sell_price', 'cost_price']));
+          } catch (e2) {
+            debugPrint('Unit conversion insert error (edit, fallback): $e2');
+          }
+        }
+      }
+    });
   }
 }
