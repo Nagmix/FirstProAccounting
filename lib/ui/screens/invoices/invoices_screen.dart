@@ -6,7 +6,8 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../../core/di/service_locator.dart';
+import '../../../../data/datasources/repositories/invoice_repository.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
 
@@ -54,8 +55,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   Future<void> _loadInvoices() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final maps = await db.getAllInvoices();
+      final maps = await locator<InvoiceRepository>().getAllInvoices();
       if (mounted) {
         setState(() {
           _invoices = maps;
@@ -698,8 +698,7 @@ class _InvoiceCard extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
       );
-      final db = DatabaseHelper();
-      final items = await db.getInvoiceItems(invoiceData['id'] as String);
+      final items = await locator<InvoiceRepository>().getInvoiceItems(invoiceData['id'] as String);
       await InvoicePdfGenerator.printInvoice(invoiceData, items);
     } catch (e) {
       if (context.mounted) {

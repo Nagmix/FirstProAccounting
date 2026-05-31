@@ -13,8 +13,14 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/services/report_service.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../currency_exchange/currency_exchange_screen.dart';
@@ -106,37 +112,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Load per-installation salt for PIN hashing (C-04)
     _pinSalt = await _getOrCreatePinSalt();
 
-    final db = DatabaseHelper();
-    final businessName = await db.getSetting('business_name');
-    final phone = await db.getSetting('business_phone');
-    final email = await db.getSetting('business_email');
-    final address = await db.getSetting('business_address');
-    final logoPath = await db.getSetting('business_logo_path');
-    final userName = await db.getSetting('user_name');
-    final taxRate = await db.getSetting('tax_rate');
-    final autoInvoice = await db.getSetting('auto_invoice_number');
-    final invoicePrefix = await db.getSetting('invoice_prefix');
-    final autoPrint = await db.getSetting('auto_print_after_sale');
-    final showTax = await db.getSetting('show_tax_in_invoice');
-    final stockAlert = await db.getSetting('stock_alert');
-    final stockThreshold = await db.getSetting('stock_alert_threshold');
-    final trackExpiry = await db.getSetting('track_expiry_date');
-    final themeMode = await db.getSetting('theme_mode_index');
-    final fontSize = await db.getSetting('font_size_index');
+    final refRepo = locator<ReferenceDataRepository>();
+    final businessName = await refRepo.getSetting('business_name');
+    final phone = await refRepo.getSetting('business_phone');
+    final email = await refRepo.getSetting('business_email');
+    final address = await refRepo.getSetting('business_address');
+    final logoPath = await refRepo.getSetting('business_logo_path');
+    final userName = await refRepo.getSetting('user_name');
+    final taxRate = await refRepo.getSetting('tax_rate');
+    final autoInvoice = await refRepo.getSetting('auto_invoice_number');
+    final invoicePrefix = await refRepo.getSetting('invoice_prefix');
+    final autoPrint = await refRepo.getSetting('auto_print_after_sale');
+    final showTax = await refRepo.getSetting('show_tax_in_invoice');
+    final stockAlert = await refRepo.getSetting('stock_alert');
+    final stockThreshold = await refRepo.getSetting('stock_alert_threshold');
+    final trackExpiry = await refRepo.getSetting('track_expiry_date');
+    final themeMode = await refRepo.getSetting('theme_mode_index');
+    final fontSize = await refRepo.getSetting('font_size_index');
     // Read PIN enabled from secure storage with DB fallback for migration
     String? pinEnabled = await _secureStorage.read(key: 'pin_enabled');
     if (pinEnabled == null) {
-      pinEnabled = await db.getSetting('pin_enabled');
+      pinEnabled = await refRepo.getSetting('pin_enabled');
       if (pinEnabled != null && pinEnabled.isNotEmpty) {
         // Migrate to secure storage
         await _secureStorage.write(key: 'pin_enabled', value: pinEnabled);
-        await db.deleteSetting('pin_enabled');
+        await refRepo.deleteSetting('pin_enabled');
       }
     }
-    final biometricEnabled = await db.getSetting('biometric_enabled');
-    final autoBackupEnabled = await db.getSetting('auto_backup_enabled');
-    final autoBackupFreq = await db.getSetting('auto_backup_frequency');
-    final lastBackup = await db.getSetting('last_backup_date');
+    final biometricEnabled = await refRepo.getSetting('biometric_enabled');
+    final autoBackupEnabled = await refRepo.getSetting('auto_backup_enabled');
+    final autoBackupFreq = await refRepo.getSetting('auto_backup_frequency');
+    final lastBackup = await refRepo.getSetting('last_backup_date');
 
     // Check biometric availability
     bool biometricAvailable = false;
@@ -180,8 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveSetting(String key, String value) async {
-    final db = DatabaseHelper();
-    await db.setSetting(key, value);
+    await locator<ReferenceDataRepository>().setSetting(key, value);
   }
 
   /// Secure SHA-256 based PIN hashing with per-installation salt (C-04).
@@ -445,9 +450,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
                         // Clean up old DB entries if they exist
                         try {
-                          final db = DatabaseHelper();
-                          await db.deleteSetting('pin_enabled');
-                          await db.deleteSetting('app_pin');
+                          final refRepo = locator<ReferenceDataRepository>();
+                          await refRepo.deleteSetting('pin_enabled');
+                          await refRepo.deleteSetting('app_pin');
                         } catch (_) {}
                         setState(() => _pinEnabled = true);
                       }
@@ -474,12 +479,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
                       // Clean up old DB entry if it exists
                       try {
-                        await DatabaseHelper().deleteSetting('app_pin');
+                        await locator<ReferenceDataRepository>().deleteSetting('app_pin');
                       } catch (_) {}
                       if (!_pinEnabled) {
                         await _secureStorage.write(key: 'pin_enabled', value: '1');
                         try {
-                          await DatabaseHelper().deleteSetting('pin_enabled');
+                          await locator<ReferenceDataRepository>().deleteSetting('pin_enabled');
                         } catch (_) {}
                         setState(() => _pinEnabled = true);
                       }
@@ -894,8 +899,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// Show exchange rates management dialog.
   Future<void> _showExchangeRatesDialog() async {
-    final db = DatabaseHelper();
-    final currencies = await db.getAllCurrencies();
+    final currencies = await locator<ReferenceDataRepository>().getAllCurrencies();
 
     if (!mounted) return;
 
@@ -949,7 +953,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               for (final c in currencies) {
                 final code = c['code'] as String;
                 final rate = double.tryParse(controllers[code]?.text ?? '1.0') ?? 1.0;
-                await db.updateCurrency(c['id'] as int, {
+                await locator<ReferenceDataRepository>().updateCurrency(c['id'] as int, {
                   'exchange_rate': rate,
                 });
               }
@@ -1473,7 +1477,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _onBackup() async {
     try {
-      final dbHelper = DatabaseHelper();
+      final dbHelper = locator<DatabaseHelper>();
       final dbPath = await dbHelper.getDatabasePath();
       final dbFile = File(dbPath);
       if (!await dbFile.exists()) {
@@ -1556,7 +1560,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Perform auto-backup silently (no share dialog).
   Future<void> _performAutoBackup() async {
     try {
-      final dbHelper = DatabaseHelper();
+      final dbHelper = locator<DatabaseHelper>();
       final dbPath = await dbHelper.getDatabasePath();
       final dbFile = File(dbPath);
       if (!await dbFile.exists()) return;
@@ -1596,8 +1600,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _checkAndPerformAutoBackup() async {
     if (!_autoBackupEnabled) return;
 
-    final db = DatabaseHelper();
-    final lastBackupStr = await db.getSetting('last_backup_date');
+    final lastBackupStr = await locator<ReferenceDataRepository>().getSetting('last_backup_date');
     if (lastBackupStr != null) {
       final lastBackup = DateTime.tryParse(lastBackupStr);
       if (lastBackup != null) {
@@ -1733,7 +1736,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
 
-      final dbHelper = DatabaseHelper();
+      final dbHelper = locator<DatabaseHelper>();
 
       // 1. Close the database connection
       await dbHelper.resetInstance();
@@ -1924,24 +1927,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (choice == null || !mounted) return;
 
     try {
-      final db = DatabaseHelper();
       String filePath;
 
       switch (choice) {
         case 'accounts':
-          final accounts = await db.getAllAccounts();
+          final accounts = await locator<AccountRepository>().getAllAccounts();
           filePath = await ExcelExporter.exportAccountsToExcel(accounts);
           break;
         case 'invoices':
-          final invoices = await db.getAllInvoices();
+          final invoices = await locator<InvoiceRepository>().getAllInvoices();
           filePath = await ExcelExporter.exportInvoicesToExcel(invoices);
           break;
         case 'inventory':
-          final products = await db.getAllProducts();
+          final products = await locator<ProductRepository>().getAllProducts();
           filePath = await ExcelExporter.exportInventoryToExcel(products);
           break;
         case 'transactions':
-          final transactions = await db.getAllTransactionsForExport();
+          final transactions = await locator<ReportService>().getAllTransactionsForExport();
           filePath = await ExcelExporter.exportTransactionsToExcel(transactions);
           break;
         default:

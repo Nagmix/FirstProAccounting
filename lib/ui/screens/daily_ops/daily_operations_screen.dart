@@ -3,7 +3,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/report_service.dart';
 
 /// شاشة العمليات اليومية - تعرض جميع الحركات المالية ليوم محدد في مكان واحد
 /// Daily Operations Screen – shows ALL financial transactions for a specific day
@@ -48,9 +49,8 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
   // ── تحميل البيانات ────────────────────────────────────────────
   Future<void> _loadData() async {
     try {
-      final dbHelper = DatabaseHelper();
-      final operations = await dbHelper.getDailyOperations(_selectedDate);
-      final summary = await dbHelper.getDailySummary(_selectedDate);
+      final operations = await locator<ReportService>().getDailyOperations(_selectedDate);
+      final summary = await locator<ReportService>().getDailySummary(_selectedDate);
 
       if (mounted) {
         setState(() {

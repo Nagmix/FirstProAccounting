@@ -7,8 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/models/product_model.dart';
 import '../../../data/models/unit_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
@@ -196,16 +201,15 @@ class _AddProductSheetState extends State<AddProductSheet> {
   // ── Load reference data ───────────────────────────────────────
 
   Future<void> _loadDropdownData() async {
-    final db = DatabaseHelper();
     final results = await Future.wait([
-      db.getAllCategories(),
-      db.getAllUnits(),
-      db.getAllSuppliers(),
-      db.getAllWarehouses(),
-      db.getAccountsByType('REVENUE'),
-      db.getAccountsByType('COST'),
-      db.getAccountsByType('ASSET'),
-      db.getAccountsByType('LIABILITY'),
+      locator<ReferenceDataRepository>().getAllCategories(),
+      locator<ReferenceDataRepository>().getAllUnits(),
+      locator<SupplierRepository>().getAllSuppliers(),
+      locator<ReferenceDataRepository>().getAllWarehouses(),
+      locator<AccountRepository>().getAccountsByType('REVENUE'),
+      locator<AccountRepository>().getAccountsByType('COST'),
+      locator<AccountRepository>().getAccountsByType('ASSET'),
+      locator<AccountRepository>().getAccountsByType('LIABILITY'),
     ]);
 
     if (!mounted) return;
@@ -221,7 +225,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     });
 
     // Auto-select default accounts based on default currency
-    final defaultCurrency = await db.getDefaultCurrency();
+    final defaultCurrency = await locator<ReferenceDataRepository>().getDefaultCurrency();
     if (defaultCurrency != null && !_isEditMode) {
       final currencyCode = defaultCurrency['code'] as String? ?? 'YER';
       _defaultCurrencyCode = currencyCode;
@@ -256,7 +260,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   Future<void> _generateItemCode() async {
-    final code = await DatabaseHelper().getNextItemCode();
+    final code = await locator<ProductRepository>().getNextItemCode();
     if (mounted) {
       _itemCodeController.text = code;
     }
@@ -324,8 +328,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
   Future<void> _loadUnitConversions() async {
     if (widget.existing?.id == null) return;
-    final db = DatabaseHelper();
-    final conversions = await db.getUnitConversions(widget.existing!.id!);
+    final conversions = await locator<ReferenceDataRepository>().getUnitConversions(widget.existing!.id!);
     if (!mounted) return;
     setState(() {
       _unitConversions = conversions.map((c) {
@@ -512,7 +515,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     final itemCode = _itemCodeController.text.trim();
     if (itemCode.isNotEmpty) {
       try {
-        final exists = await DatabaseHelper().checkItemCodeExists(
+        final exists = await locator<ProductRepository>().checkItemCodeExists(
           itemCode,
           excludeId: _isEditMode ? widget.existing!.id : null,
         );
@@ -536,7 +539,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     final barcode = _barcodeController.text.trim();
     if (barcode.isNotEmpty) {
       try {
-        final exists = await DatabaseHelper().checkBarcodeExists(
+        final exists = await locator<ProductRepository>().checkBarcodeExists(
           barcode,
           excludeId: _isEditMode ? widget.existing!.id : null,
         );
@@ -642,8 +645,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
 
     try {
-      final dbHelper = DatabaseHelper();
-      final db = await dbHelper.database;
+      final db = await locator<DatabaseHelper>().database;
       int? savedProductId;
 
       // Use a transaction to ensure atomicity
@@ -813,9 +815,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
                   // P-03: Use updateAccountBalanceWithJournal for correct balance calculation
                   // instead of manual balance calculation that doesn't handle EQUITY correctly
-                  final dbHelper = DatabaseHelper();
-                  await dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalValue, 0.0, now);
-                  await dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, totalValue, now);
+                  await locator<DatabaseHelper>().journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalValue, 0.0, now);
+                  await locator<DatabaseHelper>().journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, totalValue, now);
                 }
               }
             } catch (e) {
@@ -2837,7 +2838,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
       final name = nameController.text.trim();
       if (name.isNotEmpty) {
         final now = DateTime.now().toIso8601String();
-        final id = await DatabaseHelper().insertCategory({
+        final id = await locator<ReferenceDataRepository>().insertCategory({
           'name': name,
           'is_active': 1,
           'created_at': now,
@@ -3037,7 +3038,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
     if (result == true) {
       final now = DateTime.now().toIso8601String();
-      final id = await DatabaseHelper().insertUnit({
+      final id = await locator<ReferenceDataRepository>().insertUnit({
         'name_ar': nameArController.text.trim(),
         'name_en': nameEnController.text.trim(),
         'abbreviation': abbrController.text.trim(),
@@ -3113,7 +3114,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
       final name = nameController.text.trim();
       if (name.isNotEmpty) {
         final now = DateTime.now().toIso8601String();
-        final id = await DatabaseHelper().insertWarehouse({
+        final id = await locator<ReferenceDataRepository>().insertWarehouse({
           'name': name,
           'location': locationController.text.trim().isNotEmpty
               ? locationController.text.trim()
@@ -3524,7 +3525,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     if (result == true) {
       final now = DateTime.now().toIso8601String();
       final balance = double.tryParse(balanceController.text) ?? 0.0;
-      final id = await DatabaseHelper().insertSupplier({
+      final id = await locator<SupplierRepository>().insertSupplier({
         'name': nameController.text.trim(),
         'phone': phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
         'email': emailController.text.trim().isEmpty ? null : emailController.text.trim(),

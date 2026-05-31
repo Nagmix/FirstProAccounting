@@ -4,7 +4,9 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CASH TRANSFER SCREEN – FirstPro Arabic Accounting App
@@ -66,9 +68,8 @@ class _CashTransferScreenState extends State<CashTransferScreen>
   //  DATA LOADING
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final currencies = await db.getAllCurrencies();
-    final transfers = await db.getAllCashTransfers();
+    final currencies = await locator<ReferenceDataRepository>().getAllCurrencies();
+    final transfers = await locator<CashBoxService>().getAllCashTransfers();
 
     if (!mounted) return;
 
@@ -82,8 +83,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
   }
 
   Future<void> _loadCashBoxes() async {
-    final db = DatabaseHelper();
-    final boxes = await db.getCashBoxesByCurrency(_selectedCurrency);
+    final boxes = await locator<CashBoxService>().getCashBoxesByCurrency(_selectedCurrency);
 
     if (!mounted) return;
 
@@ -104,8 +104,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
   }
 
   Future<void> _loadTransfers() async {
-    final db = DatabaseHelper();
-    final transfers = await db.getAllCashTransfers();
+    final transfers = await locator<CashBoxService>().getAllCashTransfers();
     if (!mounted) return;
     setState(() => _transfers = transfers);
   }
@@ -164,8 +163,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
     setState(() => _isSaving = true);
 
     try {
-      final db = DatabaseHelper();
-      final transferNumber = await db.getNextTransferNumber();
+      final transferNumber = await locator<CashBoxService>().getNextTransferNumber();
       final now = DateTime.now().toIso8601String();
 
       final transferMap = <String, dynamic>{
@@ -180,7 +178,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
         'created_at': now,
       };
 
-      await db.insertCashTransfer(transferMap);
+      await locator<CashBoxService>().insertCashTransfer(transferMap);
 
       if (!mounted) return;
 

@@ -3,7 +3,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/journal_service.dart';
 import '../../../data/models/account_model.dart';
 import 'package:intl/intl.dart' as intl;
 
@@ -48,9 +49,8 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
 
   Future<void> _loadTransactions() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
     if (widget.account.id != null) {
-      final maps = await db.getTransactionsByAccount(widget.account.id!);
+      final maps = await locator<JournalService>().getTransactionsByAccount(widget.account.id!);
       setState(() {
         _transactions = maps;
         _isLoading = false;

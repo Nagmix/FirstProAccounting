@@ -9,7 +9,12 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../../core/di/service_locator.dart';
+import '../../../../data/datasources/repositories/invoice_repository.dart';
+import '../../../../data/datasources/repositories/customer_repository.dart';
+import '../../../../data/datasources/repositories/supplier_repository.dart';
+import '../../../../data/datasources/services/cash_box_service.dart';
+import '../../../../data/datasources/services/audit_service.dart';
 import '../../../data/models/invoice_item_model.dart';
 
 /// Invoice detail screen – shows comprehensive info about a single invoice.
@@ -43,15 +48,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-
-    final invoice = await db.getInvoiceById(widget.invoiceId);
+    final invoice = await locator<InvoiceRepository>().getInvoiceById(widget.invoiceId);
     if (invoice == null) {
       setState(() => _isLoading = false);
       return;
     }
 
-    final items = await db.getInvoiceItems(widget.invoiceId);
+    final items = await locator<InvoiceRepository>().getInvoiceItems(widget.invoiceId);
 
     // Load entity name and balance
     String entityName = '—';
@@ -59,7 +62,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     String entityBalanceType = 'credit';
 
     if (invoice['customer_id'] != null) {
-      final customers = await db.getAllCustomers();
+      final customers = await locator<CustomerRepository>().getAllCustomers();
       final customer = customers.where((c) => c['id'] == invoice['customer_id']).firstOrNull;
       if (customer != null) {
         entityName = customer['name'] as String? ?? '—';
@@ -67,7 +70,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         entityBalanceType = customer['balance_type'] as String? ?? 'credit';
       }
     } else if (invoice['supplier_id'] != null) {
-      final suppliers = await db.getAllSuppliers();
+      final suppliers = await locator<SupplierRepository>().getAllSuppliers();
       final supplier = suppliers.where((s) => s['id'] == invoice['supplier_id']).firstOrNull;
       if (supplier != null) {
         entityName = supplier['name'] as String? ?? '—';
@@ -79,7 +82,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     // Load cash box name
     String cashBoxName = '—';
     if (invoice['cash_box_id'] != null) {
-      final cashBoxes = await db.getAllCashBoxes();
+      final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
       final cashBox = cashBoxes.where((cb) => cb['id'] == invoice['cash_box_id']).firstOrNull;
       if (cashBox != null) {
         cashBoxName = cashBox['name'] as String? ?? '—';
@@ -90,12 +93,12 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     Map<String, dynamic>? originalInvoice;
     final originalInvoiceId = invoice['original_invoice_id'] as String?;
     if (originalInvoiceId != null && originalInvoiceId.isNotEmpty) {
-      originalInvoice = await db.getInvoiceById(originalInvoiceId);
+      originalInvoice = await locator<InvoiceRepository>().getInvoiceById(originalInvoiceId);
     }
 
     // Load linked return invoices
     List<Map<String, dynamic>> linkedReturns = [];
-    linkedReturns = await db.getLinkedReturns(widget.invoiceId);
+    linkedReturns = await locator<InvoiceRepository>().getLinkedReturns(widget.invoiceId);
 
     setState(() {
       _invoice = invoice;
@@ -870,7 +873,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     FutureBuilder<List<Map<String, dynamic>>>(
-                      future: DatabaseHelper().getAllCashBoxes(),
+                      future: locator<CashBoxService>().getAllCashBoxes(),
                       builder: (ctx, snapshot) {
                         if (!snapshot.hasData) return const SizedBox.shrink();
                         cashBoxes = snapshot.data!;
@@ -905,7 +908,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                             return;
                           }
                           Navigator.pop(ctx);
-                          await DatabaseHelper().recordInvoicePayment(
+                          await locator<InvoiceRepository>().recordInvoicePayment(
                             invoiceId: widget.invoiceId,
                             amount: amount,
                             cashBoxId: selectedCashBoxId!,
@@ -969,10 +972,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   Future<void> _cancelInvoice() async {
     try {
-      final db = DatabaseHelper();
-      await db.cancelInvoice(widget.invoiceId);
+      await locator<InvoiceRepository>().cancelInvoice(widget.invoiceId);
       // Log audit event from the UI side as well for extra traceability
-      await db.logAuditEvent(
+      await locator<AuditService>().logAuditEvent(
         action: 'cancel',
         tableName: 'invoices',
         recordId: int.tryParse(widget.invoiceId),

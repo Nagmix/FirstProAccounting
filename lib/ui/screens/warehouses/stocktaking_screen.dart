@@ -2,7 +2,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/services/stock_service.dart';
 
 /// شاشة جرد المخازن - مقارنة المخزون الفعلي بالنظام
 class StocktakingScreen extends StatefulWidget {
@@ -44,10 +47,9 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final warehouses = await db.getAllWarehouses();
-    final sessions = await db.getStocktakingSessions();
-    final products = await db.getAllProducts(activeOnly: true);
+    final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+    final sessions = await locator<StockService>().getStocktakingSessions();
+    final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
 
     setState(() {
       _warehouses = warehouses;
@@ -441,7 +443,6 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
 
     setState(() => _isSaving = true);
 
-    final db = DatabaseHelper();
     final now = DateTime.now();
 
     // توليد رقم الجرد
@@ -468,10 +469,10 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
       'variance': item['variance'],
     }).toList();
 
-    final sessionId = await db.createStocktakingSession(sessionMap, items);
+    final sessionId = await locator<StockService>().createStocktakingSession(sessionMap, items);
 
     // إكمال الجرد وتحديث المخزون
-    await db.completeStocktakingSession(sessionId);
+    await locator<StockService>().completeStocktakingSession(sessionId);
 
     if (mounted) {
       setState(() {

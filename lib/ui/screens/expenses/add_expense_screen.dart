@@ -5,11 +5,16 @@ import 'package:sqflite_sqlcipher/sqflite.dart' show Transaction;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/expense_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   final int? expenseId;
@@ -58,10 +63,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
     final results = await Future.wait([
-      db.getAllCurrencies(),
-      db.getAllCashBoxes(),
+      locator<ReferenceDataRepository>().getAllCurrencies(),
+      locator<CashBoxService>().getAllCashBoxes(),
     ]);
 
     setState(() {
@@ -72,8 +76,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     // If editing, load existing expense data
     if (_isEditing && widget.expenseId != null) {
-      final db2 = DatabaseHelper();
-      final expense = await db2.getExpenseById(widget.expenseId!);
+      final expense = await locator<ExpenseRepository>().getExpenseById(widget.expenseId!);
       if (expense != null) {
         setState(() {
           _existingExpense = expense;
@@ -727,10 +730,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     // Determine the expense account based on currency
     final codeOffset = _selectedCurrency == 'SAR' ? 1 : (_selectedCurrency == 'USD' ? 2 : 0);
-    final db = DatabaseHelper();
-
-    // Get the system expense account for this currency
-    final expenseAccounts = await db.getAccountsByType('EXPENSE');
+    final expenseAccounts = await locator<AccountRepository>().getAccountsByType('EXPENSE');
     int? systemExpenseAccountId;
     for (final acc in expenseAccounts) {
       if (acc['account_code'] == (5000 + codeOffset).toString() && acc['currency'] == _selectedCurrency) {
@@ -778,7 +778,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   Future<void> _saveExpenseWithAccountTransaction(Map<String, dynamic> expenseMap, int? expenseAccountId) async {
-    final db = await DatabaseHelper().database;
+    final db = await locator<DatabaseHelper>().database;
     final amountBase = MoneyHelper.readMoney(expenseMap['amount_base']);
     final now = DateTime.now().toIso8601String();
 
@@ -878,8 +878,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     Map<String, dynamic> newExpenseMap,
     int? newExpenseAccountId,
   ) async {
-    final dbHelper = DatabaseHelper();
-    final db = await dbHelper.database;
+    final db = await locator<DatabaseHelper>().database;
     final now = DateTime.now().toIso8601String();
 
     await db.transaction((txn) async {

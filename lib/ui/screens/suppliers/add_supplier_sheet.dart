@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/models/supplier_model.dart';
 
 class AddSupplierSheet extends StatefulWidget {
@@ -88,13 +89,13 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       'updated_at': now,
     };
 
-    final db = DatabaseHelper();
+    final supplierRepo = locator<SupplierRepository>();
 
     if (_isEditing) {
-      await db.updateSupplier(widget.supplier!.id!, supplierMap);
+      await supplierRepo.updateSupplier(widget.supplier!.id!, supplierMap);
     } else {
       supplierMap['created_at'] = now;
-      await db.insertSupplier(supplierMap);
+      await supplierRepo.insertSupplier(supplierMap);
     }
 
     if (!mounted) return;

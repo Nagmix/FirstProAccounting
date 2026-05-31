@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
 
 class FiscalYearScreen extends StatefulWidget {
   const FiscalYearScreen({super.key});
@@ -12,7 +14,6 @@ class FiscalYearScreen extends StatefulWidget {
 }
 
 class _FiscalYearScreenState extends State<FiscalYearScreen> {
-  final DatabaseHelper _db = DatabaseHelper();
   List<Map<String, dynamic>> _fiscalYears = [];
   bool _isLoading = true;
 
@@ -25,7 +26,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
   Future<void> _loadFiscalYears() async {
     setState(() => _isLoading = true);
     try {
-      _fiscalYears = await _db.getFiscalYears();
+      _fiscalYears = await locator<AccountRepository>().getFiscalYears();
     } catch (e) {
       debugPrint('Error loading fiscal years: $e');
       _fiscalYears = [];
@@ -64,7 +65,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
     );
     if (confirmed == true) {
       try {
-        await _db.performAnnualPosting(year);
+        await locator<AccountRepository>().performAnnualPosting(year);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('تم إقفال السنة المالية بنجاح'), backgroundColor: AppColors.success),
@@ -172,7 +173,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                       }
 
                       try {
-                        final db = await _db.database;
+                        final db = await locator<DatabaseHelper>().database;
                         final nowStr = DateTime.now().toIso8601String();
                         await db.insert('fiscal_years', {
                           'year': selectedYear,

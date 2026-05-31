@@ -7,7 +7,8 @@ import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/viewmodels/dashboard_viewmodel.dart';
 import '../../navigation/app_router.dart';
 import '../../widgets/animated_entry.dart';
 
@@ -34,11 +35,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-  double _todaySales = 0.0;
-  int _todayInvoiceCount = 0;
-  double _yesterdaySales = 0.0;
-  List<Map<String, dynamic>> _recentInvoices = [];
-  bool _isLoading = true;
+  final DashboardViewModel _viewModel = locator<DashboardViewModel>();
 
   // Animation controllers
   late AnimationController _entryController;
@@ -51,7 +48,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
+    _viewModel.addListener(_onViewModelChanged);
+    _viewModel.refresh();
     WidgetsBinding.instance.addObserver(this);
 
     // Entry animation
@@ -69,11 +67,21 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
     _entryController.dispose();
     _chartDrawController.dispose();
     _actionPageController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Called when the ViewModel notifies listeners of state changes.
+  void _onViewModelChanged() {
+    if (!mounted) return;
+    setState(() {});
+    if (!_viewModel.isLoading && !_chartDrawController.isCompleted) {
+      _chartDrawController.forward();
+    }
   }
 
   @override
@@ -84,46 +92,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _loadDashboardData() async {
-    try {
-      final db = DatabaseHelper();
-      final now = DateTime.now();
-      final yesterday = now.subtract(const Duration(days: 1));
-
-      final results = await Future.wait([
-        db.getTotalSalesForDate(now),
-        db.getInvoiceCountForDate(now),
-        db.getRecentInvoices(limit: 5),
-        db.getTotalSalesForDate(yesterday),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          _todaySales = results[0] as double; // already converted by getTotalSalesForDate
-          _todayInvoiceCount = (results[1] as num?)?.toInt() ?? 0;
-          _recentInvoices =
-              (results[2] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
-                  [];
-          _yesterdaySales = results[3] as double; // already converted by getTotalSalesForDate
-          _isLoading = false;
-        });
-
-        if (!_chartDrawController.isCompleted) {
-          _chartDrawController.forward();
-        }
-      }
-    } catch (e) {
-      debugPrint('Dashboard load error: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('حدث خطأ أثناء تحميل البيانات'),
-              backgroundColor: AppColors.error),
-        );
-      }
-    }
+    await _viewModel.refresh();
   }
 
   /// Navigate to a route and refresh dashboard data when returning.
@@ -351,14 +320,14 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     double trendPercent = 0.0;
     bool isTrendUp = true;
-    if (_yesterdaySales > 0) {
-      trendPercent = ((_todaySales - _yesterdaySales) / _yesterdaySales * 100);
+    if (_viewModel.yesterdaySales > 0) {
+      trendPercent = ((_viewModel.todaySales - _viewModel.yesterdaySales) / _viewModel.yesterdaySales * 100);
       isTrendUp = trendPercent >= 0;
       trendPercent = trendPercent.abs();
     }
 
     // Average invoice value
-    final avgInvoiceValue = _todayInvoiceCount > 0 ? _todaySales / _todayInvoiceCount : 0.0;
+    final avgInvoiceValue = _viewModel.todayInvoiceCount > 0 ? _viewModel.todaySales / _viewModel.todayInvoiceCount : 0.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
@@ -430,7 +399,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           Icon(Icons.receipt_long_rounded, color: Colors.white.withOpacity(0.7), size: 13),
                           const SizedBox(width: 4),
-                          Text('$_todayInvoiceCount', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                          Text('$_viewModel.todayInvoiceCount', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                           const SizedBox(width: 3),
                           Text('فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withOpacity(0.6))),
                         ]),
@@ -439,15 +408,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                   const SizedBox(height: 16),
                   // Main amount
-                  _CountUpText(value: _todaySales,
+                  _CountUpText(value: _viewModel.todaySales,
                     style: theme.textTheme.displaySmall!.copyWith(color: Colors.white, fontWeight: FontWeight.w900, height: 1.1, letterSpacing: -0.5),
-                    isLoading: _isLoading),
+                    isLoading: _viewModel.isLoading),
                   const SizedBox(height: 12),
                   // Bottom info row: trend + average
                   Row(
                     children: [
                       // Trend indicator
-                      if (_yesterdaySales > 0 || _todaySales > 0)
+                      if (_viewModel.yesterdaySales > 0 || _viewModel.todaySales > 0)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
@@ -461,10 +430,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                             Text('${trendPercent.toStringAsFixed(1)}%', style: theme.textTheme.labelSmall?.copyWith(color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), fontWeight: FontWeight.w700)),
                           ]),
                         ),
-                      if (_yesterdaySales > 0 || _todaySales > 0)
+                      if (_viewModel.yesterdaySales > 0 || _viewModel.todaySales > 0)
                         const SizedBox(width: 8),
                       // Average sale value
-                      if (_todayInvoiceCount > 0)
+                      if (_viewModel.todayInvoiceCount > 0)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
@@ -689,7 +658,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   //  RECENT TRANSACTIONS — Professional card-based design
   // ══════════════════════════════════════════════════════════════════
   Widget _buildRecentTransactions(BuildContext context, bool isDark) {
-    if (_isLoading) {
+    if (_viewModel.isLoading) {
       return const SliverToBoxAdapter(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 32),
@@ -698,7 +667,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
 
-    if (_recentInvoices.isEmpty) {
+    if (_viewModel.recentInvoices.isEmpty) {
       return SliverToBoxAdapter(
         child: AnimatedEntry(
           child: Padding(
@@ -722,8 +691,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          if (index < _recentInvoices.length) {
-            final invoice = _recentInvoices[index];
+          if (index < _viewModel.recentInvoices.length) {
+            final invoice = _viewModel.recentInvoices[index];
             final entityName = invoice['entity_name'] as String? ?? '—';
             final amount = MoneyHelper.readMoney(invoice['total']);
             final date = DateTime.tryParse(invoice['created_at'] as String? ?? '') ?? DateTime.now();
@@ -782,7 +751,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           );
         },
-        childCount: _recentInvoices.length + 1,
+        childCount: _viewModel.recentInvoices.length + 1,
       ),
     );
   }

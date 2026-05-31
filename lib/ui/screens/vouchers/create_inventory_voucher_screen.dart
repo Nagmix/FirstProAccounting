@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/services/stock_service.dart';
 
 class CreateInventoryVoucherScreen extends StatefulWidget {
   const CreateInventoryVoucherScreen({super.key});
@@ -40,9 +43,8 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final warehouses = await db.getAllWarehouses();
-    final products = await db.getAllProducts(activeOnly: true);
+    final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+    final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
     if (mounted) {
       setState(() {
         _warehouses = warehouses;
@@ -109,8 +111,7 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
     setState(() => _isSaving = true);
 
     try {
-      final db = DatabaseHelper();
-      final voucherNumber = await db.getNextInventoryVoucherNumber();
+      final voucherNumber = await locator<StockService>().getNextInventoryVoucherNumber();
       final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
       final voucherMap = {
@@ -133,7 +134,7 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
         'notes': item.notesController.text.isEmpty ? null : item.notesController.text,
       }).toList();
 
-      await db.insertInventoryVoucher(voucherMap, itemsList);
+      await locator<StockService>().insertInventoryVoucher(voucherMap, itemsList);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

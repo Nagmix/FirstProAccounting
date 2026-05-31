@@ -3,7 +3,8 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
 import 'expense_account_detail_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {
@@ -26,8 +27,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final accounts = await db.getExpenseAccounts();
+    final accounts = await locator<AccountRepository>().getExpenseAccounts();
 
     double totalBalance = 0.0;
     for (final account in accounts) {
@@ -692,8 +692,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                               context.showErrorSnackBar('اسم الحساب مطلوب');
                               return;
                             }
-                            final db = DatabaseHelper();
-                            await db.createExpenseAccount(
+                            await locator<AccountRepository>().createExpenseAccount(
                               nameAr: nameController.text.trim(),
                               currency: selectedCurrency,
                               debtCeiling: double.tryParse(debtCeilingController.text),

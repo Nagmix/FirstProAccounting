@@ -3,7 +3,11 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/order_repository.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
 
 /// Helper class for sales order line items in the creation form.
 class _OrderItem {
@@ -83,8 +87,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      _allOrders = await db.getAllSalesOrders();
+      _allOrders = await locator<OrderRepository>().getAllSalesOrders();
       _applyFilters();
     } catch (e) {
       if (mounted) {
@@ -131,7 +134,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
     );
     if (confirmed == true) {
       try {
-        await DatabaseHelper().deleteSalesOrder(id);
+        await locator<OrderRepository>().deleteSalesOrder(id);
         _loadData();
       } catch (e) {
         if (mounted) {
@@ -145,7 +148,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
 
   Future<void> _changeStatus(String id, String newStatus) async {
     try {
-      await DatabaseHelper().updateSalesOrder(id, {
+      await locator<OrderRepository>().updateSalesOrder(id, {
         'status': newStatus,
         'updated_at': DateTime.now().toIso8601String(),
       });
@@ -180,12 +183,11 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
     if (confirmed != true) return;
 
     try {
-      final db = DatabaseHelper();
       final orderId = order['id'] as String;
       final now = DateTime.now().toIso8601String();
 
       // Get order items
-      final items = await db.getSalesOrderItems(orderId);
+      final items = await locator<OrderRepository>().getSalesOrderItems(orderId);
 
       // Create invoice from order data
       final invoiceId = 'SI-${now.substring(0, 10).replaceAll('-', '')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
@@ -221,7 +223,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
       }).toList();
 
       // Save invoice with journal entries
-      await db.saveInvoiceWithJournalEntries(
+      await locator<InvoiceRepository>().saveInvoiceWithJournalEntries(
         invoiceMap,
         invoiceItems,
         invoiceType: 'sale',
@@ -230,7 +232,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
       );
 
       // Update order status to converted
-      await db.updateSalesOrder(orderId, {
+      await locator<OrderRepository>().updateSalesOrder(orderId, {
         'status': 'converted',
         'converted_to_invoice': 1,
         'invoice_id': invoiceId,
@@ -276,7 +278,7 @@ class _SalesOrdersScreenState extends State<SalesOrdersScreen> with SingleTicker
             expand: false,
             builder: (ctx, scrollController) {
               return FutureBuilder<List<Map<String, dynamic>>>(
-                future: DatabaseHelper().getSalesOrderItems(orderId),
+                future: locator<OrderRepository>().getSalesOrderItems(orderId),
                 builder: (ctx, snapshot) {
                   return Padding(
                     padding: EdgeInsets.only(
@@ -810,9 +812,8 @@ class _CreateSalesOrderFormState extends State<_CreateSalesOrderForm> {
 
   Future<void> _loadDropdownData() async {
     try {
-      final db = DatabaseHelper();
-      final customers = await db.getAllCustomers(orderBy: 'name ASC');
-      final products = await db.getAllProducts(activeOnly: true, orderBy: 'name_ar ASC');
+      final customers = await locator<CustomerRepository>().getAllCustomers(orderBy: 'name ASC');
+      final products = await locator<ProductRepository>().getAllProducts(activeOnly: true, orderBy: 'name_ar ASC');
       if (mounted) {
         setState(() {
           _customers = customers;
@@ -1033,8 +1034,7 @@ class _CreateSalesOrderFormState extends State<_CreateSalesOrderForm> {
     setState(() => _isSaving = true);
 
     try {
-      final db = DatabaseHelper();
-      final orderNumber = await db.getNextSalesOrderNumber();
+      final orderNumber = await locator<OrderRepository>().getNextSalesOrderNumber();
       final now = DateTime.now();
 
       final orderMap = {
@@ -1070,7 +1070,7 @@ class _CreateSalesOrderFormState extends State<_CreateSalesOrderForm> {
         'total_price': item.total,
       }).toList();
 
-      await db.insertSalesOrderWithItems(orderMap, orderItems);
+      await locator<OrderRepository>().insertSalesOrderWithItems(orderMap, orderItems);
 
       if (mounted) {
         Navigator.pop(context);

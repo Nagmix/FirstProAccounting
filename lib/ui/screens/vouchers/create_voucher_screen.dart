@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' show Transaction;
+import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
 
 class CreateVoucherScreen extends StatefulWidget {
   final String? initialType;
@@ -62,9 +65,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final accounts = await db.getAllAccounts();
-    final cashBoxes = await db.getAllCashBoxes();
+    final accounts = await locator<AccountRepository>().getAllAccounts();
+    final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
     setState(() {
       _accounts = accounts.where((a) => (a['is_active'] as int?) == 1).toList();
       _cashBoxes = cashBoxes.where((c) => (c['is_active'] as int?) == 1).toList();
@@ -177,8 +179,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final dbHelper = DatabaseHelper();
-      final voucherNumber = await dbHelper.getNextVoucherNumber(_selectedType);
+      final voucherNumber = await locator<CashBoxService>().getNextVoucherNumber(_selectedType);
       final now = DateTime.now().toIso8601String();
       final totalAmount = _totalDebit;
       final dateStr = _selectedDate.toIso8601String().split('T').first;
@@ -234,7 +235,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
     Map<String, dynamic> voucherMap,
     List<Map<String, dynamic>> items,
   ) async {
-    final db = await DatabaseHelper().database;
+    final db = await locator<DatabaseHelper>().database;
     final now = DateTime.now().toIso8601String();
     final journalId = DateTime.now().millisecondsSinceEpoch;
     final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';

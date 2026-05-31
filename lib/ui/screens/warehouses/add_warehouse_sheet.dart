@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 
 class AddWarehouseSheet extends StatefulWidget {
   final Map<String, dynamic>? existing;
@@ -46,12 +47,12 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
       'updated_at': now,
     };
 
-    final db = DatabaseHelper();
+    final refRepo = locator<ReferenceDataRepository>();
     if (_isEdit) {
-      await db.updateWarehouse(widget.existing!['id'] as int, warehouseMap);
+      await refRepo.updateWarehouse(widget.existing!['id'] as int, warehouseMap);
     } else {
       warehouseMap['created_at'] = now;
-      await db.insertWarehouse(warehouseMap);
+      await refRepo.insertWarehouse(warehouseMap);
     }
 
     if (!mounted) return;

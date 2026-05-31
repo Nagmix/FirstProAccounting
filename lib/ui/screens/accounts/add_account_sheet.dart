@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/account_model.dart';
 
 class AddAccountSheet extends StatefulWidget {
@@ -82,15 +84,13 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   }
 
   Future<void> _loadCashBoxes() async {
-    final db = DatabaseHelper();
-    final cashBoxes = await db.getAllCashBoxes();
+    final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
     setState(() => _cashBoxes = cashBoxes);
   }
 
   Future<void> _generateCode() async {
     if (_isEdit) return;
-    final db = DatabaseHelper();
-    final code = await db.getNextAccountCode(_selectedType.name);
+    final code = await locator<AccountRepository>().getNextAccountCode(_selectedType.name);
     if (mounted) {
       _codeController.text = code;
     }
@@ -125,11 +125,10 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
       updatedAt: DateTime.now(),
     );
 
-    final db = DatabaseHelper();
     if (_isEdit) {
-      await db.updateAccount(account.id!, account.toMap());
+      await locator<AccountRepository>().updateAccount(account.id!, account.toMap());
     } else {
-      await db.insertAccount(account.toMap());
+      await locator<AccountRepository>().insertAccount(account.toMap());
     }
 
     if (!mounted) return;

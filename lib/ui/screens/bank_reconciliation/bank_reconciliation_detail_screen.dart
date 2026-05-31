@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/bank_reconciliation_service.dart';
 import '../../../data/models/bank_reconciliation_model.dart';
 
 class BankReconciliationDetailScreen extends StatefulWidget {
@@ -32,8 +33,7 @@ class _BankReconciliationDetailScreenState
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final service = db.bankReconciliation;
+      final service = locator<BankReconciliationService>();
       final reconInfo = await service.getReconciliationWithInfo(widget.reconciliationId);
       final recon = await service.getReconciliation(widget.reconciliationId);
       if (recon == null) {
@@ -66,8 +66,7 @@ class _BankReconciliationDetailScreenState
 
   Future<void> _loadBookTransactions() async {
     if (_reconciliation == null) return;
-    final db = DatabaseHelper();
-    final service = db.bankReconciliation;
+    final service = locator<BankReconciliationService>();
 
     // Use statement date as end date, and 30 days before as start
     final endDate = _reconciliation!.statementDate;
@@ -83,8 +82,7 @@ class _BankReconciliationDetailScreenState
   }
 
   Future<void> _autoMatch() async {
-    final db = DatabaseHelper();
-    final count = await db.bankReconciliation.autoMatch(widget.reconciliationId);
+    final count = await locator<BankReconciliationService>().autoMatch(widget.reconciliationId);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -196,8 +194,7 @@ class _BankReconciliationDetailScreenState
                 onPressed: () async {
                   final amount = double.tryParse(amountController.text) ?? 0;
                   if (amount <= 0) return;
-                  final db = DatabaseHelper();
-                  await db.bankReconciliation.addStatementLine(BankStatementLine(
+                  await locator<BankReconciliationService>().addStatementLine(BankStatementLine(
                     reconciliationId: widget.reconciliationId,
                     cashBoxId: _reconciliation!.cashBoxId,
                     transactionDate: selectedDate,
@@ -227,9 +224,9 @@ class _BankReconciliationDetailScreenState
 
   Future<void> _calculateBalances() async {
     if (_reconciliation == null) return;
-    final db = DatabaseHelper();
-    final calculated = await db.bankReconciliation.calculateAdjustedBalances(_reconciliation!);
-    await db.bankReconciliation.updateReconciliation(calculated);
+    final service = locator<BankReconciliationService>();
+    final calculated = await service.calculateAdjustedBalances(_reconciliation!);
+    await service.updateReconciliation(calculated);
     _loadData();
   }
 
@@ -261,8 +258,7 @@ class _BankReconciliationDetailScreenState
 
     setState(() => _isCompleting = true);
     try {
-      final db = DatabaseHelper();
-      await db.bankReconciliation.completeReconciliation(widget.reconciliationId);
+      await locator<BankReconciliationService>().completeReconciliation(widget.reconciliationId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -284,8 +280,7 @@ class _BankReconciliationDetailScreenState
   }
 
   Future<void> _unmatchLine(int lineId) async {
-    final db = DatabaseHelper();
-    await db.bankReconciliation.unmatchLine(lineId);
+    await locator<BankReconciliationService>().unmatchLine(lineId);
     _loadData();
   }
 

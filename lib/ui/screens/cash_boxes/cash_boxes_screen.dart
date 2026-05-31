@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/cash_box_model.dart';
 import 'add_cash_box_sheet.dart';
 
@@ -34,8 +35,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
   Future<void> _loadCashBoxes() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final maps = await db.getAllCashBoxes();
+      final maps = await locator<CashBoxService>().getAllCashBoxes();
       if (mounted) {
         setState(() {
           _cashBoxes = maps.map((m) => CashBox.fromMap(m)).toList();
@@ -90,8 +90,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
       ),
     );
     if (confirmed == true) {
-      final db = DatabaseHelper();
-      await db.deleteCashBox(cashBox.id!);
+      await locator<CashBoxService>().deleteCashBox(cashBox.id!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('تم حذف "${cashBox.name}"'), backgroundColor: AppColors.success),

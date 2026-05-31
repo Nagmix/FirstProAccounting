@@ -5,7 +5,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
 import 'create_voucher_screen.dart';
 
 class VouchersScreen extends StatefulWidget {
@@ -64,8 +66,7 @@ class _VouchersScreenState extends State<VouchersScreen>
 
   Future<void> _loadData() async {
     try {
-      final db = DatabaseHelper();
-      final vouchers = await db.getAllVouchers();
+      final vouchers = await locator<CashBoxService>().getAllVouchers();
       if (mounted) {
         setState(() {
           _allVouchers = vouchers;
@@ -167,8 +168,7 @@ class _VouchersScreenState extends State<VouchersScreen>
     );
     if (!confirmed) return;
 
-    final db = DatabaseHelper();
-    await db.deleteVoucher(voucherId);
+    await locator<CashBoxService>().deleteVoucher(voucherId);
     if (mounted) {
       context.showSuccessSnackBar('تم حذف السند بنجاح');
       _loadData();
@@ -176,7 +176,6 @@ class _VouchersScreenState extends State<VouchersScreen>
   }
 
   Future<void> _showVoucherDetail(Map<String, dynamic> voucher) async {
-    final db = DatabaseHelper();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -205,13 +204,13 @@ class _VouchersScreenState extends State<VouchersScreen>
     // Load voucher items from DB
     List<Map<String, dynamic>> items = [];
     try {
-      items = await db.getVoucherItems(voucherId);
+      items = await locator<CashBoxService>().getVoucherItems(voucherId);
     } catch (_) {}
 
     if (!mounted) return;
 
     // Get account names for items
-    final database = await db.database;
+    final database = await locator<DatabaseHelper>().database;
     final List<Map<String, dynamic>> enrichedItems = [];
     for (final item in items) {
       final accountId = (item['account_id'] as num?)?.toInt();

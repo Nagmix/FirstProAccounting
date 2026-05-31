@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import '../utils/esc_pos_commands.dart';
-import '../../data/datasources/database_helper.dart';
+import '../di/service_locator.dart';
+import '../../data/datasources/repositories/reference_data_repository.dart';
+import '../../data/datasources/repositories/invoice_repository.dart';
 import '../utils/money_helper.dart';
 
 /// Bluetooth printer device info.
@@ -130,9 +132,8 @@ class BluetoothPrinterService {
         _connectedName = device?.name ?? 'طابعة';
 
         // Save as default printer
-        final db = DatabaseHelper();
-        await db.setSetting('default_printer_address', address);
-        await db.setSetting('default_printer_name', _connectedName);
+        await locator<ReferenceDataRepository>().setSetting('default_printer_address', address);
+        await locator<ReferenceDataRepository>().setSetting('default_printer_name', _connectedName);
 
         return true;
       }
@@ -186,10 +187,9 @@ class BluetoothPrinterService {
 
   /// Print a receipt from structured data.
   Future<void> printReceipt(Map<String, dynamic> receiptData) async {
-    final db = DatabaseHelper();
-    final businessName = await db.getSetting('business_name') ?? 'الأول برو';
-    final businessPhone = await db.getSetting('business_phone') ?? '';
-    final businessAddress = await db.getSetting('business_address') ?? '';
+    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو';
+    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
+    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address') ?? '';
 
     final cmds = EscPosCommands.buildReceipt(
       businessName: businessName,
@@ -217,18 +217,17 @@ class BluetoothPrinterService {
 
   /// Print an invoice using data from the database.
   Future<void> printInvoice(String invoiceId) async {
-    final db = DatabaseHelper();
-    final invoiceItems = await db.getInvoiceItems(invoiceId);
-    final invoices = await db.getAllInvoices();
+    final invoiceItems = await locator<InvoiceRepository>().getInvoiceItems(invoiceId);
+    final invoices = await locator<InvoiceRepository>().getAllInvoices();
     final invoice = invoices.where((i) => i['id'] == invoiceId).firstOrNull;
 
     if (invoice == null) {
       throw PrinterException('الفاتورة غير موجودة');
     }
 
-    final businessName = await db.getSetting('business_name') ?? 'الأول برو';
-    final businessPhone = await db.getSetting('business_phone') ?? '';
-    final businessAddress = await db.getSetting('business_address') ?? '';
+    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو';
+    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
+    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address') ?? '';
 
     final type = invoice['type'] as String? ?? 'sale';
     final isReturn = (invoice['is_return'] as int? ?? 0) == 1;
@@ -268,8 +267,7 @@ class BluetoothPrinterService {
 
   /// Print a customer statement.
   Future<void> printCustomerStatement(Map<String, dynamic> customerData) async {
-    final db = DatabaseHelper();
-    final businessName = await db.getSetting('business_name') ?? 'الأول برو';
+    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو';
 
     final cmds = <int>[];
     cmds.addAll(EscPosCommands.init());
@@ -309,10 +307,9 @@ class BluetoothPrinterService {
   /// Load printer settings from database.
   Future<void> loadSettings() async {
     try {
-      final db = DatabaseHelper();
-      final paperWidthStr = await db.getSetting('printer_paper_width');
-      final autoCutStr = await db.getSetting('printer_auto_cut');
-      final fontSizeStr = await db.getSetting('printer_font_size');
+      final paperWidthStr = await locator<ReferenceDataRepository>().getSetting('printer_paper_width');
+      final autoCutStr = await locator<ReferenceDataRepository>().getSetting('printer_auto_cut');
+      final fontSizeStr = await locator<ReferenceDataRepository>().getSetting('printer_font_size');
 
       if (paperWidthStr != null) {
         final pw = int.tryParse(paperWidthStr) ?? 80;
@@ -332,10 +329,9 @@ class BluetoothPrinterService {
 
   Future<void> _saveSettings() async {
     try {
-      final db = DatabaseHelper();
-      await db.setSetting('printer_paper_width', _paperWidth.toString());
-      await db.setSetting('printer_auto_cut', _autoCut ? '1' : '0');
-      await db.setSetting('printer_font_size', _fontSize.toString());
+      await locator<ReferenceDataRepository>().setSetting('printer_paper_width', _paperWidth.toString());
+      await locator<ReferenceDataRepository>().setSetting('printer_auto_cut', _autoCut ? '1' : '0');
+      await locator<ReferenceDataRepository>().setSetting('printer_font_size', _fontSize.toString());
     } catch (_) {
       // Ignore save errors
     }
@@ -344,8 +340,7 @@ class BluetoothPrinterService {
   /// Try to auto-connect to the default printer.
   Future<bool> autoConnect() async {
     try {
-      final db = DatabaseHelper();
-      final address = await db.getSetting('default_printer_address');
+      final address = await locator<ReferenceDataRepository>().getSetting('default_printer_address');
       if (address != null && address.isNotEmpty) {
         return await connect(address);
       }

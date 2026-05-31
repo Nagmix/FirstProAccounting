@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/bank_reconciliation_service.dart';
 import '../../../data/models/bank_reconciliation_model.dart';
 import 'bank_reconciliation_detail_screen.dart';
 
@@ -27,8 +28,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
   Future<void> _loadReconciliations() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final data = await db.bankReconciliation.getAllReconciliationsWithInfo();
+      final data = await locator<BankReconciliationService>().getAllReconciliationsWithInfo();
       if (mounted) {
         setState(() {
           _reconciliations = data;
@@ -48,8 +48,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
   }
 
   Future<void> _createNewReconciliation() async {
-    final db = DatabaseHelper();
-    final bankCashBoxes = await db.bankReconciliation.getBankCashBoxes();
+    final bankCashBoxes = await locator<BankReconciliationService>().getBankCashBoxes();
 
     if (bankCashBoxes.isEmpty) {
       if (mounted) {
@@ -73,13 +72,13 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
     if (result != null) {
       try {
         final reconNumber =
-            await db.bankReconciliation.getNextReconciliationNumber();
+            await locator<BankReconciliationService>().getNextReconciliationNumber();
         final cashBoxId = result['cashBoxId'] as int;
         final statementDate = result['statementDate'] as DateTime;
         final statementBalance = result['statementBalance'] as double;
 
         final bookBalance =
-            await db.bankReconciliation.getBookBalance(cashBoxId);
+            await locator<BankReconciliationService>().getBookBalance(cashBoxId);
 
         final recon = BankReconciliation(
           reconciliationNumber: reconNumber,
@@ -89,7 +88,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
           bookBalance: bookBalance,
         );
 
-        final id = await db.bankReconciliation.createReconciliation(recon);
+        final id = await locator<BankReconciliationService>().createReconciliation(recon);
         if (mounted) {
           Navigator.push(
             context,
@@ -140,7 +139,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
       ),
     );
     if (confirmed == true) {
-      await DatabaseHelper().bankReconciliation.deleteReconciliation(id);
+      await locator<BankReconciliationService>().deleteReconciliation(id);
       _loadReconciliations();
     }
   }

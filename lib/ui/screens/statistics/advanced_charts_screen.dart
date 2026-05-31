@@ -4,7 +4,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/report_service.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
 
 /// Advanced charts screen with multiple chart types using pure Flutter custom painting.
 class AdvancedChartsScreen extends StatefulWidget {
@@ -42,7 +44,8 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
   Future<void> _loadChartData() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
+      final reportService = locator<ReportService>();
+      final customerRepo = locator<CustomerRepository>();
       final currency = _selectedCurrency.isEmpty ? null : _selectedCurrency;
       final days = _selectedPeriod == 'week'
           ? 7
@@ -51,12 +54,12 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
               : 365;
 
       final results = await Future.wait([
-        db.getMonthlySalesVsPurchases(_selectedYear, currency: currency),
-        db.getRevenueExpenseBreakdown(_selectedYear, currency: currency),
-        db.getDailySalesTrend(days, currency: currency),
-        db.getTopProducts(5, currency: currency),
-        db.getTopCustomerBalances(5),
-        db.getMonthlyCashFlow(_selectedYear, currency: currency),
+        reportService.getMonthlySalesVsPurchases(_selectedYear, currency: currency),
+        reportService.getRevenueExpenseBreakdown(_selectedYear, currency: currency),
+        reportService.getDailySalesTrend(days, currency: currency),
+        reportService.getTopProducts(5, currency: currency),
+        customerRepo.getTopCustomerBalances(5),
+        reportService.getMonthlyCashFlow(_selectedYear, currency: currency),
       ]);
 
       if (mounted) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/models/unit_model.dart';
 
 /// Units Master screen - manages the library of measurement units.
@@ -40,8 +42,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
   Future<void> _loadUnits() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final rawUnits = await db.getAllUnits();
+      final rawUnits = await locator<ReferenceDataRepository>().getAllUnits();
       if (!mounted) return;
       setState(() {
         _allUnits = rawUnits.map((m) => Unit.fromMap(m)).toList();
@@ -249,7 +250,6 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
     );
 
     if (result == true) {
-      final db = DatabaseHelper();
       final now = DateTime.now().toIso8601String();
       final unitMap = {
         'name_ar': nameArController.text.trim(),
@@ -267,11 +267,12 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
       };
 
       try {
+        final refRepo = locator<ReferenceDataRepository>();
         if (existing != null) {
-          await db.updateUnit(existing.id!, unitMap);
+          await refRepo.updateUnit(existing.id!, unitMap);
         } else {
           unitMap['created_at'] = now;
-          await db.insertUnit(unitMap);
+          await refRepo.insertUnit(unitMap);
         }
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -293,8 +294,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
   Future<void> _deleteUnit(Unit unit) async {
     // Pre-check: verify no products reference this unit before showing confirmation
     try {
-      final db = DatabaseHelper();
-      final database = await db.database;
+      final database = await locator<DatabaseHelper>().database;
       final productsWithUnit = await database.query(
         'products',
         columns: ['id', 'name_ar'],
@@ -337,7 +337,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
 
     if (confirmed == true) {
       try {
-        await DatabaseHelper().deleteUnit(unit.id!);
+        await locator<ReferenceDataRepository>().deleteUnit(unit.id!);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم حذف الوحدة'), backgroundColor: AppColors.success),

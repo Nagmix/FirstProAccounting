@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/services/stock_service.dart';
 
 class InventoryVoucherScreen extends StatefulWidget {
   const InventoryVoucherScreen({super.key});
@@ -11,7 +14,6 @@ class InventoryVoucherScreen extends StatefulWidget {
 }
 
 class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
-  final DatabaseHelper _db = DatabaseHelper();
   List<Map<String, dynamic>> _vouchers = [];
   bool _isLoading = true;
 
@@ -23,7 +25,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
 
   Future<void> _loadVouchers() async {
     setState(() => _isLoading = true);
-    _vouchers = await _db.getAllInventoryVouchers();
+    _vouchers = await locator<StockService>().getAllInventoryVouchers();
     setState(() => _isLoading = false);
   }
 
@@ -44,7 +46,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
       ),
     );
     if (confirmed == true) {
-      await _db.deleteInventoryVoucher(id);
+      await locator<StockService>().deleteInventoryVoucher(id);
       _loadVouchers();
     }
   }
@@ -66,7 +68,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
       ),
     );
     if (confirmed == true) {
-      await _db.confirmInventoryVoucher(id);
+      await locator<StockService>().confirmInventoryVoucher(id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم تأكيد سند الجرد وتعديل المخزون'), backgroundColor: AppColors.success),
@@ -237,8 +239,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
   }
 
   Future<void> _showCreateVoucherDialog() async {
-    final warehouses = await _db.getAllWarehouses();
-    final products = await _db.getAllProducts(activeOnly: true);
+    final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+    final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
     int? selectedWarehouseId;
     DateTime selectedDate = DateTime.now();
     String selectedCurrency = 'YER';
@@ -414,7 +416,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                         });
                       }
 
-                      await _db.insertInventoryVoucher({
+                      await locator<StockService>().insertInventoryVoucher({
                         'voucher_number': voucherNumber,
                         'warehouse_id': selectedWarehouseId,
                         'date': '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',

@@ -6,7 +6,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-import '../../data/datasources/database_helper.dart';
+import '../di/service_locator.dart';
+import '../../data/datasources/repositories/reference_data_repository.dart';
 import 'currency_formatter.dart';
 import 'money_helper.dart';
 
@@ -51,13 +52,11 @@ class AccountStatementPdfGenerator {
     String? phone,
     String currency = 'YER',
   }) async {
-    final db = DatabaseHelper();
-
     // Load business settings
-    final businessName = await db.getSetting('business_name');
-    final businessPhone = await db.getSetting('business_phone');
-    final businessAddress = await db.getSetting('business_address');
-    final logoPath = await db.getSetting('business_logo_path');
+    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name');
+    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone');
+    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address');
+    final logoPath = await locator<ReferenceDataRepository>().getSetting('business_logo_path');
 
     final hasCustomBusiness = businessName != null && businessName.trim().isNotEmpty;
     final String headerName = hasCustomBusiness ? businessName! : 'الأول برو المحاسبي';

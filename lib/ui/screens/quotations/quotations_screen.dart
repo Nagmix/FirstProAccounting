@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/order_repository.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
 
 /// Helper class for quotation line items in the creation form.
 class _QuotationItem {
@@ -86,8 +90,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      _allQuotations = await db.getAllQuotations();
+      _allQuotations = await locator<OrderRepository>().getAllQuotations();
       _applyFilters();
     } catch (e) {
       if (mounted) {
@@ -133,13 +136,13 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
       ),
     );
     if (confirmed == true) {
-      await DatabaseHelper().deleteQuotation(id);
+      await locator<OrderRepository>().deleteQuotation(id);
       _loadData();
     }
   }
 
   Future<void> _changeStatus(String id, String newStatus) async {
-    await DatabaseHelper().updateQuotation(id, {
+    await locator<OrderRepository>().updateQuotation(id, {
       'status': newStatus,
       'updated_at': DateTime.now().toIso8601String(),
     });
@@ -167,12 +170,11 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
     if (confirmed != true) return;
 
     try {
-      final db = DatabaseHelper();
       final quotationId = quotation['id'] as String;
       final now = DateTime.now().toIso8601String();
 
       // Get quotation items
-      final items = await db.getQuotationItems(quotationId);
+      final items = await locator<OrderRepository>().getQuotationItems(quotationId);
 
       // Create invoice from quotation data
       final invoiceId = 'SI-${now.substring(0, 10).replaceAll('-', '')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
@@ -208,7 +210,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
       }).toList();
 
       // Save invoice with journal entries
-      await db.saveInvoiceWithJournalEntries(
+      await locator<InvoiceRepository>().saveInvoiceWithJournalEntries(
         invoiceMap,
         invoiceItems,
         invoiceType: 'sale',
@@ -217,7 +219,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
       );
 
       // Update quotation status to converted
-      await db.updateQuotation(quotationId, {
+      await locator<OrderRepository>().updateQuotation(quotationId, {
         'status': 'converted',
         'converted_to_sales_order': 1,
         'updated_at': now,
@@ -711,9 +713,8 @@ class _CreateQuotationFormState extends State<_CreateQuotationForm> {
 
   Future<void> _loadDropdownData() async {
     try {
-      final db = DatabaseHelper();
-      final customers = await db.getAllCustomers(orderBy: 'name ASC');
-      final products = await db.getAllProducts(activeOnly: true, orderBy: 'name_ar ASC');
+      final customers = await locator<CustomerRepository>().getAllCustomers(orderBy: 'name ASC');
+      final products = await locator<ProductRepository>().getAllProducts(activeOnly: true, orderBy: 'name_ar ASC');
       if (mounted) {
         setState(() {
           _customers = customers;
@@ -944,8 +945,7 @@ class _CreateQuotationFormState extends State<_CreateQuotationForm> {
     setState(() => _isSaving = true);
 
     try {
-      final db = DatabaseHelper();
-      final quotationNumber = await db.getNextQuotationNumber();
+      final quotationNumber = await locator<OrderRepository>().getNextQuotationNumber();
       final now = DateTime.now();
 
       final quotationMap = {
@@ -979,7 +979,7 @@ class _CreateQuotationFormState extends State<_CreateQuotationForm> {
         'total_price': item.total,
       }).toList();
 
-      await db.insertQuotationWithItems(quotationMap, quotationItems);
+      await locator<OrderRepository>().insertQuotationWithItems(quotationMap, quotationItems);
 
       if (mounted) {
         Navigator.pop(context);

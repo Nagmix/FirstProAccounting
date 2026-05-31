@@ -3,7 +3,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/order_repository.dart';
+import '../../../data/datasources/repositories/supplier_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
 
 /// Helper class for purchase order line items in the creation form.
 class _OrderItem {
@@ -81,8 +84,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      _allOrders = await db.getAllPurchaseOrders();
+      _allOrders = await locator<OrderRepository>().getAllPurchaseOrders();
       _applyFilters();
     } catch (e) {
       if (mounted) {
@@ -129,7 +131,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
     );
     if (confirmed == true) {
       try {
-        await DatabaseHelper().deletePurchaseOrder(id);
+        await locator<OrderRepository>().deletePurchaseOrder(id);
         _loadData();
       } catch (e) {
         if (mounted) {
@@ -143,7 +145,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
 
   Future<void> _changeStatus(String id, String newStatus) async {
     try {
-      await DatabaseHelper().updatePurchaseOrder(id, {
+      await locator<OrderRepository>().updatePurchaseOrder(id, {
         'status': newStatus,
         'updated_at': DateTime.now().toIso8601String(),
       });
@@ -177,7 +179,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
             expand: false,
             builder: (ctx, scrollController) {
               return FutureBuilder<List<Map<String, dynamic>>>(
-                future: DatabaseHelper().getPurchaseOrderItems(orderId),
+                future: locator<OrderRepository>().getPurchaseOrderItems(orderId),
                 builder: (ctx, snapshot) {
                   return Padding(
                     padding: EdgeInsets.only(
@@ -665,9 +667,8 @@ class _CreatePurchaseOrderFormState extends State<_CreatePurchaseOrderForm> {
 
   Future<void> _loadDropdownData() async {
     try {
-      final db = DatabaseHelper();
-      final suppliers = await db.getAllSuppliers();
-      final products = await db.getAllProducts(activeOnly: true, orderBy: 'name_ar ASC');
+      final suppliers = await locator<SupplierRepository>().getAllSuppliers();
+      final products = await locator<ProductRepository>().getAllProducts(activeOnly: true, orderBy: 'name_ar ASC');
       if (mounted) {
         setState(() {
           _suppliers = suppliers;
@@ -888,8 +889,7 @@ class _CreatePurchaseOrderFormState extends State<_CreatePurchaseOrderForm> {
     setState(() => _isSaving = true);
 
     try {
-      final db = DatabaseHelper();
-      final orderNumber = await db.getNextPurchaseOrderNumber();
+      final orderNumber = await locator<OrderRepository>().getNextPurchaseOrderNumber();
       final now = DateTime.now();
 
       final orderMap = {
@@ -924,7 +924,7 @@ class _CreatePurchaseOrderFormState extends State<_CreatePurchaseOrderForm> {
         'total_price': item.total,
       }).toList();
 
-      await db.insertPurchaseOrderWithItems(orderMap, orderItems);
+      await locator<OrderRepository>().insertPurchaseOrderWithItems(orderMap, orderItems);
 
       if (mounted) {
         Navigator.pop(context);

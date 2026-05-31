@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
 
 /// شاشة إدارة الموظفين مع رصيد افتتاحي وربط بدليل الحسابات
 class EmployeesScreen extends StatefulWidget {
@@ -26,8 +29,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
   Future<void> _loadEmployees() async {
     try {
-      final db = DatabaseHelper();
-      final employees = await db.getAllEmployees();
+      final employees = await locator<ReferenceDataRepository>().getAllEmployees();
       if (mounted) {
         setState(() {
           _employees = employees;
@@ -285,8 +287,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               title: Text(isActive ? 'تعطيل' : 'تفعيل'),
               onTap: () async {
                 Navigator.pop(ctx);
-                final db = DatabaseHelper();
-                await db.updateEmployee(employee['id'] as int, {
+                await locator<ReferenceDataRepository>().updateEmployee(employee['id'] as int, {
                   'is_active': isActive ? 0 : 1,
                   'updated_at': DateTime.now().toIso8601String(),
                 });
@@ -314,7 +315,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   ),
                 );
                 if (confirmed == true) {
-                  await DatabaseHelper().deleteEmployee(employee['id'] as int);
+                  await locator<ReferenceDataRepository>().deleteEmployee(employee['id'] as int);
                   _loadEmployees();
                 }
               },
@@ -389,13 +390,12 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
-    final db = DatabaseHelper();
     final now = DateTime.now().toIso8601String();
     final balance = double.tryParse(_balanceController.text) ?? 0.0;
 
     // Get the employee account for this currency
     int? accountId;
-    final accounts = await db.getAccountsByCurrency(_currency);
+    final accounts = await locator<AccountRepository>().getAccountsByCurrency(_currency);
     // Try to find account code like 5100/5101/5102 based on currency
     int accountCodeSuffix = _currency == 'YER' ? 5100 : (_currency == 'SAR' ? 5101 : 5102);
     final empAccount = accounts.where((a) => a['account_code'] == accountCodeSuffix.toString()).firstOrNull;
@@ -417,10 +417,10 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     };
 
     if (widget.employee != null) {
-      await db.updateEmployee(widget.employee!['id'] as int, data);
+      await locator<ReferenceDataRepository>().updateEmployee(widget.employee!['id'] as int, data);
     } else {
       data['created_at'] = now;
-      await db.insertEmployee(data);
+      await locator<ReferenceDataRepository>().insertEmployee(data);
 
       // If opening balance > 0, post journal entry
       if (balance > 0 && accountId != null) {
@@ -433,7 +433,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         if (_balanceType == 'credit') {
           // له - الموظف له رصيد: مدين = الموظف، دائن = الصندوق
           if (cashAccountId != null) {
-            await (await db.database).transaction((txn) async {
+            await (await locator<DatabaseHelper>().database).transaction((txn) async {
               await txn.insert('transactions', {
                 'account_id': accountId, 'journal_id': journalId,
                 'debit': MoneyHelper.toCents(balance), 'credit': 0,
@@ -453,7 +453,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         } else {
           // عليه - الموظف عليه رصيد: مدين = الصندوق، دائن = الموظف
           if (cashAccountId != null) {
-            await (await db.database).transaction((txn) async {
+            await (await locator<DatabaseHelper>().database).transaction((txn) async {
               await txn.insert('transactions', {
                 'account_id': cashAccountId, 'journal_id': journalId,
                 'debit': MoneyHelper.toCents(balance), 'credit': 0,

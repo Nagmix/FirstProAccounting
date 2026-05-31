@@ -3,7 +3,7 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/services/audit_service.dart';
 
 /// Accounting audit screen that verifies all operations are linked to
@@ -45,7 +45,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final auditService = AuditService(DatabaseHelper());
+      final auditService = locator<AuditService>();
 
       // 1. Trial Balance by Currency
       final trialBalance = await auditService.getTrialBalanceByCurrency();

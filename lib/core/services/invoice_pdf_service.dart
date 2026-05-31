@@ -6,7 +6,9 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 
-import '../../data/datasources/database_helper.dart';
+import '../di/service_locator.dart';
+import '../../data/datasources/repositories/reference_data_repository.dart';
+import '../../data/datasources/repositories/customer_repository.dart';
 import '../utils/money_helper.dart';
 
 /// Professional sales invoice PDF generator for the FirstPro accounting app.
@@ -15,7 +17,6 @@ import '../utils/money_helper.dart';
 /// standard template with: header, invoice type badge, metadata, items table,
 /// totals, amount-in-words, and signature fields.
 class InvoicePdfService {
-  final DatabaseHelper _db = DatabaseHelper();
 
   // ─── Color constants ────────────────────────────────────────────────
   static const PdfColor _blueHeader = PdfColor.fromInt(0xFF174AFF);
@@ -49,15 +50,15 @@ class InvoicePdfService {
 
     // ─── Load business settings ─────────────────────────────────────
     final businessName =
-        await _db.getSetting('business_name') ?? 'الأول برو المحاسبي';
-    final businessPhone = await _db.getSetting('business_phone') ?? '';
-    final businessEmail = await _db.getSetting('business_email') ?? '';
-    final businessAddress = await _db.getSetting('business_address') ??
+        await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
+    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
+    final businessEmail = await locator<ReferenceDataRepository>().getSetting('business_email') ?? '';
+    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address') ??
         'الجمهورية اليمنية - صنعاء';
-    final logoPath = await _db.getSetting('business_logo_path') ?? '';
-    final taxNumber = await _db.getSetting('business_tax_number') ?? '';
+    final logoPath = await locator<ReferenceDataRepository>().getSetting('business_logo_path') ?? '';
+    final taxNumber = await locator<ReferenceDataRepository>().getSetting('business_tax_number') ?? '';
     final commercialReg =
-        await _db.getSetting('business_commercial_reg') ?? '';
+        await locator<ReferenceDataRepository>().getSetting('business_commercial_reg') ?? '';
 
     final currency = invoice['currency'] as String? ?? 'YER';
     final currencySymbol =
@@ -91,7 +92,7 @@ class InvoicePdfService {
     if (customerName.isEmpty && invoice['customer_id'] != null) {
       final custId = invoice['customer_id'];
       if (custId is int) {
-        final customer = await _db.getCustomerById(custId);
+        final customer = await locator<CustomerRepository>().getCustomerById(custId);
         if (customer != null) {
           customerName = customer['name'] as String? ?? '';
         }

@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../../data/datasources/database_helper.dart';
+import '../di/service_locator.dart';
+import '../../data/datasources/repositories/reference_data_repository.dart';
 import '../utils/money_helper.dart';
 
 /// Service for Bluetooth thermal printer (80mm) integration.
@@ -67,8 +68,7 @@ class ThermalPrinterService {
             _isConnected = true;
 
             // Save the connected device
-            final db = DatabaseHelper();
-            await db.setSetting('thermal_printer_mac', macAddress);
+            await locator<ReferenceDataRepository>().setSetting('thermal_printer_mac', macAddress);
 
             return true;
           }
@@ -103,8 +103,7 @@ class ThermalPrinterService {
   /// Auto-connect to the last used printer.
   Future<bool> autoConnect() async {
     try {
-      final db = DatabaseHelper();
-      final mac = await db.getSetting('thermal_printer_mac');
+      final mac = await locator<ReferenceDataRepository>().getSetting('thermal_printer_mac');
       if (mac != null && mac.isNotEmpty) {
         return await connect(mac);
       }
@@ -152,11 +151,10 @@ class ThermalPrinterService {
       List<int> bytes = [];
 
       // Get business info from settings
-      final db = DatabaseHelper();
       final businessName =
-          await db.getSetting('business_name') ?? 'الأول برو المحاسبي';
-      final businessPhone = await db.getSetting('business_phone') ?? '';
-      final businessAddress = await db.getSetting('business_address') ?? '';
+          await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
+      final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
+      final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address') ?? '';
 
       final currencySymbol =
           currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
@@ -262,9 +260,8 @@ class ThermalPrinterService {
 
     try {
       List<int> bytes = [];
-      final db = DatabaseHelper();
       final businessName =
-          await db.getSetting('business_name') ?? 'الأول برو المحاسبي';
+          await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
       final currencySymbol =
           currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
 

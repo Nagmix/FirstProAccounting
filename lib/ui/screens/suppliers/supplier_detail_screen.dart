@@ -8,8 +8,9 @@ import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/supplier_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
 
@@ -82,19 +83,18 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
 
     // Refresh supplier data
-    final supplierMap = await db.getSupplierById(widget.supplier.id!);
+    final supplierMap = await locator<SupplierRepository>().getSupplierById(widget.supplier.id!);
     if (supplierMap != null) {
       _freshSupplier = Supplier.fromMap(supplierMap);
     }
 
     // Load cash boxes for voucher dialog
-    _cashBoxes = await db.getAllCashBoxes();
+    _cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
 
     // Load movements
-    final movements = await db.getSupplierMovements(widget.supplier.id!);
+    final movements = await locator<SupplierRepository>().getSupplierMovements(widget.supplier.id!);
     setState(() {
       _allMovements = movements;
       _isLoading = false;
@@ -104,8 +104,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
 
   Future<void> _loadMovements() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final movements = await db.getSupplierMovements(widget.supplier.id!);
+    final movements = await locator<SupplierRepository>().getSupplierMovements(widget.supplier.id!);
     setState(() {
       _allMovements = movements;
       _isLoading = false;
@@ -480,13 +479,11 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                           }
                           setDialogState(() => isSaving = true);
 
-                          final dbHelper = DatabaseHelper();
-                          final db = await dbHelper.database;
                           final now = DateTime.now();
-                          final voucherNumber = await dbHelper.getNextVoucherNumber(voucherType);
+                          final voucherNumber = await locator<CashBoxService>().getNextVoucherNumber(voucherType);
 
                           // Find the supplier's account
-                          final supplierAccounts = await dbHelper.suppliers.getSupplierPayableAccounts(selectedCurrency);
+                          final supplierAccounts = await locator<SupplierRepository>().getSupplierPayableAccounts(selectedCurrency);
                           final supplierAccountId = supplierAccounts.isNotEmpty
                               ? supplierAccounts.first['id'] as int
                               : null;
@@ -494,7 +491,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                           // Find the cash box account
                           int? cashBoxAccountId;
                           if (selectedCashBoxId != null) {
-                            final cbData = await dbHelper.getCashBoxById(selectedCashBoxId!);
+                            final cbData = await locator<CashBoxService>().getCashBoxById(selectedCashBoxId!);
                             if (cbData != null) {
                               cashBoxAccountId = cbData['linked_account_id'] as int?;
                             }
@@ -557,7 +554,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                           }
 
                           if (items.isNotEmpty) {
-                            await dbHelper.insertVoucher(voucherMap, items);
+                            await locator<CashBoxService>().insertVoucher(voucherMap, items);
                           }
 
                           // Update supplier balance
@@ -570,14 +567,14 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                               if (currentType == 'credit') {
                                 newBalance = currentBalance - amount;
                                 final newType = newBalance < 0 ? 'debit' : 'credit';
-                                await dbHelper.updateSupplier(supplier.id!, {
+                                await locator<SupplierRepository>().updateSupplier(supplier.id!, {
                                   'balance': newBalance.abs(),
                                   'balance_type': newType,
                                   'updated_at': now.toIso8601String(),
                                 });
                               } else {
                                 newBalance = currentBalance + amount;
-                                await dbHelper.updateSupplier(supplier.id!, {
+                                await locator<SupplierRepository>().updateSupplier(supplier.id!, {
                                   'balance': newBalance,
                                   'balance_type': 'debit',
                                   'updated_at': now.toIso8601String(),
@@ -588,14 +585,14 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                               if (currentType == 'debit') {
                                 newBalance = currentBalance - amount;
                                 final newType = newBalance < 0 ? 'credit' : 'debit';
-                                await dbHelper.updateSupplier(supplier.id!, {
+                                await locator<SupplierRepository>().updateSupplier(supplier.id!, {
                                   'balance': newBalance.abs(),
                                   'balance_type': newType,
                                   'updated_at': now.toIso8601String(),
                                 });
                               } else {
                                 newBalance = currentBalance + amount;
-                                await dbHelper.updateSupplier(supplier.id!, {
+                                await locator<SupplierRepository>().updateSupplier(supplier.id!, {
                                   'balance': newBalance,
                                   'balance_type': 'credit',
                                   'updated_at': now.toIso8601String(),

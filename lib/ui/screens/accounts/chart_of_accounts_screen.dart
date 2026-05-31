@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
 import '../../../data/models/account_model.dart';
 import 'add_account_sheet.dart';
 import '../../../ui/navigation/app_router.dart';
@@ -57,8 +58,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
 
   Future<void> _loadAccounts() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final maps = await db.getAllAccounts();
+    final maps = await locator<AccountRepository>().getAllAccounts();
     setState(() {
       _accounts = maps.map((m) => Account.fromMap(m)).toList();
       _isLoading = false;
@@ -156,8 +156,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
       ),
     );
     if (confirmed == true) {
-      final db = DatabaseHelper();
-      final result = await db.deleteAccount(account.id!);
+      final result = await locator<AccountRepository>().deleteAccount(account.id!);
       if (result == -1) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

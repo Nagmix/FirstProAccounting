@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
-import '../../core/di/service_locator.dart';
-import '../../data/datasources/database_helper.dart';
-import '../../core/utils/money_helper.dart';
+import '../di/service_locator.dart';
+import '../../data/datasources/repositories/customer_repository.dart';
+import '../../data/datasources/repositories/product_repository.dart';
+import '../utils/money_helper.dart';
 
 /// ViewModel for invoice creation — manages customers, products, and invoice items.
-/// Extracted from CreateInvoiceScreen State (H-08).
+///
+/// Uses dependency-injected repositories/services instead of DatabaseHelper
+/// directly. Registered in [service_locator.dart] as a lazy singleton.
 class InvoiceViewModel extends ChangeNotifier {
-  final DatabaseHelper _db = locator<DatabaseHelper>();
+  final CustomerRepository _customerRepo = locator<CustomerRepository>();
+  final ProductRepository _productRepo = locator<ProductRepository>();
 
   // ── Customer state ──
   List<Map<String, dynamic>> _customers = [];
@@ -46,8 +50,8 @@ class InvoiceViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _customers = await _db.getAllCustomers();
-      _products = await _db.getAllProducts();
+      _customers = await _customerRepo.getAllCustomers();
+      _products = await _productRepo.getAllProducts();
       _errorMessage = null;
     } catch (e) {
       _errorMessage = 'حدث خطأ أثناء تحميل البيانات';

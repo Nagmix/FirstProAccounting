@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
 
 class AnnualPostingScreen extends StatefulWidget {
   const AnnualPostingScreen({super.key});
@@ -26,8 +27,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
 
   Future<void> _loadData() async {
     try {
-      final db = DatabaseHelper();
-      final years = await db.getFiscalYears();
+      final years = await locator<AccountRepository>().getFiscalYears();
 
       // Determine the active fiscal year: prefer the most recent open fiscal year
       int activeYear = DateTime.now().year;
@@ -42,7 +42,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
         }
       }
 
-      final pl = await db.getYearProfitLoss(activeYear);
+      final pl = await locator<AccountRepository>().getYearProfitLoss(activeYear);
 
       if (mounted) {
         setState(() {
@@ -69,8 +69,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
     setState(() => _isPosting = true);
 
     try {
-      final db = DatabaseHelper();
-      await db.performAnnualPosting(year);
+      await locator<AccountRepository>().performAnnualPosting(year);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

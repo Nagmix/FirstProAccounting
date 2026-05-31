@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/database_helper.dart';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -62,8 +63,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final database = await db.database;
+      final database = await locator<DatabaseHelper>().database;
       final cc = _currencyCode();
 
       final args = <dynamic>[];

@@ -5,7 +5,9 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../../core/di/service_locator.dart';
+import '../../../../data/datasources/repositories/product_repository.dart';
+import '../../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/models/invoice_item_model.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
@@ -64,12 +66,11 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
 
   Future<void> _searchProducts(String query) async {
     setState(() => _isSearching = true);
-    final db = DatabaseHelper();
     List<Map<String, dynamic>> maps;
     if (query.isEmpty) {
-      maps = await db.getAllProducts(activeOnly: true);
+      maps = await locator<ProductRepository>().getAllProducts(activeOnly: true);
     } else {
-      maps = await db.searchProducts(query, warehouseId: widget.warehouseId);
+      maps = await locator<ProductRepository>().searchProducts(query, warehouseId: widget.warehouseId);
     }
     if (!mounted) return;
     setState(() {
@@ -80,8 +81,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
 
   Future<void> _loadUnitsForProduct(int productId) async {
     setState(() => _loadingUnits = true);
-    final db = DatabaseHelper();
-    final units = await db.getAvailableUnitsForProduct(productId);
+    final units = await locator<ReferenceDataRepository>().getAvailableUnitsForProduct(productId);
     if (!mounted) return;
     setState(() {
       _availableUnits = units;

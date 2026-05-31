@@ -14,7 +14,13 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/repositories/supplier_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
+import '../../../data/datasources/services/shift_service.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
 import '../../../data/models/invoice_item_model.dart';
@@ -116,13 +122,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
     final results = await Future.wait([
-      db.getAllCustomers(),
-      db.getAllSuppliers(),
-      db.getAllWarehouses(),
-      db.getAllCashBoxes(),
-      db.getAllCurrencies(),
+      locator<CustomerRepository>().getAllCustomers(),
+      locator<SupplierRepository>().getAllSuppliers(),
+      locator<ReferenceDataRepository>().getAllWarehouses(),
+      locator<CashBoxService>().getAllCashBoxes(),
+      locator<ReferenceDataRepository>().getAllCurrencies(),
     ]);
     setState(() {
       _customers = results[0];
@@ -906,9 +911,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   }
 
   void _showOriginalInvoiceSelector() async {
-    final db = DatabaseHelper();
     // Get recent non-return invoices of the same type (sale or purchase)
-    final invoices = await db.getInvoicesByType(widget.invoiceType);
+    final invoices = await locator<InvoiceRepository>().getInvoicesByType(widget.invoiceType);
 
     // Filter to only non-return invoices
     final nonReturnInvoices = invoices.where((inv) {
@@ -1807,10 +1811,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
 
     // Reload entities after adding
-    final db = DatabaseHelper();
     final results = await Future.wait([
-      db.getAllCustomers(),
-      db.getAllSuppliers(),
+      locator<CustomerRepository>().getAllCustomers(),
+      locator<SupplierRepository>().getAllSuppliers(),
     ]);
     setState(() {
       _customers = results[0];
@@ -2276,7 +2279,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
     // Check return limits if this is a return invoice with an original invoice linked
     if (_isReturn && _originalInvoiceId != null) {
-      final db = DatabaseHelper();
       final itemsMaps = _items.map((item) => <String, dynamic>{
         'product_id': item.productId,
         'product_name': item.productName,
@@ -2285,7 +2287,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'unit_price': item.unitPrice,
         'total_price': item.totalPrice,
       }).toList();
-      final limitErrors = await db.checkReturnLimits(_originalInvoiceId!, itemsMaps);
+      final limitErrors = await locator<InvoiceRepository>().checkReturnLimits(_originalInvoiceId!, itemsMaps);
       if (limitErrors.isNotEmpty && mounted) {
         final errorMessages = limitErrors.values.join('\n');
         showDialog(
@@ -2365,9 +2367,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       'notes': item.notes,
     }).toList();
 
-    final db = DatabaseHelper();
-
-    await db.saveInvoiceWithJournalEntries(
+    await locator<InvoiceRepository>().saveInvoiceWithJournalEntries(
       invoice.toMap(),
       itemsMaps,
       invoiceType: invoice.effectiveType,
@@ -2381,10 +2381,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     // Update shift totals if this is a return invoice and a shift is active
     if (_isReturn && _selectedCashBoxId != null) {
       try {
-        final activeShift = await db.getActiveShift(_selectedCashBoxId!);
+        final activeShift = await locator<ShiftService>().getActiveShift(_selectedCashBoxId!);
         if (activeShift != null) {
           final shiftId = activeShift['id'] as int;
-          await db.updateShiftTotals(shiftId, 0.0, _total, 0.0);
+          await locator<ShiftService>().updateShiftTotals(shiftId, 0.0, _total, 0.0);
         }
       } catch (e) {
         debugPrint('Warning: Could not update shift totals for return: $e');

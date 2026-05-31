@@ -4,7 +4,10 @@ import '../../../core/theme/design_system.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
+import '../../../data/datasources/repositories/expense_repository.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/datasources/services/report_service.dart';
 import '../../widgets/animated_entry.dart';
 import '../../widgets/stat_card.dart';
@@ -46,17 +49,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
 
   Future<void> _loadStatisticsData() async {
     try {
-      final db = DatabaseHelper();
-      final reportService = ReportService(db);
+      final invoiceRepo = locator<InvoiceRepository>();
+      final reportService = locator<ReportService>();
 
       final results = await Future.wait([
-        db.getTotalSalesThisMonth(),
-        db.getTotalPurchasesThisMonth(),
-        db.getTotalExpensesThisMonth(),
-        db.getCustomerCount(),
-        db.getCashBalance(),
-        db.getRecentInvoices(limit: 5),
-        db.getCOGSThisMonth(),  // Real COGS from invoice_items
+        invoiceRepo.getTotalSalesThisMonth(),
+        invoiceRepo.getTotalPurchasesThisMonth(),
+        locator<ExpenseRepository>().getTotalExpensesThisMonth(),
+        locator<CustomerRepository>().getCustomerCount(),
+        invoiceRepo.getCashBalance(),
+        invoiceRepo.getRecentInvoices(limit: 5),
+        invoiceRepo.getCOGSThisMonth(),  // Real COGS from invoice_items
       ]);
 
       final now = DateTime.now();

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
 import 'add_warehouse_sheet.dart';
 
 class WarehousesScreen extends StatefulWidget {
@@ -34,14 +36,13 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
   Future<void> _loadWarehouses() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final warehouses = await db.getAllWarehouses();
+      final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
 
       // Load product counts per warehouse
       final counts = <int, int>{};
       for (final w in warehouses) {
         final id = w['id'] as int;
-        counts[id] = await db.getProductCountByWarehouse(id);
+        counts[id] = await locator<ProductRepository>().getProductCountByWarehouse(id);
       }
 
       if (mounted) {
@@ -124,8 +125,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
       ),
     );
     if (confirmed == true) {
-      final db = DatabaseHelper();
-      await db.deleteWarehouse(id);
+      await locator<ReferenceDataRepository>().deleteWarehouse(id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

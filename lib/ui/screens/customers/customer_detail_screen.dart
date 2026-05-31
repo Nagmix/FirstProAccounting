@@ -7,8 +7,9 @@ import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/customer_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
 
@@ -76,26 +77,25 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final dbHelper = DatabaseHelper();
 
     // Refresh customer data
-    final customerMap = await dbHelper.getCustomerById(widget.customer.id!);
+    final customerMap = await locator<CustomerRepository>().getCustomerById(widget.customer.id!);
     if (customerMap != null) {
       _freshCustomer = Customer.fromMap(customerMap);
     }
 
     // Load cash boxes
-    _cashBoxes = await dbHelper.getAllCashBoxes();
+    _cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
 
     // Load all movements
-    await _loadMovements(dbHelper);
+    await _loadMovements();
 
     setState(() => _isLoading = false);
   }
 
-  Future<void> _loadMovements(DatabaseHelper dbHelper) async {
+  Future<void> _loadMovements() async {
     final customerId = widget.customer.id!;
-    final customerRepo = dbHelper.customers;
+    final customerRepo = locator<CustomerRepository>();
     final movements = <Map<String, dynamic>>[];
 
     // 1. Load invoices for this customer
@@ -192,7 +192,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       for (final v in unlinkedVouchers) {
         final voucherId = v['id'] as int?;
         if (voucherId == null) continue;
-        final items = await dbHelper.getVoucherItems(voucherId);
+        final items = await locator<CashBoxService>().getVoucherItems(voucherId);
         for (final item in items) {
           final accountId = item['account_id'] as int?;
           if (accountId != null && customerAccountIds.contains(accountId)) {
@@ -505,13 +505,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           }
                           setDialogState(() => isSaving = true);
 
-                          final dbHelper = DatabaseHelper();
-                          final db = await dbHelper.database;
                           final now = DateTime.now();
-                          final voucherNumber = await dbHelper.getNextVoucherNumber(voucherType);
+                          final voucherNumber = await locator<CashBoxService>().getNextVoucherNumber(voucherType);
 
                           // Find the customer's account
-                          final customerAccounts = await dbHelper.customers.getCustomerReceivableAccounts(selectedCurrency);
+                          final customerAccounts = await locator<CustomerRepository>().getCustomerReceivableAccounts(selectedCurrency);
                           final customerAccountId = customerAccounts.isNotEmpty
                               ? customerAccounts.first['id'] as int
                               : null;
@@ -519,7 +517,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           // Find the cash box account
                           int? cashBoxAccountId;
                           if (selectedCashBoxId != null) {
-                            final cbData = await dbHelper.getCashBoxById(selectedCashBoxId!);
+                            final cbData = await locator<CashBoxService>().getCashBoxById(selectedCashBoxId!);
                             if (cbData != null) {
                               cashBoxAccountId = cbData['linked_account_id'] as int?;
                             }
@@ -582,7 +580,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           }
 
                           if (items.isNotEmpty) {
-                            await dbHelper.insertVoucher(voucherMap, items);
+                            await locator<CashBoxService>().insertVoucher(voucherMap, items);
                           }
 
                           // Update customer balance
@@ -595,14 +593,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               if (currentType == 'debit') {
                                 newBalance = currentBalance - amount;
                                 final newType = newBalance < 0 ? 'credit' : 'debit';
-                                await dbHelper.updateCustomer(_freshCustomer!.id!, {
+                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
                                   'balance': newBalance.abs(),
                                   'balance_type': newType,
                                   'updated_at': now.toIso8601String(),
                                 });
                               } else {
                                 newBalance = currentBalance + amount;
-                                await dbHelper.updateCustomer(_freshCustomer!.id!, {
+                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
                                   'balance': newBalance,
                                   'balance_type': 'credit',
                                   'updated_at': now.toIso8601String(),
@@ -612,7 +610,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               // Payment to customer increases what they owe us
                               if (currentType == 'debit') {
                                 newBalance = currentBalance + amount;
-                                await dbHelper.updateCustomer(_freshCustomer!.id!, {
+                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
                                   'balance': newBalance,
                                   'balance_type': 'debit',
                                   'updated_at': now.toIso8601String(),
@@ -620,7 +618,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               } else {
                                 newBalance = currentBalance - amount;
                                 final newType = newBalance < 0 ? 'debit' : 'credit';
-                                await dbHelper.updateCustomer(_freshCustomer!.id!, {
+                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
                                   'balance': newBalance.abs(),
                                   'balance_type': newType,
                                   'updated_at': now.toIso8601String(),

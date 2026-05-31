@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
+import '../../../data/datasources/services/journal_service.dart';
 import '../../../data/models/cash_box_model.dart';
 
 class AddCashBoxSheet extends StatefulWidget {
@@ -70,9 +73,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
 
   /// When editing, try to figure out which currency the existing linked account belongs to.
   Future<void> _deriveCurrencyFromLinkedAccount() async {
-    final db = DatabaseHelper();
     for (final entry in _cashBanksAccountCodes.entries) {
-      final account = await db.getAccountByCodeAndCurrency(entry.value, entry.key);
+      final account = await locator<JournalService>().getAccountByCodeAndCurrency(entry.value, entry.key);
       if (account != null && account['id'] == _linkedAccountId) {
         if (mounted) {
           setState(() => _currency = entry.key);
@@ -100,8 +102,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
     });
 
     final code = _cashBanksAccountCodes[newCurrency]!;
-    final db = DatabaseHelper();
-    final account = await db.getAccountByCodeAndCurrency(code, newCurrency);
+    final account = await locator<JournalService>().getAccountByCodeAndCurrency(code, newCurrency);
 
     if (!mounted) return;
 
@@ -123,9 +124,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
     if (_linkedAccountId == null) {
       // Try one more time to resolve the account
       final code = _cashBanksAccountCodes[_currency]!;
-      final db = DatabaseHelper();
       try {
-        final account = await db.getAccountByCodeAndCurrency(code, _currency);
+        final account = await locator<JournalService>().getAccountByCodeAndCurrency(code, _currency);
         if (account != null) {
           _linkedAccountId = account['id'] as int;
         } else {
@@ -175,17 +175,16 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
         map.remove('id');
       }
 
-      final db = DatabaseHelper();
       if (_isEdit) {
-        await db.updateCashBox(cashBox.id!, map);
+        await locator<CashBoxService>().updateCashBox(cashBox.id!, map);
       } else {
-        await db.insertCashBox(map);
+        await locator<CashBoxService>().insertCashBox(map);
 
         // ── Opening Balance Journal Entry ──
         final openingBalance = double.tryParse(_balanceController.text) ?? 0.0;
         if (openingBalance > 0 && _linkedAccountId != null) {
           final codeOffset = _currency == 'SAR' ? 1 : (_currency == 'USD' ? 2 : 0);
-          final openingBalanceAccount = await db.getAccountByCodeAndCurrency(
+          final openingBalanceAccount = await locator<JournalService>().getAccountByCodeAndCurrency(
             (2901 + codeOffset).toString(), _currency,
           );
           final openingBalanceAccountId = openingBalanceAccount?['id'] as int?;
@@ -193,7 +192,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
           if (openingBalanceAccountId != null) {
             final now = DateTime.now().toIso8601String();
             final journalId = DateTime.now().millisecondsSinceEpoch;
-            final database = await db.database;
+            final database = await locator<DatabaseHelper>().database;
             final name = _nameController.text.trim();
 
             if (_balanceType == 'debit') {
@@ -216,8 +215,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 'date': now,
                 'created_at': now,
               });
-              await db.updateAccountBalance(_linkedAccountId!, openingBalance, isDebit: true);
-              await db.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: false);
+              await locator<JournalService>().updateAccountBalance(_linkedAccountId!, openingBalance, isDebit: true);
+              await locator<JournalService>().updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: false);
             } else {
               // Credit Cash & Banks, Debit Opening Balance Equity
               await database.insert('transactions', {
@@ -238,8 +237,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 'date': now,
                 'created_at': now,
               });
-              await db.updateAccountBalance(_linkedAccountId!, openingBalance, isDebit: false);
-              await db.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: true);
+              await locator<JournalService>().updateAccountBalance(_linkedAccountId!, openingBalance, isDebit: false);
+              await locator<JournalService>().updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: true);
             }
           }
         }

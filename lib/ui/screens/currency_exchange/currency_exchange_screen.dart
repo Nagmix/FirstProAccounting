@@ -3,7 +3,9 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CURRENCY EXCHANGE SCREEN – FirstPro Arabic Accounting App
@@ -78,9 +80,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   //  DATA LOADING
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final currencies = await db.getAllCurrencies();
-    final exchanges = await db.getAllCurrencyExchanges();
+    final currencies = await locator<ReferenceDataRepository>().getAllCurrencies();
+    final exchanges = await locator<CashBoxService>().getAllCurrencyExchanges();
 
     if (!mounted) return;
 
@@ -95,9 +96,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   }
 
   Future<void> _loadCashBoxes() async {
-    final db = DatabaseHelper();
-    final fromBoxes = await db.getCashBoxesByCurrency(_fromCurrency);
-    final toBoxes = await db.getCashBoxesByCurrency(_toCurrency);
+    final fromBoxes = await locator<CashBoxService>().getCashBoxesByCurrency(_fromCurrency);
+    final toBoxes = await locator<CashBoxService>().getCashBoxesByCurrency(_toCurrency);
 
     if (!mounted) return;
 
@@ -115,8 +115,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   }
 
   Future<void> _loadExchanges() async {
-    final db = DatabaseHelper();
-    final exchanges = await db.getAllCurrencyExchanges();
+    final exchanges = await locator<CashBoxService>().getAllCurrencyExchanges();
     if (!mounted) return;
     setState(() => _exchanges = exchanges);
   }
@@ -287,10 +286,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     setState(() => _isSaving = true);
 
     try {
-      final db = DatabaseHelper();
       final toAmount = fromAmount * exchangeRate;
       final gainLoss = _calculateGainLoss();
-      final exchangeNumber = await db.getNextExchangeNumber();
+      final exchangeNumber = await locator<CashBoxService>().getNextExchangeNumber();
       final now = DateTime.now().toIso8601String();
 
       final exchangeMap = <String, dynamic>{
@@ -308,7 +306,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
         'created_at': now,
       };
 
-      await db.insertCurrencyExchange(exchangeMap);
+      await locator<CashBoxService>().insertCurrencyExchange(exchangeMap);
 
       if (!mounted) return;
 

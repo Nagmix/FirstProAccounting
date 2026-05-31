@@ -3,7 +3,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/expense_repository.dart';
+import '../../../data/datasources/services/journal_service.dart';
 import 'add_expense_screen.dart';
 
 class ExpenseAccountDetailScreen extends StatefulWidget {
@@ -42,10 +45,9 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
     final results = await Future.wait([
-      db.getAccountTransactions(_accountId),
-      db.getExpensesByAccountId(_accountId),
+      locator<JournalService>().getAccountTransactions(_accountId),
+      locator<ExpenseRepository>().getExpensesByAccountId(_accountId),
     ]);
 
     double totalDebit = 0.0;

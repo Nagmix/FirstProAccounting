@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/services/stock_service.dart';
 
 /// شاشة التحويل المخزني - نقل المنتجات بين المستودعات
 class StockTransferScreen extends StatefulWidget {
@@ -43,10 +46,9 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    final warehouses = await db.getAllWarehouses();
-    final products = await db.getAllProducts(activeOnly: true);
-    final transfers = await db.getAllStockTransfers();
+    final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+    final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
+    final transfers = await locator<StockService>().getAllStockTransfers();
 
     setState(() {
       _warehouses = warehouses;
@@ -113,10 +115,9 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
 
     // التحقق من الكمية المتاحة
     // Check warehouse-specific stock if source warehouse is selected
-    final db = DatabaseHelper();
     if (_fromWarehouseId != null) {
       // Query stock in the specific source warehouse
-      final warehouseStock = await db.getProductStockInWarehouse(_selectedProductId!, _fromWarehouseId!);
+      final warehouseStock = await locator<ProductRepository>().getProductStockInWarehouse(_selectedProductId!, _fromWarehouseId!);
       if (warehouseStock == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('المنتج غير موجود في مخزن المصدر'), backgroundColor: AppColors.warning),
@@ -148,7 +149,7 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
     final now = DateTime.now();
 
     // توليد رقم التحويل
-    final existingTransfers = await db.getAllStockTransfers();
+    final existingTransfers = await locator<StockService>().getAllStockTransfers();
     final transferNumber = 'ST-${(existingTransfers.length + 1).toString().padLeft(4, '0')}';
 
     final transferMap = {
@@ -162,7 +163,7 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
       'created_at': now.toIso8601String(),
     };
 
-    await db.insertStockTransfer(transferMap);
+    await locator<StockService>().insertStockTransfer(transferMap);
 
     if (mounted) {
       setState(() {

@@ -351,6 +351,11 @@ class ReferenceDataRepository {
     return await db.update('notifications', {'is_read': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<int> markAllNotificationsAsRead() async {
+    final db = await _db;
+    return await db.update('notifications', {'is_read': 1}, where: 'is_read = ?', whereArgs: [0]);
+  }
+
   Future<int> deleteNotification(int id) async {
     final db = await _db;
     return await db.delete('notifications', where: 'id = ?', whereArgs: [id]);

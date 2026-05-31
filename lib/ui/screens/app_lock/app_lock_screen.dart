@@ -7,7 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../navigation/main_scaffold.dart';
 
 /// A lock screen that appears before any other app content.
@@ -23,7 +24,6 @@ class AppLockScreen extends StatefulWidget {
 class _AppLockScreenState extends State<AppLockScreen>
     with TickerProviderStateMixin {
   // ── Services ────────────────────────────────────────────────
-  final DatabaseHelper _db = DatabaseHelper();
   final LocalAuthentication _localAuth = LocalAuthentication();
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
@@ -122,7 +122,7 @@ class _AppLockScreenState extends State<AppLockScreen>
       try {
         _isBiometricAvailable = await _localAuth.isDeviceSupported();
         if (_isBiometricAvailable) {
-          final biometricEnabled = await _db.getSetting('biometric_enabled');
+          final biometricEnabled = await locator<ReferenceDataRepository>().getSetting('biometric_enabled');
           _isBiometricEnabled = biometricEnabled == '1';
         }
       } on PlatformException {
@@ -130,7 +130,7 @@ class _AppLockScreenState extends State<AppLockScreen>
       }
 
       // Load username
-      _userName = await _db.getSetting('user_name') ?? '';
+      _userName = await locator<ReferenceDataRepository>().getSetting('user_name') ?? '';
 
       if (mounted) {
         setState(() {
@@ -273,12 +273,12 @@ class _AppLockScreenState extends State<AppLockScreen>
 
     // Fallback to DB for users upgrading from older versions
     try {
-      final dbValue = await _db.getSetting(key);
+      final dbValue = await locator<ReferenceDataRepository>().getSetting(key);
       if (dbValue != null && dbValue.isNotEmpty) {
         // Migrate to secure storage
         await _secureStorage.write(key: key, value: dbValue);
         // Remove from DB after successful migration
-        await _db.deleteSetting(key);
+        await locator<ReferenceDataRepository>().deleteSetting(key);
         return dbValue;
       }
     } catch (_) {
@@ -292,8 +292,8 @@ class _AppLockScreenState extends State<AppLockScreen>
     await _secureStorage.write(key: 'pin_enabled', value: '1');
     // Clean up old DB entries if they exist
     try {
-      await _db.deleteSetting('app_pin');
-      await _db.deleteSetting('pin_enabled');
+      await locator<ReferenceDataRepository>().deleteSetting('app_pin');
+      await locator<ReferenceDataRepository>().deleteSetting('pin_enabled');
     } catch (_) {}
   }
 

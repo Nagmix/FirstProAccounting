@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 
 /// A simple notification center screen that displays notifications from the DB.
 class NotificationsScreen extends StatefulWidget {
@@ -11,7 +12,6 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final DatabaseHelper _db = DatabaseHelper();
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
 
@@ -23,11 +23,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _loadNotifications() async {
     try {
-      final db = await _db.database;
-      final notifications = await db.query(
-        'notifications',
-        orderBy: 'created_at DESC',
-      );
+      final notifications = await locator<ReferenceDataRepository>().getAllNotifications();
 
       if (mounted) {
         setState(() {
@@ -46,24 +42,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _markAsRead(int id) async {
-    final db = await _db.database;
-    await db.update(
-      'notifications',
-      {'is_read': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await locator<ReferenceDataRepository>().markNotificationAsRead(id);
     _loadNotifications();
   }
 
   Future<void> _markAllAsRead() async {
-    final db = await _db.database;
-    await db.update(
-      'notifications',
-      {'is_read': 1},
-      where: 'is_read = ?',
-      whereArgs: [0],
-    );
+    await locator<ReferenceDataRepository>().markAllNotificationsAsRead();
     _loadNotifications();
   }
 

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/models/supplier_model.dart';
 import '../../widgets/empty_state.dart';
 import 'add_supplier_sheet.dart';
@@ -49,8 +50,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   Future<void> _loadSuppliers() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final maps = await db.getAllSuppliers();
+      final maps = await locator<SupplierRepository>().getAllSuppliers();
       if (mounted) {
         setState(() {
           _suppliers = maps.map((m) => Supplier.fromMap(m)).toList();
@@ -171,8 +171,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       ),
     );
     if (confirmed == true) {
-      final db = DatabaseHelper();
-      await db.deleteSupplier(supplier.id!);
+      await locator<SupplierRepository>().deleteSupplier(supplier.id!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

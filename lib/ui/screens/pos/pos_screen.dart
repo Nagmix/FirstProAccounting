@@ -12,7 +12,15 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/product_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
+import '../../../data/datasources/services/shift_service.dart';
+import '../../../data/datasources/services/journal_service.dart';
 import '../../../data/datasources/services/report_service.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
@@ -130,8 +138,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
 
     // 2. Check unit conversion barcodes
-    final db = DatabaseHelper();
-    final conversion = await db.findUnitConversionByBarcode(barcode);
+    final conversion = await locator<ReferenceDataRepository>().findUnitConversionByBarcode(barcode);
     if (conversion != null) {
       final productId = conversion['product_id'] as int;
       final product = _products.where((p) => p.id == productId).firstOrNull;
@@ -164,18 +171,17 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  DATA LOADING
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final catMaps = await db.getAllCategories();
-    final prodMaps = await db.getAllProducts(activeOnly: true);
+    final catMaps = await locator<ReferenceDataRepository>().getAllCategories();
+    final prodMaps = await locator<ProductRepository>().getAllProducts(activeOnly: true);
 
     // Load default cashier name from settings
-    final savedName = await db.getSetting('user_name');
+    final savedName = await locator<ReferenceDataRepository>().getSetting('user_name');
 
     // C7: Query DB for today's POS invoice count to avoid ID collisions after restart
     // IMPORTANT: Date format must match _generateInvoiceId() — NO hyphens!
     final today = DateTime.now();
     final todayStr = '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
-    final count = await db.getTodayPosInvoiceCount(todayStr);
+    final count = await locator<InvoiceRepository>().getTodayPosInvoiceCount(todayStr);
 
     // Filter products that are sellable and shown in POS
     final posProducts = prodMaps
@@ -201,8 +207,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   Future<void> _loadHeldOrdersFromDb() async {
     try {
-      final db = DatabaseHelper();
-      final dbOrders = await db.getHeldOrders(shiftId: _activeShift?['id']);
+      final dbOrders = await locator<ShiftService>().getHeldOrders(shiftId: _activeShift?['id']);
       for (final row in dbOrders) {
         final cartData = jsonDecode(row['cart_data'] as String) as List;
         final paymentsData = jsonDecode(row['payments_data'] as String) as List;
@@ -238,10 +243,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _loadActiveShift() async {
-    final db = DatabaseHelper();
-    final cashBoxes = await db.getAllCashBoxes();
+    final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
     for (final cb in cashBoxes) {
-      final shift = await db.getActiveShift(cb['id'] as int);
+      final shift = await locator<ShiftService>().getActiveShift(cb['id'] as int);
       if (shift != null) {
         setState(() {
           _activeShift = shift;
@@ -265,10 +269,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _loadTopSellers() async {
-    final db = DatabaseHelper();
     final today = DateTime.now();
     final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    final reportService = ReportService(db);
+    final reportService = locator<ReportService>();
     final result = await reportService.getTopSellersToday(todayStr);
     if (mounted) {
       setState(() => _topSellers = result);
@@ -277,8 +280,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   /// Refresh product list to update stock badges after sales
   Future<void> _refreshProducts() async {
-    final db = DatabaseHelper();
-    final prodMaps = await db.getAllProducts(activeOnly: true);
+    final prodMaps = await locator<ProductRepository>().getAllProducts(activeOnly: true);
     if (mounted) {
       setState(() {
         _products = prodMaps.map((m) => Product.fromMap(m)).toList();
@@ -331,8 +333,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     final now = DateTime.now();
     final dateStr =
         '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final db = DatabaseHelper();
-    final nextSeq = await db.getNextInvoiceSequence('POS-$dateStr', 'pos');
+    final nextSeq = await locator<InvoiceRepository>().getNextInvoiceSequence('POS-$dateStr', 'pos');
     _todayInvoiceCount = nextSeq;
     final seq = nextSeq.toString().padLeft(4, '0');
     return 'POS-$dateStr-$seq';
@@ -1825,8 +1826,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  OPEN SHIFT DIALOG
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showOpenShiftDialog() async {
-    final db = DatabaseHelper();
-    final cashBoxes = await db.getAllCashBoxes();
+    final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
     if (cashBoxes.isEmpty) {
       if (mounted) {
         context.showErrorSnackBar('لا توجد صناديق نقدية. أضف صندوقاً أولاً من الإعدادات.');
@@ -1986,7 +1986,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         return;
                       }
 
-                      final existingShift = await db.getActiveShift(selectedCashBoxId!);
+                      final existingShift = await locator<ShiftService>().getActiveShift(selectedCashBoxId!);
                       if (existingShift != null) {
                         if (mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
@@ -2001,7 +2001,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       final now = DateTime.now();
 
                       // Get next shift number
-                      final reportService = ReportService(db);
+                      final reportService = locator<ReportService>();
                       final shiftNum = await reportService.getShiftCountForDate(now) + 1;
 
                       final shiftMap = {
@@ -2025,10 +2025,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         'created_at': now.toIso8601String(),
                         'updated_at': now.toIso8601String(),
                       };
-                      await db.openShift(shiftMap);
+                      await locator<ShiftService>().openShift(shiftMap);
 
                       // Save cashier name to settings
-                      await db.setSetting('user_name', cashierName);
+                      await locator<ReferenceDataRepository>().setSetting('user_name', cashierName);
 
                       if (!mounted) return;
                       Navigator.pop(ctx);
@@ -2158,14 +2158,13 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
                     // Record the cash in/out transaction in the database
                     try {
-                      final db = DatabaseHelper();
                       final shiftId = _activeShift!['id'] as int;
                       final cashBoxId = _activeShift!['cash_box_id'] as int;
                       final now = DateTime.now();
-                      final dbInstance = await db.database;
+                      final dbInstance = await locator<DatabaseHelper>().database;
 
                       // Update cash box balance
-                      final cashBox = await db.getCashBoxById(cashBoxId);
+                      final cashBox = await locator<CashBoxService>().getCashBoxById(cashBoxId);
                       if (cashBox != null) {
                         final currentBalance = MoneyHelper.readMoney(cashBox['balance']);
                         final newBalance = isCashIn
@@ -2186,11 +2185,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       // Create journal entries for the cash in/out
                       final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[_selectedCurrency] ?? 0;
                       final cashAccountCode = 1100 + codeOffset;
-                      final cashAccount = await db.getAccountByCodeAndCurrency(
+                      final cashAccount = await locator<JournalService>().getAccountByCodeAndCurrency(
                         cashAccountCode.toString(), _selectedCurrency,
                       );
                       final expenseAccountCode = 5000 + codeOffset;
-                      final expenseAccount = await db.getAccountByCodeAndCurrency(
+                      final expenseAccount = await locator<JournalService>().getAccountByCodeAndCurrency(
                         expenseAccountCode.toString(), _selectedCurrency,
                       );
 
@@ -2221,8 +2220,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                             'created_at': now.toIso8601String(),
                           });
                           // Update account balances
-                          await db.updateAccountBalance(cashAccountId, amount, isDebit: true);
-                          await db.updateAccountBalance(expenseAccountId, amount, isDebit: false);
+                          await locator<JournalService>().updateAccountBalance(cashAccountId, amount, isDebit: true);
+                          await locator<JournalService>().updateAccountBalance(expenseAccountId, amount, isDebit: false);
                         } else {
                           // سحب: مدين (مصاريف متنوعة) / دائن (الصندوق)
                           await dbInstance.insert('transactions', {
@@ -2242,8 +2241,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                             'created_at': now.toIso8601String(),
                           });
                           // Update account balances
-                          await db.updateAccountBalance(expenseAccountId, amount, isDebit: true);
-                          await db.updateAccountBalance(cashAccountId, amount, isDebit: false);
+                          await locator<JournalService>().updateAccountBalance(expenseAccountId, amount, isDebit: true);
+                          await locator<JournalService>().updateAccountBalance(cashAccountId, amount, isDebit: false);
                         }
                       }
 
@@ -2541,10 +2540,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                           double.tryParse(closingAmountController.text) ?? expectedAmount;
                       final difference = closingAmount - expectedAmount;
                       final now = DateTime.now();
-                      final db = DatabaseHelper();
 
                       // ── Step 1: Post all shift invoices (deferred posting) ──
-                      await db.postShiftInvoices(shiftId);
+                      await locator<ShiftService>().postShiftInvoices(shiftId);
 
                       // ── Step 2: Close the shift ──
                       final closeData = {
@@ -2556,7 +2554,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         'notes': notesController.text.isEmpty ? shift['notes'] : notesController.text,
                         'updated_at': now.toIso8601String(),
                       };
-                      await db.closeShift(shiftId, closeData);
+                      await locator<ShiftService>().closeShift(shiftId, closeData);
 
                       if (!mounted) return;
                       Navigator.pop(ctx);
@@ -2662,8 +2660,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  CUSTOMER SELECTOR
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showCustomerSelector() async {
-    final db = DatabaseHelper();
-    final customers = await db.getAllCustomers();
+    final customers = await locator<CustomerRepository>().getAllCustomers();
     final searchController = TextEditingController();
 
     await showModalBottomSheet(
@@ -2900,10 +2897,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       return;
     }
 
-    final db = DatabaseHelper();
     List<Map<String, dynamic>> availableUnits;
     try {
-      availableUnits = await db.getAvailableUnitsForProduct(product.id!);
+      availableUnits = await locator<ReferenceDataRepository>().getAvailableUnitsForProduct(product.id!);
     } catch (e) {
       debugPrint('Error loading units for product: $e');
       // Fallback: add directly with base unit
@@ -3378,8 +3374,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // ── التحقق من سقف الدين للعميل عند البيع الآجل ──
     if (primaryMethod == 'credit' && _selectedCustomerId != null) {
-      final db = DatabaseHelper();
-      final isOverCeiling = await db.isCustomerOverDebtCeiling(_selectedCustomerId!, _total);
+      final isOverCeiling = await locator<CustomerRepository>().isCustomerOverDebtCeiling(_selectedCustomerId!, _total);
       if (isOverCeiling) {
         if (mounted) {
           context.showErrorSnackBar('تجاوز سقف الدين! لا يمكن إتمام البيع الآجل لهذا العميل');
@@ -3463,8 +3458,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         'base_quantity': item.baseQuantity, // Always in base unit for stock
       }).toList();
 
-      final db = DatabaseHelper();
-      await db.saveInvoiceWithJournalEntries(
+      await locator<InvoiceRepository>().saveInvoiceWithJournalEntries(
         invoiceMap,
         items,
         invoiceType: 'pos',
@@ -3474,7 +3468,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         deferPosting: true,
       );
 
-      await db.updateShiftTotals(shiftId, _total, 0.0, _effectiveDiscount);
+      await locator<ShiftService>().updateShiftTotals(shiftId, _total, 0.0, _effectiveDiscount);
       await _loadActiveShift();
 
       if (!mounted) return;
@@ -3766,13 +3760,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   /// Print invoice as PDF.
   Future<void> _printPdfInvoice(String invoiceId) async {
     try {
-      final db = DatabaseHelper();
-      final invoiceData = await db.getInvoiceById(invoiceId);
+      final invoiceData = await locator<InvoiceRepository>().getInvoiceById(invoiceId);
       if (invoiceData == null) {
         if (mounted) context.showErrorSnackBar('لم يتم العثور على الفاتورة');
         return;
       }
-      final itemsData = await db.getInvoiceItems(invoiceId);
+      final itemsData = await locator<InvoiceRepository>().getInvoiceItems(invoiceId);
       await InvoicePdfGenerator.printInvoice(invoiceData, itemsData);
     } catch (e) {
       if (mounted) context.showErrorSnackBar('حدث خطأ أثناء الطباعة');
@@ -3862,7 +3855,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // Persist to database
     try {
-      final db = DatabaseHelper();
       final cartJson = _cart.map((item) => {
         'productId': item.productId,
         'productName': item.name,
@@ -3875,7 +3867,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         'amount': p.amount,
         'method': p.method,
       }).toList();
-      await db.insertHeldOrder({
+      await locator<ShiftService>().insertHeldOrder({
         'shift_id': _activeShift?['id'],
         'cart_data': jsonEncode(cartJson),
         'payment_method': _activePaymentMethod,
@@ -3942,7 +3934,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         onPressed: () {
                           // Delete from DB if persisted
                           if (order.dbId != null) {
-                            DatabaseHelper().deleteHeldOrder(order.dbId!);
+                            locator<ShiftService>().deleteHeldOrder(order.dbId!);
                           }
                           setState(() {
                             _cart.clear();
@@ -3968,7 +3960,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         onPressed: () {
                           // Delete from DB if persisted
                           if (order.dbId != null) {
-                            DatabaseHelper().deleteHeldOrder(order.dbId!);
+                            locator<ShiftService>().deleteHeldOrder(order.dbId!);
                           }
                           setState(() => _heldOrders.removeAt(idx));
                           Navigator.pop(ctx);
@@ -4006,8 +3998,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         _addToCartWithUnit(match.first);
       } else {
         // Try unit conversion barcode match
-        final db = DatabaseHelper();
-        final conversion = await db.findUnitConversionByBarcode(result);
+        final conversion = await locator<ReferenceDataRepository>().findUnitConversionByBarcode(result);
         if (conversion != null) {
           final productId = conversion['product_id'] as int;
           final product = _products.where((p) => p.id == productId).firstOrNull;

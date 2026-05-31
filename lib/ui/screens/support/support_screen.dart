@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 
 /// Support and complaints screen for the FirstPro accounting app.
 ///
@@ -19,7 +20,6 @@ class SupportScreen extends StatefulWidget {
 class _SupportScreenState extends State<SupportScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final _dbHelper = DatabaseHelper();
 
   // ── New complaint form controllers ──────────────────────────────
   final _customerNameController = TextEditingController();
@@ -67,7 +67,7 @@ class _SupportScreenState extends State<SupportScreen>
   // ── Load complaints from notifications table ────────────────────
   Future<void> _loadComplaintsFromDb() async {
     try {
-      final rows = await _dbHelper.getNotificationsByType('complaint');
+      final rows = await locator<ReferenceDataRepository>().getNotificationsByType('complaint');
       if (!mounted) return;
       setState(() {
         _previousComplaints.clear();
@@ -429,7 +429,7 @@ class _SupportScreenState extends State<SupportScreen>
         '\n$description';
 
     // Save to notifications table in the database
-    await _dbHelper.insertNotification({
+    await locator<ReferenceDataRepository>().insertNotification({
       'title': subject,
       'body': body,
       'type': 'complaint',

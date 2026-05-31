@@ -4,7 +4,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/date_formatter.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/shift_service.dart';
 
 class ShiftsScreen extends StatefulWidget {
   const ShiftsScreen({super.key});
@@ -43,8 +44,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
 
   Future<void> _loadData() async {
     try {
-      final db = DatabaseHelper();
-      final shifts = await db.getAllShifts();
+      final shifts = await locator<ShiftService>().getAllShifts();
 
       int openCount = 0;
       int closedTodayCount = 0;
@@ -689,8 +689,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     // Load shift invoices
     List<Map<String, dynamic>> invoices = [];
     try {
-      final db = DatabaseHelper();
-      invoices = await db.getShiftInvoices(shiftId);
+      invoices = await locator<ShiftService>().getShiftInvoices(shiftId);
     } catch (_) {}
 
     if (!mounted) return;
@@ -1273,11 +1272,9 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                             double.tryParse(closingAmountController.text) ?? expectedAmount;
                         final difference = closingAmount - expectedAmount;
                         final now = DateTime.now();
-                        final db = DatabaseHelper();
-
                         try {
                           // Step 1: Post all shift invoices
-                          await db.postShiftInvoices(shiftId);
+                          await locator<ShiftService>().postShiftInvoices(shiftId);
 
                           // Step 2: Close the shift
                           final closeData = {
@@ -1291,7 +1288,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                                 : notesController.text,
                             'updated_at': now.toIso8601String(),
                           };
-                          await db.closeShift(shiftId, closeData);
+                          await locator<ShiftService>().closeShift(shiftId, closeData);
 
                           if (!mounted) return;
                           Navigator.pop(ctx); // Close bottom sheet

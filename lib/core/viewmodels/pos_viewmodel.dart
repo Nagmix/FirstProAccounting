@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
-import '../../core/di/service_locator.dart';
-import '../../data/datasources/database_helper.dart';
-import '../../core/utils/money_helper.dart';
+import '../di/service_locator.dart';
+import '../../data/datasources/repositories/product_repository.dart';
+import '../../data/datasources/repositories/reference_data_repository.dart';
+import '../utils/money_helper.dart';
 
 /// ViewModel for POS screen — manages cart, products, and checkout logic.
-/// Extracted from PosScreen State (H-08).
+///
+/// Uses dependency-injected repositories/services instead of DatabaseHelper
+/// directly. Registered in [service_locator.dart] as a lazy singleton.
 class PosViewModel extends ChangeNotifier {
-  final DatabaseHelper _db = locator<DatabaseHelper>();
+  final ProductRepository _productRepo = locator<ProductRepository>();
+  final ReferenceDataRepository _refData = locator<ReferenceDataRepository>();
 
   // ── Product state ──
   List<Map<String, dynamic>> _products = [];
@@ -36,8 +40,8 @@ class PosViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _products = await _db.getAllProducts();
-      _categories = await _db.getAllCategories();
+      _products = await _productRepo.getAllProducts();
+      _categories = await _refData.getAllCategories();
       _errorMessage = null;
     } catch (e) {
       _errorMessage = 'حدث خطأ أثناء تحميل البيانات';

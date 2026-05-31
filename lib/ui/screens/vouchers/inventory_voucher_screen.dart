@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/services/stock_service.dart';
 import 'create_inventory_voucher_screen.dart';
 
 class InventoryVoucherScreen extends StatefulWidget {
@@ -27,8 +28,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
 
   Future<void> _loadData() async {
     try {
-      final db = DatabaseHelper();
-      final vouchers = await db.getInventoryVouchers(searchQuery: _searchQuery.isEmpty ? null : _searchQuery);
+      final vouchers = await locator<StockService>().getInventoryVouchers(searchQuery: _searchQuery.isEmpty ? null : _searchQuery);
       if (mounted) {
         setState(() {
           _vouchers = vouchers;
@@ -77,8 +77,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
   }
 
   Future<void> _navigateToDetail(int voucherId) async {
-    final db = DatabaseHelper();
-    final details = await db.getInventoryVoucherDetails(voucherId);
+    final details = await locator<StockService>().getInventoryVoucherDetails(voucherId);
     if (details != null && mounted) {
       _showVoucherDetail(details);
     }

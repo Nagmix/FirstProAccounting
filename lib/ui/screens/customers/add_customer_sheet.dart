@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/models/customer_model.dart';
 
 class AddCustomerSheet extends StatefulWidget {
@@ -65,8 +66,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       debtCeiling: double.tryParse(_debtCeilingController.text) ?? 0.0,
     );
 
-    final db = DatabaseHelper();
-    await db.insertCustomer(customer.toMap());
+    await locator<CustomerRepository>().insertCustomer(customer.toMap());
 
     if (!mounted) return;
     setState(() => _isSaving = false);

@@ -17,6 +17,9 @@ import '../../data/datasources/services/report_service.dart';
 import '../../data/datasources/services/audit_service.dart';
 import '../../data/datasources/services/costing_engine_service.dart';
 import '../../data/datasources/services/bank_reconciliation_service.dart';
+import '../../core/viewmodels/dashboard_viewmodel.dart';
+import '../../core/viewmodels/pos_viewmodel.dart';
+import '../../core/viewmodels/invoice_viewmodel.dart';
 
 final GetIt locator = GetIt.instance;
 
@@ -77,6 +80,11 @@ Future<void> setupLocator() async {
   locator.registerLazySingleton<BankReconciliationService>(
     () => BankReconciliationService(locator<DatabaseHelper>()),
   );
+
+  // ── ViewModels ──
+  locator.registerLazySingleton<DashboardViewModel>(() => DashboardViewModel());
+  locator.registerLazySingleton<PosViewModel>(() => PosViewModel());
+  locator.registerLazySingleton<InvoiceViewModel>(() => InvoiceViewModel());
 
   // ── Mark locator as ready so DatabaseHelper resolves via locator ──
   // This ensures all sub-service getters in DatabaseHelper return the same

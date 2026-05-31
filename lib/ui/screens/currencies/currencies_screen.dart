@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/models/currency_model.dart';
 
 /// Currency management screen for the FirstPro accounting app.
@@ -31,8 +32,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
   Future<void> _loadCurrencies() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final maps = await db.getAllCurrencies();
+      final maps = await locator<ReferenceDataRepository>().getAllCurrencies();
       if (mounted) {
         setState(() {
           _currencies = maps.map((m) => Currency.fromMap(m)).toList();
@@ -50,14 +50,12 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
   }
 
   Future<void> _setDefault(Currency currency) async {
-    final db = DatabaseHelper();
-    await db.setDefaultCurrency(currency.id!);
+    await locator<ReferenceDataRepository>().setDefaultCurrency(currency.id!);
     _loadCurrencies();
   }
 
   Future<void> _toggleActive(Currency currency) async {
-    final db = DatabaseHelper();
-    await db.updateCurrency(currency.id!, {
+    await locator<ReferenceDataRepository>().updateCurrency(currency.id!, {
       'is_active': currency.isActive ? 0 : 1,
     });
     _loadCurrencies();
@@ -165,16 +163,16 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                             return;
                           }
 
-                          final db = DatabaseHelper();
+                          final refRepo = locator<ReferenceDataRepository>();
                           if (isEdit) {
-                            await db.updateCurrency(existing.id!, {
+                            await refRepo.updateCurrency(existing.id!, {
                               'name_ar': nameAr,
                               'name_en': nameEn,
                               'symbol': symbol,
                               'exchange_rate': rate,
                             });
                           } else {
-                            await db.insertCurrency({
+                            await refRepo.insertCurrency({
                               'code': code,
                               'name_ar': nameAr,
                               'name_en': nameEn,
@@ -249,8 +247,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
       ),
     );
     if (confirmed == true) {
-      final db = DatabaseHelper();
-      await db.deleteCurrency(currency.id!);
+      await locator<ReferenceDataRepository>().deleteCurrency(currency.id!);
       _loadCurrencies();
     }
   }

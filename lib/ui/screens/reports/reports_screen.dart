@@ -5,7 +5,15 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/repositories/supplier_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
+import '../../../data/datasources/services/report_service.dart';
+import '../../../data/datasources/services/shift_service.dart';
 import 'trial_balance_screen.dart';
 import 'financial_statements_screen.dart';
 
@@ -429,74 +437,73 @@ class _ReportsScreenState extends State<ReportsScreen>
 
     setState(() { _isLoading = true; _hasData = false; });
     try {
-      final db = DatabaseHelper();
       _reportRows = [];
       _reportTotals = {};
 
       switch (_selectedReportKey) {
         // ── SALES & PURCHASES ──
         case 'sales':
-          await _loadSalesReport(db, typeFilter: "type IN ('sale','pos') AND is_return=0");
+          await _loadSalesReport(typeFilter: "type IN ('sale','pos') AND is_return=0");
         case 'purchases':
-          await _loadSalesReport(db, typeFilter: "type='purchase' AND is_return=0");
+          await _loadSalesReport(typeFilter: "type='purchase' AND is_return=0");
         case 'sales_returns':
-          await _loadSalesReport(db, typeFilter: "type IN ('sale','pos') AND is_return=1");
+          await _loadSalesReport(typeFilter: "type IN ('sale','pos') AND is_return=1");
         case 'purchase_returns':
-          await _loadSalesReport(db, typeFilter: "type='purchase' AND is_return=1");
+          await _loadSalesReport(typeFilter: "type='purchase' AND is_return=1");
         case 'profit_loss':
-          await _loadProfitLossReport(db);
+          await _loadProfitLossReport();
         case 'invoice_profit':
-          await _loadInvoiceProfitReport(db);
+          await _loadInvoiceProfitReport();
         case 'sales_by_product':
-          await _loadSalesByProductReport(db);
+          await _loadSalesByProductReport();
         case 'sales_by_customer':
-          await _loadSalesByCustomerReport(db);
+          await _loadSalesByCustomerReport();
 
         // ── ACCOUNTING ──
         case 'account_movement':
-          await _loadAccountMovementReport(db);
+          await _loadAccountMovementReport();
         case 'all_account_movement':
-          await _loadAllAccountMovementReport(db);
+          await _loadAllAccountMovementReport();
         case 'trial_balance':
-          await _loadTrialBalanceReport(db);
+          await _loadTrialBalanceReport();
         case 'cash_box':
-          await _loadCashBoxReport(db);
+          await _loadCashBoxReport();
         case 'accounts_no_movement':
-          await _loadAccountsWithoutMovementReport(db);
+          await _loadAccountsWithoutMovementReport();
         case 'customer_statement':
-          await _loadCustomerStatementReport(db);
+          await _loadCustomerStatementReport();
         case 'supplier_statement':
-          await _loadSupplierStatementReport(db);
+          await _loadSupplierStatementReport();
         case 'expenses':
-          await _loadExpensesReport(db);
+          await _loadExpensesReport();
 
         // ── INVENTORY ──
         case 'inventory':
-          await _loadInventoryReport(db);
+          await _loadInventoryReport();
         case 'inventory_movement':
-          await _loadInventoryMovementReport(db);
+          await _loadInventoryMovementReport();
         case 'inventory_cost':
-          await _loadInventoryCostReport(db);
+          await _loadInventoryCostReport();
         case 'out_of_stock':
-          await _loadOutOfStockReport(db);
+          await _loadOutOfStockReport();
         case 'low_stock':
-          await _loadLowStockReport(db);
+          await _loadLowStockReport();
 
         // ── DEBTS ──
         case 'customer_debts':
-          await _loadDebtReport(db, isCustomer: true);
+          await _loadDebtReport(isCustomer: true);
         case 'supplier_debts':
-          await _loadDebtReport(db, isCustomer: false);
+          await _loadDebtReport(isCustomer: false);
 
         // ── OPERATIONS ──
         case 'cash_transfers':
-          await _loadCashTransfersReport(db);
+          await _loadCashTransfersReport();
         case 'currency_exchanges':
-          await _loadCurrencyExchangesReport(db);
+          await _loadCurrencyExchangesReport();
         case 'vouchers':
-          await _loadVouchersReport(db);
+          await _loadVouchersReport();
         case 'shifts':
-          await _loadShiftsReport(db);
+          await _loadShiftsReport();
       }
 
       _hasData = true;
@@ -519,8 +526,8 @@ class _ReportsScreenState extends State<ReportsScreen>
   //  Individual Report Queries
   // ══════════════════════════════════════════════════════════════
 
-  Future<void> _loadSalesReport(DatabaseHelper db, {required String typeFilter}) async {
-    final database = await db.database;
+  Future<void> _loadSalesReport({required String typeFilter}) async {
+    final database = await locator<DatabaseHelper>().database;
     final args = <dynamic>[];
     String whereClause = typeFilter;
 
@@ -561,8 +568,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'الإجمالي': totalAmount, 'المدفوع': totalPaid, 'المتبقي': totalRemaining, 'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadProfitLossReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadProfitLossReport() async {
+    final database = await locator<DatabaseHelper>().database;
     final allArgs = [..._dateArgs(), ..._currencyArgs()];
     final df = _dateFilter();
     final cf = _currencyFilter();
@@ -669,8 +676,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'صافي المبيعات': netSales, 'تكلفة البضاعة': cogs, 'صافي الربح': netProfit};
   }
 
-  Future<void> _loadInvoiceProfitReport(DatabaseHelper db) async {
-    final items = await db.getInvoiceProfitReport(startDate: _dateFrom, endDate: _dateTo);
+  Future<void> _loadInvoiceProfitReport() async {
+    final items = await locator<ReportService>().getInvoiceProfitReport(startDate: _dateFrom, endDate: _dateTo);
     double totalProfit = 0, totalRevenue = 0, totalCost = 0;
     _reportRows = items.map((item) {
       // profit and cost_total are CAST AS INTEGER in SQL, so readMoney works for int results
@@ -696,8 +703,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي الإيرادات': totalRevenue, 'إجمالي التكلفة': totalCost, 'إجمالي الربح': totalProfit, 'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadSalesByProductReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadSalesByProductReport() async {
+    final database = await locator<DatabaseHelper>().database;
     final args = <dynamic>[];
     String dateF = '';
     if (_dateFrom != null) { dateF += ' AND i.created_at >= ?'; args.add(_dateFrom!.toIso8601String()); }
@@ -753,8 +760,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي المبيعات': totalRevenue, 'إجمالي التكلفة': totalCost, 'إجمالي الربح': totalProfit, 'إجمالي الكمية': totalQty.toDouble(), 'عدد الأصناف': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadSalesByCustomerReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadSalesByCustomerReport() async {
+    final database = await locator<DatabaseHelper>().database;
     final args = <dynamic>[];
     String dateF = '';
     if (_dateFrom != null) { dateF += ' AND i.created_at >= ?'; args.add(_dateFrom!.toIso8601String()); }
@@ -791,11 +798,11 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي المبيعات': totalSales, 'عدد العملاء': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadAccountMovementReport(DatabaseHelper db) async {
+  Future<void> _loadAccountMovementReport() async {
     if (_selectedAccountId == null) return;
     // Use raw query with date filter instead of getAccountTransactions
     // which ignores date range completely (BUG FIX)
-    final database = await db.database;
+    final database = await locator<DatabaseHelper>().database;
     final args = <dynamic>[_selectedAccountId!];
     args.addAll(_dateArgs());
     final transactions = await database.rawQuery(
@@ -838,8 +845,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadAllAccountMovementReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadAllAccountMovementReport() async {
+    final database = await locator<DatabaseHelper>().database;
     final args = [..._dateArgs()];
     String cf = '';
     if (_currencyCode() != null) { cf = ' AND a.currency = ?'; args.add(_currencyCode()!); }
@@ -872,9 +879,9 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadTrialBalanceReport(DatabaseHelper db) async {
-    final database = await db.database;
-    final accounts = await db.getAllAccounts();
+  Future<void> _loadTrialBalanceReport() async {
+    final database = await locator<DatabaseHelper>().database;
+    final accounts = await locator<AccountRepository>().getAllAccounts();
     final cc = _currencyCode();
     double totalDebit = 0, totalCredit = 0;
     _reportRows = [];
@@ -922,9 +929,9 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الفرق': (totalDebit - totalCredit).abs(), 'عدد الحسابات': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadCashBoxReport(DatabaseHelper db) async {
-    final database = await db.database;
-    final cashBoxes = await db.getAllCashBoxes();
+  Future<void> _loadCashBoxReport() async {
+    final database = await locator<DatabaseHelper>().database;
+    final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
     final cc = _currencyCode();
     double totalBalance = 0;
     _reportRows = [];
@@ -961,8 +968,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي الأرصدة': totalBalance.abs(), 'عدد الصناديق': _reportRows.length.toDouble()}; // totalBalance is computed from already-converted values
   }
 
-  Future<void> _loadAccountsWithoutMovementReport(DatabaseHelper db) async {
-    final accounts = await db.getAccountsWithoutMovements();
+  Future<void> _loadAccountsWithoutMovementReport() async {
+    final accounts = await locator<AccountRepository>().getAccountsWithoutMovements();
     _reportRows = accounts.map((a) => {
       'كود الحساب': a['account_code'] as String? ?? '',
       'اسم الحساب': a['name_ar'] as String? ?? '',
@@ -972,16 +979,16 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadCustomerStatementReport(DatabaseHelper db) async {
+  Future<void> _loadCustomerStatementReport() async {
     if (_selectedCustomerId == null) return;
-    final database = await db.database;
+    final database = await locator<DatabaseHelper>().database;
     final args = <dynamic>[_selectedCustomerId!];
     String dateF = '';
     if (_dateFrom != null) { dateF += ' AND t.created_at >= ?'; args.add(_dateFrom!.toIso8601String()); }
     if (_dateTo != null) { dateF += ' AND t.created_at < ?'; args.add(_dateTo!.add(const Duration(days: 1)).toIso8601String()); }
 
     // Get customer's linked account(s)
-    final customer = await db.getAllCustomers();
+    final customer = await locator<CustomerRepository>().getAllCustomers();
     final cust = customer.firstWhere((c) => c['id'] == _selectedCustomerId, orElse: () => <String, dynamic>{});
     final custName = cust['name'] as String? ?? '';
     final custCurrency = cust['currency'] as String? ?? 'YER';
@@ -1027,10 +1034,10 @@ class _ReportsScreenState extends State<ReportsScreen>
     }
   }
 
-  Future<void> _loadSupplierStatementReport(DatabaseHelper db) async {
+  Future<void> _loadSupplierStatementReport() async {
     if (_selectedSupplierId == null) return;
-    final database = await db.database;
-    final suppliers = await db.getAllSuppliers();
+    final database = await locator<DatabaseHelper>().database;
+    final suppliers = await locator<SupplierRepository>().getAllSuppliers();
     final sup = suppliers.firstWhere((s) => s['id'] == _selectedSupplierId, orElse: () => <String, dynamic>{});
     final supName = sup['name'] as String? ?? '';
     final supCurrency = sup['currency'] as String? ?? 'YER';
@@ -1076,8 +1083,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     }
   }
 
-  Future<void> _loadExpensesReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadExpensesReport() async {
+    final database = await locator<DatabaseHelper>().database;
     final args = <dynamic>[];
     String whereClause = '1=1';
     if (_dateFrom != null) { whereClause += ' AND expense_date >= ?'; args.add(_dateFrom!.toIso8601String()); }
@@ -1104,8 +1111,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي المصروفات': totalAmount, 'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadInventoryReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadInventoryReport() async {
+    final database = await locator<DatabaseHelper>().database;
     String whereExtra = '';
     final args = <dynamic>[];
     if (_selectedWarehouseId != null) { whereExtra += ' AND p.warehouse_id=?'; args.add(_selectedWarehouseId!); }
@@ -1141,8 +1148,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'قيمة المخزون': totalValue, 'عدد الأصناف': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadInventoryMovementReport(DatabaseHelper db) async {
-    final items = await db.getInventoryMovementReport(startDate: _dateFrom, endDate: _dateTo);
+  Future<void> _loadInventoryMovementReport() async {
+    final items = await locator<ReportService>().getInventoryMovementReport(startDate: _dateFrom, endDate: _dateTo);
     _reportRows = items.map((item) {
       final qtyIn = (item['qty_in'] as num?)?.toDouble() ?? 0.0;
       final qtyOut = (item['qty_out'] as num?)?.toDouble() ?? 0.0;
@@ -1164,8 +1171,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي الوارد': totalIn, 'إجمالي الصادر': totalOut, 'الصافي': totalIn - totalOut, 'إجمالي المبيعات': totalRevenue, 'إجمالي المشتريات': totalCost};
   }
 
-  Future<void> _loadInventoryCostReport(DatabaseHelper db) async {
-    final items = await db.getInventoryCostReport();
+  Future<void> _loadInventoryCostReport() async {
+    final items = await locator<ReportService>().getInventoryCostReport();
     double totalCost = 0, totalSell = 0;
     _reportRows = items.map((item) {
       final costVal = MoneyHelper.readCalculatedMoney(item['stock_cost_value']);
@@ -1187,8 +1194,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'تكلفة المخزون': totalCost, 'قيمة البيع': totalSell, 'الربح المتوقع': totalSell - totalCost};
   }
 
-  Future<void> _loadOutOfStockReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadOutOfStockReport() async {
+    final database = await locator<DatabaseHelper>().database;
     String whereExtra = '';
     final args = <dynamic>[];
     if (_selectedWarehouseId != null) { whereExtra += ' AND p.warehouse_id=?'; args.add(_selectedWarehouseId!); }
@@ -1211,8 +1218,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadLowStockReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadLowStockReport() async {
+    final database = await locator<DatabaseHelper>().database;
     String whereExtra = '';
     final args = <dynamic>[];
     if (_selectedWarehouseId != null) { whereExtra += ' AND p.warehouse_id=?'; args.add(_selectedWarehouseId!); }
@@ -1241,11 +1248,11 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadDebtReport(DatabaseHelper db, {required bool isCustomer}) async {
+  Future<void> _loadDebtReport({required bool isCustomer}) async {
     _reportRows = [];
     double totalBalance = 0;
     if (isCustomer) {
-      final customers = await db.getAllCustomers();
+      final customers = await locator<CustomerRepository>().getAllCustomers();
       for (final c in customers) {
         final balance = MoneyHelper.readMoney(c['balance']);
         if (balance > 0) {
@@ -1261,7 +1268,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         }
       }
     } else {
-      final suppliers = await db.getAllSuppliers();
+      final suppliers = await locator<SupplierRepository>().getAllSuppliers();
       for (final s in suppliers) {
         final balance = MoneyHelper.readMoney(s['balance']);
         if (balance > 0) {
@@ -1280,8 +1287,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي الديون': totalBalance, 'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadCashTransfersReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadCashTransfersReport() async {
+    final database = await locator<DatabaseHelper>().database;
     final args = [..._dateArgs()];
     final results = await database.rawQuery(
       "SELECT ct.*, cb1.name AS from_name, cb2.name AS to_name "
@@ -1304,8 +1311,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي المبالغ': totalAmount, 'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadCurrencyExchangesReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadCurrencyExchangesReport() async {
+    final database = await locator<DatabaseHelper>().database;
     final args = [..._dateArgs()];
     final results = await database.rawQuery(
       "SELECT ce.*, cb1.name AS from_name, cb2.name AS to_name "
@@ -1325,8 +1332,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadVouchersReport(DatabaseHelper db) async {
-    final database = await db.database;
+  Future<void> _loadVouchersReport() async {
+    final database = await locator<DatabaseHelper>().database;
     final args = [..._dateArgs()];
     final results = await database.rawQuery(
       "SELECT v.*, cb.name AS cash_box_name "
@@ -1356,8 +1363,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportTotals = {'إجمالي المبالغ': totalAmount, 'العدد': _reportRows.length.toDouble()};
   }
 
-  Future<void> _loadShiftsReport(DatabaseHelper db) async {
-    final results = await db.getAllShifts(orderBy: 'opened_at DESC');
+  Future<void> _loadShiftsReport() async {
+    final results = await locator<ShiftService>().getAllShifts(orderBy: 'opened_at DESC');
     _reportRows = results.map((r) => {
       'رقم الوردية': r['shift_number'] as String? ?? '',
       'الكاشير': r['cashier_name'] as String? ?? '',
@@ -1435,7 +1442,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildAccountDropdown(ThemeData theme) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DatabaseHelper().getAllAccounts(),
+      future: locator<AccountRepository>().getAllAccounts(),
       builder: (ctx, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
         return _buildDropdown<int>(
@@ -1454,7 +1461,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildCustomerDropdown(ThemeData theme) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DatabaseHelper().getAllCustomers(),
+      future: locator<CustomerRepository>().getAllCustomers(),
       builder: (ctx, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
         return _buildDropdown<int>(
@@ -1473,7 +1480,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildSupplierDropdown(ThemeData theme) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DatabaseHelper().getAllSuppliers(),
+      future: locator<SupplierRepository>().getAllSuppliers(),
       builder: (ctx, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
         return _buildDropdown<int>(
@@ -1492,7 +1499,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildCashBoxDropdown(ThemeData theme) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DatabaseHelper().getAllCashBoxes(),
+      future: locator<CashBoxService>().getAllCashBoxes(),
       builder: (ctx, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
         return _buildDropdown<int>(
@@ -1511,7 +1518,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildWarehouseDropdown(ThemeData theme) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DatabaseHelper().getAllWarehouses(),
+      future: locator<ReferenceDataRepository>().getAllWarehouses(),
       builder: (ctx, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
         final items = [DropdownMenuItem<int>(value: null, child: Text('كل المخازن', style: TextStyle(fontSize: 12)))];
@@ -1532,7 +1539,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _buildCategoryDropdown(ThemeData theme) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DatabaseHelper().getAllCategories(),
+      future: locator<ReferenceDataRepository>().getAllCategories(),
       builder: (ctx, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
         final items = [DropdownMenuItem<int>(value: null, child: Text('كل الفئات', style: TextStyle(fontSize: 12)))];

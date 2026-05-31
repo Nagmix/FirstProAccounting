@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/models/customer_model.dart';
 import '../../widgets/empty_state.dart';
 import 'add_customer_sheet.dart';
@@ -55,8 +56,7 @@ class _CustomersScreenState extends State<CustomersScreen>
   Future<void> _loadCustomers() async {
     setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper();
-      final maps = await db.getAllCustomers();
+      final maps = await locator<CustomerRepository>().getAllCustomers();
       if (mounted) {
         setState(() {
           _customers = maps.map((m) => Customer.fromMap(m)).toList();
@@ -143,8 +143,7 @@ class _CustomersScreenState extends State<CustomersScreen>
       ),
     );
     if (confirmed == true) {
-      final db = DatabaseHelper();
-      await db.deleteCustomer(customer.id!);
+      await locator<CustomerRepository>().deleteCustomer(customer.id!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

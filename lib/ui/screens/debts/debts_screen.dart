@@ -3,7 +3,11 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../data/datasources/database_helper.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/repositories/supplier_repository.dart';
+import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  DEBTS SCREEN – FirstPro Arabic Accounting App
@@ -62,10 +66,9 @@ class _DebtsScreenState extends State<DebtsScreen>
   //  DATA LOADING
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final customers = await db.getAllCustomers();
-    final suppliers = await db.getAllSuppliers();
-    final liabilityAccounts = await db.getAccountsByType('LIABILITY');
+    final customers = await locator<CustomerRepository>().getAllCustomers();
+    final suppliers = await locator<SupplierRepository>().getAllSuppliers();
+    final liabilityAccounts = await locator<AccountRepository>().getAccountsByType('LIABILITY');
 
     if (!mounted) return;
 
@@ -1301,9 +1304,8 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
   }
 
   Future<void> _loadInvoices() async {
-    final db = DatabaseHelper();
     // Get sale invoices for this customer
-    final allSaleInvoices = await db.getInvoicesByType('sale');
+    final allSaleInvoices = await locator<InvoiceRepository>().getInvoicesByType('sale');
     final customerInvoices = allSaleInvoices.where(
       (inv) => inv['customer_id'] == widget.customerId,
     ).toList();
@@ -1610,9 +1612,8 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
   }
 
   Future<void> _loadInvoices() async {
-    final db = DatabaseHelper();
     // Get purchase invoices for this supplier
-    final allPurchaseInvoices = await db.getInvoicesByType('purchase');
+    final allPurchaseInvoices = await locator<InvoiceRepository>().getInvoicesByType('purchase');
     final supplierInvoices = allPurchaseInvoices.where(
       (inv) => inv['supplier_id'] == widget.supplierId,
     ).toList();
