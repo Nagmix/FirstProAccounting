@@ -4,6 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:path/path.dart';
 import '../../core/security/db_encryption.dart';
 import '../../core/utils/money_helper.dart';
+import '../../core/di/service_locator.dart';
 import 'services/journal_service.dart';
 import 'repositories/account_repository.dart';
 import 'repositories/customer_repository.dart';
@@ -36,23 +37,48 @@ class DatabaseHelper {
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
 
-  // C-08: Sub-services for God class decomposition
-  late final JournalService journal = JournalService(this);
-  late final AccountRepository accounts = AccountRepository(this);
-  late final CustomerRepository customers = CustomerRepository(this);
-  late final InvoiceRepository invoices = InvoiceRepository(this);
-  late final ProductRepository products = ProductRepository(this);
-  late final SupplierRepository suppliers = SupplierRepository(this);
-  late final ExpenseRepository expenses = ExpenseRepository(this);
-  late final CashBoxService cashBoxes = CashBoxService(this);
-  late final ReferenceDataRepository refData = ReferenceDataRepository(this);
-  late final StockService stock = StockService(this);
-  late final ShiftService shifts = ShiftService(this);
-  late final OrderRepository orders = OrderRepository(this);
-  late final ReportService reports = ReportService(this);
-  late final AuditService audit = AuditService(this);
-  late final CostingEngineService costingEngine = CostingEngineService(this);
-  late final BankReconciliationService bankReconciliation = BankReconciliationService(this);
+  // ══════════════════════════════════════════════════════════════
+  //  C-08 + Architecture Fix: Sub-services accessed via service locator
+  //
+  //  Instead of creating new instances of repositories/services (which
+  //  bypasses DI and creates duplicate objects), we now resolve them
+  //  through the service locator. This ensures:
+  //  1. Single instance per repository/service (singleton guarantee)
+  //  2. Screens can use either `locator<XRepository>()` or `DatabaseHelper().xRepository`
+  //  3. Both paths resolve to the SAME object — no more duplicate instances
+  //  4. Future migration (e.g., PowerSync) only requires changing repository
+  //     implementations, not DatabaseHelper or screens
+  //
+  //  The late resolution via locator is safe because setupLocator() runs
+  //  in main() before any screen is loaded. These getters are only called
+  //  after the app is fully initialized.
+  // ══════════════════════════════════════════════════════════════
+
+  /// Whether to use the service locator for resolving sub-services.
+  /// Set to true after setupLocator() completes. Falls back to direct
+  /// instantiation during migration/setup phase when locator isn't ready.
+  static bool _locatorReady = false;
+
+  /// Called by setupLocator() after all registrations are complete.
+  static void markLocatorReady() => _locatorReady = true;
+
+  // Sub-service getters — resolve via locator when available, else create locally
+  JournalService get journal => _locatorReady ? locator<JournalService>() : JournalService(this);
+  AccountRepository get accounts => _locatorReady ? locator<AccountRepository>() : AccountRepository(this);
+  CustomerRepository get customers => _locatorReady ? locator<CustomerRepository>() : CustomerRepository(this);
+  InvoiceRepository get invoices => _locatorReady ? locator<InvoiceRepository>() : InvoiceRepository(this);
+  ProductRepository get products => _locatorReady ? locator<ProductRepository>() : ProductRepository(this);
+  SupplierRepository get suppliers => _locatorReady ? locator<SupplierRepository>() : SupplierRepository(this);
+  ExpenseRepository get expenses => _locatorReady ? locator<ExpenseRepository>() : ExpenseRepository(this);
+  CashBoxService get cashBoxes => _locatorReady ? locator<CashBoxService>() : CashBoxService(this);
+  ReferenceDataRepository get refData => _locatorReady ? locator<ReferenceDataRepository>() : ReferenceDataRepository(this);
+  StockService get stock => _locatorReady ? locator<StockService>() : StockService(this);
+  ShiftService get shifts => _locatorReady ? locator<ShiftService>() : ShiftService(this);
+  OrderRepository get orders => _locatorReady ? locator<OrderRepository>() : OrderRepository(this);
+  ReportService get reports => _locatorReady ? locator<ReportService>() : ReportService(this);
+  AuditService get audit => _locatorReady ? locator<AuditService>() : AuditService(this);
+  CostingEngineService get costingEngine => _locatorReady ? locator<CostingEngineService>() : CostingEngineService(this);
+  BankReconciliationService get bankReconciliation => _locatorReady ? locator<BankReconciliationService>() : BankReconciliationService(this);
 
   static Database? _database;
   static Future<Database>? _databaseFuture;

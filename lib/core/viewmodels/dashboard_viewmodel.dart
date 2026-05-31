@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
+import '../../core/di/service_locator.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../core/utils/money_helper.dart';
 
 /// ViewModel for Dashboard — manages dashboard data loading and refresh.
 /// Extracted from DashboardScreen State (H-08).
 class DashboardViewModel extends ChangeNotifier {
-  final DatabaseHelper _db = DatabaseHelper();
+  final DatabaseHelper _db = locator<DatabaseHelper>();
 
   double totalSales = 0.0;
   double totalPurchases = 0.0;
@@ -51,21 +52,21 @@ class DashboardViewModel extends ChangeNotifier {
         "SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('sale', 'pos') AND is_return = 0 AND currency = ? AND created_at >= ? AND created_at < ?",
         [currency, startStr, endStr],
       );
-      totalSales = MoneyHelper.readMoney(salesResult.first['total']);
+      totalSales = MoneyHelper.readCalculatedMoney(salesResult.first['total']);
 
       // Today's purchases
       final purchasesResult = await db.rawQuery(
         "SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type = 'purchase' AND is_return = 0 AND currency = ? AND created_at >= ? AND created_at < ?",
         [currency, startStr, endStr],
       );
-      totalPurchases = MoneyHelper.readMoney(purchasesResult.first['total']);
+      totalPurchases = MoneyHelper.readCalculatedMoney(purchasesResult.first['total']);
 
       // Today's expenses
       final expensesResult = await db.rawQuery(
         "SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE currency = ? AND expense_date >= ? AND expense_date < ?",
         [currency, startStr, endStr],
       );
-      totalExpenses = MoneyHelper.readMoney(expensesResult.first['total']);
+      totalExpenses = MoneyHelper.readCalculatedMoney(expensesResult.first['total']);
 
       // Today's COGS (cost of goods sold) - calculated from invoice_items
       // FIX: CAST to INTEGER so readMoney divides by 100 correctly.
@@ -84,7 +85,7 @@ class DashboardViewModel extends ChangeNotifier {
           "AND i.currency = ? AND i.created_at >= ? AND i.created_at < ?",
           [currency, startStr, endStr],
         );
-        totalCOGS = MoneyHelper.readMoney(cogsResult.first['total_cogs']);
+        totalCOGS = MoneyHelper.readCalculatedMoney(cogsResult.first['total_cogs']);
       } catch (e) {
         debugPrint('COGS calculation error on dashboard: $e');
         totalCOGS = 0.0;
@@ -99,7 +100,7 @@ class DashboardViewModel extends ChangeNotifier {
         "SELECT COALESCE(SUM(balance), 0) AS total FROM cash_boxes WHERE currency = ?",
         [currency],
       );
-      cashBalance = MoneyHelper.readMoney(cashResult.first['total']);
+      cashBalance = MoneyHelper.readCalculatedMoney(cashResult.first['total']);
 
       // Counts — use public methods
       final invoices = await _db.getAllInvoices();

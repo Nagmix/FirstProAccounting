@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
+import '../../core/di/service_locator.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../core/utils/money_helper.dart';
 
 /// ViewModel for POS screen — manages cart, products, and checkout logic.
 /// Extracted from PosScreen State (H-08).
 class PosViewModel extends ChangeNotifier {
-  final DatabaseHelper _db = DatabaseHelper();
+  final DatabaseHelper _db = locator<DatabaseHelper>();
 
   // ── Product state ──
   List<Map<String, dynamic>> _products = [];

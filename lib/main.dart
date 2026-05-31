@@ -57,7 +57,8 @@ class _FirstProAppState extends State<FirstProApp> {
   }
 
   Future<void> _initApp() async {
-    final db = DatabaseHelper();
+    // Use locator to access DatabaseHelper — consistent with DI architecture
+    final db = locator<DatabaseHelper>();
 
     // Load PIN enabled state from secure storage with DB fallback for migration
     String? pinEnabled;

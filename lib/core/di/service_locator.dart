@@ -77,4 +77,9 @@ Future<void> setupLocator() async {
   locator.registerLazySingleton<BankReconciliationService>(
     () => BankReconciliationService(locator<DatabaseHelper>()),
   );
+
+  // ── Mark locator as ready so DatabaseHelper resolves via locator ──
+  // This ensures all sub-service getters in DatabaseHelper return the same
+  // singleton instances that are registered here, eliminating duplicate objects.
+  DatabaseHelper.markLocatorReady();
 }
