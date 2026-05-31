@@ -273,7 +273,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _dateFrom = picked);
       _loadData();
     }
@@ -286,7 +286,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _dateTo = picked);
       _loadData();
     }
@@ -878,12 +878,12 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                 children: [
                   SizedBox(
                     width: 60,
-                    child: Text(account['account_code'] as String,
+                    child: Text(account['account_code'] as String? ?? '',
                         style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(account['name_ar'] as String,
+                    child: Text(account['name_ar'] as String? ?? '',
                         style: theme.textTheme.bodySmall),
                   ),
                   Text(CurrencyFormatter.format(account['balance'] as double? ?? 0.0, symbol: _selectedCurrency),

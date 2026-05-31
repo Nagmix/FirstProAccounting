@@ -115,7 +115,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     _tabController = TabController(length: _groups.length, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
-      setState(() {});
+      if (mounted) setState(() {});
     });
     _applyDatePreset(_selectedDatePreset);
   }
@@ -358,7 +358,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _dateFrom = picked;
         _selectedDatePreset = _DatePreset.custom;
@@ -373,7 +373,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _dateTo = picked;
         _selectedDatePreset = _DatePreset.custom;
@@ -780,7 +780,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       final sales = MoneyHelper.readCalculatedMoney(r['total_sales']);
       totalSales += sales;
       return {
-        'العميل': r['customer_name'] as String,
+        'العميل': r['customer_name'] as String? ?? 'بدون عميل',
         'العملة': r['currency'] as String? ?? 'YER',
         'عدد الفواتير': (r['inv_count'] as num?)?.toInt() ?? 0,
         'إجمالي المبيعات': sales,

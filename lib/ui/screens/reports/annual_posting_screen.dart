@@ -25,31 +25,40 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final years = await db.getFiscalYears();
+    try {
+      final db = DatabaseHelper();
+      final years = await db.getFiscalYears();
 
-    // Determine the active fiscal year: prefer the most recent open fiscal year
-    int activeYear = DateTime.now().year;
-    if (years.isNotEmpty) {
-      // Find the most recent open fiscal year
-      final openYears = years.where((fy) => fy['status'] != 'closed');
-      if (openYears.isNotEmpty) {
-        activeYear = (openYears.first['year'] as num).toInt();
-      } else {
-        // All closed – use the most recent fiscal year
-        activeYear = (years.first['year'] as num).toInt();
+      // Determine the active fiscal year: prefer the most recent open fiscal year
+      int activeYear = DateTime.now().year;
+      if (years.isNotEmpty) {
+        // Find the most recent open fiscal year
+        final openYears = years.where((fy) => fy['status'] != 'closed');
+        if (openYears.isNotEmpty) {
+          activeYear = (openYears.first['year'] as num?)?.toInt() ?? DateTime.now().year;
+        } else {
+          // All closed – use the most recent fiscal year
+          activeYear = (years.first['year'] as num?)?.toInt() ?? DateTime.now().year;
+        }
       }
-    }
 
-    final pl = await db.getYearProfitLoss(activeYear);
+      final pl = await db.getYearProfitLoss(activeYear);
 
-    if (mounted) {
-      setState(() {
-        _fiscalYears = years;
-        _activeYear = activeYear;
-        _currentYearPL = pl;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _fiscalYears = years;
+          _activeYear = activeYear;
+          _currentYearPL = pl;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات: $e')),
+        );
+      }
     }
   }
 
@@ -398,7 +407,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
             )
           else
             ..._fiscalYears.map((fy) {
-              final year = (fy['year'] as num).toInt();
+              final year = (fy['year'] as num?)?.toInt() ?? 0;
               final status = fy['status'] as String? ?? 'open';
               final netProfit = MoneyHelper.readMoney(fy['net_profit']);
               final closedAt = fy['closed_at'] as String?;

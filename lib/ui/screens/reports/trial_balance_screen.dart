@@ -148,7 +148,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _dateFrom = picked);
       _loadData();
     }
@@ -161,7 +161,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _dateTo = picked);
       _loadData();
     }
@@ -491,39 +491,39 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
                 ],
                 rows: [
                   ..._accounts.map((account) => DataRow(cells: [
-                    DataCell(Text(account['account_code'] as String, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600))),
-                    DataCell(Text(account['name_ar'] as String, style: theme.textTheme.bodySmall)),
+                    DataCell(Text(account['account_code'] as String? ?? '', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600))),
+                    DataCell(Text(account['name_ar'] as String? ?? '', style: theme.textTheme.bodySmall)),
                     DataCell(Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _accountTypeColor(account['account_type'] as String).withOpacity(0.1),
+                        color: _accountTypeColor(account['account_type'] as String? ?? '').withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        _accountTypeAr(account['account_type'] as String),
+                        _accountTypeAr(account['account_type'] as String? ?? ''),
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: _accountTypeColor(account['account_type'] as String),
+                          color: _accountTypeColor(account['account_type'] as String? ?? ''),
                         ),
                       ),
                     )),
                     DataCell(Text(
-                      (account['debit'] as double) > 0
-                          ? CurrencyFormatter.formatValue(account['debit'] as double)
+                      ((account['debit'] as num?)?.toDouble() ?? 0.0) > 0
+                          ? CurrencyFormatter.formatValue((account['debit'] as num?)?.toDouble() ?? 0.0)
                           : '-',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: (account['debit'] as double) > 0 ? AppColors.info : AppColors.textHint,
+                        color: ((account['debit'] as num?)?.toDouble() ?? 0.0) > 0 ? AppColors.info : AppColors.textHint,
                       ),
                       textAlign: TextAlign.left,
                     )),
                     DataCell(Text(
-                      (account['credit'] as double) > 0
-                          ? CurrencyFormatter.formatValue(account['credit'] as double)
+                      ((account['credit'] as num?)?.toDouble() ?? 0.0) > 0
+                          ? CurrencyFormatter.formatValue((account['credit'] as num?)?.toDouble() ?? 0.0)
                           : '-',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: (account['credit'] as double) > 0 ? AppColors.success : AppColors.textHint,
+                        color: ((account['credit'] as num?)?.toDouble() ?? 0.0) > 0 ? AppColors.success : AppColors.textHint,
                       ),
                       textAlign: TextAlign.left,
                     )),
