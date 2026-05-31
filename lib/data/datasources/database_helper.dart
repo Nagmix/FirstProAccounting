@@ -4159,8 +4159,31 @@ class DatabaseHelper {
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  Product CRUD methods
+  //  Pass-through methods (delegating to sub-services/repositories)
+  //
+  //  ⚠️ ARCHITECTURE NOTE: These methods exist for backward compatibility.
+  //  New code should use repositories/services directly via locator:
+  //
+  //    // OLD (still works, but discouraged):
+  //    final db = DatabaseHelper();
+  //    await db.getAllCustomers();
+  //
+  //    // NEW (preferred):
+  //    final customers = locator<CustomerRepository>();
+  //    await customers.getAllCustomers();
+  //
+  //  Or via the DatabaseHelper sub-service getters:
+  //    final db = DatabaseHelper();
+  //    await db.customers.getAllCustomers();
+  //
+  //  Both NEW approaches resolve to the same singleton instance via
+  //  the service locator, ensuring DI consistency and testability.
+  //
+  //  These pass-through methods will be removed in a future version
+  //  once all screens are migrated to use repositories directly.
   // ══════════════════════════════════════════════════════════════
+
+  // ── Product CRUD methods ──────────────────────────────────────
 
   Future<int> insertProduct(Map<String, dynamic> productMap) => products.insertProduct(productMap);
 
