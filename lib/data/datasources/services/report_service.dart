@@ -610,4 +610,541 @@ class ReportService {
       ORDER BY m.month
     ''', [...inflowArgs, ...outflowArgs, ...purchaseOutflowArgs, ...voucherOutflowArgs]);
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Report screen query methods
+  //  Extracted from reports_screen.dart — raw SQL, no MoneyHelper.
+  //  All monetary values are returned as raw DB integers (cents).
+  //  The caller is responsible for converting using
+  //  MoneyHelper.readMoney / readCalculatedMoney.
+  // ══════════════════════════════════════════════════════════════
+
+  // ── Private filter helpers ────────────────────────────────────
+
+  /// Convenience: builds date filter string and args list.
+  static (String, List<dynamic>) buildDateFilter({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String column = 'created_at',
+  }) {
+    String f = '';
+    final args = <dynamic>[];
+    if (dateFrom != null) {
+      f += ' AND $column >= ?';
+      args.add(dateFrom.toIso8601String());
+    }
+    if (dateTo != null) {
+      f += ' AND $column < ?';
+      args.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+    }
+    return (f, args);
+  }
+
+  /// Convenience: builds currency filter string and args list.
+  static (String, List<dynamic>) buildCurrencyFilter({
+    String? currency,
+    String column = 'currency',
+  }) {
+    if (currency != null && currency.isNotEmpty) {
+      return (' AND $column = ?', [currency]);
+    }
+    return ('', <dynamic>[]);
+  }
+
+  // ── 1. Profit / Loss ──────────────────────────────────────────
+
+  /// تقرير الأرباح والخسائر — returns multiple aggregate rows.
+  /// Each map key is the raw DB column name; monetary values are
+  /// stored as INTEGER (cents). The caller converts with
+  /// `MoneyHelper.readCalculatedMoney`.
+  Future<List<Map<String, dynamic>>> getProfitLossReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+  }) async {
+    final db = await _db;
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo);
+    final (cf, curArgs) = buildCurrencyFilter(currency: currency);
+    final allArgs = [...dateArgs, ...curArgs];
+
+    // Revenue
+    final revRes = await db.rawQuery(
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS revenue "
+      "FROM invoices WHERE type IN ('sale','pos') AND is_return=0$df$cf",
+      allArgs,
+    );
+
+    // Purchases
+    final purRes = await db.rawQuery(
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS purchases "
+      "FROM invoices WHERE type='purchase' AND is_return=0$df$cf",
+      allArgs,
+    );
+
+    // Sales returns
+    final retSaleRes = await db.rawQuery(
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS sales_returns "
+      "FROM invoices WHERE type IN ('sale','pos') AND is_return=1$df$cf",
+      allArgs,
+    );
+
+    // Purchase returns
+    final retPurRes = await db.rawQuery(
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS purchase_returns "
+      "FROM invoices WHERE type='purchase' AND is_return=1$df$cf",
+      allArgs,
+    );
+
+    // Expenses (uses expense_date column)
+    final (expDf, expDateArgs) = buildDateFilter(
+      dateFrom: dateFrom, dateTo: dateTo, column: 'expense_date',
+    );
+    final expRes = await db.rawQuery(
+      "SELECT CAST(COALESCE(SUM(amount), 0) AS INTEGER) AS expenses "
+      "FROM expenses WHERE 1=1$expDf$cf",
+      [...expDateArgs, ...curArgs],
+    );
+
+    // COGS from sales
+    final cogsSaleArgs = <dynamic>[];
+    String cogsDateF = '';
+    if (dateFrom != null) {
+      cogsDateF += ' AND i.created_at >= ?';
+      cogsSaleArgs.add(dateFrom.toIso8601String());
+    }
+    if (dateTo != null) {
+      cogsDateF += ' AND i.created_at < ?';
+      cogsSaleArgs.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+    }
+    if (currency != null && currency.isNotEmpty) {
+      cogsDateF += ' AND i.currency = ?';
+      cogsSaleArgs.add(currency);
+    }
+
+    int cogs = 0;
+    try {
+      final cogsRes = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM("
+        "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+        "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+        "), 0) AS INTEGER) AS total_cogs "
+        "FROM invoice_items ii "
+        "INNER JOIN invoices i ON ii.invoice_id = i.id "
+        "LEFT JOIN products p ON ii.product_id = p.id "
+        "WHERE i.type IN ('sale','pos') AND i.is_return = 0$cogsDateF",
+        cogsSaleArgs,
+      );
+      cogs = cogsRes.first['total_cogs'] as int? ?? 0;
+
+      // Subtract COGS from sales returns
+      final salesReturnsRaw = retSaleRes.first['sales_returns'] as int? ?? 0;
+      if (salesReturnsRaw > 0) {
+        final cogsRetArgs = <dynamic>[];
+        String cogsRetF = '';
+        if (dateFrom != null) {
+          cogsRetF += ' AND i.created_at >= ?';
+          cogsRetArgs.add(dateFrom.toIso8601String());
+        }
+        if (dateTo != null) {
+          cogsRetF += ' AND i.created_at < ?';
+          cogsRetArgs.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+        }
+        if (currency != null && currency.isNotEmpty) {
+          cogsRetF += ' AND i.currency = ?';
+          cogsRetArgs.add(currency);
+        }
+        final cogsRetRes = await db.rawQuery(
+          "SELECT CAST(COALESCE(SUM("
+          "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+          "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+          "), 0) AS INTEGER) AS total_cogs "
+          "FROM invoice_items ii "
+          "INNER JOIN invoices i ON ii.invoice_id = i.id "
+          "LEFT JOIN products p ON ii.product_id = p.id "
+          "WHERE i.type IN ('sale','pos') AND i.is_return = 1$cogsRetF",
+          cogsRetArgs,
+        );
+        cogs -= (cogsRetRes.first['total_cogs'] as int? ?? 0);
+      }
+    } catch (_) {
+      cogs = 0;
+    }
+
+    return [
+      {'item': 'revenue', 'amount': revRes.first['revenue']},
+      {'item': 'purchases', 'amount': purRes.first['purchases']},
+      {'item': 'sales_returns', 'amount': retSaleRes.first['sales_returns']},
+      {'item': 'purchase_returns', 'amount': retPurRes.first['purchase_returns']},
+      {'item': 'expenses', 'amount': expRes.first['expenses']},
+      {'item': 'cogs', 'amount': cogs},
+    ];
+  }
+
+  // ── 2. Sales by Product ───────────────────────────────────────
+
+  /// المبيعات حسب المنتج — grouped by product_id.
+  /// Returns `product_name`, `qty`, `revenue`, `cost_total`, `inv_count`.
+  Future<List<Map<String, dynamic>>> getSalesByProductReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+    int? categoryId,
+  }) async {
+    final db = await _db;
+    final args = <dynamic>[];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
+    args.addAll(dateArgs);
+    final (cf, curArgs) = buildCurrencyFilter(currency: currency, column: 'i.currency');
+    args.addAll(curArgs);
+
+    String catJoin = '';
+    String catFilter = '';
+    if (categoryId != null) {
+      catJoin = ' INNER JOIN products p2 ON ii.product_id=p2.id';
+      catFilter = ' AND p2.category_id=?';
+      args.add(categoryId);
+    }
+
+    return await db.rawQuery(
+      "SELECT ii.product_name, SUM(ii.quantity) AS qty, "
+      "CAST(SUM(ii.total_price) AS INTEGER) AS revenue, "
+      "CAST(SUM("
+      "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+      "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
+      ") AS INTEGER) AS cost_total, "
+      "COUNT(DISTINCT ii.invoice_id) AS inv_count "
+      "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id=i.id "
+      "LEFT JOIN products p ON ii.product_id=p.id $catJoin "
+      "WHERE i.type IN ('sale','pos') AND i.is_return=0$df$cf$catFilter "
+      "GROUP BY ii.product_id ORDER BY revenue DESC",
+      args,
+    );
+  }
+
+  // ── 3. Sales by Customer ──────────────────────────────────────
+
+  /// المبيعات حسب العميل — grouped by customer_id.
+  /// Returns `customer_name`, `currency`, `inv_count`,
+  /// `total_sales`, `total_paid`, `total_remaining`.
+  Future<List<Map<String, dynamic>>> getSalesByCustomerReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+  }) async {
+    final db = await _db;
+    final args = <dynamic>[];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
+    args.addAll(dateArgs);
+    final (cf, curArgs) = buildCurrencyFilter(currency: currency, column: 'i.currency');
+    args.addAll(curArgs);
+
+    return await db.rawQuery(
+      "SELECT COALESCE(c.name, 'بدون عميل') AS customer_name, c.currency, "
+      "COUNT(i.id) AS inv_count, "
+      "CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total_sales, "
+      "CAST(COALESCE(SUM(i.paid_amount), 0) AS INTEGER) AS total_paid, "
+      "CAST(COALESCE(SUM(i.remaining), 0) AS INTEGER) AS total_remaining "
+      "FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id "
+      "WHERE i.type IN ('sale','pos') AND i.is_return=0$df$cf "
+      "GROUP BY i.customer_id ORDER BY total_sales DESC",
+      args,
+    );
+  }
+
+  // ── 4. Account Movement ───────────────────────────────────────
+
+  /// حركة حساب — transactions for a specific account with date filter.
+  /// Returns raw transaction rows. The caller computes running balance
+  /// using the account's `balance_type` (fetched separately).
+  Future<List<Map<String, dynamic>>> getAccountMovementReport({
+    required int accountId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+    final args = <dynamic>[accountId];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'date');
+    args.addAll(dateArgs);
+
+    return await db.rawQuery(
+      "SELECT id, account_id, debit, credit, description, date, created_at "
+      "FROM transactions "
+      "WHERE account_id = ?$df"
+      " ORDER BY date ASC, created_at ASC",
+      args,
+    );
+  }
+
+  /// Gets the `balance_type` for an account ('debit' or 'credit').
+  Future<String> getAccountBalanceType(int accountId) async {
+    final db = await _db;
+    final rows = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+    return rows.isNotEmpty ? (rows.first['balance_type'] as String? ?? 'credit') : 'credit';
+  }
+
+  // ── 5. Supplier Movement (Supplier Statement) ─────────────────
+
+  /// كشف حساب مورد — finds the supplier's payable account and returns
+  /// its transactions. Returns empty list if no linked account is found.
+  /// The `supplierName` and `supplierCurrency` must be provided by the
+  /// caller (typically from `getAllSuppliers()`).
+  Future<List<Map<String, dynamic>>> getSupplierMovementReport({
+    required int supplierId,
+    required String supplierName,
+    required String supplierCurrency,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+
+    // Try exact name match first, then LIKE fallback
+    var acctRes = await db.rawQuery(
+      "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1",
+      [supplierName, supplierCurrency],
+    );
+    if (acctRes.isEmpty && supplierName.isNotEmpty) {
+      acctRes = await db.rawQuery(
+        "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
+        ['%$supplierName%', '%$supplierName%', supplierCurrency],
+      );
+    }
+    if (acctRes.isEmpty) return [];
+
+    final accountId = acctRes.first['id'] as int;
+    final args = <dynamic>[accountId];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
+    args.addAll(dateArgs);
+
+    return await db.rawQuery(
+      "SELECT t.date, t.description, t.debit, t.credit, t.created_at "
+      "FROM transactions t WHERE t.account_id=?$df ORDER BY t.date ASC, t.created_at ASC",
+      args,
+    );
+  }
+
+  // ── 6. Customer Balances ──────────────────────────────────────
+
+  /// ديون العملاء — returns all customers with positive balances.
+  /// Values are raw DB integers (cents).
+  Future<List<Map<String, dynamic>>> getCustomerBalancesReport() async {
+    final customers = await _dbHelper.getAllCustomers();
+    return customers
+        .where((c) => (c['balance'] as num?)?.toInt() != 0)
+        .map((c) => {
+              'name': c['name'],
+              'balance': c['balance'],
+              'balance_type': c['balance_type'],
+              'currency': c['currency'],
+              'phone': c['phone'],
+              'debt_ceiling': c['debt_ceiling'],
+            })
+        .toList();
+  }
+
+  // ── 7. Supplier Balances ──────────────────────────────────────
+
+  /// ديون الموردين — returns all suppliers with positive balances.
+  /// Values are raw DB integers (cents).
+  Future<List<Map<String, dynamic>>> getSupplierBalancesReport() async {
+    final suppliers = await _dbHelper.getAllSuppliers();
+    return suppliers
+        .where((s) => (s['balance'] as num?)?.toInt() != 0)
+        .map((s) => {
+              'name': s['name'],
+              'balance': s['balance'],
+              'balance_type': s['balance_type'],
+              'currency': s['currency'],
+              'phone': s['phone'],
+              'debt_ceiling': s['debt_ceiling'],
+            })
+        .toList();
+  }
+
+  // ── 8. Expenses ───────────────────────────────────────────────
+
+  /// تقرير المصروفات — returns expense rows filtered by date/currency.
+  Future<List<Map<String, dynamic>>> getExpensesReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+  }) async {
+    final db = await _db;
+    final args = <dynamic>[];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'expense_date');
+    args.addAll(dateArgs);
+    final (cf, curArgs) = buildCurrencyFilter(currency: currency);
+    args.addAll(curArgs);
+
+    return await db.rawQuery(
+      "SELECT title, amount, currency, expense_date, category, payment_method, beneficiary "
+      "FROM expenses WHERE 1=1$df$cf ORDER BY expense_date DESC",
+      args,
+    );
+  }
+
+  // ── 9. Cash Boxes ─────────────────────────────────────────────
+
+  /// حركة الصندوق — returns cash box data with per‑box sales/purchase
+  /// totals. The caller iterates cash boxes, filters by currency/cashBoxId,
+  /// and adds per‑box invoice aggregates.
+  Future<List<Map<String, dynamic>>> getCashBoxesReport({
+    String? currency,
+    int? cashBoxId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+    final cashBoxes = await _dbHelper.getAllCashBoxes();
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo);
+
+    final results = <Map<String, dynamic>>[];
+    for (final cb in cashBoxes) {
+      if (currency != null && currency.isNotEmpty && cb['currency'] != currency) continue;
+      if (cashBoxId != null && cb['id'] != cashBoxId) continue;
+
+      final cbId = cb['id'] as int;
+
+      // Invoice aggregates for this cash box
+      final invRes = await db.rawQuery(
+        "SELECT type, CAST(COALESCE(SUM(total), 0) AS INTEGER) as total "
+        "FROM invoices WHERE cash_box_id=? AND is_return=0$df GROUP BY type",
+        [cbId, ...dateArgs],
+      );
+
+      int salesTotal = 0;
+      int purchaseTotal = 0;
+      for (final inv in invRes) {
+        final t = inv['type'] as String? ?? '';
+        final tot = inv['total'] as int? ?? 0;
+        if (t == 'sale' || t == 'pos') {
+          salesTotal = tot;
+        } else if (t == 'purchase') {
+          purchaseTotal = tot;
+        }
+      }
+
+      results.add({
+        'id': cbId,
+        'name': cb['name'],
+        'type': cb['type'],
+        'currency': cb['currency'],
+        'balance': cb['balance'],
+        'balance_type': cb['balance_type'],
+        'sales_total': salesTotal,
+        'purchase_total': purchaseTotal,
+      });
+    }
+    return results;
+  }
+
+  // ── 10. Currency Exchanges ────────────────────────────────────
+
+  /// صرافة العملات — returns currency exchange rows with box names.
+  Future<List<Map<String, dynamic>>> getCurrencyExchangesReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'ce.created_at');
+
+    return await db.rawQuery(
+      "SELECT ce.*, cb1.name AS from_name, cb2.name AS to_name "
+      "FROM currency_exchanges ce LEFT JOIN cash_boxes cb1 ON ce.from_cash_box_id=cb1.id "
+      "LEFT JOIN cash_boxes cb2 ON ce.to_cash_box_id=cb2.id "
+      "WHERE 1=1$df ORDER BY ce.created_at DESC",
+      dateArgs,
+    );
+  }
+
+  // ── 11. Vouchers ──────────────────────────────────────────────
+
+  /// السندات — returns voucher rows with cash box name.
+  Future<List<Map<String, dynamic>>> getVouchersReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final db = await _db;
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'v.created_at');
+
+    return await db.rawQuery(
+      "SELECT v.*, cb.name AS cash_box_name "
+      "FROM vouchers v LEFT JOIN cash_boxes cb ON v.cash_box_id=cb.id "
+      "WHERE 1=1$df ORDER BY v.created_at DESC",
+      dateArgs,
+    );
+  }
+
+  // ── 12. Shifts ────────────────────────────────────────────────
+
+  /// الورديات — returns shift rows ordered by opened_at DESC.
+  Future<List<Map<String, dynamic>>> getShiftsReport() async {
+    return await _dbHelper.getAllShifts(orderBy: 'opened_at DESC');
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Aggregate query methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// ملخص الأرباح والخسائر — returns a single map with keys:
+  /// `revenue`, `purchases`, `sales_returns`, `purchase_returns`,
+  /// `expenses`, `cogs`. All values are raw INTEGER (cents).
+  Future<Map<String, dynamic>> getProfitLossSummary({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+  }) async {
+    final rows = await getProfitLossReport(
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      currency: currency,
+    );
+    final map = <String, dynamic>{};
+    for (final row in rows) {
+      map[row['item'] as String] = row['amount'];
+    }
+    return map;
+  }
+
+  /// تكلفة البضاعة المباعة (COGS) — returns the COGS amount as raw
+  /// INTEGER (cents). Set [isReturn] to true for sales‑return COGS.
+  Future<int> getCOGS({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+    bool isReturn = false,
+  }) async {
+    final db = await _db;
+    final args = <dynamic>[];
+    String df = '';
+    if (dateFrom != null) {
+      df += ' AND i.created_at >= ?';
+      args.add(dateFrom.toIso8601String());
+    }
+    if (dateTo != null) {
+      df += ' AND i.created_at < ?';
+      args.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+    }
+    if (currency != null && currency.isNotEmpty) {
+      df += ' AND i.currency = ?';
+      args.add(currency);
+    }
+
+    final returnFlag = isReturn ? 1 : 0;
+    try {
+      final res = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM("
+        "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+        "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+        "), 0) AS INTEGER) AS total_cogs "
+        "FROM invoice_items ii "
+        "INNER JOIN invoices i ON ii.invoice_id = i.id "
+        "LEFT JOIN products p ON ii.product_id = p.id "
+        "WHERE i.type IN ('sale','pos') AND i.is_return = ?$df",
+        [returnFlag, ...args],
+      );
+      return res.first['total_cogs'] as int? ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
 }
