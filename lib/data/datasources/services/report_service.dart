@@ -927,7 +927,7 @@ class ReportService {
   /// ديون العملاء — returns all customers with positive balances.
   /// Values are raw DB integers (cents).
   Future<List<Map<String, dynamic>>> getCustomerBalancesReport() async {
-    final customers = await _dbHelper.getAllCustomers();
+    final customers = await _dbHelper.customers.getAllCustomers();
     return customers
         .where((c) => (c['balance'] as num?)?.toInt() != 0)
         .map((c) => {
@@ -946,7 +946,7 @@ class ReportService {
   /// ديون الموردين — returns all suppliers with positive balances.
   /// Values are raw DB integers (cents).
   Future<List<Map<String, dynamic>>> getSupplierBalancesReport() async {
-    final suppliers = await _dbHelper.getAllSuppliers();
+    final suppliers = await _dbHelper.suppliers.getAllSuppliers();
     return suppliers
         .where((s) => (s['balance'] as num?)?.toInt() != 0)
         .map((s) => {
@@ -994,7 +994,7 @@ class ReportService {
     DateTime? dateTo,
   }) async {
     final db = await _db;
-    final cashBoxes = await _dbHelper.getAllCashBoxes();
+    final cashBoxes = await _dbHelper.cashBoxes.getAllCashBoxes();
     final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo);
 
     final results = <Map<String, dynamic>>[];
@@ -1078,7 +1078,7 @@ class ReportService {
 
   /// الورديات — returns shift rows ordered by opened_at DESC.
   Future<List<Map<String, dynamic>>> getShiftsReport() async {
-    return await _dbHelper.getAllShifts(orderBy: 'opened_at DESC');
+    return await _dbHelper.shifts.getAllShifts(orderBy: 'opened_at DESC');
   }
 
   // ── 13. Sales Report (invoices with entity names) ─────────────

@@ -23,7 +23,7 @@ class VoucherRepository {
     Map<String, dynamic> voucherMap,
     List<Map<String, dynamic>> items,
   ) async {
-    return await _dbHelper.cashBoxService.insertVoucher(voucherMap, items);
+    return await _dbHelper.cashBoxes.insertVoucher(voucherMap, items);
   }
 
   /// Get an account by its ID.

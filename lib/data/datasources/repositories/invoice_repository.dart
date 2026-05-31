@@ -60,7 +60,7 @@ class InvoiceRepository {
     await _dbHelper.journal.checkFiscalPeriodOpen(invoiceDate);
 
     // Check if the invoice date falls in a closed fiscal year
-    final isClosed = await _dbHelper.isDateInClosedPeriod(DateTime.parse(invoiceDate));
+    final isClosed = await _dbHelper.accounts.isDateInClosedPeriod(DateTime.parse(invoiceDate));
     if (isClosed) {
       throw Exception('لا يمكن إضافة فاتورة في سنة مالية مغلقة');
     }
@@ -1123,7 +1123,7 @@ class InvoiceRepository {
         rethrow;
       }
       // Log the error for audit trail
-      await _dbHelper.logAuditEvent(
+      await _dbHelper.audit.logAuditEvent(
         action: 'error',
         tableName: 'invoices',
         recordId: int.tryParse(invoiceMap['id']?.toString() ?? ''),
@@ -1406,7 +1406,7 @@ class InvoiceRepository {
 
     // Check if the invoice date falls in a closed fiscal year
     final invoiceDate = invoice['date'] as String? ?? invoice['created_at'] as String;
-    final isClosed = await _dbHelper.isDateInClosedPeriod(DateTime.parse(invoiceDate));
+    final isClosed = await _dbHelper.accounts.isDateInClosedPeriod(DateTime.parse(invoiceDate));
     if (isClosed) {
       throw Exception('لا يمكن إلغاء فاتورة في سنة مالية مغلقة');
     }
@@ -1816,7 +1816,7 @@ class InvoiceRepository {
     });
 
     // Log audit event for invoice cancellation
-    await _dbHelper.logAuditEvent(
+    await _dbHelper.audit.logAuditEvent(
       action: 'cancel',
       tableName: 'invoices',
       recordId: int.tryParse(id),
@@ -1832,7 +1832,7 @@ class InvoiceRepository {
         rethrow;
       }
       // Log the error for audit trail
-      await _dbHelper.logAuditEvent(
+      await _dbHelper.audit.logAuditEvent(
         action: 'error',
         tableName: 'invoices',
         recordId: int.tryParse(id),
@@ -1903,7 +1903,7 @@ class InvoiceRepository {
   }
 
   Future<double> getCashBalance() async {
-    return _dbHelper.getTotalCashBalance();
+    return _dbHelper.cashBoxes.getTotalCashBalance();
   }
 
   Future<List<Map<String, dynamic>>> getRecentInvoices({int limit = 10}) async {

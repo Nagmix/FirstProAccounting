@@ -4239,4 +4239,29 @@ class DatabaseHelper {
       throw Exception('القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit. يجب أن يتساوى المدين والدائن.');
     }
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Settings helpers (direct DB operations on 'settings' table)
+  //  These are kept in DatabaseHelper because settings are a core
+  //  DB concern and there is no dedicated SettingsRepository.
+  // ══════════════════════════════════════════════════════════════
+
+  /// Get a setting value by key. Returns null if not found.
+  Future<String?> getSetting(String key) async {
+    final db = await database;
+    final results = await db.query(
+      'settings',
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (results.isEmpty) return null;
+    return results.first['value'] as String?;
+  }
+
+  /// Delete a setting by key.
+  Future<void> deleteSetting(String key) async {
+    final db = await database;
+    await db.delete('settings', where: 'key = ?', whereArgs: [key]);
+  }
 }
