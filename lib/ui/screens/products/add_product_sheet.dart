@@ -237,8 +237,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
           _autoSelectAccount(_assetAccounts, 1300 + codeOffset, (id) => _selectedInventoryAccountId = id);
           // COGS account (3200 + offset)
           _autoSelectAccount(_costAccounts, 3200 + codeOffset, (id) => _selectedCogsAccountId = id);
-          // VAT account (3300 + offset)
-          _autoSelectAccount(_liabilityAccounts, 3300 + codeOffset, (id) => _selectedVatAccountId = id);
+          // VAT account (2300 + offset)
+          _autoSelectAccount(_liabilityAccounts, 2300 + codeOffset, (id) => _selectedVatAccountId = id);
         });
       }
     }

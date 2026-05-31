@@ -57,7 +57,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 40;
+  static const int _databaseVersion = 41;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -1080,24 +1080,34 @@ class DatabaseHelper {
     }
   }
 
-  /// Shared account templates: [nameAr, nameEn, baseCode, accountType]
+  /// Shared account templates: [nameAr, nameEn, baseCode, accountType, parentBaseCode]
+  /// parentBaseCode = null means this is a root/group account
   /// Used by both _seedDefaultAccounts and _seedAccountsForCurrency.
   static const List<List<dynamic>> _defaultAccountTemplates = [
-    ['حساب الأصول', 'Assets Account', 1000, 'ASSET'],
-    ['حساب الصناديق والبنوك', 'Cash & Banks Account', 1100, 'ASSET'],
-    ['حساب العملاء', 'Customers Account', 1200, 'ASSET'],
-    ['المخزون', 'Inventory Account', 1300, 'ASSET'],
-    ['حساب الخصوم', 'Liabilities Account', 2000, 'LIABILITY'],
-    ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY'],
-    ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'EQUITY'],
-    ['الأرباح المحتجزة', 'Retained Earnings', 2900, 'EQUITY'],
-    ['ضريبة القيمة المضافة', 'VAT Payable', 3300, 'LIABILITY'],
-    ['تكلفة البضاعة المباعة', 'COGS Account', 3200, 'COST'],
-    ['حساب المشتريات', 'Purchases Account', 3100, 'COST'],
-    ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE'],
-    ['حساب المصاريف', 'Expenses Account', 5000, 'EXPENSE'],
-    ['اجور النقل', 'Transport Charges', 5200, 'EXPENSE'],
-    ['حساب الموظفين', 'Employees Account', 5100, 'EXPENSE'],
+    // ── الأصول (Assets) ──
+    ['حساب الأصول', 'Assets Account', 1000, 'ASSET', null],
+    ['حساب الصناديق والبنوك', 'Cash & Banks Account', 1100, 'ASSET', 1000],
+    ['حساب العملاء', 'Customers Account', 1200, 'ASSET', 1000],
+    ['المخزون', 'Inventory Account', 1300, 'ASSET', 1000],
+    // ── الخصوم (Liabilities) ──
+    ['حساب الخصوم', 'Liabilities Account', 2000, 'LIABILITY', null],
+    ['حساب الموردين', 'Suppliers Account', 2100, 'LIABILITY', 2000],
+    ['ضريبة القيمة المضافة', 'VAT Payable', 2300, 'LIABILITY', 2000],
+    // ── حقوق الملكية (Equity) ──
+    ['حقوق الملكية', 'Equity Account', 2900, 'EQUITY', null],
+    ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'EQUITY', 2900],
+    ['الأرباح المحتجزة', 'Retained Earnings', 2910, 'EQUITY', 2900],
+    // ── التكاليف (Costs) ──
+    ['حساب التكاليف', 'Cost Account', 3000, 'COST', null],
+    ['حساب المشتريات', 'Purchases Account', 3100, 'COST', 3000],
+    ['تكلفة البضاعة المباعة', 'COGS Account', 3200, 'COST', 3000],
+    // ── الإيرادات (Revenue) ──
+    ['حساب الإيرادات', 'Revenue Account', 4000, 'REVENUE', null],
+    ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE', 4000],
+    // ── المصروفات (Expenses) ──
+    ['حساب المصاريف', 'Expenses Account', 5000, 'EXPENSE', null],
+    ['حساب الموظفين', 'Employees Account', 5100, 'EXPENSE', 5000],
+    ['اجور النقل', 'Transport Charges', 5200, 'EXPENSE', 5000],
   ];
 
   Future<void> _seedDefaultAccounts(Database db) async {
@@ -1106,23 +1116,6 @@ class DatabaseHelper {
     if (existing.isNotEmpty) return;
 
     final now = DateTime.now().toIso8601String();
-
-    // Helper to build account map
-    Map<String, dynamic> makeAccount(String nameAr, String nameEn, String code, String type, String currency, String currencySymbol) {
-      return {
-        'name_ar': '$nameAr ($currencySymbol)',
-        'name_en': '$nameEn ($currency)',
-        'account_code': code,
-        'account_type': type,
-        'balance': 0,
-        'currency': currency,
-        'balance_type': (type == 'ASSET' || type == 'COST' || type == 'EXPENSE') ? 'debit' : 'credit',
-        'is_active': 1,
-        'is_system': 1,
-        'created_at': now,
-        'updated_at': now,
-      };
-    }
 
     // Use shared account templates (M-07)
     final templates = _defaultAccountTemplates;
@@ -1139,18 +1132,49 @@ class DatabaseHelper {
       final currencySymbol = config[1] as String;
       final codeOffset = config[2] as int;
 
-      for (final template in templates) {
+      // Track inserted account IDs by code for parent_id resolution
+      final codeToId = <String, int>{};
+
+      // First pass: insert all accounts (root accounts first, then children)
+      // Sort to ensure parent accounts are inserted before children
+      final sortedTemplates = List<List<dynamic>>.from(templates);
+      sortedTemplates.sort((a, b) {
+        final parentA = a[4] as int?;
+        final parentB = b[4] as int?;
+        // Root accounts (parent == null) come first
+        if (parentA == null && parentB != null) return -1;
+        if (parentA != null && parentB == null) return 1;
+        return 0;
+      });
+
+      for (final template in sortedTemplates) {
         final baseCode = template[2] as int;
         final actualCode = (baseCode + codeOffset).toString();
-        final account = makeAccount(
-          template[0] as String,
-          template[1] as String,
-          actualCode,
-          template[3] as String,
-          currencyCode,
-          currencySymbol,
-        );
-        await db.insert('accounts', account);
+        final accountType = template[3] as String;
+        final parentBaseCode = template[4] as int?;
+
+        // Resolve parent_id from previously inserted accounts
+        int? parentId;
+        if (parentBaseCode != null) {
+          final parentCode = (parentBaseCode + codeOffset).toString();
+          parentId = codeToId[parentCode];
+        }
+
+        final id = await db.insert('accounts', {
+          'name_ar': '${template[0]} ($currencySymbol)',
+          'name_en': '${template[1]} ($currencyCode)',
+          'account_code': actualCode,
+          'account_type': accountType,
+          'balance': 0,
+          'currency': currencyCode,
+          'balance_type': (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE') ? 'debit' : 'credit',
+          'parent_id': parentId,
+          'is_active': 1,
+          'is_system': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+        codeToId[actualCode] = id;
       }
     }
   }
@@ -1167,10 +1191,32 @@ class DatabaseHelper {
     // Use shared account templates (M-07)
     final templates = _defaultAccountTemplates;
 
-    for (final template in templates) {
+    // Track inserted account IDs by code for parent_id resolution
+    final codeToId = <String, int>{};
+
+    // Sort to ensure parent accounts are inserted before children
+    final sortedTemplates = List<List<dynamic>>.from(templates);
+    sortedTemplates.sort((a, b) {
+      final parentA = a[4] as int?;
+      final parentB = b[4] as int?;
+      if (parentA == null && parentB != null) return -1;
+      if (parentA != null && parentB == null) return 1;
+      return 0;
+    });
+
+    for (final template in sortedTemplates) {
       final actualCode = ((template[2] as int) + codeOffset).toString();
       final accountType = template[3] as String;
-      await db.insert('accounts', {
+      final parentBaseCode = template[4] as int?;
+
+      // Resolve parent_id from previously inserted accounts
+      int? parentId;
+      if (parentBaseCode != null) {
+        final parentCode = (parentBaseCode + codeOffset).toString();
+        parentId = codeToId[parentCode];
+      }
+
+      final id = await db.insert('accounts', {
         'name_ar': '${template[0]} ($currencySymbol)',
         'name_en': '${template[1]} ($currencyCode)',
         'account_code': actualCode,
@@ -1178,11 +1224,13 @@ class DatabaseHelper {
         'balance': 0,
         'currency': currencyCode,
         'balance_type': (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE') ? 'debit' : 'credit',
+        'parent_id': parentId,
         'is_active': 1,
         'is_system': 1,
         'created_at': now,
         'updated_at': now,
       });
+      codeToId[actualCode] = id;
     }
   }
 
@@ -2668,6 +2716,17 @@ class DatabaseHelper {
         logMigrationError('v40', e);
       }
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Migration v41: Accounting tree hierarchy + code corrections
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 41) {
+      try {
+        await _migrateV41(db);
+      } catch (e) {
+        logMigrationError('v41', e);
+      }
+    }
   }
 
   /// Migration v39: Fix #9 — Set correct balance_type for existing accounts
@@ -2733,6 +2792,112 @@ class DatabaseHelper {
         logMigrationError("migration v39 fix_exchange_account", e);
       }
     });
+  }
+
+  /// Migration v41: Accounting tree hierarchy — set parent_id for existing accounts,
+  /// rename VAT account from 3300 to 2300 (proper LIABILITY range), and add group accounts.
+  Future<void> _migrateV41(Database db) async {
+    final now = DateTime.now().toIso8601String();
+    final currencies = ['YER', 'SAR', 'USD'];
+    final offsets = [0, 1, 2];
+
+    for (int i = 0; i < currencies.length; i++) {
+      final currency = currencies[i];
+      final offset = offsets[i];
+
+      // ── 1. Rename VAT from 3300+offset → 2300+offset (move to LIABILITY range) ──
+      final oldVatCode = (3300 + offset).toString();
+      final newVatCode = (2300 + offset).toString();
+      final vatRows = await db.query('accounts',
+          where: 'account_code = ? AND currency = ?', whereArgs: [oldVatCode, currency]);
+      if (vatRows.isNotEmpty) {
+        // Check if new code already exists
+        final newCodeExists = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?', whereArgs: [newVatCode, currency]);
+        if (newCodeExists.isEmpty) {
+          await db.update('accounts',
+              {'account_code': newVatCode, 'updated_at': now},
+              where: 'id = ?', whereArgs: [vatRows.first['id']]);
+        }
+      }
+
+      // ── 2. Rename Retained Earnings from 2900+offset → 2910+offset ──
+      // (2900 becomes the Equity parent group account)
+      final oldRetainedCode = (2900 + offset).toString();
+      final newRetainedCode = (2910 + offset).toString();
+      final retainedRows = await db.query('accounts',
+          where: 'account_code = ? AND currency = ?', whereArgs: [oldRetainedCode, currency]);
+      if (retainedRows.isNotEmpty) {
+        final newCodeExists = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?', whereArgs: [newRetainedCode, currency]);
+        if (newCodeExists.isEmpty) {
+          await db.update('accounts',
+              {'account_code': newRetainedCode, 'updated_at': now},
+              where: 'id = ?', whereArgs: [retainedRows.first['id']]);
+        }
+      }
+
+      // ── 3. Add missing group/parent accounts if they don't exist ──
+      final groupAccounts = [
+        {'code': (2000 + offset).toString(), 'name_ar': 'حساب الخصوم', 'name_en': 'Liabilities Account', 'type': 'LIABILITY'},
+        {'code': (2900 + offset).toString(), 'name_ar': 'حقوق الملكية', 'name_en': 'Equity Account', 'type': 'EQUITY'},
+        {'code': (3000 + offset).toString(), 'name_ar': 'حساب التكاليف', 'name_en': 'Cost Account', 'type': 'COST'},
+        {'code': (4000 + offset).toString(), 'name_ar': 'حساب الإيرادات', 'name_en': 'Revenue Account', 'type': 'REVENUE'},
+      ];
+      for (final group in groupAccounts) {
+        final exists = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [group['code'], currency]);
+        if (exists.isEmpty) {
+          await db.insert('accounts', {
+            'name_ar': '${group['name_ar']} (${currency == 'YER' ? 'ر.ي' : currency == 'SAR' ? 'ر.س' : r'$'})',
+            'name_en': '${group['name_en']} ($currency)',
+            'account_code': group['code'],
+            'account_type': group['type'],
+            'balance': 0,
+            'currency': currency,
+            'balance_type': (group['type'] == 'ASSET' || group['type'] == 'COST' || group['type'] == 'EXPENSE') ? 'debit' : 'credit',
+            'parent_id': null,
+            'is_active': 1,
+            'is_system': 1,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+      }
+
+      // ── 4. Set parent_id for child accounts ──
+      final parentMappings = {
+        (1100 + offset).toString(): (1000 + offset).toString(), // Cash&Banks → Assets
+        (1200 + offset).toString(): (1000 + offset).toString(), // Customers → Assets
+        (1300 + offset).toString(): (1000 + offset).toString(), // Inventory → Assets
+        (2100 + offset).toString(): (2000 + offset).toString(), // Suppliers → Liabilities
+        (2300 + offset).toString(): (2000 + offset).toString(), // VAT → Liabilities (new code)
+        (2200 + offset).toString(): (2900 + offset).toString(), // Opening Balance → Equity
+        (2910 + offset).toString(): (2900 + offset).toString(), // Retained Earnings → Equity (new code)
+        (3100 + offset).toString(): (3000 + offset).toString(), // Purchases → Costs
+        (3200 + offset).toString(): (3000 + offset).toString(), // COGS → Costs
+        (4100 + offset).toString(): (4000 + offset).toString(), // Sales → Revenue
+        (5100 + offset).toString(): (5000 + offset).toString(), // Employees → Expenses
+        (5200 + offset).toString(): (5000 + offset).toString(), // Transport → Expenses
+        (5250 + offset).toString(): (5000 + offset).toString(), // Bank Charges → Expenses
+      };
+
+      for (final entry in parentMappings.entries) {
+        final childCode = entry.key;
+        final parentCode = entry.value;
+        final childRows = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?', whereArgs: [childCode, currency]);
+        final parentRows = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?', whereArgs: [parentCode, currency]);
+        if (childRows.isNotEmpty && parentRows.isNotEmpty) {
+          final parentId = parentRows.first['id'];
+          await db.update('accounts',
+              {'parent_id': parentId, 'updated_at': now},
+              where: 'id = ?', whereArgs: [childRows.first['id']]);
+        }
+      }
+    }
   }
 
   /// C-06: Migrate all REAL monetary columns to INTEGER (cents).

@@ -42,7 +42,7 @@ class ReportService {
         'type_label': 'فاتورة مبيعات',
         'id': row['id'],
         'entity_name': row['entity_name'],
-        'amount': MoneyHelper.readMoney(row['total']),
+        'amount': MoneyHelper.readCalculatedMoney(row['total']),
         'currency': row['currency'] ?? 'YER',
         'time': row['created_at'] ?? '',
       });
@@ -65,7 +65,7 @@ class ReportService {
         'type_label': 'فاتورة مشتريات',
         'id': row['id'],
         'entity_name': row['entity_name'],
-        'amount': MoneyHelper.readMoney(row['total']),
+        'amount': MoneyHelper.readCalculatedMoney(row['total']),
         'currency': row['currency'] ?? 'YER',
         'time': row['created_at'] ?? '',
       });
@@ -88,7 +88,7 @@ class ReportService {
           'type_label': isReceipt ? 'سند قبض' : 'سند صرف',
           'id': row['id'],
           'entity_name': row['description'] ?? row['voucher_number'] ?? '',
-          'amount': MoneyHelper.readMoney(row['total_amount']),
+          'amount': MoneyHelper.readCalculatedMoney(row['total_amount']),
           'currency': row['currency'] ?? 'YER',
           'time': row['date'] ?? '',
         });
@@ -112,7 +112,7 @@ class ReportService {
         'type_label': 'مصروف',
         'id': row['id'],
         'entity_name': row['title'] ?? (row['category'] ?? ''),
-        'amount': MoneyHelper.readMoney(row['amount']),
+        'amount': MoneyHelper.readCalculatedMoney(row['amount']),
         'currency': row['currency'] ?? 'YER',
         'time': row['expense_date'] ?? '',
       });
@@ -135,7 +135,7 @@ class ReportService {
         'type_label': 'تحويل نقدي',
         'id': row['id'],
         'entity_name': '${row['from_name'] ?? ''} ← ${row['to_name'] ?? ''}',
-        'amount': MoneyHelper.readMoney(row['amount']),
+        'amount': MoneyHelper.readCalculatedMoney(row['amount']),
         'currency': row['currency'] ?? 'YER',
         'time': row['created_at'] ?? '',
       });
@@ -160,7 +160,7 @@ class ReportService {
           'type_label': 'صرافة عملات',
           'id': row['id'],
           'entity_name': '${row['from_currency'] ?? ''} → ${row['to_currency'] ?? ''}',
-          'amount': MoneyHelper.readMoney(row['from_amount']),
+          'amount': MoneyHelper.readCalculatedMoney(row['from_amount']),
           'currency': row['from_currency'] ?? 'YER',
           'time': row['created_at'] ?? '',
         });
@@ -205,7 +205,7 @@ class ReportService {
       "AND created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_sales'] = MoneyHelper.readMoney(salesResult.first['total']);
+    summary['total_sales'] = MoneyHelper.readCalculatedMoney(salesResult.first['total']);
 
     // إجمالي المشتريات
     final purchasesResult = await db.rawQuery(
@@ -214,7 +214,7 @@ class ReportService {
       "AND created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_purchases'] = MoneyHelper.readMoney(purchasesResult.first['total']);
+    summary['total_purchases'] = MoneyHelper.readCalculatedMoney(purchasesResult.first['total']);
 
     // سندات القبض
     try {
@@ -224,7 +224,7 @@ class ReportService {
         "AND date >= ? AND date < ?",
         [startStr, endStr],
       );
-      summary['total_receipts'] = MoneyHelper.readMoney(receiptsResult.first['total']);
+      summary['total_receipts'] = MoneyHelper.readCalculatedMoney(receiptsResult.first['total']);
     } catch (e) { DatabaseHelper.logMigrationError("migration", e); }
 
     // سندات الصرف
@@ -235,7 +235,7 @@ class ReportService {
         "AND date >= ? AND date < ?",
         [startStr, endStr],
       );
-      summary['total_payments'] = MoneyHelper.readMoney(paymentsResult.first['total']);
+      summary['total_payments'] = MoneyHelper.readCalculatedMoney(paymentsResult.first['total']);
     } catch (e) { DatabaseHelper.logMigrationError("migration", e); }
 
     // المصروفات
@@ -244,7 +244,7 @@ class ReportService {
       "WHERE expense_date >= ? AND expense_date < ?",
       [startStr, endStr],
     );
-    summary['total_expenses'] = MoneyHelper.readMoney(expensesResult.first['total']);
+    summary['total_expenses'] = MoneyHelper.readCalculatedMoney(expensesResult.first['total']);
 
     // التحويلات
     final transfersResult = await db.rawQuery(
@@ -252,7 +252,7 @@ class ReportService {
       "WHERE created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_transfers'] = MoneyHelper.readMoney(transfersResult.first['total']);
+    summary['total_transfers'] = MoneyHelper.readCalculatedMoney(transfersResult.first['total']);
 
     return summary;
   }

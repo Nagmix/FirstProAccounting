@@ -94,8 +94,9 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
       final accounts = <Map<String, dynamic>>[];
 
       for (final row in results) {
-        final totalDebitRaw = MoneyHelper.readMoney(row['total_debit']);
-        final totalCreditRaw = MoneyHelper.readMoney(row['total_credit']);
+        // Use readCalculatedMoney for SQL SUM results which may be REAL
+        final totalDebitRaw = MoneyHelper.readCalculatedMoney(row['total_debit']);
+        final totalCreditRaw = MoneyHelper.readCalculatedMoney(row['total_credit']);
         final netBalance = totalDebitRaw - totalCreditRaw;
 
         if (MoneyHelper.isZero(netBalance)) continue;

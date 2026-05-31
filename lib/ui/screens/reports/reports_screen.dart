@@ -568,28 +568,28 @@ class _ReportsScreenState extends State<ReportsScreen>
     final cf = _currencyFilter();
 
     final revRes = await database.rawQuery(
-      "SELECT COALESCE(SUM(total),0) AS t FROM invoices WHERE type IN ('sale','pos') AND is_return=0$df$cf", allArgs);
-    final revenue = MoneyHelper.readMoney(revRes.first['t']);
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS t FROM invoices WHERE type IN ('sale','pos') AND is_return=0$df$cf", allArgs);
+    final revenue = MoneyHelper.readCalculatedMoney(revRes.first['t']);
 
     final purRes = await database.rawQuery(
-      "SELECT COALESCE(SUM(total),0) AS t FROM invoices WHERE type='purchase' AND is_return=0$df$cf", allArgs);
-    final purchases = MoneyHelper.readMoney(purRes.first['t']);
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS t FROM invoices WHERE type='purchase' AND is_return=0$df$cf", allArgs);
+    final purchases = MoneyHelper.readCalculatedMoney(purRes.first['t']);
 
     final retSaleRes = await database.rawQuery(
-      "SELECT COALESCE(SUM(total),0) AS t FROM invoices WHERE type IN ('sale','pos') AND is_return=1$df$cf", allArgs);
-    final salesReturns = MoneyHelper.readMoney(retSaleRes.first['t']);
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS t FROM invoices WHERE type IN ('sale','pos') AND is_return=1$df$cf", allArgs);
+    final salesReturns = MoneyHelper.readCalculatedMoney(retSaleRes.first['t']);
 
     final retPurRes = await database.rawQuery(
-      "SELECT COALESCE(SUM(total),0) AS t FROM invoices WHERE type='purchase' AND is_return=1$df$cf", allArgs);
-    final purchaseReturns = MoneyHelper.readMoney(retPurRes.first['t']);
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS t FROM invoices WHERE type='purchase' AND is_return=1$df$cf", allArgs);
+    final purchaseReturns = MoneyHelper.readCalculatedMoney(retPurRes.first['t']);
 
     final expArgs = <dynamic>[];
     if (_dateFrom != null) expArgs.add(_dateFrom!.toIso8601String());
     if (_dateTo != null) expArgs.add(_dateTo!.add(const Duration(days: 1)).toIso8601String());
     expArgs.addAll(_currencyArgs());
     final expRes = await database.rawQuery(
-      "SELECT COALESCE(SUM(amount),0) AS t FROM expenses WHERE 1=1${_dateFilter(column: 'expense_date')}$cf", expArgs);
-    final expenses = MoneyHelper.readMoney(expRes.first['t']);
+      "SELECT CAST(COALESCE(SUM(amount), 0) AS INTEGER) AS t FROM expenses WHERE 1=1${_dateFilter(column: 'expense_date')}$cf", expArgs);
+    final expenses = MoneyHelper.readCalculatedMoney(expRes.first['t']);
 
     final netSales = revenue - salesReturns;
     final netPurchases = purchases - purchaseReturns;
@@ -673,9 +673,9 @@ class _ReportsScreenState extends State<ReportsScreen>
     final items = await db.getInvoiceProfitReport(startDate: _dateFrom, endDate: _dateTo);
     double totalProfit = 0, totalRevenue = 0, totalCost = 0;
     _reportRows = items.map((item) {
-      final profit = MoneyHelper.readMoney(item['profit']);
-      final total = MoneyHelper.readMoney(item['sale_total']);
-      final cost = MoneyHelper.readMoney(item['cost_total']);
+      final profit = MoneyHelper.readCalculatedMoney(item['profit']);
+      final total = MoneyHelper.readCalculatedMoney(item['sale_total']);
+      final cost = MoneyHelper.readCalculatedMoney(item['cost_total']);
       totalProfit += profit;
       totalRevenue += total;
       totalCost += cost;
@@ -711,7 +711,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     // Include cost and profit per product using unit_cost from invoice_items
     // FIX: CAST cost_total to INTEGER so MoneyHelper.readMoney() divides by 100 correctly
     final results = await database.rawQuery(
-      "SELECT ii.product_name, SUM(ii.quantity) AS qty, SUM(ii.total_price) AS revenue, "
+      "SELECT ii.product_name, SUM(ii.quantity) AS qty, "
+      "CAST(SUM(ii.total_price) AS INTEGER) AS revenue, "
       "CAST(SUM("
       "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
       "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
@@ -726,8 +727,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     double totalRevenue = 0, totalCost = 0, totalProfit = 0;
     int totalQty = 0;
     _reportRows = results.map((r) {
-      final rev = MoneyHelper.readMoney(r['revenue']);
-      final cost = MoneyHelper.readMoney(r['cost_total']);
+      final rev = MoneyHelper.readCalculatedMoney(r['revenue']);
+      final cost = MoneyHelper.readCalculatedMoney(r['cost_total']);
       final qty = (r['qty'] as num?)?.toDouble() ?? 0;
       final profit = rev - cost;
       totalRevenue += rev;
@@ -758,8 +759,10 @@ class _ReportsScreenState extends State<ReportsScreen>
 
     final results = await database.rawQuery(
       "SELECT COALESCE(c.name, 'بدون عميل') AS customer_name, c.currency, "
-      "COUNT(i.id) AS inv_count, COALESCE(SUM(i.total),0) AS total_sales, "
-      "COALESCE(SUM(i.paid_amount),0) AS total_paid, COALESCE(SUM(i.remaining),0) AS total_remaining "
+      "COUNT(i.id) AS inv_count, "
+      "CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total_sales, "
+      "CAST(COALESCE(SUM(i.paid_amount), 0) AS INTEGER) AS total_paid, "
+      "CAST(COALESCE(SUM(i.remaining), 0) AS INTEGER) AS total_remaining "
       "FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id "
       "WHERE i.type IN ('sale','pos') AND i.is_return=0$dateF$curF "
       "GROUP BY i.customer_id ORDER BY total_sales DESC",
@@ -887,12 +890,12 @@ class _ReportsScreenState extends State<ReportsScreen>
       final balanceArgs = <dynamic>[accountId];
       balanceArgs.addAll(dateArgs);
       final result = await database.rawQuery(
-        "SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS balance "
+        "SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS balance "
         "FROM transactions "
         "WHERE account_id = ?$dateFilter",
         balanceArgs,
       );
-      final balance = MoneyHelper.readMoney(result.first['balance']);
+      final balance = MoneyHelper.readCalculatedMoney(result.first['balance']);
 
       if (balance == 0.0) continue;
       final isDebit = balance > 0;
@@ -928,12 +931,12 @@ class _ReportsScreenState extends State<ReportsScreen>
       totalBalance += signedBalance;
 
       final invRes = await database.rawQuery(
-        "SELECT type, COALESCE(SUM(total),0) as total FROM invoices WHERE cash_box_id=? AND is_return=0${_dateFilter()} GROUP BY type",
+        "SELECT type, CAST(COALESCE(SUM(total), 0) AS INTEGER) as total FROM invoices WHERE cash_box_id=? AND is_return=0${_dateFilter()} GROUP BY type",
         [cbId, ..._dateArgs()]);
       double salesTotal = 0, purchaseTotal = 0;
       for (final inv in invRes) {
         final t = inv['type'] as String? ?? '';
-        final tot = MoneyHelper.readMoney(inv['total']);
+        final tot = MoneyHelper.readCalculatedMoney(inv['total']);
         if (t == 'sale' || t == 'pos') salesTotal = tot;
         else if (t == 'purchase') purchaseTotal = tot;
       }
@@ -1096,7 +1099,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     final results = await database.rawQuery(
       // FIX: Use COALESCE(average_cost, cost_price) for accurate inventory valuation
       "SELECT p.name_ar, p.barcode, p.item_code, p.current_stock, "
-      "COALESCE(NULLIF(p.average_cost, 0), p.cost_price) AS cost_price, p.sell_price, "
+      "CAST(COALESCE(NULLIF(p.average_cost, 0), p.cost_price) AS INTEGER) AS cost_price, "
+      "CAST(p.sell_price AS INTEGER) AS sell_price, "
       "p.min_stock, p.currency, w.name AS warehouse_name, c.name AS category_name "
       "FROM products p LEFT JOIN warehouses w ON p.warehouse_id=w.id "
       "LEFT JOIN categories c ON p.category_id=c.id "
@@ -1104,7 +1108,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     double totalValue = 0;
     _reportRows = results.map((p) {
       final stock = (p['current_stock'] as num?)?.toDouble() ?? 0;
-      final cost = MoneyHelper.readMoney(p['cost_price']);
+      final cost = MoneyHelper.readCalculatedMoney(p['cost_price']);
       final value = stock * cost;
       totalValue += value;
       return {
@@ -1112,7 +1116,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         'الباركود': p['barcode'] as String? ?? '',
         'الكمية': stock,
         'سعر التكلفة': cost,
-        'سعر البيع': MoneyHelper.readMoney(p['sell_price']),
+        'سعر البيع': MoneyHelper.readCalculatedMoney(p['sell_price']),
         'قيمة المخزون': value,
         'العملة': p['currency'] as String? ?? 'YER',
         'المخزن': p['warehouse_name'] as String? ?? '',
@@ -1174,8 +1178,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     _reportRows = results.map((p) => {
       'الصنف': p['name_ar'] as String? ?? '',
       'الباركود': p['barcode'] as String? ?? '',
-      'سعر التكلفة': MoneyHelper.readMoney(p['cost_price']),
-      'سعر البيع': MoneyHelper.readMoney(p['sell_price']),
+      'سعر التكلفة': MoneyHelper.readCalculatedMoney(p['cost_price']),
+      'سعر البيع': MoneyHelper.readCalculatedMoney(p['sell_price']),
       'المخزن': p['warehouse_name'] as String? ?? '',
       'الفئة': p['category_name'] as String? ?? '',
     }).toList();
@@ -1203,8 +1207,8 @@ class _ReportsScreenState extends State<ReportsScreen>
         'الباركود': p['barcode'] as String? ?? '',
         'الكمية الحالية': stock,
         'الحد الأدنى': min,
-        'سعر التكلفة': MoneyHelper.readMoney(p['cost_price']),
-        'سعر البيع': MoneyHelper.readMoney(p['sell_price']),
+        'سعر التكلفة': MoneyHelper.readCalculatedMoney(p['cost_price']),
+        'سعر البيع': MoneyHelper.readCalculatedMoney(p['sell_price']),
         'المخزن': p['warehouse_name'] as String? ?? '',
         'الفئة': p['category_name'] as String? ?? '',
       };

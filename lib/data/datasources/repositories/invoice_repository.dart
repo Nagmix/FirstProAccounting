@@ -698,8 +698,8 @@ class InvoiceRepository {
       final taxAmount = MoneyHelper.readMoney(invoiceMap['tax_amount']);
       if (taxAmount.abs() >= 0.005) {
         // P-01: Use invoice-level VAT account or product-level if all products share the same one
-        // For simplicity, use the default VAT account (3300 + offset)
-        final vatCode = (3300 + codeOffset).toString();
+        // For simplicity, use the default VAT account (2300 + offset)
+        final vatCode = (2300 + codeOffset).toString();
         final vatRows = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',

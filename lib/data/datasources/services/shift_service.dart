@@ -149,7 +149,7 @@ class ShiftService {
           (1200 + codeOffset).toString(), // Customers
           (2100 + codeOffset).toString(), // Suppliers
           (1100 + codeOffset).toString(), // Cash & Banks
-          (3300 + codeOffset).toString(), // VAT
+          (2300 + codeOffset).toString(), // VAT
         ];
         final placeholders = accountCodes.map((_) => '?').join(',');
         final accountRows = await txn.query(

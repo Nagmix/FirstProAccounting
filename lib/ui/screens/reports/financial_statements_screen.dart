@@ -135,8 +135,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       final equityAccountsList = <Map<String, dynamic>>[];
 
       for (final row in results) {
-        final totalDebitRaw = MoneyHelper.readMoney(row['total_debit']);
-        final totalCreditRaw = MoneyHelper.readMoney(row['total_credit']);
+        // Use readCalculatedMoney for SQL SUM results which may be REAL
+        final totalDebitRaw = MoneyHelper.readCalculatedMoney(row['total_debit']);
+        final totalCreditRaw = MoneyHelper.readCalculatedMoney(row['total_credit']);
         final netBalance = totalDebitRaw - totalCreditRaw;
         final accountType = row['account_type'] as String? ?? '';
         final balanceType = row['balance_type'] as String? ?? 'credit';
