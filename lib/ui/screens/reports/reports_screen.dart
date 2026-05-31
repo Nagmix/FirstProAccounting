@@ -673,18 +673,23 @@ class _ReportsScreenState extends State<ReportsScreen>
     final items = await db.getInvoiceProfitReport(startDate: _dateFrom, endDate: _dateTo);
     double totalProfit = 0, totalRevenue = 0, totalCost = 0;
     _reportRows = items.map((item) {
+      // profit and cost_total are CAST AS INTEGER in SQL, so readMoney works for int results
+      // But for safety with SQL-calculated values, use readCalculatedMoney
       final profit = MoneyHelper.readCalculatedMoney(item['profit']);
       final total = MoneyHelper.readCalculatedMoney(item['sale_total']);
       final cost = MoneyHelper.readCalculatedMoney(item['cost_total']);
       totalProfit += profit;
       totalRevenue += total;
       totalCost += cost;
+      final idStr = (item['invoice_id']?.toString() ?? '');
       return {
-        'رقم الفاتورة': (item['invoice_id']?.toString() ?? '').substring(0, (item['invoice_id']?.toString().length ?? 1).clamp(1, 12)),
+        'رقم الفاتورة': idStr.length > 12 ? idStr.substring(0, 12) : idStr,
+        'الجهة': item['entity_name'] as String? ?? '',
         'إجمالي الفاتورة': total,
         'تكلفة الفاتورة': cost,
         'الربح': profit,
         'هامش الربح': total > 0 ? (profit / total * 100) : 0.0,
+        'العملة': item['currency'] as String? ?? 'YER',
         'التاريخ': item['created_at'] as String? ?? '',
       };
     }).toList();
@@ -770,15 +775,17 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
     double totalSales = 0;
     _reportRows = results.map((r) {
-      final sales = MoneyHelper.readMoney(r['total_sales']);
+      // SUM() results with CAST AS INTEGER may still return REAL from SQLite;
+      // use readCalculatedMoney to always divide by 100
+      final sales = MoneyHelper.readCalculatedMoney(r['total_sales']);
       totalSales += sales;
       return {
         'العميل': r['customer_name'] as String,
         'العملة': r['currency'] as String? ?? 'YER',
         'عدد الفواتير': (r['inv_count'] as num?)?.toInt() ?? 0,
         'إجمالي المبيعات': sales,
-        'المدفوع': MoneyHelper.readMoney(r['total_paid']),
-        'المتبقي': MoneyHelper.readMoney(r['total_remaining']),
+        'المدفوع': MoneyHelper.readCalculatedMoney(r['total_paid']),
+        'المتبقي': MoneyHelper.readCalculatedMoney(r['total_remaining']),
       };
     }).toList();
     _reportTotals = {'إجمالي المبيعات': totalSales, 'عدد العملاء': _reportRows.length.toDouble()};
@@ -1014,6 +1021,10 @@ class _ReportsScreenState extends State<ReportsScreen>
       };
     }).toList();
     _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'العميل': 0};
+    // Add customer name to totals for display
+    if (custName.isNotEmpty) {
+      _reportTotals['اسم العميل'] = 0; // placeholder key for name display
+    }
   }
 
   Future<void> _loadSupplierStatementReport(DatabaseHelper db) async {
@@ -1059,6 +1070,10 @@ class _ReportsScreenState extends State<ReportsScreen>
       };
     }).toList();
     _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'المورد': 0};
+    // Add supplier name to totals for display
+    if (supName.isNotEmpty) {
+      _reportTotals['اسم المورد'] = 0; // placeholder key for name display
+    }
   }
 
   Future<void> _loadExpensesReport(DatabaseHelper db) async {
@@ -1129,34 +1144,44 @@ class _ReportsScreenState extends State<ReportsScreen>
   Future<void> _loadInventoryMovementReport(DatabaseHelper db) async {
     final items = await db.getInventoryMovementReport(startDate: _dateFrom, endDate: _dateTo);
     _reportRows = items.map((item) {
-      final qtyIn = (item['qty_in'] as num?)?.toDouble() ?? 0;
-      final qtyOut = (item['qty_out'] as num?)?.toDouble() ?? 0;
+      final qtyIn = (item['qty_in'] as num?)?.toDouble() ?? 0.0;
+      final qtyOut = (item['qty_out'] as num?)?.toDouble() ?? 0.0;
+      final revenue = MoneyHelper.readCalculatedMoney(item['total_revenue']);
+      final cost = MoneyHelper.readCalculatedMoney(item['total_cost']);
       return {
-        'الصنف': item['product_name'] as String? ?? '',
+        'الصنف': (item['name_ar'] ?? item['product_name']) as String? ?? '',
         'الوارد': qtyIn,
         'الصادر': qtyOut,
         'الصافي': qtyIn - qtyOut,
+        'إجمالي المبيعات': revenue,
+        'إجمالي المشتريات': cost,
       };
     }).toList();
-    final totalIn = _reportRows.fold(0.0, (s, r) => s + (r['الوارد'] as double));
-    final totalOut = _reportRows.fold(0.0, (s, r) => s + (r['الصادر'] as double));
-    _reportTotals = {'إجمالي الوارد': totalIn, 'إجمالي الصادر': totalOut, 'الصافي': totalIn - totalOut};
+    final totalIn = _reportRows.fold(0.0, (s, r) => s + ((r['الوارد'] as num?)?.toDouble() ?? 0.0));
+    final totalOut = _reportRows.fold(0.0, (s, r) => s + ((r['الصادر'] as num?)?.toDouble() ?? 0.0));
+    final totalRevenue = _reportRows.fold(0.0, (s, r) => s + ((r['إجمالي المبيعات'] as num?)?.toDouble() ?? 0.0));
+    final totalCost = _reportRows.fold(0.0, (s, r) => s + ((r['إجمالي المشتريات'] as num?)?.toDouble() ?? 0.0));
+    _reportTotals = {'إجمالي الوارد': totalIn, 'إجمالي الصادر': totalOut, 'الصافي': totalIn - totalOut, 'إجمالي المبيعات': totalRevenue, 'إجمالي المشتريات': totalCost};
   }
 
   Future<void> _loadInventoryCostReport(DatabaseHelper db) async {
     final items = await db.getInventoryCostReport();
     double totalCost = 0, totalSell = 0;
     _reportRows = items.map((item) {
-      final costVal = MoneyHelper.readMoney(item['stock_cost_value']);
-      final sellVal = MoneyHelper.readMoney(item['stock_sell_value']);
+      final costVal = MoneyHelper.readCalculatedMoney(item['stock_cost_value']);
+      final sellVal = MoneyHelper.readCalculatedMoney(item['stock_sell_value']);
       totalCost += costVal;
       totalSell += sellVal;
       return {
-        'الصنف': item['product_name'] as String? ?? '',
+        'الصنف': (item['name_ar'] ?? item['product_name']) as String? ?? '',
+        'الباركود': item['barcode'] as String? ?? '',
         'الكمية': (item['current_stock'] as num?)?.toDouble() ?? 0,
-        'سعر التكلفة': MoneyHelper.readMoney(item['cost_price']),
+        'سعر التكلفة': MoneyHelper.readCalculatedMoney(item['cost_price']),
+        'سعر البيع': MoneyHelper.readCalculatedMoney(item['sell_price']),
         'تكلفة المخزون': costVal,
         'قيمة البيع': sellVal,
+        'الفئة': item['category_name'] as String? ?? '',
+        'المخزن': item['warehouse_name'] as String? ?? '',
       };
     }).toList();
     _reportTotals = {'تكلفة المخزون': totalCost, 'قيمة البيع': totalSell, 'الربح المتوقع': totalSell - totalCost};
@@ -1332,12 +1357,11 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadShiftsReport(DatabaseHelper db) async {
-    final database = await db.database;
     final results = await db.getAllShifts(orderBy: 'opened_at DESC');
     _reportRows = results.map((r) => {
       'رقم الوردية': r['shift_number'] as String? ?? '',
       'الكاشير': r['cashier_name'] as String? ?? '',
-      'الصندوق': '', // would need join
+      'الصندوق': r['cash_box_name'] as String? ?? '',
       'المبيعات': MoneyHelper.readMoney(r['total_sales']),
       'المرتجعات': MoneyHelper.readMoney(r['total_returns']),
       'الخصومات': MoneyHelper.readMoney(r['total_discounts']),

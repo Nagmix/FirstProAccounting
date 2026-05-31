@@ -57,7 +57,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 41;
+  static const int _databaseVersion = 42;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -1104,10 +1104,16 @@ class DatabaseHelper {
     // ── الإيرادات (Revenue) ──
     ['حساب الإيرادات', 'Revenue Account', 4000, 'REVENUE', null],
     ['حساب المبيعات', 'Sales Account', 4100, 'REVENUE', 4000],
+    ['خصم مشتريات مكتسب', 'Purchase Discount Earned', 4600, 'REVENUE', 4000],
     // ── المصروفات (Expenses) ──
     ['حساب المصاريف', 'Expenses Account', 5000, 'EXPENSE', null],
     ['حساب الموظفين', 'Employees Account', 5100, 'EXPENSE', 5000],
     ['اجور النقل', 'Transport Charges', 5200, 'EXPENSE', 5000],
+    ['مصاريف بنكية', 'Bank Charges', 5250, 'EXPENSE', 5000],
+    ['خسائر فروقات الصرف', 'Exchange Rate Losses', 5300, 'EXPENSE', 5000],
+    ['خصم مسموح به', 'Discount Allowed', 5400, 'EXPENSE', 5000],
+    // ── إيرادات أخرى (Other Revenue) ──
+    ['مكاسب فروقات الصرف', 'Exchange Rate Gains', 4700, 'REVENUE', 4000],
   ];
 
   Future<void> _seedDefaultAccounts(Database db) async {
@@ -2727,6 +2733,78 @@ class DatabaseHelper {
         logMigrationError('v41', e);
       }
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Migration v42: Fix account codes and hierarchy
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 42) {
+      try {
+        await _migrateV42(db);
+      } catch (e) {
+        logMigrationError('v42', e);
+      }
+    }
+  }
+
+  /// Migration v42: Fix account codes and hierarchy for dynamically created accounts
+  /// - Rename exchange gains account from 5310 to 4700 (proper REVENUE range)
+  /// - Rename discount allowed from 4500 to 5400 (proper EXPENSE range)
+  /// - Set parent_id for orphaned dynamic accounts
+  Future<void> _migrateV42(Database db) async {
+    final now = DateTime.now().toIso8601String();
+
+    // 1. Rename exchange gains account code 5310 → 4700
+    try {
+      final oldGainRows = await db.query('accounts', where: 'account_code = ?', whereArgs: ['5310']);
+      for (final row in oldGainRows) {
+        final newCodeExists = await db.query('accounts', where: 'account_code = ?', whereArgs: ['4700'], limit: 1);
+        if (newCodeExists.isEmpty) {
+          await db.update('accounts', {'account_code': '4700', 'updated_at': now}, where: 'id = ?', whereArgs: [row['id']]);
+        }
+      }
+    } catch (e) { logMigrationError('v42_exchange_gains', e); }
+
+    // 2. Rename discount allowed account code 4500 → 5400
+    try {
+      final oldDiscountRows = await db.query('accounts', where: 'account_code = ?', whereArgs: ['4500']);
+      for (final row in oldDiscountRows) {
+        final newCodeExists = await db.query('accounts', where: 'account_code = ?', whereArgs: ['5400'], limit: 1);
+        if (newCodeExists.isEmpty) {
+          await db.update('accounts', {'account_code': '5400', 'updated_at': now}, where: 'id = ?', whereArgs: [row['id']]);
+        }
+      }
+    } catch (e) { logMigrationError('v42_discount_code', e); }
+
+    // 3. Set parent_id for orphaned dynamic accounts (5250, 5300, 5400 → parent 5000)
+    try {
+      final expenseRoot = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['5000', 'EXPENSE'], limit: 1);
+      if (expenseRoot.isNotEmpty) {
+        final expenseParentId = expenseRoot.first['id'];
+        final orphanCodes = ['5250', '5300', '5400'];
+        for (final code in orphanCodes) {
+          await db.update('accounts', {'parent_id': expenseParentId, 'updated_at': now},
+            where: 'account_code = ? AND parent_id IS NULL AND account_type = ?', whereArgs: [code, 'EXPENSE']);
+        }
+      }
+    } catch (e) { logMigrationError('v42_expense_parent', e); }
+
+    // 4. Set parent_id for revenue dynamic accounts (4600, 4700 → parent 4000)
+    try {
+      final revenueRoot = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['4000', 'REVENUE'], limit: 1);
+      if (revenueRoot.isNotEmpty) {
+        final revenueParentId = revenueRoot.first['id'];
+        final orphanCodes = ['4600', '4700'];
+        for (final code in orphanCodes) {
+          await db.update('accounts', {'parent_id': revenueParentId, 'updated_at': now},
+            where: 'account_code = ? AND parent_id IS NULL AND account_type = ?', whereArgs: [code, 'REVENUE']);
+        }
+      }
+    } catch (e) { logMigrationError('v42_revenue_parent', e); }
+
+    // 5. Seed missing accounts from updated templates (4600, 4700, 5250, 5300, 5400)
+    try {
+      await _seedDefaultAccounts(db);
+    } catch (e) { logMigrationError('v42_seed_accounts', e); }
   }
 
   /// Migration v39: Fix #9 — Set correct balance_type for existing accounts
@@ -2782,8 +2860,9 @@ class DatabaseHelper {
       }
 
       // Fix old exchange account (5300) that was EXPENSE/credit → now should be EXPENSE/debit
-      // The new separate accounts (5300=losses/debit, 5310=gains/credit) will be created automatically
+      // The new separate accounts (5300=losses/debit, 4700=gains/credit) will be created automatically
       // when getOrCreateExchangeAccount is called next time.
+      // Also fix old 5310 code → 4700 for exchange gains (REVENUE)
       try {
         await txn.execute(
           "UPDATE accounts SET balance_type = 'debit' WHERE account_code = '5300' AND account_type = 'EXPENSE' AND balance_type = 'credit'",
@@ -2930,7 +3009,7 @@ class DatabaseHelper {
           is_active INTEGER NOT NULL DEFAULT 1,
           is_system INTEGER NOT NULL DEFAULT 0,
           debt_ceiling INTEGER NOT NULL DEFAULT 0,
-          balance_type TEXT NOT NULL DEFAULT 'credit',
+          balance_type TEXT NOT NULL DEFAULT 'debit',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           FOREIGN KEY (parent_id) REFERENCES accounts (id)

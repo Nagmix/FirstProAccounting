@@ -59,6 +59,15 @@ class AccountRepository {
     if (transactions.isNotEmpty) {
       return -3; // Cannot delete account with transactions
     }
+    // Check for voucher items referencing this account
+    try {
+      final voucherItems = await db.query('voucher_items', where: 'account_id = ?', whereArgs: [id], limit: 1);
+      if (voucherItems.isNotEmpty) {
+        return -4; // Cannot delete account with voucher items
+      }
+    } catch (_) {
+      // voucher_items table may not exist in older databases
+    }
     // Remove linked_cash_box_id references
     await db.rawUpdate('UPDATE cash_boxes SET linked_account_id = NULL WHERE linked_account_id = ?', [id]);
     return await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
@@ -146,7 +155,7 @@ class AccountRepository {
 
         // Find the Opening Balance Equity account for this currency
         final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[currency] ?? 0;
-        final obCode = (3900 + codeOffset).toString();
+        final obCode = (2200 + codeOffset).toString();
         final obAccounts = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',

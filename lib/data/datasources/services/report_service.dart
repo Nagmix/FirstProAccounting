@@ -328,10 +328,10 @@ class ReportService {
 
     return await db.rawQuery(
       "SELECT p.id AS product_id, p.name_ar, p.item_code, p.current_stock, "
-      "COALESCE(sales_data.qty_out, 0.0) AS qty_out, "
-      "COALESCE(sales_data.revenue, 0.0) AS total_revenue, "
-      "COALESCE(purchase_data.qty_in, 0.0) AS qty_in, "
-      "COALESCE(purchase_data.cost, 0.0) AS total_cost "
+      "COALESCE(sales_data.qty_out, 0) AS qty_out, "
+      "CAST(COALESCE(sales_data.revenue, 0) AS INTEGER) AS total_revenue, "
+      "COALESCE(purchase_data.qty_in, 0) AS qty_in, "
+      "CAST(COALESCE(purchase_data.cost, 0) AS INTEGER) AS total_cost "
       "FROM products p "
       "LEFT JOIN ("
       "  SELECT ii.product_id, SUM(ii.quantity) AS qty_out, SUM(ii.total_price) AS revenue "

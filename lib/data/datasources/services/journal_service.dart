@@ -376,7 +376,7 @@ class JournalService {
   /// LOSSES account (for debits), depending on [isGain].
   Future<int> getOrCreateExchangeAccount({bool isGain = true}) async {
     final db = await _db;
-    final code = isGain ? '5310' : '5300';
+    final code = isGain ? '4700' : '5300';
     final existing = await db.query(
       'accounts',
       where: 'account_code = ? AND is_system = 1',
@@ -388,15 +388,19 @@ class JournalService {
     // Create new account
     final now = DateTime.now().toIso8601String();
     if (isGain) {
-      // Exchange Gains → REVENUE / credit nature
+      // Exchange Gains → REVENUE / credit nature (code 4700 under Revenue root 4000)
+      // Find parent REVENUE root account
+      final parentRows = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['4000', 'REVENUE'], limit: 1);
+      final parentId = parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
       final id = await db.insert('accounts', {
         'name_ar': 'مكاسب فروقات الصرف',
         'name_en': 'Exchange Rate Gains',
-        'account_code': '5310',
+        'account_code': '4700',
         'account_type': 'REVENUE',
         'balance': 0,
         'currency': 'YER',
         'balance_type': 'credit',
+        'parent_id': parentId,
         'is_active': 1,
         'is_system': 1,
         'created_at': now,
@@ -404,7 +408,9 @@ class JournalService {
       });
       return id;
     } else {
-      // Exchange Losses → EXPENSE / debit nature
+      // Exchange Losses → EXPENSE / debit nature (code 5300 under Expenses root 5000)
+      final parentRows = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['5000', 'EXPENSE'], limit: 1);
+      final parentId = parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
       final id = await db.insert('accounts', {
         'name_ar': 'خسائر فروقات الصرف',
         'name_en': 'Exchange Rate Losses',
@@ -413,6 +419,7 @@ class JournalService {
         'balance': 0,
         'currency': 'YER',
         'balance_type': 'debit',
+        'parent_id': parentId,
         'is_active': 1,
         'is_system': 1,
         'created_at': now,

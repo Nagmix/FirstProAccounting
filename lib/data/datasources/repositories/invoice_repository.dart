@@ -817,8 +817,8 @@ class InvoiceRepository {
       // M-01: الخصومات — إنشاء قيد مستقل لحساب "خصم مسموح به"
       final discountAmount = MoneyHelper.readMoney(invoiceMap['discount_amount']);
       if (discountAmount.abs() >= 0.005 && (invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
-        // البحث عن حساب خصم مسموح به (4500+offset) أو إنشاؤه
-        final discountCode = (4500 + codeOffset).toString();
+        // البحث عن حساب خصم مسموح به (5400+offset) أو إنشاؤه
+        final discountCode = (5400 + codeOffset).toString();
         final discountAccount = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',
@@ -829,6 +829,14 @@ class InvoiceRepository {
         if (discountAccount.isNotEmpty) {
           discountAccountId = discountAccount.first['id'] as int;
         } else {
+          // Find parent account for hierarchy
+          final parentRows = await txn.query(
+            'accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(5000 + codeOffset).toString(), journalCurrency],
+            limit: 1,
+          );
+          final discountParentId = parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
           discountAccountId = await txn.insert('accounts', {
             'name_ar': 'خصم مسموح به ($journalCurrency)',
             'name_en': 'Discount Allowed ($journalCurrency)',
@@ -837,6 +845,7 @@ class InvoiceRepository {
             'balance': 0,
             'currency': journalCurrency,
             'balance_type': 'debit',
+            'parent_id': discountParentId,
             'is_active': 1,
             'is_system': 1,
             'created_at': now,
@@ -887,6 +896,14 @@ class InvoiceRepository {
         if (purchaseDiscountRows.isNotEmpty) {
           purchaseDiscountAccountId = purchaseDiscountRows.first['id'] as int;
         } else {
+          // Find parent account for hierarchy
+          final revParentRows = await txn.query(
+            'accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(4000 + codeOffset).toString(), journalCurrency],
+            limit: 1,
+          );
+          final pdParentId = revParentRows.isNotEmpty ? revParentRows.first['id'] as int : null;
           purchaseDiscountAccountId = await txn.insert('accounts', {
             'name_ar': 'خصم مشتريات مكتسب ($journalCurrency)',
             'name_en': 'Purchase Discount Earned ($journalCurrency)',
@@ -895,6 +912,7 @@ class InvoiceRepository {
             'balance': 0,
             'currency': journalCurrency,
             'balance_type': 'credit',
+            'parent_id': pdParentId,
             'is_active': 1,
             'is_system': 1,
             'created_at': now,
