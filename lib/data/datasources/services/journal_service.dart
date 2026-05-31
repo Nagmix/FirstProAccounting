@@ -151,13 +151,13 @@ class JournalService {
         accountRow.first['balance_type'] as String? ?? 'credit';
 
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(debit) - SUM(credit), 0.0) AS net_debit, '
-      'COALESCE(SUM(credit) - SUM(debit), 0.0) AS net_credit '
+      'SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS net_debit, '
+      'CAST(COALESCE(SUM(credit) - SUM(debit), 0) AS INTEGER) AS net_credit '
       'FROM transactions WHERE account_id = ?',
       [accountId],
     );
-    final netDebit = MoneyHelper.readMoney(result.first['net_debit']);
-    final netCredit = MoneyHelper.readMoney(result.first['net_credit']);
+    final netDebit = MoneyHelper.readCalculatedMoney(result.first['net_debit']);
+    final netCredit = MoneyHelper.readCalculatedMoney(result.first['net_credit']);
 
     // For debit-balance accounts (ASSET, COST): balance = debit - credit
     // For credit-balance accounts (LIABILITY, REVENUE, EXPENSE): balance = credit - debit
@@ -185,11 +185,11 @@ class JournalService {
     final balanceType = accountRow.first['balance_type'] as String? ?? 'credit';
 
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(debit), 0) AS total_debit, COALESCE(SUM(credit), 0) AS total_credit FROM transactions WHERE account_id = ?",
+      "SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit FROM transactions WHERE account_id = ?",
       [accountId],
     );
-    final totalDebit = MoneyHelper.readMoney(result.first['total_debit']);
-    final totalCredit = MoneyHelper.readMoney(result.first['total_credit']);
+    final totalDebit = MoneyHelper.readCalculatedMoney(result.first['total_debit']);
+    final totalCredit = MoneyHelper.readCalculatedMoney(result.first['total_credit']);
 
     // الرصيد حسب طبيعة الحساب
     if (balanceType == 'debit') {

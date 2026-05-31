@@ -1807,24 +1807,24 @@ class InvoiceRepository {
   Future<double> getTotalSalesForDate(DateTime date) async {
     final db = await _db;
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) = ?", [dateStr]);
-    return MoneyHelper.readMoney(result.first['total']);
+    final result = await db.rawQuery("SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) = ?", [dateStr]);
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
   Future<double> getTotalPurchasesThisMonth() async {
     final db = await _db;
     final now = DateTime.now();
     final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('purchase', 'purchase_return') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
-    return MoneyHelper.readMoney(result.first['total']);
+    final result = await db.rawQuery("SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS total FROM invoices WHERE type IN ('purchase', 'purchase_return') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
   Future<double> getTotalSalesThisMonth() async {
     final db = await _db;
     final now = DateTime.now();
     final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
-    return MoneyHelper.readMoney(result.first['total']);
+    final result = await db.rawQuery("SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS total FROM invoices WHERE type IN ('sale', 'sale_return', 'pos') AND is_return = 0 AND date(created_at) >= ?", [monthStart]);
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
   /// Calculate Cost of Goods Sold (COGS) for the current month.
@@ -1847,7 +1847,7 @@ class InvoiceRepository {
         "AND date(i.created_at) >= ?",
         [monthStart],
       );
-      return MoneyHelper.readMoney(result.first['total_cogs']);
+      return MoneyHelper.readCalculatedMoney(result.first['total_cogs']);
     } catch (e) {
       return 0.0;
     }

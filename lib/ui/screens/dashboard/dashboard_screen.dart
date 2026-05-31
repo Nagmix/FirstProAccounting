@@ -98,12 +98,12 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       if (mounted) {
         setState(() {
-          _todaySales = MoneyHelper.readMoney(results[0]);
+          _todaySales = results[0] as double; // already converted by getTotalSalesForDate
           _todayInvoiceCount = (results[1] as num?)?.toInt() ?? 0;
           _recentInvoices =
               (results[2] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
                   [];
-          _yesterdaySales = MoneyHelper.readMoney(results[3]);
+          _yesterdaySales = results[3] as double; // already converted by getTotalSalesForDate
           _isLoading = false;
         });
 

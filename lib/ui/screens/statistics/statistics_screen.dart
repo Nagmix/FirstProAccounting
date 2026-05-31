@@ -61,7 +61,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
       final now = DateTime.now();
       final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
       final topCustomersResult = await dbInstance.rawQuery('''
-        SELECT c.id, c.name, COALESCE(SUM(i.total), 0.0) AS total_sales
+        SELECT c.id, c.name, CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total_sales
         FROM customers c
         LEFT JOIN invoices i ON i.customer_id = c.id AND i.type IN ('sale', 'pos') AND i.is_return = 0 AND date(i.created_at) >= ?
         GROUP BY c.id
@@ -71,7 +71,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
       ''', [monthStart]);
 
       final currencyBreakdownResult = await dbInstance.rawQuery('''
-        SELECT i.currency, COALESCE(SUM(i.total), 0.0) AS total
+        SELECT i.currency, CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total
         FROM invoices i
         WHERE i.is_return = 0 AND date(i.created_at) >= ?
         GROUP BY i.currency
@@ -80,11 +80,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
 
       if (mounted) {
         setState(() {
-          _monthSales = MoneyHelper.readMoney(results[0]);
-          _monthPurchases = MoneyHelper.readMoney(results[1]);
-          _monthExpenses = MoneyHelper.readMoney(results[2]);
-          _monthCOGS = MoneyHelper.readMoney(results[6]); // Real COGS from invoice_items
-          _cashBalance = MoneyHelper.readMoney(results[4]);
+          _monthSales = results[0] as double; // already converted by getTotalSalesThisMonth
+          _monthPurchases = results[1] as double; // already converted by getTotalPurchasesThisMonth
+          _monthExpenses = results[2] as double; // already converted by getTotalExpensesThisMonth
+          _monthCOGS = results[6] as double; // Real COGS from invoice_items (already converted by repository)
+          _cashBalance = results[4] as double; // already converted by getCashBalance
           _recentActivity = results[5] as List<Map<String, dynamic>>;
           _topCustomers = topCustomersResult;
           _currencyBreakdown = currencyBreakdownResult;
@@ -656,7 +656,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     }
 
     final maxSale = _topCustomers.isNotEmpty
-        ? MoneyHelper.readMoney(_topCustomers.first['total_sales'], fallback: 1.0)
+        ? MoneyHelper.readCalculatedMoney(_topCustomers.first['total_sales'], fallback: 1.0)
         : 1.0;
 
     return Padding(
@@ -673,7 +673,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
             final index = entry.key;
             final customer = entry.value;
             final name = customer['name'] as String? ?? '—';
-            final sales = MoneyHelper.readMoney(customer['total_sales']);
+            final sales = MoneyHelper.readCalculatedMoney(customer['total_sales']);
             final progress = maxSale > 0 ? sales / maxSale : 0.0;
             final rankColor = index == 0
                 ? AppColors.warning
@@ -780,7 +780,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
         child: Column(
           children: _currencyBreakdown.map((item) {
             final code = item['currency'] as String? ?? 'YER';
-            final total = MoneyHelper.readMoney(item['total']);
+            final total = MoneyHelper.readCalculatedMoney(item['total']);
             final symbol = currencySymbols[code] ?? code;
 
             return Padding(

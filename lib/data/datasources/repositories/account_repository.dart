@@ -270,33 +270,33 @@ class AccountRepository {
 
     // REVENUE accounts have credit normal balance → revenue = credit - debit
     final revenueResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(t.credit) - SUM(t.debit), 0.0) as total
+      SELECT CAST(COALESCE(SUM(t.credit) - SUM(t.debit), 0) AS INTEGER) as total
       FROM transactions t
       INNER JOIN accounts a ON t.account_id = a.id
       WHERE a.account_type = 'REVENUE' AND a.is_active = 1
       AND t.date >= ? AND t.date <= ?
     ''', [yearStart, yearEnd]);
-    final totalRevenue = MoneyHelper.readMoney(revenueResult.first['total']);
+    final totalRevenue = MoneyHelper.readCalculatedMoney(revenueResult.first['total']);
 
     // COST accounts have debit normal balance → cost = debit - credit
     final costResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
+      SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) as total
       FROM transactions t
       INNER JOIN accounts a ON t.account_id = a.id
       WHERE a.account_type = 'COST' AND a.is_active = 1
       AND t.date >= ? AND t.date <= ?
     ''', [yearStart, yearEnd]);
-    final totalCosts = MoneyHelper.readMoney(costResult.first['total']);
+    final totalCosts = MoneyHelper.readCalculatedMoney(costResult.first['total']);
 
     // EXPENSE accounts have debit normal balance → expense = debit - credit
     final expenseResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(t.debit) - SUM(t.credit), 0.0) as total
+      SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) as total
       FROM transactions t
       INNER JOIN accounts a ON t.account_id = a.id
       WHERE a.account_type = 'EXPENSE' AND a.is_active = 1
       AND t.date >= ? AND t.date <= ?
     ''', [yearStart, yearEnd]);
-    final totalExpenses = MoneyHelper.readMoney(expenseResult.first['total']);
+    final totalExpenses = MoneyHelper.readCalculatedMoney(expenseResult.first['total']);
 
     final netProfit = totalRevenue - totalCosts - totalExpenses;
 
@@ -375,13 +375,13 @@ class AccountRepository {
       /// positive for credit-type (REVENUE, LIABILITY, EQUITY).
       Future<double> calcNormalBalance(int accountId, String accountType) async {
         final result = await txn.rawQuery(
-          "SELECT COALESCE(SUM(debit), 0) AS total_debit, COALESCE(SUM(credit), 0) AS total_credit "
+          "SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit "
           "FROM transactions "
           "WHERE account_id = ? AND date >= ? AND date <= ?",
           [accountId, yearStart, yearEnd],
         );
-        final totalDebit = MoneyHelper.readMoney(result.first['total_debit']);
-        final totalCredit = MoneyHelper.readMoney(result.first['total_credit']);
+        final totalDebit = MoneyHelper.readCalculatedMoney(result.first['total_debit']);
+        final totalCredit = MoneyHelper.readCalculatedMoney(result.first['total_credit']);
         // Credit-type accounts: normal balance = credit - debit (positive)
         // Debit-type accounts: normal balance = debit - credit (positive)
         const creditTypes = ['REVENUE', 'LIABILITY', 'EQUITY'];

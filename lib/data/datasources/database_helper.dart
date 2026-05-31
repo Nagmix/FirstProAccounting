@@ -1968,10 +1968,10 @@ class DatabaseHelper {
       for (final row in affectedAccounts) {
         final accountId = row['id'] as int;
         final txResult = await db.rawQuery(
-          'SELECT COALESCE(SUM(debit) - SUM(credit), 0) AS net_debit FROM transactions WHERE account_id = ?',
+          'SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS net_debit FROM transactions WHERE account_id = ?',
           [accountId],
         );
-        final correctBalance = MoneyHelper.readMoney(txResult.first['net_debit']);
+        final correctBalance = MoneyHelper.readCalculatedMoney(txResult.first['net_debit']);
         await db.update(
           'accounts',
           {'balance': MoneyHelper.toCents(correctBalance), 'updated_at': DateTime.now().toIso8601String()},
@@ -2457,11 +2457,11 @@ class DatabaseHelper {
       for (final row in expenseAccounts) {
         final accountId = row['id'] as int;
         final txResult = await db.rawQuery(
-          'SELECT COALESCE(SUM(debit), 0) AS total_debit, COALESCE(SUM(credit), 0) AS total_credit FROM transactions WHERE account_id = ?',
+          'SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit FROM transactions WHERE account_id = ?',
           [accountId],
         );
-        final totalDebit = MoneyHelper.readMoney(txResult.first['total_debit']);
-        final totalCredit = MoneyHelper.readMoney(txResult.first['total_credit']);
+        final totalDebit = MoneyHelper.readCalculatedMoney(txResult.first['total_debit']);
+        final totalCredit = MoneyHelper.readCalculatedMoney(txResult.first['total_credit']);
         // EXPENSE is debit-nature: balance = debit - credit
         final correctBalance = totalDebit - totalCredit;
         await db.update(
@@ -2493,11 +2493,11 @@ class DatabaseHelper {
       for (final row in equityAccounts) {
         final accountId = row['id'] as int;
         final txResult = await db.rawQuery(
-          'SELECT COALESCE(SUM(debit), 0) AS total_debit, COALESCE(SUM(credit), 0) AS total_credit FROM transactions WHERE account_id = ?',
+          'SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit FROM transactions WHERE account_id = ?',
           [accountId],
         );
-        final totalDebit = MoneyHelper.readMoney(txResult.first['total_debit']);
-        final totalCredit = MoneyHelper.readMoney(txResult.first['total_credit']);
+        final totalDebit = MoneyHelper.readCalculatedMoney(txResult.first['total_debit']);
+        final totalCredit = MoneyHelper.readCalculatedMoney(txResult.first['total_credit']);
         // EQUITY is credit-nature: balance = credit - debit
         final correctBalance = totalCredit - totalDebit;
         await db.update(

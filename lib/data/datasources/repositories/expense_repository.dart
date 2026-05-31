@@ -71,21 +71,21 @@ class ExpenseRepository {
     final db = await _db;
     final now = DateTime.now();
     final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE date(expense_date) >= ?", [monthStart]);
-    return MoneyHelper.readMoney(result.first['total']);
+    final result = await db.rawQuery("SELECT CAST(COALESCE(SUM(amount_base), 0) AS INTEGER) AS total FROM expenses WHERE date(expense_date) >= ?", [monthStart]);
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
   Future<double> getTotalExpensesByCategory(String category) async {
     final db = await _db;
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE category = ?", [category]);
-    return MoneyHelper.readMoney(result.first['total']);
+    final result = await db.rawQuery("SELECT CAST(COALESCE(SUM(amount_base), 0) AS INTEGER) AS total FROM expenses WHERE category = ?", [category]);
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
   Future<double> getTotalExpensesForDate(DateTime date) async {
     final db = await _db;
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final result = await db.rawQuery("SELECT COALESCE(SUM(amount_base), 0) AS total FROM expenses WHERE date(expense_date) = ?", [dateStr]);
-    return MoneyHelper.readMoney(result.first['total']);
+    final result = await db.rawQuery("SELECT CAST(COALESCE(SUM(amount_base), 0) AS INTEGER) AS total FROM expenses WHERE date(expense_date) = ?", [dateStr]);
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
   /// Save expense with journal entry.

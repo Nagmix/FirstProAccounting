@@ -46,8 +46,8 @@ class CashBoxService {
 
   Future<double> getTotalCashBalance() async {
     final db = await _db;
-    final result = await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN balance_type = 'credit' THEN balance ELSE -balance END), 0) AS total FROM cash_boxes WHERE is_active = 1");
-    return MoneyHelper.readMoney(result.first['total']);
+    final result = await db.rawQuery("SELECT CAST(COALESCE(SUM(CASE WHEN balance_type = 'credit' THEN balance ELSE -balance END), 0) AS INTEGER) AS total FROM cash_boxes WHERE is_active = 1");
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
   /// جلب الصناديق حسب العملة
