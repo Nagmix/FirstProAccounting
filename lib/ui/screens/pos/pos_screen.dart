@@ -13,6 +13,7 @@ import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/services/report_service.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
 
@@ -267,14 +268,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     final db = DatabaseHelper();
     final today = DateTime.now();
     final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    final dbInstance = await db.database;
-    final result = await dbInstance.rawQuery(
-      "SELECT ii.product_id, ii.product_name, SUM(ii.quantity) AS total_qty "
-      "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id = i.id "
-      "WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 AND i.created_at LIKE ? "
-      "GROUP BY ii.product_id ORDER BY total_qty DESC LIMIT 5",
-      ['$todayStr%'],
-    );
+    final reportService = ReportService(db);
+    final result = await reportService.getTopSellersToday(todayStr);
     if (mounted) {
       setState(() => _topSellers = result);
     }
@@ -2006,12 +2001,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       final now = DateTime.now();
 
                       // Get next shift number
-                      final dbInstance = await db.database;
-                      final countResult = await dbInstance.rawQuery(
-                        "SELECT COUNT(*) as cnt FROM shifts WHERE date(opened_at) = date(?)",
-                        [now.toIso8601String()],
-                      );
-                      final shiftNum = (countResult.first['cnt'] as int) + 1;
+                      final reportService = ReportService(db);
+                      final shiftNum = await reportService.getShiftCountForDate(now) + 1;
 
                       final shiftMap = {
                         'shift_number': shiftNum,

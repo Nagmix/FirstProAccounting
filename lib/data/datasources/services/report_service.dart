@@ -1147,4 +1147,71 @@ class ReportService {
       return 0;
     }
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Statistics screen query methods
+  //  Extracted from statistics_screen.dart — raw SQL, no MoneyHelper.
+  //  All monetary values are returned as raw DB values.
+  //  The caller is responsible for converting using
+  //  MoneyHelper.readMoney / readCalculatedMoney.
+  // ══════════════════════════════════════════════════════════════
+
+  /// أفضل العملاء مبيعات — top customers by sales amount since [monthStart].
+  /// Returns rows with: id, name, total_sales.
+  Future<List<Map<String, dynamic>>> getTopCustomersBySales(String monthStart, {int limit = 5}) async {
+    final db = await _db;
+    return await db.rawQuery('''
+      SELECT c.id, c.name, CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total_sales
+      FROM customers c
+      LEFT JOIN invoices i ON i.customer_id = c.id AND i.type IN ('sale', 'pos') AND i.is_return = 0 AND date(i.created_at) >= ?
+      GROUP BY c.id
+      HAVING total_sales > 0
+      ORDER BY total_sales DESC
+      LIMIT ?
+    ''', [monthStart, limit]);
+  }
+
+  /// توزيع العملات — invoice currency breakdown since [monthStart].
+  /// Returns rows with: currency, total.
+  Future<List<Map<String, dynamic>>> getInvoiceCurrencyBreakdown(String monthStart) async {
+    final db = await _db;
+    return await db.rawQuery('''
+      SELECT i.currency, CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total
+      FROM invoices i
+      WHERE i.is_return = 0 AND date(i.created_at) >= ?
+      GROUP BY i.currency
+      ORDER BY total DESC
+    ''', [monthStart]);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  POS screen query methods
+  //  Extracted from pos_screen.dart — raw SQL, no MoneyHelper.
+  //  All monetary values are returned as raw DB values.
+  // ══════════════════════════════════════════════════════════════
+
+  /// الأكثر مبيعاً اليوم — top selling products for a given day.
+  /// [todayStr] should be in 'YYYY-MM-DD' format.
+  /// Returns rows with: product_id, product_name, total_qty.
+  Future<List<Map<String, dynamic>>> getTopSellersToday(String todayStr, {int limit = 5}) async {
+    final db = await _db;
+    return await db.rawQuery(
+      "SELECT ii.product_id, ii.product_name, SUM(ii.quantity) AS total_qty "
+      "FROM invoice_items ii INNER JOIN invoices i ON ii.invoice_id = i.id "
+      "WHERE i.type IN ('sale', 'pos') AND i.is_return = 0 AND i.created_at LIKE ? "
+      "GROUP BY ii.product_id ORDER BY total_qty DESC LIMIT ?",
+      ['$todayStr%', limit],
+    );
+  }
+
+  /// عدد الورديات اليوم — count of shifts opened on a given date.
+  /// Used for shift number generation.
+  Future<int> getShiftCountForDate(DateTime date) async {
+    final db = await _db;
+    final result = await db.rawQuery(
+      "SELECT COUNT(*) as cnt FROM shifts WHERE date(opened_at) = date(?)",
+      [date.toIso8601String()],
+    );
+    return (result.first['cnt'] as int?) ?? 0;
+  }
 }

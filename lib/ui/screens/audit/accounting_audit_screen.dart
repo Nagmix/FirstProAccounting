@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/services/audit_service.dart';
 
 /// Accounting audit screen that verifies all operations are linked to
 /// the Chart of Accounts by currency, checks trial balance, and
@@ -44,82 +45,28 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final db = await DatabaseHelper().database;
+      final auditService = AuditService(DatabaseHelper());
 
       // 1. Trial Balance by Currency
-      final trialBalance = await db.rawQuery('''
-        SELECT a.currency,
-               COUNT(DISTINCT a.id) AS account_count,
-               COALESCE(SUM(t.debit), 0.0) AS total_debit,
-               COALESCE(SUM(t.credit), 0.0) AS total_credit,
-               COALESCE(SUM(t.debit), 0.0) - COALESCE(SUM(t.credit), 0.0) AS balance_diff
-        FROM accounts a
-        LEFT JOIN transactions t ON t.account_id = a.id
-        WHERE a.is_active = 1
-        GROUP BY a.currency
-        ORDER BY a.currency
-      ''');
+      final trialBalance = await auditService.getTrialBalanceByCurrency();
 
       // 2. Account Summary by Currency and Type
-      final accountSummary = await db.rawQuery('''
-        SELECT a.currency, a.account_type,
-               COUNT(*) AS count,
-               COALESCE(SUM(a.balance), 0.0) AS total_balance
-        FROM accounts a
-        WHERE a.is_active = 1
-        GROUP BY a.currency, a.account_type
-        ORDER BY a.currency, a.account_type
-      ''');
+      final accountSummary = await auditService.getAccountSummaryByCurrencyAndType();
 
       // 3. Orphaned Invoices (invoices without journal entries)
-      // NOTE: The transactions table does not have reference_type/reference_id columns,
-      // so we rely on description pattern matching. Invoice IDs are embedded in
-      // transaction descriptions like 'فاتورة مبيعات - {id}'. We use LIKE matching
-      // which is more robust than the previous SUBSTR(t.description, -36) approach.
-      final orphanedInvoices = await db.rawQuery('''
-        SELECT i.id, i.type, i.total, i.currency, i.created_at,
-               CASE WHEN i.customer_id IS NOT NULL THEN c.name
-                    WHEN i.supplier_id IS NOT NULL THEN s.name
-                    ELSE 'بدون عميل/مورد' END AS entity_name
-        FROM invoices i
-        LEFT JOIN customers c ON c.id = i.customer_id
-        LEFT JOIN suppliers s ON s.id = i.supplier_id
-        LEFT JOIN transactions t ON t.description LIKE '%' || i.id || '%' AND t.description LIKE 'فاتورة%'
-        WHERE i.is_return = 0 AND i.total > 0
-          AND t.id IS NULL
-        ORDER BY i.created_at DESC
-        LIMIT 20
-      ''');
+      final orphanedInvoices = await auditService.getOrphanedInvoices();
 
       // 4. Orphaned Expenses (expenses without journal entries to accounts)
-      final orphanedExpenses = await db.rawQuery('''
-        SELECT e.id, e.title, e.amount, e.currency, e.expense_date, e.operation_type
-        FROM expenses e
-        WHERE (e.account_id IS NULL AND e.expense_account_id IS NULL)
-        ORDER BY e.expense_date DESC
-        LIMIT 20
-      ''');
+      final orphanedExpenses = await auditService.getOrphanedExpenses();
 
       // 5. Unbalanced Journal Entries (debit != credit)
-      final unbalancedJournals = await db.rawQuery('''
-        SELECT t.journal_id,
-               COUNT(*) AS entry_count,
-               SUM(t.debit) AS total_debit,
-               SUM(t.credit) AS total_credit,
-               SUM(t.debit) - SUM(t.credit) AS diff
-        FROM transactions t
-        WHERE t.journal_id IS NOT NULL
-        GROUP BY t.journal_id
-        HAVING ABS(SUM(t.debit) - SUM(t.credit)) > 0.01
-        ORDER BY ABS(diff) DESC
-        LIMIT 20
-      ''');
+      final unbalancedJournals = await auditService.getUnbalancedJournals();
 
       // 6. Counts
-      final txCount = await db.rawQuery('SELECT COUNT(*) AS cnt FROM transactions');
-      final accCount = await db.rawQuery('SELECT COUNT(*) AS cnt FROM accounts WHERE is_active = 1');
-      final invCount = await db.rawQuery('SELECT COUNT(*) AS cnt FROM invoices');
-      final expCount = await db.rawQuery('SELECT COUNT(*) AS cnt FROM expenses');
+      final txCount = await auditService.getTransactionCount();
+      final accCount = await auditService.getActiveAccountCount();
+      final invCount = await auditService.getInvoiceCount();
+      final expCount = await auditService.getExpenseCount();
 
       // Check overall balance
       bool isBalanced = true;
@@ -140,10 +87,10 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           _orphanedInvoices = orphanedInvoices;
           _orphanedExpenses = orphanedExpenses;
           _unbalancedJournals = unbalancedJournals;
-          _totalTransactions = (txCount.first['cnt'] as int?) ?? 0;
-          _totalAccounts = (accCount.first['cnt'] as int?) ?? 0;
-          _totalInvoices = (invCount.first['cnt'] as int?) ?? 0;
-          _totalExpenses = (expCount.first['cnt'] as int?) ?? 0;
+          _totalTransactions = txCount;
+          _totalAccounts = accCount;
+          _totalInvoices = invCount;
+          _totalExpenses = expCount;
           _isBalanced = isBalanced;
           _issueCount = issues;
           _isLoading = false;

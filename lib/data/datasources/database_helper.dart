@@ -4209,6 +4209,10 @@ class DatabaseHelper {
   Future<int> getCustomerCount() => customers.getCustomerCount();
   Future<bool> isCustomerOverDebtCeiling(int customerId, double additionalAmount) => customers.isCustomerOverDebtCeiling(customerId, additionalAmount);
   Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) => customers.getTopCustomerBalances(limit);
+  Future<List<Map<String, dynamic>>> getCustomerInvoices(int customerId) => customers.getCustomerInvoices(customerId);
+  Future<List<Map<String, dynamic>>> getCustomerVouchers(int customerId) => customers.getCustomerVouchers(customerId);
+  Future<List<Map<String, dynamic>>> getCustomerReceivableAccounts(String currency) => customers.getCustomerReceivableAccounts(currency);
+  Future<List<Map<String, dynamic>>> getUnlinkedVouchers() => customers.getUnlinkedVouchers();
 
   // ══════════════════════════════════════════════════════════════
   //  Supplier CRUD methods — delegated to SupplierRepository
@@ -4224,6 +4228,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getSupplierMovements(int supplierId) => suppliers.getSupplierMovements(supplierId);
   Future<Map<String, dynamic>?> getSupplierById(int id) => suppliers.getSupplierById(id);
   Future<bool> isSupplierOverDebtCeiling(int supplierId, double additionalAmount) => suppliers.isSupplierOverDebtCeiling(supplierId, additionalAmount);
+  Future<List<Map<String, dynamic>>> getSupplierPayableAccounts(String currency) => suppliers.getSupplierPayableAccounts(currency);
 
   // ══════════════════════════════════════════════════════════════
   //  Cash Boxes & Banks CRUD methods — delegated to CashBoxService
@@ -4686,6 +4691,37 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getTopProducts(int limit, {String? currency}) => reports.getTopProducts(limit, currency: currency);
   /// Monthly cash flow (inflow vs outflow) for a given [year].
   Future<List<Map<String, dynamic>>> getMonthlyCashFlow(int year, {String? currency}) => reports.getMonthlyCashFlow(year, currency: currency);
+  /// Top customers by sales since a given month start date.
+  Future<List<Map<String, dynamic>>> getTopCustomersBySales(String monthStart, {int limit = 5}) => reports.getTopCustomersBySales(monthStart, limit: limit);
+  /// Invoice currency breakdown since a given month start date.
+  Future<List<Map<String, dynamic>>> getInvoiceCurrencyBreakdown(String monthStart) => reports.getInvoiceCurrencyBreakdown(monthStart);
+  /// Top selling products for a given day.
+  Future<List<Map<String, dynamic>>> getTopSellersToday(String todayStr, {int limit = 5}) => reports.getTopSellersToday(todayStr, limit: limit);
+  /// Count of shifts opened on a given date.
+  Future<int> getShiftCountForDate(DateTime date) => reports.getShiftCountForDate(date);
+
+  // ══════════════════════════════════════════════════════════════
+  //  Audit methods — delegated to AuditService
+  // ══════════════════════════════════════════════════════════════
+
+  /// Trial balance grouped by currency.
+  Future<List<Map<String, dynamic>>> getTrialBalanceByCurrency() => audit.getTrialBalanceByCurrency();
+  /// Account summary by currency and type.
+  Future<List<Map<String, dynamic>>> getAccountSummaryByCurrencyAndType() => audit.getAccountSummaryByCurrencyAndType();
+  /// Orphaned invoices (no journal entries).
+  Future<List<Map<String, dynamic>>> getOrphanedInvoices({int limit = 20}) => audit.getOrphanedInvoices(limit: limit);
+  /// Orphaned expenses (no linked accounts).
+  Future<List<Map<String, dynamic>>> getOrphanedExpenses({int limit = 20}) => audit.getOrphanedExpenses(limit: limit);
+  /// Unbalanced journal entries.
+  Future<List<Map<String, dynamic>>> getUnbalancedJournals({int limit = 20}) => audit.getUnbalancedJournals(limit: limit);
+  /// Total transaction count.
+  Future<int> getAuditTransactionCount() => audit.getTransactionCount();
+  /// Active account count.
+  Future<int> getActiveAccountCount() => audit.getActiveAccountCount();
+  /// Total invoice count.
+  Future<int> getAuditInvoiceCount() => audit.getInvoiceCount();
+  /// Total expense count.
+  Future<int> getAuditExpenseCount() => audit.getExpenseCount();
 
   // ══════════════════════════════════════════════════════════════
   //  Inventory Voucher Methods (سندات الجرد) - v22 — delegated to StockService

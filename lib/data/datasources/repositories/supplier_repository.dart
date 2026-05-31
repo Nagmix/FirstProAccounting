@@ -201,4 +201,22 @@ class SupplierRepository {
     final currentBalance = MoneyHelper.readMoney(supplier.first['balance']);
     return (currentBalance + additionalAmount) > debtCeiling;
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Supplier detail / ledger query methods
+  //  Extracted from supplier_detail_screen.dart — raw SQL, no MoneyHelper.
+  //  All monetary values are returned as raw DB values.
+  //  The caller is responsible for converting using
+  //  MoneyHelper.readMoney / readCalculatedMoney.
+  // ══════════════════════════════════════════════════════════════
+
+  /// جلب حسابات الموردين — find supplier payable accounts by currency.
+  /// Returns account rows with matching name pattern.
+  Future<List<Map<String, dynamic>>> getSupplierPayableAccounts(String currency) async {
+    final db = await _db;
+    return await db.rawQuery(
+      "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'LIABILITY' AND currency = ?",
+      ['%الموردين%', currency],
+    );
+  }
 }

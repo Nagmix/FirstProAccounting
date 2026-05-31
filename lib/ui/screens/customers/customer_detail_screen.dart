@@ -8,6 +8,7 @@ import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/models/customer_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
 
@@ -93,15 +94,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   }
 
   Future<void> _loadMovements(DatabaseHelper dbHelper) async {
-    final db = await dbHelper.database;
     final customerId = widget.customer.id!;
+    final customerRepo = dbHelper.customers;
     final movements = <Map<String, dynamic>>[];
 
     // 1. Load invoices for this customer
-    final invoices = await db.rawQuery(
-      'SELECT * FROM invoices WHERE customer_id = ? ORDER BY created_at ASC',
-      [customerId],
-    );
+    final invoices = await customerRepo.getCustomerInvoices(customerId);
 
     for (final inv in invoices) {
       final type = inv['type'] as String? ?? 'sale';
@@ -181,24 +179,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     // 2. Load vouchers linked to this customer via customer_id column
     // Primary: vouchers with customer_id matching this customer
     // Fallback: vouchers with NULL customer_id but items referencing customer accounts
-    final voucherRows = await db.rawQuery(
-      'SELECT * FROM vouchers WHERE customer_id = ? ORDER BY date ASC',
-      [customerId],
-    );
+    final voucherRows = await customerRepo.getCustomerVouchers(customerId);
 
     // Backward compatibility: find vouchers with NULL customer_id that reference
     // this customer's receivable account through voucher items
     final customerCurrency = _freshCustomer?.currency ?? widget.customer.currency;
-    final customerAccounts = await db.rawQuery(
-      "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET' AND currency = ?",
-      ['%العملاء%', customerCurrency],
-    );
+    final customerAccounts = await customerRepo.getCustomerReceivableAccounts(customerCurrency);
     final customerAccountIds = customerAccounts.map((a) => a['id']).toList();
 
     if (customerAccountIds.isNotEmpty) {
-      final unlinkedVouchers = await db.rawQuery(
-        'SELECT * FROM vouchers WHERE customer_id IS NULL ORDER BY date ASC',
-      );
+      final unlinkedVouchers = await customerRepo.getUnlinkedVouchers();
       for (final v in unlinkedVouchers) {
         final voucherId = v['id'] as int?;
         if (voucherId == null) continue;
@@ -521,10 +511,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           final voucherNumber = await dbHelper.getNextVoucherNumber(voucherType);
 
                           // Find the customer's account
-                          final customerAccounts = await db.rawQuery(
-                            "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET' AND currency = ?",
-                            ['%العملاء%', selectedCurrency],
-                          );
+                          final customerAccounts = await dbHelper.customers.getCustomerReceivableAccounts(selectedCurrency);
                           final customerAccountId = customerAccounts.isNotEmpty
                               ? customerAccounts.first['id'] as int
                               : null;

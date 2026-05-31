@@ -5,6 +5,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/services/report_service.dart';
 import '../../widgets/animated_entry.dart';
 import '../../widgets/stat_card.dart';
 import 'advanced_charts_screen.dart';
@@ -46,6 +47,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   Future<void> _loadStatisticsData() async {
     try {
       final db = DatabaseHelper();
+      final reportService = ReportService(db);
 
       final results = await Future.wait([
         db.getTotalSalesThisMonth(),
@@ -57,26 +59,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
         db.getCOGSThisMonth(),  // Real COGS from invoice_items
       ]);
 
-      final dbInstance = await db.database;
       final now = DateTime.now();
       final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-      final topCustomersResult = await dbInstance.rawQuery('''
-        SELECT c.id, c.name, CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total_sales
-        FROM customers c
-        LEFT JOIN invoices i ON i.customer_id = c.id AND i.type IN ('sale', 'pos') AND i.is_return = 0 AND date(i.created_at) >= ?
-        GROUP BY c.id
-        HAVING total_sales > 0
-        ORDER BY total_sales DESC
-        LIMIT 5
-      ''', [monthStart]);
+      final topCustomersResult = await reportService.getTopCustomersBySales(monthStart);
 
-      final currencyBreakdownResult = await dbInstance.rawQuery('''
-        SELECT i.currency, CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total
-        FROM invoices i
-        WHERE i.is_return = 0 AND date(i.created_at) >= ?
-        GROUP BY i.currency
-        ORDER BY total DESC
-      ''', [monthStart]);
+      final currencyBreakdownResult = await reportService.getInvoiceCurrencyBreakdown(monthStart);
 
       if (mounted) {
         setState(() {

@@ -242,4 +242,52 @@ class CustomerRepository {
     final map = await getCustomerById(id);
     return map != null ? Customer.fromMap(map) : null;
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Customer detail / ledger query methods
+  //  Extracted from customer_detail_screen.dart — raw SQL, no MoneyHelper.
+  //  All monetary values are returned as raw DB values.
+  //  The caller is responsible for converting using
+  //  MoneyHelper.readMoney / readCalculatedMoney.
+  // ══════════════════════════════════════════════════════════════
+
+  /// جلب فواتير العميل — all invoices for a specific customer, ordered by date.
+  /// Returns raw invoice rows.
+  Future<List<Map<String, dynamic>>> getCustomerInvoices(int customerId) async {
+    final db = await _db;
+    return await db.rawQuery(
+      'SELECT * FROM invoices WHERE customer_id = ? ORDER BY created_at ASC',
+      [customerId],
+    );
+  }
+
+  /// جلب سندات العميل — all vouchers linked to a specific customer.
+  /// Returns raw voucher rows.
+  Future<List<Map<String, dynamic>>> getCustomerVouchers(int customerId) async {
+    final db = await _db;
+    return await db.rawQuery(
+      'SELECT * FROM vouchers WHERE customer_id = ? ORDER BY date ASC',
+      [customerId],
+    );
+  }
+
+  /// جلب حسابات العملاء — find customer receivable accounts by currency.
+  /// Returns account rows with matching name pattern.
+  Future<List<Map<String, dynamic>>> getCustomerReceivableAccounts(String currency) async {
+    final db = await _db;
+    return await db.rawQuery(
+      "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET' AND currency = ?",
+      ['%العملاء%', currency],
+    );
+  }
+
+  /// جلب السندات غير المرتبطة — find unlinked vouchers (NULL customer_id)
+  /// that reference a customer's receivable account.
+  /// Returns raw voucher rows.
+  Future<List<Map<String, dynamic>>> getUnlinkedVouchers() async {
+    final db = await _db;
+    return await db.rawQuery(
+      'SELECT * FROM vouchers WHERE customer_id IS NULL ORDER BY date ASC',
+    );
+  }
 }

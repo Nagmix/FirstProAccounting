@@ -9,6 +9,7 @@ import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../data/datasources/database_helper.dart';
+import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/models/supplier_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
 
@@ -485,10 +486,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                           final voucherNumber = await dbHelper.getNextVoucherNumber(voucherType);
 
                           // Find the supplier's account
-                          final supplierAccounts = await db.rawQuery(
-                            "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'LIABILITY' AND currency = ?",
-                            ['%الموردين%', selectedCurrency],
-                          );
+                          final supplierAccounts = await dbHelper.suppliers.getSupplierPayableAccounts(selectedCurrency);
                           final supplierAccountId = supplierAccounts.isNotEmpty
                               ? supplierAccounts.first['id'] as int
                               : null;
