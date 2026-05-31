@@ -369,7 +369,7 @@ class ShiftService {
 
         // ── C-01: قيود ضريبة القيمة المضافة (VAT) في ترحيل الورديات ──
         if (taxAmount.abs() >= 0.005 && vatAccountId != null) {
-          if ((invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
+          if ((invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') && !isReturn) {
             // مبيعات عليها ضريبة: مدين المبيعات (تخفيض الإيراد) / دائن ضريبة مستحقة
             if (salesAccountId != null) {
               await txn.insert('transactions', {
@@ -393,7 +393,7 @@ class ShiftService {
               'created_at': now,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
-          } else if ((invoiceType == 'sale' || invoiceType == 'pos') && isReturn) {
+          } else if ((invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') && isReturn) {
             // عكس ضريبة مرتجع مبيعات
             await txn.insert('transactions', {
               'account_id': vatAccountId,
@@ -417,7 +417,7 @@ class ShiftService {
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, taxAmount, now);
             }
-          } else if (invoiceType == 'purchase' && !isReturn) {
+          } else if ((invoiceType == 'purchase' || invoiceType == 'purchase_return') && !isReturn) {
             // مشتريات عليها ضريبة: مدين ضريبة مستحقة / دائن المشتريات (تخفيض التكلفة)
             await txn.insert('transactions', {
               'account_id': vatAccountId,
@@ -441,7 +441,7 @@ class ShiftService {
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, taxAmount, now);
             }
-          } else if (invoiceType == 'purchase' && isReturn) {
+          } else if ((invoiceType == 'purchase' || invoiceType == 'purchase_return') && isReturn) {
             // عكس ضريبة مرتجع مشتريات
             if (purchasesAccountId != null) {
               await txn.insert('transactions', {

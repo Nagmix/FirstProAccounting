@@ -150,6 +150,11 @@ class ExpenseRepository {
         cashAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
       }
 
+      // Prevent unbalanced entry if cash account not found
+      if (cashAccountId == null) {
+        throw Exception('لا يوجد حساب نقدية/بنك للعملة $expenseCurrency. يرجى إنشاء حساب صناديق وبنوك أولاً.');
+      }
+
       final title = expenseMap['title'] as String? ?? 'مصروف';
       final isSarf = operationType == 'صرف';
 

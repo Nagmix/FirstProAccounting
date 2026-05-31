@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
 
@@ -90,7 +91,7 @@ class CashBoxService {
       exchangeId = await txn.insert('currency_exchanges', MoneyHelper.toCentsMap(exchangeMap, ['from_amount', 'to_amount', 'gain_loss']));
 
       // القيود المحاسبية
-      final journalId = DateTime.now().millisecondsSinceEpoch;
+      final journalId = generateUniqueJournalId();
 
       // حساب الصناديق والبنوك للعملة المستلمة (مدين)
       final toCodeOffset = toCurrency == 'SAR' ? 1 : (toCurrency == 'USD' ? 2 : 0);
@@ -140,11 +141,12 @@ class CashBoxService {
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromCashBanksAccountId, 0.0, fromAmount, now);
       }
 
-      // ── C-04: معالجة أرباح/خسائر الصرافة باستخدام حساب فروقات الصرف (5300) ──
+      // ── C-04: معالجة أرباح/خسائر الصرافة باستخدام حساب فروقات الصرف ──
       // لا نستخدم حساب المبيعات (4100) أو المصاريف العامة (5100) لأنها ليست إيراد تشغيلي
       if (gainLoss > 0) {
-        // استخدام حساب فروقات الصرف من journal_service (5300)
-        final exchangeAccountId = await _dbHelper.journal.getOrCreateExchangeAccount();
+        // Use separate gain/loss accounts: 4700 for gains (REVENUE), 5300 for losses (EXPENSE)
+        final isGain = gainLossType == 'gain';
+        final exchangeAccountId = await _dbHelper.journal.getOrCreateExchangeAccount(isGain: isGain);
 
         if (gainLossType == 'gain') {
           // أرباح صرافة: دائن حساب فروقات الصرف (إيراد)
@@ -242,7 +244,7 @@ class CashBoxService {
       transferId = await txn.insert('cash_transfers', MoneyHelper.toCentsMap(transferMap, ['amount']));
 
       // القيود المحاسبية
-      final journalId = DateTime.now().millisecondsSinceEpoch;
+      final journalId = generateUniqueJournalId();
 
       // الحصول على حساب الصندوق المصدر (المرتبط أو الافتراضي)
       int? fromAccountId;
@@ -378,7 +380,7 @@ class CashBoxService {
 
     final db = await _db;
     final now = DateTime.now().toIso8601String();
-    final journalId = DateTime.now().millisecondsSinceEpoch;
+    final journalId = generateUniqueJournalId();
 
     int voucherId = 0;
     await db.transaction((txn) async {
@@ -509,7 +511,7 @@ class CashBoxService {
           // عكس القيد:debit يصبح credit والعكس
           await txn.insert('transactions', {
             'account_id': accountId,
-            'journal_id': DateTime.now().millisecondsSinceEpoch,
+            'journal_id': generateUniqueJournalId(),
             'debit': MoneyHelper.toCents(credit),
             'credit': MoneyHelper.toCents(debit),
             'description': 'عكس سند $voucherNumber',

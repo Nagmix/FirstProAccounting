@@ -308,20 +308,23 @@ class BankReconciliationService {
             ? expenseAccount.first['id'] as int
             : null;
 
-        if (expenseAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': expenseAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(calculated.bankCharges),
-            'credit': 0,
-            'description':
-                'رسوم بنكية - تسوية ${recon.reconciliationNumber}',
-            'date': now,
-            'created_at': now,
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(
-              txn, expenseAccountId, calculated.bankCharges, 0.0, now);
+        // Prevent unbalanced entry if expense account not found
+        if (expenseAccountId == null) {
+          throw Exception('لا يوجد حساب رسوم بنكية (5250) للعملة $currency. يرجى التأكد من إنشاء الحساب.');
         }
+
+        await txn.insert('transactions', {
+          'account_id': expenseAccountId,
+          'journal_id': journalId,
+          'debit': MoneyHelper.toCents(calculated.bankCharges),
+          'credit': 0,
+          'description':
+              'رسوم بنكية - تسوية ${recon.reconciliationNumber}',
+          'date': now,
+          'created_at': now,
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, expenseAccountId, calculated.bankCharges, 0.0, now);
 
         await txn.insert('transactions', {
           'account_id': linkedAccountId,
@@ -379,12 +382,12 @@ class BankReconciliationService {
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, revenueAccountId, 0.0, calculated.interestEarned, now);
-        }
 
-        // Update cash box balance
-        await txn.rawUpdate(
-            'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(calculated.interestEarned), now, cashBoxId]);
+          // Update cash box balance (only inside null check to stay in sync)
+          await txn.rawUpdate(
+              'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
+              [MoneyHelper.toCents(calculated.interestEarned), now, cashBoxId]);
+        }
       }
 
       // Update reconciliation status
