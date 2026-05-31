@@ -420,13 +420,13 @@ class _ReportsScreenState extends State<ReportsScreen>
       switch (_selectedReportKey) {
         // ── SALES & PURCHASES ──
         case 'sales':
-          await _loadSalesReport(typeFilter: "type IN ('sale','pos') AND is_return=0");
+          await _loadSalesReport(typeFilter: "i.type IN ('sale','pos') AND i.is_return=0");
         case 'purchases':
-          await _loadSalesReport(typeFilter: "type='purchase' AND is_return=0");
+          await _loadSalesReport(typeFilter: "i.type='purchase' AND i.is_return=0");
         case 'sales_returns':
-          await _loadSalesReport(typeFilter: "type IN ('sale','pos') AND is_return=1");
+          await _loadSalesReport(typeFilter: "i.type IN ('sale','pos') AND i.is_return=1");
         case 'purchase_returns':
-          await _loadSalesReport(typeFilter: "type='purchase' AND is_return=1");
+          await _loadSalesReport(typeFilter: "i.type='purchase' AND i.is_return=1");
         case 'profit_loss':
           await _loadProfitLossReport();
         case 'invoice_profit':

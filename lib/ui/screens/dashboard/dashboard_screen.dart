@@ -399,7 +399,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           Icon(Icons.receipt_long_rounded, color: Colors.white.withOpacity(0.7), size: 13),
                           const SizedBox(width: 4),
-                          Text('$_viewModel.todayInvoiceCount', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                          Text('${_viewModel.todayInvoiceCount}', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                           const SizedBox(width: 3),
                           Text('فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withOpacity(0.6))),
                         ]),

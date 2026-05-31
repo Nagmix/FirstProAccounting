@@ -1099,19 +1099,19 @@ class ReportService {
     String whereClause = typeFilter;
 
     if (dateFrom != null) {
-      whereClause += ' AND created_at >= ?';
+      whereClause += ' AND i.created_at >= ?';
       args.add(dateFrom.toIso8601String());
     }
     if (dateTo != null) {
-      whereClause += ' AND created_at < ?';
+      whereClause += ' AND i.created_at < ?';
       args.add(dateTo.add(const Duration(days: 1)).toIso8601String());
     }
     if (currency != null && currency.isNotEmpty) {
-      whereClause += ' AND currency = ?';
+      whereClause += ' AND i.currency = ?';
       args.add(currency);
     }
     if (cashBoxId != null) {
-      whereClause += ' AND cash_box_id = ?';
+      whereClause += ' AND i.cash_box_id = ?';
       args.add(cashBoxId);
     }
 
