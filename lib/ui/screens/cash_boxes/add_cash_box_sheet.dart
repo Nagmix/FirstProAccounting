@@ -186,7 +186,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
         if (openingBalance > 0 && _linkedAccountId != null) {
           final codeOffset = _currency == 'SAR' ? 1 : (_currency == 'USD' ? 2 : 0);
           final openingBalanceAccount = await db.getAccountByCodeAndCurrency(
-            (2200 + codeOffset).toString(), _currency,
+            (2901 + codeOffset).toString(), _currency,
           );
           final openingBalanceAccountId = openingBalanceAccount?['id'] as int?;
 

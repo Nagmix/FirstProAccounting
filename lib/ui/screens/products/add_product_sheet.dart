@@ -781,11 +781,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   whereArgs: [(1300 + codeOffset).toString(), currency],
                   limit: 1,
                 );
-                // Find opening balance equity account (2200 + offset)
+                // Find opening balance equity account (2901 + offset)
                 final openingBalanceAccount = await txn.query(
                   'accounts',
                   where: 'account_code = ? AND currency = ?',
-                  whereArgs: [(2200 + codeOffset).toString(), currency],
+                  whereArgs: [(2901 + codeOffset).toString(), currency],
                   limit: 1,
                 );
 

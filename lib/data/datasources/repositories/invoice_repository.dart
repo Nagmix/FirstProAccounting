@@ -4,6 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../models/invoice_model.dart';
+import '../../models/inventory_cost_layer_model.dart';
 import '../database_helper.dart';
 
 class InvoiceRepository {
@@ -215,6 +216,29 @@ class InvoiceRepository {
               'unit_cost': MoneyHelper.toCents(unitPrice),
               'created_at': now,
             });
+
+            // ── FIFO/LIFO: Create cost layer for non-weighted-average products ──
+            // Cost layers enable accurate COGS calculation per FIFO/LIFO method.
+            // For weighted average, the average_cost field is used instead.
+            final costingMethodStr = prodRow.isNotEmpty
+                ? (prodRow.first['costing_method'] as String? ?? 'weighted_average')
+                : 'weighted_average';
+            final costingMethod = CostingMethodExt.fromValue(costingMethodStr);
+            if (costingMethod != CostingMethod.weightedAverage) {
+              // unit cost per base unit = total purchase value / base quantity
+              final unitCostPerBase = baseQuantity > 0 ? (quantity * unitPrice) / baseQuantity : unitPrice;
+              final layer = InventoryCostLayer(
+                productId: productId,
+                warehouseId: invoiceMap['warehouse_id'] as int?,
+                quantityOriginal: baseQuantity,
+                quantityRemaining: baseQuantity,
+                unitCost: unitCostPerBase,
+                acquisitionDate: DateTime.now(),
+                referenceType: 'purchase',
+                referenceId: invoiceIdStr,
+              );
+              await txn.insert('inventory_cost_layers', layer.toMap());
+            }
           } else {
             // Purchase return: stock leaves warehouse (always in base units)
             // Check if product allows negative stock

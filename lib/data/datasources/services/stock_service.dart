@@ -327,8 +327,8 @@ class StockService {
           ? inventoryAccountRows.first['id'] as int
           : null;
 
-      // حساب خسارة تفاوت الجرد (5400+offset) — مصروف
-      final varianceLossCode = (5400 + codeOffset).toString();
+      // حساب خسارة تفاوت الجرد (5500+offset) — مصروف
+      final varianceLossCode = (5500 + codeOffset).toString();
       final varianceLossRows = await txn.query(
         'accounts',
         where: 'account_code = ? AND currency = ?',
@@ -702,8 +702,8 @@ class StockService {
           });
         }
 
-        // حساب خسارة تفاوت الجرد (5400+offset)
-        final varianceLossCode = (5400 + codeOffset).toString();
+        // حساب خسارة تفاوت الجرد (5500+offset)
+        final varianceLossCode = (5500 + codeOffset).toString();
         final varianceLossRows = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',
@@ -1090,8 +1090,8 @@ class StockService {
         });
       }
 
-      // حساب خسارة تفاوت الجرد (5400+offset)
-      final varianceLossCode = (5400 + codeOffset).toString();
+      // حساب خسارة تفاوت الجرد (5500+offset)
+      final varianceLossCode = (5500 + codeOffset).toString();
       final varianceLossRows = await txn.query(
         'accounts',
         where: 'account_code = ? AND currency = ?',

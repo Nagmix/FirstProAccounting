@@ -57,7 +57,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 42;
+  static const int _databaseVersion = 43;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -1095,7 +1095,7 @@ class DatabaseHelper {
     ['ضريبة القيمة المضافة', 'VAT Payable', 2300, 'LIABILITY', 2000],
     // ── حقوق الملكية (Equity) ──
     ['حقوق الملكية', 'Equity Account', 2900, 'EQUITY', null],
-    ['رصيد افتتاحي', 'Opening Balance Equity', 2200, 'EQUITY', 2900],
+    ['رصيد افتتاحي', 'Opening Balance Equity', 2901, 'EQUITY', 2900],
     ['الأرباح المحتجزة', 'Retained Earnings', 2910, 'EQUITY', 2900],
     // ── التكاليف (Costs) ──
     ['حساب التكاليف', 'Cost Account', 3000, 'COST', null],
@@ -1112,8 +1112,10 @@ class DatabaseHelper {
     ['مصاريف بنكية', 'Bank Charges', 5250, 'EXPENSE', 5000],
     ['خسائر فروقات الصرف', 'Exchange Rate Losses', 5300, 'EXPENSE', 5000],
     ['خصم مسموح به', 'Discount Allowed', 5400, 'EXPENSE', 5000],
+    ['خسارة تفاوت الجرد', 'Inventory Variance Loss', 5500, 'EXPENSE', 5000],
     // ── إيرادات أخرى (Other Revenue) ──
     ['مكاسب فروقات الصرف', 'Exchange Rate Gains', 4700, 'REVENUE', 4000],
+    ['إيراد تفاوت الجرد', 'Inventory Variance Income', 4400, 'REVENUE', 4000],
   ];
 
   Future<void> _seedDefaultAccounts(Database db) async {
@@ -1883,8 +1885,8 @@ class DatabaseHelper {
       final newAccountTemplates = [
         // Inventory account (ASSET, code 1300+offset)
         {'baseCode': 1300, 'nameAr': 'المخزون', 'nameEn': 'Inventory Account', 'type': 'ASSET'},
-        // Opening Balance Equity (EQUITY, code 2200+offset) — P-04: was LIABILITY, now EQUITY
-        {'baseCode': 2200, 'nameAr': 'رصيد افتتاحي', 'nameEn': 'Opening Balance Equity', 'type': 'EQUITY'},
+        // Opening Balance Equity (EQUITY, code 2901+offset) — P-04: was LIABILITY, now EQUITY; v43: code moved from 2200 to 2901
+        {'baseCode': 2901, 'nameAr': 'رصيد افتتاحي', 'nameEn': 'Opening Balance Equity', 'type': 'EQUITY'},
         // Retained Earnings (EQUITY, code 2900+offset) — P-04: was LIABILITY, now EQUITY
         {'baseCode': 2900, 'nameAr': 'الأرباح المحتجزة', 'nameEn': 'Retained Earnings', 'type': 'EQUITY'},
         // COGS account (COST, code 3200+offset)
@@ -2744,6 +2746,17 @@ class DatabaseHelper {
         logMigrationError('v42', e);
       }
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Migration v43: Rename Opening Balance Equity code 2200→2901
+    // ══════════════════════════════════════════════════════════════
+    if (oldVersion < 43) {
+      try {
+        await _migrateV43(db);
+      } catch (e) {
+        logMigrationError('v43', e);
+      }
+    }
   }
 
   /// Migration v42: Fix account codes and hierarchy for dynamically created accounts
@@ -2805,6 +2818,83 @@ class DatabaseHelper {
     try {
       await _seedDefaultAccounts(db);
     } catch (e) { logMigrationError('v42_seed_accounts', e); }
+  }
+
+  /// Migration v43: Fix chart of accounts code conflicts and hierarchy
+  /// 1. Rename Opening Balance Equity account code from 2200→2901
+  ///    (move from LIABILITY range to EQUITY sub-range)
+  /// 2. Rename Inventory Variance Loss account code from 5400→5500
+  ///    (5400 conflicts with Discount Allowed)
+  /// 3. Seed new accounts (5500 variance loss, 4400 variance income)
+  /// Applies to all 3 currency offsets: YER(0), SAR(1), USD(2).
+  Future<void> _migrateV43(Database db) async {
+    final now = DateTime.now().toIso8601String();
+    final codeOffsets = [0, 1, 2]; // YER, SAR, USD
+
+    // ── Step 1: Rename Opening Balance Equity 2200 → 2901 ──
+    for (final offset in codeOffsets) {
+      final oldCode = (2200 + offset).toString();
+      final newCode = (2901 + offset).toString();
+
+      try {
+        final oldRows = await db.query('accounts', where: 'account_code = ?', whereArgs: [oldCode]);
+        for (final row in oldRows) {
+          final currency = row['currency'] as String? ?? 'YER';
+          final newCodeExists = await db.query('accounts',
+              where: 'account_code = ? AND currency = ?', whereArgs: [newCode, currency], limit: 1);
+
+          if (newCodeExists.isEmpty) {
+            await db.update('accounts',
+                {'account_code': newCode, 'updated_at': now},
+                where: 'id = ?', whereArgs: [row['id']]);
+          } else {
+            final oldAccountId = row['id'] as int;
+            final newAccountId = newCodeExists.first['id'] as int;
+            await db.update('transactions',
+                {'account_id': newAccountId},
+                where: 'account_id = ?', whereArgs: [oldAccountId]);
+            await db.delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
+          }
+        }
+      } catch (e) { logMigrationError('v43_rename_2200_$offset', e); }
+    }
+
+    // ── Step 2: Rename Inventory Variance Loss 5400 → 5500 ──
+    // Only rename EXPENSE accounts at code 5400 that are "خسارة تفاوت الجرد"
+    // (do NOT touch "خصم مسموح به" / Discount Allowed which is the correct 5400)
+    for (final offset in codeOffsets) {
+      final oldCode = (5400 + offset).toString();
+      final newCode = (5500 + offset).toString();
+
+      try {
+        final oldRows = await db.query('accounts',
+            where: "account_code = ? AND (name_ar LIKE '%تفاوت%' OR name_en LIKE '%Variance%')",
+            whereArgs: [oldCode]);
+        for (final row in oldRows) {
+          final currency = row['currency'] as String? ?? 'YER';
+          final newCodeExists = await db.query('accounts',
+              where: 'account_code = ? AND currency = ?', whereArgs: [newCode, currency], limit: 1);
+
+          if (newCodeExists.isEmpty) {
+            await db.update('accounts',
+                {'account_code': newCode, 'updated_at': now},
+                where: 'id = ?', whereArgs: [row['id']]);
+          } else {
+            final oldAccountId = row['id'] as int;
+            final newAccountId = newCodeExists.first['id'] as int;
+            await db.update('transactions',
+                {'account_id': newAccountId},
+                where: 'account_id = ?', whereArgs: [oldAccountId]);
+            await db.delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
+          }
+        }
+      } catch (e) { logMigrationError('v43_rename_variance_5400_$offset', e); }
+    }
+
+    // ── Step 3: Seed new/missing accounts from updated templates ──
+    try {
+      await _seedDefaultAccounts(db);
+    } catch (e) { logMigrationError('v43_seed_accounts', e); }
   }
 
   /// Migration v39: Fix #9 — Set correct balance_type for existing accounts
@@ -2952,14 +3042,16 @@ class DatabaseHelper {
         (1300 + offset).toString(): (1000 + offset).toString(), // Inventory → Assets
         (2100 + offset).toString(): (2000 + offset).toString(), // Suppliers → Liabilities
         (2300 + offset).toString(): (2000 + offset).toString(), // VAT → Liabilities (new code)
-        (2200 + offset).toString(): (2900 + offset).toString(), // Opening Balance → Equity
+        (2901 + offset).toString(): (2900 + offset).toString(), // Opening Balance → Equity
         (2910 + offset).toString(): (2900 + offset).toString(), // Retained Earnings → Equity (new code)
         (3100 + offset).toString(): (3000 + offset).toString(), // Purchases → Costs
         (3200 + offset).toString(): (3000 + offset).toString(), // COGS → Costs
         (4100 + offset).toString(): (4000 + offset).toString(), // Sales → Revenue
+        (4400 + offset).toString(): (4000 + offset).toString(), // Variance Income → Revenue
         (5100 + offset).toString(): (5000 + offset).toString(), // Employees → Expenses
         (5200 + offset).toString(): (5000 + offset).toString(), // Transport → Expenses
         (5250 + offset).toString(): (5000 + offset).toString(), // Bank Charges → Expenses
+        (5500 + offset).toString(): (5000 + offset).toString(), // Variance Loss → Expenses
       };
 
       for (final entry in parentMappings.entries) {

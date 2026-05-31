@@ -35,7 +35,7 @@ class SupplierRepository {
         final codeOffset = supplierCurrency == 'SAR' ? 1 : (supplierCurrency == 'USD' ? 2 : 0);
 
         final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), supplierCurrency], limit: 1);
-        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2200 + codeOffset).toString(), supplierCurrency], limit: 1);
+        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), supplierCurrency], limit: 1);
 
         final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
         final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;

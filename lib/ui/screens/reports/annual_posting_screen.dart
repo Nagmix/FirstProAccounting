@@ -398,7 +398,7 @@ class _AnnualPostingScreenState extends State<AnnualPostingScreen> {
             )
           else
             ..._fiscalYears.map((fy) {
-              final year = fy['year'] as int;
+              final year = (fy['year'] as num).toInt();
               final status = fy['status'] as String? ?? 'open';
               final netProfit = MoneyHelper.readMoney(fy['net_profit']);
               final closedAt = fy['closed_at'] as String?;

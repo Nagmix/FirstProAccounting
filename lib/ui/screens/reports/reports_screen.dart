@@ -623,7 +623,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         "WHERE i.type IN ('sale','pos') AND i.is_return = 0$cogsDateF",
         cogsSaleArgs,
       );
-      cogs = MoneyHelper.readMoney(cogsRes.first['total_cogs']);
+      cogs = MoneyHelper.readCalculatedMoney(cogsRes.first['total_cogs']);
 
       // Subtract COGS from sales returns (inventory comes back)
       if (salesReturns > 0) {
@@ -644,7 +644,7 @@ class _ReportsScreenState extends State<ReportsScreen>
           "WHERE i.type IN ('sale','pos') AND i.is_return = 1$cogsRetF",
           cogsRetArgs,
         );
-        cogs -= MoneyHelper.readMoney(cogsRetRes.first['total_cogs']);
+        cogs -= MoneyHelper.readCalculatedMoney(cogsRetRes.first['total_cogs']);
       }
     } catch (e) {
       debugPrint('COGS calculation error: $e');

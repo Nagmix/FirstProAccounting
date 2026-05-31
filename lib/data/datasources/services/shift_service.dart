@@ -593,15 +593,22 @@ class ShiftService {
           final purchGroups = <String, double>{};
           for (final item in invoiceItems) {
             final productId = (item['product_id'] as num?)?.toInt();
-            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
             if (productId == null) continue;
 
             // Fix #1 (shift): Use unit_price (actual purchase price) for inventory transfer
             // to ensure purchases account (3100) zeros out correctly.
             // unit_price is the actual purchase price per unit, which matches the
             // debit to Purchases account in the original entry.
+            //
+            // FIX: Use `quantity * unitPrice` (not `baseQuantity * unitPrice`).
+            // When purchasing 1 carton at 1500 with conversion_factor=20:
+            //   quantity=1 (carton), unitPrice=1500 (per carton)
+            //   Total = 1 × 1500 = 1500 (CORRECT)
+            //   Old formula: 20 × 1500 = 30000 (WRONG - pieces × carton-price)
             final unitPrice = MoneyHelper.readMoney(item['unit_price']);
-            final itemCost = unitPrice * baseQuantity;
+            final itemCost = quantity * unitPrice;
             if (itemCost.abs() < 0.005) continue;
 
             // P-01: Resolve product-specific accounts

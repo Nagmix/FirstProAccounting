@@ -837,7 +837,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
 
   Widget _buildAccountSection(ThemeData theme, bool isDark, String title,
       List<Map<String, dynamic>> accounts, Color color, IconData icon) {
-    final total = accounts.fold(0.0, (sum, a) => sum + MoneyHelper.readMoney(a['balance']));
+    final total = accounts.fold(0.0, (sum, a) => sum + (a['balance'] as double? ?? 0.0));
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -886,7 +886,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                     child: Text(account['name_ar'] as String,
                         style: theme.textTheme.bodySmall),
                   ),
-                  Text(CurrencyFormatter.format(MoneyHelper.readMoney(account['balance']), symbol: _selectedCurrency),
+                  Text(CurrencyFormatter.format(account['balance'] as double? ?? 0.0, symbol: _selectedCurrency),
                       style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: color)),
                 ],
               ),

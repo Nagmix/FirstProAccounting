@@ -149,13 +149,13 @@ class AccountRepository {
       }, MoneyHelper.accountMoneyFields));
 
       // Create double-entry opening balance transaction if > 0
-      // Must include contra-entry to Opening Balance Equity account (3900+offset)
+      // Must include contra-entry to Opening Balance Equity account (2901+offset)
       if (openingBalance > 0) {
         final journalId = generateUniqueJournalId();
 
         // Find the Opening Balance Equity account for this currency
         final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[currency] ?? 0;
-        final obCode = (2200 + codeOffset).toString();
+        final obCode = (2901 + codeOffset).toString();
         final obAccounts = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',
