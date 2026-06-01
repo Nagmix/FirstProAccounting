@@ -327,11 +327,16 @@ class PosViewModel extends ChangeNotifier {
   Duration get shiftDuration => _shiftDuration;
 
   /// Update shift duration (called by screen ticker).
+  /// NOTE: Does NOT call notifyListeners() to avoid full-screen rebuilds.
+  /// The UI reads [shiftDuration] and [formattedShiftDuration] directly
+  /// during its own scheduled rebuilds (throttled to once per second by
+  /// the screen's ticker callback).
   void updateShiftDuration() {
     if (_activeShift != null && _activeShift!['opened_at'] != null) {
       final opened = DateTime.parse(_activeShift!['opened_at'].toString());
       _shiftDuration = DateTime.now().difference(opened);
-      notifyListeners();
+      // Do NOT call notifyListeners() here — the screen's _onTick
+      // already calls setState() which triggers a rebuild.
     }
   }
 

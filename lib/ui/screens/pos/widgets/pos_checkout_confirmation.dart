@@ -4,9 +4,11 @@ import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/viewmodels/pos_viewmodel.dart';
+import '../pos_models.dart';
 import '../dialogs/pos_reports_dialog.dart' show reportRow;
 
 /// Checkout confirmation overlay widget.
+/// Also shown during the saving phase with a progress indicator.
 class PosCheckoutConfirmationOverlay extends StatelessWidget {
   const PosCheckoutConfirmationOverlay({
     super.key,
@@ -18,6 +20,8 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
   final PosViewModel vm;
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
+
+  bool get _isSaving => vm.checkoutPhase == CheckoutPhase.saving;
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +43,16 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.shopping_cart_checkout, color: AppColors.primary, size: 26),
+                      if (_isSaving)
+                        const SizedBox(
+                          width: 26, height: 26,
+                          child: CircularProgressIndicator(strokeWidth: 3),
+                        )
+                      else
+                        const Icon(Icons.shopping_cart_checkout, color: AppColors.primary, size: 26),
                       const SizedBox(width: 10),
                       Text(
-                        'تأكيد عملية البيع',
+                        _isSaving ? 'جارٍ حفظ الفاتورة...' : 'تأكيد عملية البيع',
                         style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ],
@@ -67,33 +77,39 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
                     style: TextStyle(fontSize: 11, color: context.textSecondary),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: onCancel,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  if (_isSaving)
+                    const Center(child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Text('يرجى الانتظار...', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+                    ))
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: onCancel,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('إلغاء', style: TextStyle(fontSize: 15)),
                           ),
-                          child: const Text('إلغاء', style: TextStyle(fontSize: 15)),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: onConfirm,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.success,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: onConfirm,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('تأكيد البيع', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                           ),
-                          child: const Text('تأكيد البيع', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
             ),

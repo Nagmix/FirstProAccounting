@@ -69,6 +69,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    // Safety reset: ensure VM is not stuck in a non-idle phase
+    // from a previous screen visit (singleton persists across navigations)
+    if (_vm.checkoutPhase != CheckoutPhase.idle) {
+      _vm.setCheckoutPhase(CheckoutPhase.idle);
+    }
     _ticker = createTicker(_onTick);
     _searchController.addListener(_onSearchChanged);
     _vm.addListener(_onVmChanged);
@@ -80,8 +85,19 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   void _onTick(Duration elapsed) {
-    _vm.updateShiftDuration();
+    // Only update shift duration every ~1 second to avoid
+    // excessive notifyListeners() calls that cause full rebuilds.
+    // The ticker fires every frame (~60fps) but we only need
+    // second-level precision for the duration display.
+    if (elapsed.inSeconds != _lastTickSeconds) {
+      _lastTickSeconds = elapsed.inSeconds;
+      _vm.updateShiftDuration();
+      // Trigger rebuild directly (VM no longer calls notifyListeners
+      // from updateShiftDuration to avoid cascading rebuilds).
+      if (mounted) setState(() {});
+    }
   }
+  int _lastTickSeconds = -1;
 
   void _onSearchChanged() {
     final text = _searchController.text;
@@ -160,7 +176,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   // Each overlay uses GestureDetector to absorb ALL taps
                   // (including on the transparent background), preventing
                   // any tap-through to widgets below.
-                  if (_vm.checkoutPhase == CheckoutPhase.confirming)
+                  if (_vm.checkoutPhase == CheckoutPhase.confirming ||
+                      _vm.checkoutPhase == CheckoutPhase.saving)
                     _buildCheckoutConfirmationOverlay(),
                   if (_vm.checkoutPhase == CheckoutPhase.completed)
                     _buildCheckoutCompletedOverlay(),
