@@ -142,6 +142,10 @@ class DatabaseHelper {
   // These delegate to MigrationHelpers for backward compatibility with
   // code that references DatabaseHelper for these operations.
 
+  /// Log a migration error (delegates to MigrationHelpers).
+  static void logMigrationError(String operation, dynamic error) =>
+      MigrationHelpers.logMigrationError(operation, error);
+
   /// Delegates to [JournalService.updateAccountBalance].
   Future<void> updateAccountBalance(int accountId, double amount, {required bool isDebit}) =>
       journal.updateAccountBalance(accountId, amount, isDebit: isDebit);
