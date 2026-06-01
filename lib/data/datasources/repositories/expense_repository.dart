@@ -88,6 +88,18 @@ class ExpenseRepository {
     return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
+  /// Get total expenses for a specific date range and currency.
+  /// Used by DashboardViewModel instead of raw SQL.
+  Future<double> getTotalExpensesForDateRange(String currency, String startStr, String endStr) async {
+    final db = await _db;
+    final result = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0) AS total FROM expenses "
+      "WHERE currency = ? AND expense_date >= ? AND expense_date < ?",
+      [currency, startStr, endStr],
+    );
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
+  }
+
   /// Save expense with journal entry.
   /// Supports operation_type: 'صرف' (disburse - debit expense, credit cash) or 'قبض' (receive - debit cash, credit expense).
   Future<void> saveExpenseWithJournalEntry(Map<String, dynamic> expenseMap) async {

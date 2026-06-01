@@ -1853,6 +1853,42 @@ class InvoiceRepository {
     return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
+  /// Get total purchases for a specific date range and currency.
+  /// Used by DashboardViewModel instead of raw SQL.
+  Future<double> getTotalPurchasesForDateRange(String currency, String startStr, String endStr) async {
+    final db = await _db;
+    final result = await db.rawQuery(
+      "SELECT COALESCE(SUM(total), 0) AS total FROM invoices "
+      "WHERE type = 'purchase' AND is_return = 0 AND currency = ? "
+      "AND created_at >= ? AND created_at < ?",
+      [currency, startStr, endStr],
+    );
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
+  }
+
+  /// Calculate Cost of Goods Sold (COGS) for a specific date range and currency.
+  /// Used by DashboardViewModel instead of raw SQL.
+  Future<double> getCOGSForDateRange(String currency, String startStr, String endStr) async {
+    final db = await _db;
+    try {
+      final result = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM("
+        "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
+        "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
+        "), 0) AS INTEGER) AS total_cogs "
+        "FROM invoice_items ii "
+        "INNER JOIN invoices i ON ii.invoice_id = i.id "
+        "LEFT JOIN products p ON ii.product_id = p.id "
+        "WHERE i.type IN ('sale','pos') AND i.is_return = 0 "
+        "AND i.currency = ? AND i.created_at >= ? AND i.created_at < ?",
+        [currency, startStr, endStr],
+      );
+      return MoneyHelper.readCalculatedMoney(result.first['total_cogs']);
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
   Future<double> getTotalPurchasesThisMonth() async {
     final db = await _db;
     final now = DateTime.now();

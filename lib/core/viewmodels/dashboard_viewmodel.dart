@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import '../di/service_locator.dart';
-import '../../data/datasources/database_helper.dart';
 import '../../data/datasources/repositories/invoice_repository.dart';
 import '../../data/datasources/repositories/product_repository.dart';
 import '../../data/datasources/repositories/customer_repository.dart';
@@ -13,7 +12,8 @@ import '../utils/money_helper.dart';
 /// ViewModel for Dashboard — manages dashboard data loading and refresh.
 ///
 /// Uses dependency-injected repositories/services instead of DatabaseHelper
-/// directly. Registered in [service_locator.dart] as a lazy singleton.
+/// directly. All SQL queries are now in repository/service methods.
+/// Registered in [service_locator.dart] as a lazy singleton.
 class DashboardViewModel extends ChangeNotifier {
   final InvoiceRepository _invoiceRepo = locator<InvoiceRepository>();
   final ProductRepository _productRepo = locator<ProductRepository>();
@@ -65,11 +65,7 @@ class DashboardViewModel extends ChangeNotifier {
       final startStr = startOfDay.toIso8601String();
       final endStr = endOfDay.toIso8601String();
 
-      // Use the raw database for complex aggregation queries
-      // (these have no repository method yet — will be migrated in future step)
-      final db = await locator<DatabaseHelper>().database;
-
-      // Load data in parallel where possible
+      // Load data in parallel — all via repository/service methods, no raw SQL
       final results = await Future.wait([
         // Today's sales
         _invoiceRepo.getTotalSalesForDate(today),
@@ -83,34 +79,14 @@ class DashboardViewModel extends ChangeNotifier {
         _productRepo.getProductCount(),
         // Customer count
         _customerRepo.getCustomerCount(),
-        // Today's purchases (raw SQL)
-        db.rawQuery(
-          "SELECT COALESCE(SUM(total), 0) AS total FROM invoices WHERE type = 'purchase' AND is_return = 0 AND currency = ? AND created_at >= ? AND created_at < ?",
-          [currency, startStr, endStr],
-        ),
-        // Today's expenses (raw SQL)
-        db.rawQuery(
-          "SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE currency = ? AND expense_date >= ? AND expense_date < ?",
-          [currency, startStr, endStr],
-        ),
-        // Today's COGS (raw SQL)
-        db.rawQuery(
-          "SELECT CAST(COALESCE(SUM("
-          "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
-          "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END"
-          "), 0) AS INTEGER) AS total_cogs "
-          "FROM invoice_items ii "
-          "INNER JOIN invoices i ON ii.invoice_id = i.id "
-          "LEFT JOIN products p ON ii.product_id = p.id "
-          "WHERE i.type IN ('sale','pos') AND i.is_return = 0 "
-          "AND i.currency = ? AND i.created_at >= ? AND i.created_at < ?",
-          [currency, startStr, endStr],
-        ),
-        // Cash balance (raw SQL)
-        db.rawQuery(
-          "SELECT COALESCE(SUM(balance), 0) AS total FROM cash_boxes WHERE currency = ?",
-          [currency],
-        ),
+        // Today's purchases (via InvoiceRepository)
+        _invoiceRepo.getTotalPurchasesForDateRange(currency, startStr, endStr),
+        // Today's expenses (via ExpenseRepository)
+        _expenseRepo.getTotalExpensesForDateRange(currency, startStr, endStr),
+        // Today's COGS (via InvoiceRepository)
+        _invoiceRepo.getCOGSForDateRange(currency, startStr, endStr),
+        // Cash balance for currency (via CashBoxService)
+        _cashBoxService.getCashBalanceForCurrency(currency),
         // Top products
         _reportService.getTopProducts(5, currency: currency),
       ]);
@@ -121,17 +97,10 @@ class DashboardViewModel extends ChangeNotifier {
       recentInvoices = (results[3] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
       productCount = results[4] as int;
       customerCount = results[5] as int;
-      totalPurchases = MoneyHelper.readCalculatedMoney((results[6] as List).first['total']);
-      totalExpenses = MoneyHelper.readCalculatedMoney((results[7] as List).first['total']);
-
-      try {
-        totalCOGS = MoneyHelper.readCalculatedMoney((results[8] as List).first['total_cogs']);
-      } catch (e) {
-        debugPrint('COGS calculation error on dashboard: $e');
-        totalCOGS = 0.0;
-      }
-
-      cashBalance = MoneyHelper.readCalculatedMoney((results[9] as List).first['total']);
+      totalPurchases = results[6] as double;
+      totalExpenses = results[7] as double;
+      totalCOGS = results[8] as double;
+      cashBalance = results[9] as double;
       topProducts = results[10] as List<Map<String, dynamic>>;
 
       // Calculate profit

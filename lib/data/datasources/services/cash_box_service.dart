@@ -51,6 +51,17 @@ class CashBoxService {
     return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
+  /// Get total cash balance for a specific currency.
+  /// Used by DashboardViewModel instead of raw SQL.
+  Future<double> getCashBalanceForCurrency(String currency) async {
+    final db = await _db;
+    final result = await db.rawQuery(
+      "SELECT COALESCE(SUM(balance), 0) AS total FROM cash_boxes WHERE currency = ?",
+      [currency],
+    );
+    return MoneyHelper.readCalculatedMoney(result.first['total']);
+  }
+
   /// جلب الصناديق حسب العملة
   /// Get cash boxes filtered by currency (via linked account currency).
   Future<List<Map<String, dynamic>>> getCashBoxesByCurrency(String currency) async {
