@@ -2,22 +2,18 @@ import "package:flutter/scheduler.dart";
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/viewmodels/pos_viewmodel.dart';
 import '../../../data/datasources/repositories/invoice_repository.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
-import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/shift_service.dart';
-import '../../../data/datasources/services/report_service.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
 import 'pos_models.dart';
@@ -26,6 +22,21 @@ import 'widgets/pos_cart_item_tile.dart';
 import 'widgets/pos_payment_method_selector.dart';
 import 'widgets/pos_totals_section.dart';
 import 'widgets/pos_action_buttons.dart';
+import 'widgets/pos_shift_info_bar.dart';
+import 'widgets/pos_ewallet_fields.dart';
+import 'widgets/pos_bank_transfer_fields.dart';
+import 'widgets/pos_multi_payment_summary.dart';
+import 'widgets/pos_checkout_confirmation.dart';
+import 'widgets/pos_checkout_completed.dart';
+import 'dialogs/pos_open_shift_dialog.dart';
+import 'dialogs/pos_cash_in_out_dialog.dart';
+import 'dialogs/pos_reports_dialog.dart';
+import 'dialogs/pos_customer_selector_dialog.dart';
+import 'dialogs/pos_discount_dialog.dart';
+import 'dialogs/pos_held_orders_dialog.dart';
+import 'dialogs/pos_print_options_dialog.dart';
+import 'dialogs/pos_partial_payment_dialog.dart';
+import 'dialogs/pos_quantity_edit_dialog.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  POS SCREEN – FirstPro Arabic Accounting App
@@ -307,183 +318,13 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  SHIFT INFO BAR
+  //  SHIFT INFO BAR (delegates to extracted widget)
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildShiftInfoBar() {
-    final shift = _vm.activeShift!;
-    final totalSales = MoneyHelper.readMoney(shift['total_sales']);
-    final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.success.withOpacity(0.06),
-            AppColors.success.withOpacity(0.12),
-          ],
-          begin: Alignment.centerRight,
-          end: Alignment.centerLeft,
-        ),
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.success.withOpacity(0.25),
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              // Pulsing dot
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: AppColors.success,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.success.withOpacity(0.5),
-                      blurRadius: 6,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'وردية مفتوحة',
-                style: context.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.success,
-                ),
-              ),
-              const SizedBox(width: 14),
-
-              // Cashier name
-              _shiftChip(
-                icon: Icons.person,
-                label: 'الكاشير',
-                value: _vm.cashierName,
-              ),
-              const SizedBox(width: 10),
-
-              // Duration
-              _shiftChip(
-                icon: Icons.access_time,
-                label: 'المدة',
-                value: _vm.formattedShiftDuration,
-              ),
-              const SizedBox(width: 10),
-
-              // Cash box
-              _shiftChip(
-                icon: Icons.account_balance_wallet,
-                label: 'الصندوق',
-                value: _vm.shiftCashBoxName,
-              ),
-              const SizedBox(width: 10),
-
-              // Total sales
-              _shiftChip(
-                icon: Icons.show_chart,
-                label: 'المبيعات',
-                value: CurrencyFormatter.format(totalSales),
-              ),
-              const SizedBox(width: 10),
-
-              // Opening amount
-              _shiftChip(
-                icon: Icons.account_balance_wallet,
-                label: 'الافتتاح',
-                value: CurrencyFormatter.format(openingAmount),
-              ),
-              const SizedBox(width: 12),
-
-              // Cash In/Out
-              _shiftActionChip(
-                label: 'إيداع',
-                icon: Icons.arrow_downward,
-                color: AppColors.success,
-                onTap: () => _showCashInOutDialog(true),
-              ),
-              const SizedBox(width: 6),
-              _shiftActionChip(
-                label: 'سحب',
-                icon: Icons.arrow_upward,
-                color: AppColors.error,
-                onTap: () => _showCashInOutDialog(false),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _shiftChip({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: AppColors.primary),
-        const SizedBox(width: 3),
-        Text(
-          '$label: ',
-          style: context.textTheme.bodySmall?.copyWith(
-            color: context.textSecondary,
-            fontSize: 11,
-          ),
-        ),
-        Text(
-          value,
-          style: context.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: context.textPrimary,
-            fontSize: 11,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _shiftActionChip({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          border: Border.all(color: color.withOpacity(0.4)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return PosShiftInfoBar(
+      vm: _vm,
+      onCashIn: () => _showCashInOutDialog(true),
+      onCashOut: () => _showCashInOutDialog(false),
     );
   }
 
@@ -918,180 +759,21 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── E-Wallet fields ──────────────────────────────────────────────
+  // ── E-Wallet fields (delegates to extracted widget) ──────────────
   Widget _buildEwalletFields() {
-    final ewalletPayment = _vm.payments.where((p) => p.method == 'ewallet').firstOrNull;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.secondary.withOpacity(0.4)),
-          borderRadius: BorderRadius.circular(10),
-          color: AppColors.secondary.withOpacity(0.04),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.account_balance_wallet, size: 18, color: AppColors.secondary),
-                const SizedBox(width: 6),
-                Text(
-                  'بيانات المحفظة الإلكترونية',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.secondary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'اسم مزود المحفظة (مثل: فلوسك، جوالي)',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                prefixIcon: const Icon(Icons.badge, size: 18),
-              ),
-              onChanged: (v) {
-                // Update the ewallet provider name in payments
-                final idx = _vm.payments.indexWhere((p) => p.method == 'ewallet');
-                if (idx >= 0) {
-                  _vm.updatePayment(idx, _vm.payments[idx].copyWith(providerName: v));
-                }
-              },
-              controller: TextEditingController(text: ewalletPayment?.providerName ?? '')
-                ..selection = TextSelection.fromPosition(
-                  TextPosition(offset: ewalletPayment?.providerName?.length ?? 0),
-                ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _pickImage('ewallet'),
-                  icon: const Icon(Icons.camera_alt, size: 16),
-                  label: const Text('التقاط صورة'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    textStyle: const TextStyle(fontSize: 11),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _pickImageFromGallery('ewallet'),
-                  icon: const Icon(Icons.image, size: 16),
-                  label: const Text('إرفاق صورة'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    textStyle: const TextStyle(fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return PosEwalletFields(
+      vm: _vm,
+      onPickImage: _pickImage,
+      onPickImageFromGallery: _pickImageFromGallery,
     );
   }
 
-  // ── Bank Transfer fields ─────────────────────────────────────────
+  // ── Bank Transfer fields (delegates to extracted widget) ──────────
   Widget _buildBankTransferFields() {
-    final bankPayment = _vm.payments.where((p) => p.method == 'bank_transfer').firstOrNull;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.info.withOpacity(0.4)),
-          borderRadius: BorderRadius.circular(10),
-          color: AppColors.info.withOpacity(0.04),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.business, size: 18, color: AppColors.info),
-                const SizedBox(width: 6),
-                Text(
-                  'بيانات التحويل البنكي',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.info,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'اسم البنك / مزود التحويل',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                prefixIcon: const Icon(Icons.account_balance, size: 18),
-              ),
-              onChanged: (v) {
-                final idx = _vm.payments.indexWhere((p) => p.method == 'bank_transfer');
-                if (idx >= 0) {
-                  _vm.updatePayment(idx, _vm.payments[idx].copyWith(providerName: v));
-                }
-              },
-              controller: TextEditingController(text: bankPayment?.providerName ?? '')
-                ..selection = TextSelection.fromPosition(
-                  TextPosition(offset: bankPayment?.providerName?.length ?? 0),
-                ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'رقم المرجع / رقم التحويل',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                prefixIcon: const Icon(Icons.tag, size: 18),
-              ),
-              onChanged: (v) {
-                final idx = _vm.payments.indexWhere((p) => p.method == 'bank_transfer');
-                if (idx >= 0) {
-                  _vm.updatePayment(idx, _vm.payments[idx].copyWith(referenceNumber: v));
-                }
-              },
-              controller: TextEditingController(text: bankPayment?.referenceNumber ?? '')
-                ..selection = TextSelection.fromPosition(
-                  TextPosition(offset: bankPayment?.referenceNumber?.length ?? 0),
-                ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _pickImage('bank_transfer'),
-                  icon: const Icon(Icons.camera_alt, size: 16),
-                  label: const Text('التقاط صورة'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    textStyle: const TextStyle(fontSize: 11),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _pickImageFromGallery('bank_transfer'),
-                  icon: const Icon(Icons.image, size: 16),
-                  label: const Text('إرفاق صورة'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    textStyle: const TextStyle(fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return PosBankTransferFields(
+      vm: _vm,
+      onPickImage: _pickImage,
+      onPickImageFromGallery: _pickImageFromGallery,
     );
   }
 
@@ -1118,118 +800,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ── Multi-payment summary ────────────────────────────────────────
+  // ── Multi-payment summary (delegates to extracted widget) ────────
   Widget _buildMultiPaymentSummary() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.primary.withOpacity(0.15)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.credit_card, size: 16, color: AppColors.primary),
-                const SizedBox(width: 6),
-                Text(
-                  'المدفوعات',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ..._vm.payments.map((p) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            p.method == 'cash'
-                                ? Icons.payments
-                                : p.method == 'credit'
-                                    ? Icons.access_time
-                                    : p.method == 'card'
-                                        ? Icons.credit_card
-                                        : p.method == 'ewallet'
-                                            ? Icons.account_balance_wallet
-                                            : Icons.business,
-                            size: 14,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _paymentLabel(p.method),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          if (p.providerName != null && p.providerName!.isNotEmpty) ...[
-                            Text(
-                              ' (${p.providerName})',
-                              style: TextStyle(fontSize: 11, color: context.textSecondary),
-                            ),
-                          ],
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            CurrencyFormatter.format(p.amount),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          InkWell(
-                            onTap: () => _vm.removePayment(_vm.payments.indexOf(p)),
-                            child: const Icon(
-                              Icons.close,
-                              size: 14,
-                              color: AppColors.error,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                )),
-            if (_vm.remaining.abs() > 0.01) ...[
-              const Divider(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _vm.remaining > 0 ? 'المتبقي' : 'الزيادة',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                      color: _vm.remaining > 0 ? AppColors.error : AppColors.success,
-                    ),
-                  ),
-                  Text(
-                    CurrencyFormatter.format(_vm.remaining.abs()),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                      color: _vm.remaining > 0 ? AppColors.error : AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
+    return PosMultiPaymentSummary(
+      vm: _vm,
+      onRemovePayment: () {},
+      paymentLabel: _paymentLabel,
     );
   }
 
@@ -1251,946 +827,45 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  OPEN SHIFT DIALOG
+  //  OPEN SHIFT DIALOG (delegates to extracted dialog)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showOpenShiftDialog() async {
-    final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
-    if (cashBoxes.isEmpty) {
-      if (mounted) {
-        context.showErrorSnackBar('لا توجد صناديق نقدية. أضف صندوقاً أولاً من الإعدادات.');
-      }
-      return;
-    }
-
-    int? selectedCashBoxId = cashBoxes.first['id'] as int?;
-    final amountController = TextEditingController(text: '0');
-    final cashierNameController = TextEditingController(text: _vm.cashierName);
-    final notesController = TextEditingController();
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.divider,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.lock_open, color: AppColors.success, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'فتح وردية جديدة',
-                      style: context.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // ── Cashier name ─────────────────────────────────
-                Text('اسم الكاشير', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: cashierNameController,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    hintText: 'أدخل اسم الكاشير',
-                    prefixIcon: const Icon(Icons.person, size: 20),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── Cash box selector ────────────────────────────
-                Text('الصندوق النقدي', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      value: selectedCashBoxId,
-                      isExpanded: true,
-                      items: cashBoxes.map<DropdownMenuItem<int>>((cb) {
-                        final id = cb['id'] as int;
-                        final name = cb['name']?.toString() ?? '';
-                        final type = cb['type']?.toString() ?? 'cash_box';
-                        final currency = cb['currency']?.toString() ?? 'YER';
-                        final typeLabel = type == 'bank' ? 'بنك' : 'صندوق';
-                        return DropdownMenuItem<int>(
-                          value: id,
-                          child: Text('$name ($typeLabel - $currency)'),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) selectedCashBoxId = val;
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── Opening amount ───────────────────────────────
-                Text('مبلغ الافتتاح', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: amountController,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    hintText: 'أدخل مبلغ الافتتاح',
-                    suffixText: AppConstants.currency,
-                    prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── Notes ────────────────────────────────────────
-                Text('ملاحظات (اختياري)', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: notesController,
-                  maxLines: 2,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    hintText: 'ملاحظات...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // ── Open shift button ────────────────────────────
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (selectedCashBoxId == null) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('اختر صندوقاً نقدیاً'), backgroundColor: AppColors.warning),
-                        );
-                        return;
-                      }
-                      if (cashierNameController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('أدخل اسم الكاشير'), backgroundColor: AppColors.warning),
-                        );
-                        return;
-                      }
-
-                      final existingShift = await locator<ShiftService>().getActiveShift(selectedCashBoxId!);
-                      if (existingShift != null) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            const SnackBar(content: Text('يوجد وردية مفتوحة لهذا الصندوق بالفعل'), backgroundColor: AppColors.warning),
-                          );
-                        }
-                        return;
-                      }
-
-                      final cashierName = cashierNameController.text.trim();
-                      final openingAmount = double.tryParse(amountController.text) ?? 0.0;
-                      final now = DateTime.now();
-
-                      // Get next shift number
-                      final reportService = locator<ReportService>();
-                      final shiftNum = await reportService.getShiftCountForDate(now) + 1;
-
-                      final shiftMap = {
-                        'shift_number': shiftNum,
-                        'cashier_id': null,
-                        'cashier_name': cashierName,
-                        'cash_box_id': selectedCashBoxId,
-                        'opening_amount': openingAmount,
-                        'closing_amount': null,
-                        'expected_amount': openingAmount,
-                        'difference': null,
-                        'status': 'open',
-                        'opened_at': now.toIso8601String(),
-                        'closed_at': null,
-                        'notes': notesController.text.isEmpty ? null : notesController.text,
-                        'total_sales': 0.0,
-                        'total_returns': 0.0,
-                        'total_discounts': 0.0,
-                        'transaction_count': 0,
-                        'currency': _vm.selectedCurrency,
-                        'created_at': now.toIso8601String(),
-                        'updated_at': now.toIso8601String(),
-                      };
-                      await _vm.openShift(shiftMap);
-
-                      if (!mounted) return;
-                      Navigator.pop(ctx);
-                      context.showSuccessSnackBar('تم فتح الوردية $shiftNum بنجاح');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: const Text('فتح الوردية', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    await showOpenShiftDialog(context, _vm);
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  CASH IN / CASH OUT DIALOG
+  //  CASH IN / CASH OUT DIALOG (delegates to extracted dialog)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showCashInOutDialog(bool isCashIn) async {
-    if (_vm.activeShift == null) {
-      context.showErrorSnackBar('يجب فتح وردية أولاً');
-      return;
-    }
-
-    final amountController = TextEditingController();
-    final reasonController = TextEditingController();
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: (isCashIn ? AppColors.success : AppColors.error).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isCashIn ? Icons.arrow_downward : Icons.arrow_upward,
-                      color: isCashIn ? AppColors.success : AppColors.error,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    isCashIn ? 'إيداع نقدي' : 'سحب نقدي',
-                    style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text('المبلغ', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: isCashIn ? 'أدخل مبلغ الإيداع' : 'أدخل مبلغ السحب',
-                  suffixText: AppConstants.currency,
-                  prefixIcon: Icon(
-                    Icons.payments,
-                    size: 20,
-                    color: isCashIn ? AppColors.success : AppColors.error,
-                  ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text('السبب', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: reasonController,
-                maxLines: 2,
-                decoration: InputDecoration(
-                  hintText: isCashIn ? 'سبب الإيداع...' : 'سبب السحب...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final amount = double.tryParse(amountController.text) ?? 0.0;
-                    if (amount <= 0) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('أدخل مبلغاً صحيحاً'), backgroundColor: AppColors.warning),
-                      );
-                      return;
-                    }
-
-                    // Record the cash in/out transaction in the database
-                    try {
-                      final shiftId = _vm.activeShift!['id'] as int;
-                      final cashBoxId = _vm.activeShift!['cash_box_id'] as int;
-                      final reason = reasonController.text.trim().isNotEmpty
-                          ? reasonController.text.trim()
-                          : (isCashIn ? 'إيداع نقدي في الوردية' : 'سحب نقدي من الوردية');
-
-                      await locator<ShiftService>().recordCashInOut(
-                        shiftId: shiftId,
-                        cashBoxId: cashBoxId,
-                        amount: amount,
-                        isCashIn: isCashIn,
-                        reason: reason,
-                        currency: _vm.selectedCurrency,
-                      );
-
-                      await _vm.loadData();
-
-                      if (!mounted) return;
-                      Navigator.pop(ctx);
-                      context.showSuccessSnackBar(
-                        isCashIn
-                            ? 'تم الإيداع بنجاح: ${CurrencyFormatter.format(amount)}'
-                            : 'تم السحب بنجاح: ${CurrencyFormatter.format(amount)}',
-                      );
-                    } catch (e) {
-                      if (mounted) {
-                        context.showErrorSnackBar('حدث خطأ أثناء تسجيل العملية');
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isCashIn ? AppColors.success : AppColors.error,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: Text(
-                    isCashIn ? 'تأكيد الإيداع' : 'تأكيد السحب',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    await showCashInOutDialog(context, _vm, isCashIn);
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  X-REPORT (Mid-Shift Report)
+  //  X-REPORT (delegates to extracted dialog)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showXReport() async {
-    if (_vm.activeShift == null) return;
-
-    final shift = _vm.activeShift!;
-    final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
-    final totalSales = MoneyHelper.readMoney(shift['total_sales']);
-    final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
-    final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
-    final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
-    final expectedAmount = openingAmount + totalSales - totalReturns - totalDiscounts;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.bar_chart, color: AppColors.info, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'تقرير X – منتصف الوردية',
-                    style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _reportRow('رقم الوردية', shift['shift_number']?.toString() ?? '-'),
-              _reportRow('الكاشير', _vm.cashierName),
-              _reportRow('الصندوق', _vm.shiftCashBoxName),
-              _reportRow('المدة', _vm.formattedShiftDuration),
-              const Divider(height: 24),
-              _reportRow('رصيد الافتتاح', CurrencyFormatter.format(openingAmount), valueColor: AppColors.primary),
-              _reportRow('إجمالي المبيعات', CurrencyFormatter.format(totalSales), valueColor: AppColors.success),
-              _reportRow('إجمالي المرتجعات', CurrencyFormatter.format(totalReturns), valueColor: AppColors.error),
-              _reportRow('إجمالي الخصومات', CurrencyFormatter.format(totalDiscounts), valueColor: AppColors.warning),
-              const Divider(height: 24),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                ),
-                child: Column(
-                  children: [
-                    _reportRow('المتوقع في الصندوق', CurrencyFormatter.format(expectedAmount),
-                        valueColor: AppColors.primary, isBold: true),
-                    const SizedBox(height: 6),
-                    _reportRow('عدد المعاملات', transactionCount.toString()),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.info,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('إغلاق التقرير', style: TextStyle(fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    await showXReport(context, _vm);
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  Z-REPORT / CLOSE SHIFT (with deferred posting)
+  //  Z-REPORT / CLOSE SHIFT (delegates to extracted dialog)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showZReport() async {
-    if (_vm.activeShift == null) return;
-
-    final shift = _vm.activeShift!;
-    final shiftId = shift['id'] as int;
-    final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
-    final totalSales = MoneyHelper.readMoney(shift['total_sales']);
-    final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
-    final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
-    final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
-    final expectedAmount = openingAmount + totalSales - totalReturns - totalDiscounts;
-
-    final closingAmountController = TextEditingController();
-    final notesController = TextEditingController();
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.divider,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.logout, color: AppColors.error, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'تقرير Z – إغلاق الوردية',
-                      style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                _reportRow('رقم الوردية', shift['shift_number']?.toString() ?? '-'),
-                _reportRow('الكاشير', _vm.cashierName),
-                _reportRow('الصندوق', _vm.shiftCashBoxName),
-                _reportRow('المدة', _vm.formattedShiftDuration),
-                const Divider(height: 20),
-
-                _reportRow('رصيد الافتتاح', CurrencyFormatter.format(openingAmount)),
-                _reportRow('إجمالي المبيعات', CurrencyFormatter.format(totalSales), valueColor: AppColors.success),
-                _reportRow('إجمالي المرتجعات', CurrencyFormatter.format(totalReturns), valueColor: AppColors.error),
-                _reportRow('إجمالي الخصومات', CurrencyFormatter.format(totalDiscounts), valueColor: AppColors.warning),
-                _reportRow('عدد المعاملات', transactionCount.toString()),
-                const Divider(height: 20),
-
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                  ),
-                  child: _reportRow('المتوقع في الصندوق', CurrencyFormatter.format(expectedAmount),
-                      valueColor: AppColors.primary, isBold: true),
-                ),
-                const SizedBox(height: 16),
-
-                Text('المبلغ الفعلي في الصندوق',
-                    style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: closingAmountController,
-                  keyboardType: TextInputType.number,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: 'أدخل المبلغ الفعلي',
-                    suffixText: AppConstants.currency,
-                    prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                Text('ملاحظات (اختياري)',
-                    style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: notesController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    hintText: 'ملاحظات الإغلاق...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // ── Close shift button ────────────────────────────
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final closingAmount =
-                          double.tryParse(closingAmountController.text) ?? expectedAmount;
-                      final difference = closingAmount - expectedAmount;
-                      final now = DateTime.now();
-
-                      // ── Step 1: Post all shift invoices (deferred posting) ──
-                      await locator<ShiftService>().postShiftInvoices(shiftId);
-                      final closeData = {
-                        'closing_amount': closingAmount,
-                        'expected_amount': expectedAmount,
-                        'difference': difference,
-                        'status': 'closed',
-                        'closed_at': now.toIso8601String(),
-                        'notes': notesController.text.isEmpty ? shift['notes'] : notesController.text,
-                        'updated_at': now.toIso8601String(),
-                      };
-                      await _vm.closeShift(shiftId, closeData);
-
-                      if (!mounted) return;
-                      Navigator.pop(ctx);
-
-                      // Show result dialog
-                      showDialog(
-                        context: context,
-                        builder: (dctx) => Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: AlertDialog(
-                            title: Row(
-                              children: [
-                                Icon(
-                                  difference.abs() < 0.005
-                                      ? Icons.check_circle
-                                      : Icons.warning,
-                                  color: difference.abs() < 0.005
-                                      ? AppColors.success
-                                      : AppColors.warning,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('تم إغلاق الوردية'),
-                              ],
-                            ),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('المتوقع: ${CurrencyFormatter.format(expectedAmount)}'),
-                                Text('الفعلي: ${CurrencyFormatter.format(closingAmount)}'),
-                                const SizedBox(height: 8),
-                                if (difference.abs() >= 0.005)
-                                  Text(
-                                    difference > 0
-                                        ? 'فائض: ${CurrencyFormatter.format(difference)}'
-                                        : 'عجز: ${CurrencyFormatter.format(difference.abs())}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: difference > 0 ? AppColors.success : AppColors.error,
-                                    ),
-                                  )
-                                else
-                                  const Text(
-                                    'الصندوق متوازن',
-                                    style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.success),
-                                  ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'تم ترحيل جميع فواتير الوردية إلى الحسابات',
-                                  style: TextStyle(fontSize: 12, color: AppColors.info),
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(dctx),
-                                child: const Text('حسناً'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.error,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: const Text('إغلاق الوردية وترحيل الفواتير',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _reportRow(String label, String value, {Color? valueColor, bool isBold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: context.textTheme.bodyMedium?.copyWith(color: context.textSecondary)),
-          Text(
-            value,
-            style: context.textTheme.bodyMedium?.copyWith(
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-              color: valueColor ?? context.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
+    await showZReport(context, _vm);
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  CUSTOMER SELECTOR
+  //  CUSTOMER SELECTOR (delegates to extracted dialog)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showCustomerSelector() async {
-    final customers = await locator<CustomerRepository>().getAllCustomers();
-    final searchController = TextEditingController();
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text('اختر العميل',
-                  style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: searchController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'بحث عن عميل...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  filled: true,
-                  isDense: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 280,
-                child: StatefulBuilder(
-                  builder: (ctx, setModalState) {
-                    var filtered = customers;
-                    if (searchController.text.isNotEmpty) {
-                      final q = searchController.text.toLowerCase();
-                      filtered = customers
-                          .where((c) =>
-                              (c['name']?.toString() ?? '').toLowerCase().contains(q) ||
-                              (c['phone']?.toString() ?? '').contains(q))
-                          .toList();
-                    }
-                    if (filtered.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.person, size: 48, color: AppColors.textHint),
-                            const SizedBox(height: 8),
-                            Text('لا يوجد عملاء', style: context.textTheme.bodyLarge),
-                          ],
-                        ),
-                      );
-                    }
-                    return ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final c = filtered[index];
-                        final cId = c['id'] as int;
-                        final cName = c['name']?.toString() ?? '';
-                        final cPhone = c['phone']?.toString() ?? '';
-                        final cBalance = MoneyHelper.readMoney(c['balance']);
-                        final isSelected = _vm.selectedCustomerId == cId;
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: isSelected
-                                ? AppColors.primary.withOpacity(0.15)
-                                : AppColors.surfaceVariant,
-                            child: Icon(
-                              isSelected ? Icons.check : Icons.person,
-                              size: 20,
-                              color: isSelected ? AppColors.primary : null,
-                            ),
-                          ),
-                          title: Text(cName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: cPhone.isNotEmpty ? Text(cPhone) : null,
-                          trailing: Text(
-                            CurrencyFormatter.format(cBalance),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: cBalance > 0 ? AppColors.error : AppColors.success,
-                            ),
-                          ),
-                          selected: isSelected,
-                          onTap: () {
-                            _vm.setSelectedCustomer(cId, cName);
-                            Navigator.pop(ctx);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    await showCustomerSelectorDialog(context, _vm);
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  DISCOUNT DIALOG
+  //  DISCOUNT DIALOG (delegates to extracted dialog)
   // ═══════════════════════════════════════════════════════════════════
   void _showDiscountDialog() {
-    if (_vm.activeShift == null) {
-      context.showErrorSnackBar('يجب فتح وردية أولاً');
-      return;
-    }
-    final controller = TextEditingController(
-      text: _vm.orderDiscount > 0 ? _vm.orderDiscount.toStringAsFixed(2) : '',
-    );
-    showDialog(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('خصم على الطلب'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: _vm.discountType == DiscountType.percentage ? 'نسبة الخصم %' : 'مبلغ الخصم',
-                  suffixText: _vm.discountType == DiscountType.percentage ? '%' : AppConstants.currency,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Text('نوع الخصم: '),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('مبلغ ثابت'),
-                    selected: _vm.discountType == DiscountType.fixed,
-                    onSelected: (_) => _vm.setOrderDiscount(_vm.orderDiscount, DiscountType.fixed),
-                  ),
-                  const SizedBox(width: 6),
-                  ChoiceChip(
-                    label: const Text('نسبة مئوية'),
-                    selected: _vm.discountType == DiscountType.percentage,
-                    onSelected: (_) => _vm.setOrderDiscount(_vm.orderDiscount, DiscountType.percentage),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() => _vm.setOrderDiscount(0, DiscountType.fixed));
-                Navigator.pop(ctx);
-              },
-              child: const Text('إزالة الخصم'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final value = double.tryParse(controller.text) ?? 0;
-                // Validation: discount must be >= 0
-                if (value < 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('الخصم لا يمكن أن يكون سالباً'), backgroundColor: AppColors.error),
-                  );
-                  return;
-                }
-                // Validation: fixed discount must not exceed total
-                if (_vm.discountType == DiscountType.fixed && value > _vm.subtotal) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('الخصم لا يمكن أن يتجاوز الإجمالي'), backgroundColor: AppColors.error),
-                  );
-                  return;
-                }
-                // Validation: percentage discount must not exceed 100%
-                if (_vm.discountType == DiscountType.percentage && value > 100) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('نسبة الخصم لا يمكن أن تتجاوز 100%'), backgroundColor: AppColors.error),
-                  );
-                  return;
-                }
-                _vm.setOrderDiscount(value, _vm.discountType);
-                Navigator.pop(ctx);
-              },
-              child: const Text('تطبيق'),
-            ),
-          ],
-        ),
-      ),
-    );
+    showDiscountDialog(context, _vm);
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -2366,9 +1041,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// Internal: actually add the item to cart with unit info (now handled by VM).
-  // Removed _doAddToCartWithUnit – _vm.addToCartDirect handles cart + payments.
-
   void _addToCart(Product product) {
     if (_vm.activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
@@ -2452,126 +1124,21 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// Internal: actually add the item to cart (now handled by VM).
-  // Removed _doAddToCart – _vm.addToCart handles cart + payments.
-
+  /// Edit quantity for a cart item (delegates to extracted dialog)
   void _editQuantity(int index) async {
-    final controller = TextEditingController(text: '${_vm.cartItems[index].quantity}');
-    final result = await showDialog<int>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Text('الكمية - ${_vm.cartItems[index].name}'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: false),
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: 'الكمية',
-              prefixIcon: Icon(Icons.format_list_numbered),
-            ),
-            onSubmitted: (v) {
-              final qty = int.tryParse(v);
-              Navigator.pop(ctx, qty);
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final qty = int.tryParse(controller.text);
-                Navigator.pop(ctx, qty);
-              },
-              child: const Text('تأكيد'),
-            ),
-          ],
-        ),
-      ),
-    );
-    controller.dispose();
-
-    if (result != null && result > 0) {
-      _vm.updateCartQuantity(index, result);
-    }
+    await showEditQuantityDialog(context, _vm, index);
   }
 
   // Removed _syncPaymentsWithTotal – VM handles payment sync internally.
   // Removed _addPayment – use _vm.addPayment() directly.
 
+  /// Add partial payment (delegates to extracted dialog)
   Future<void> _showAddPartialPaymentDialog() async {
-    final amountController = TextEditingController();
-    String selectedMethod = _vm.activePaymentMethod;
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('إضافة دفعة جزئية'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: selectedMethod,
-                decoration: const InputDecoration(labelText: 'طريقة الدفع'),
-                items: [
-                  DropdownMenuItem(value: 'cash', child: Text('نقدي - المتبقي: ${CurrencyFormatter.format(_vm.remaining)}')),
-                  DropdownMenuItem(value: 'card', child: const Text('بطاقة')),
-                  DropdownMenuItem(value: 'ewallet', child: const Text('محفظة إلكترونية')),
-                  DropdownMenuItem(value: 'bank_transfer', child: const Text('تحويل بنكي')),
-                  DropdownMenuItem(value: 'credit', child: const Text('آجل')),
-                ],
-                onChanged: (v) => selectedMethod = v ?? 'cash',
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'مبلغ الدفعة',
-                  suffixText: AppConstants.currency,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final amount = double.tryParse(amountController.text) ?? 0.0;
-                if (amount > 0) {
-                  _vm.addPayment(PaymentEntry(method: selectedMethod, amount: amount));
-                }
-                Navigator.pop(ctx);
-              },
-              child: const Text('إضافة'),
-            ),
-          ],
-        ),
-      ),
-    );
+    await showAddPartialPaymentDialog(context, _vm);
   }
 
   // ═══════════════════════════════════════════════════════════════════
   //  CHECKOUT – State-based overlay (NO showDialog)
-  //  ═══════════════════════════════════════════════════════════════════
-  //  ROOT CAUSE of multi-click bug: showDialog pushes a route onto the
-  //  Navigator. If _checkout() is called again (due to widget rebuilds,
-  //  ticker setState, or rapid taps), multiple dialog routes stack up.
-  //  Each "تأكيد البيع" click only pops ONE dialog, so N stacked
-  //  dialogs require N clicks.
-  //
-  //  FIX: Replace ALL showDialog calls with state-based overlays that
-  //  are part of the widget tree. Only ONE overlay can exist at a time
-  //  (controlled by _checkoutPhase enum), making stacking impossible.
   // ═══════════════════════════════════════════════════════════════════
 
   /// Step 1: Start checkout – capture values and show confirmation overlay
@@ -2709,243 +1276,31 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     _vm.setLastInvoiceId('');
   }
 
-  // ── Checkout Confirmation Overlay ──────────────────────────────────
+  // ── Checkout Confirmation Overlay (delegates to extracted widget) ──
   Widget _buildCheckoutConfirmationOverlay() {
-    // GestureDetector with HitTestBehavior.opaque ensures ALL taps
-    // are absorbed (even on the transparent background), preventing
-    // tap-through to widgets below the overlay.
-    return GestureDetector(
-      onTap: () {}, // Absorb background taps – do nothing
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        color: Colors.black.withOpacity(0.55),
-        child: Center(
-          child: Card(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            elevation: 12,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.shopping_cart_checkout, color: AppColors.primary, size: 26),
-                      const SizedBox(width: 10),
-                      Text(
-                        'تأكيد عملية البيع',
-                        style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _reportRow('عدد الأصناف', '${_vm.capturedCartLength}'),
-                  _reportRow('المجموع الفرعي', CurrencyFormatter.format(_vm.capturedSubtotal)),
-                  if (_vm.capturedDiscount > 0)
-                    _reportRow('الخصم', '- ${CurrencyFormatter.format(_vm.capturedDiscount)}', valueColor: AppColors.error),
-                  if (_vm.capturedTax > 0)
-                    _reportRow('الضريبة', CurrencyFormatter.format(_vm.capturedTax)),
-                  const Divider(height: 20),
-                  _reportRow('الإجمالي', CurrencyFormatter.format(_vm.capturedTotal),
-                      valueColor: AppColors.primary, isBold: true),
-                  const SizedBox(height: 8),
-                  _reportRow('طريقة الدفع', _vm.capturedPaymentLabel),
-                  if (_vm.selectedCustomerName.isNotEmpty)
-                    _reportRow('العميل', _vm.selectedCustomerName),
-                  const SizedBox(height: 6),
-                  Text(
-                    'سيتم تسجيل الفاتورة وترحيلها عند إغلاق الوردية',
-                    style: TextStyle(fontSize: 11, color: context.textSecondary),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _cancelCheckout,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('إلغاء', style: TextStyle(fontSize: 15)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _confirmCheckout,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.success,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('تأكيد البيع', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return PosCheckoutConfirmationOverlay(
+      vm: _vm,
+      onConfirm: _confirmCheckout,
+      onCancel: _cancelCheckout,
     );
   }
 
-  // ── Checkout Completed Overlay ─────────────────────────────────────
+  // ── Checkout Completed Overlay (delegates to extracted widget) ────
   Widget _buildCheckoutCompletedOverlay() {
-    // GestureDetector with HitTestBehavior.opaque ensures ALL taps
-    // are absorbed (even on the transparent background), preventing
-    // tap-through to widgets below the overlay.
-    return GestureDetector(
-      onTap: () {}, // Absorb background taps – do nothing
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        color: Colors.black.withOpacity(0.55),
-        child: Center(
-          child: Card(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            elevation: 12,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: AppColors.success, size: 28),
-                      const SizedBox(width: 10),
-                      Text(
-                        'تم إنهاء البيع',
-                        style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text('رقم الفاتورة: ${_vm.lastInvoiceId}',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text('الإجمالي: ${CurrencyFormatter.format(_vm.capturedTotal)}',
-                      style: const TextStyle(fontSize: 14)),
-                  const SizedBox(height: 4),
-                  Text('طريقة الدفع: ${_vm.capturedPaymentLabel}',
-                      style: const TextStyle(fontSize: 14)),
-                  if (_vm.selectedCustomerName.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text('العميل: ${_vm.selectedCustomerName}',
-                        style: const TextStyle(fontSize: 14)),
-                  ],
-                  const SizedBox(height: 10),
-                  const Text(
-                    'لم يتم ترحيل الفاتورة بعد – سيتم ترحيلها عند إغلاق الوردية',
-                    style: TextStyle(fontSize: 11, color: AppColors.info),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            _showPrintOptions(_vm.lastInvoiceId);
-                          },
-                          icon: const Icon(Icons.print, size: 18),
-                          label: const Text('طباعه'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _dismissCompletion,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('إغلاق', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return PosCheckoutCompletedOverlay(
+      vm: _vm,
+      onDismiss: _dismissCompletion,
+      onPrint: () => _showPrintOptions(_vm.lastInvoiceId),
     );
   }
 
-  /// Reset all state for a new invoice (now handled by VM).
-  // Removed _resetForNewInvoice – use _vm.resetForNewInvoice() + UI cleanup.
-
-  /// Show print options (PDF or Bluetooth thermal).
+  /// Show print options (delegates to extracted dialog)
   void _showPrintOptions(String invoiceId) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('خيارات الطباعة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 20),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
-                  ),
-                  title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('مشاركة أو حفظ كملف PDF'),
-                  trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await _printPdfInvoice(invoiceId);
-                  },
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),
-                  ),
-                  title: const Text('طباعة حرارية بلوتوث', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('طباعة على طابعة حرارية 80mm'),
-                  trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _printBluetoothReceipt(invoiceId);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    showPrintOptionsDialog(
+      context,
+      invoiceId,
+      onPdfPrint: _printPdfInvoice,
+      onBluetoothPrint: _printBluetoothReceipt,
     );
   }
 
@@ -3042,71 +1397,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     context.showSuccessSnackBar('تم تعليق الطلب');
   }
 
+  /// Show held orders (delegates to extracted dialog)
   void _showHeldOrders() {
-    if (_vm.heldOrders.isEmpty) {
-      context.showSnackBar('لا توجد طلبات معلقة');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('الطلبات المعلقة', style: context.textTheme.titleLarge),
-              const SizedBox(height: 12),
-              ..._vm.heldOrders.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final order = entry.value;
-                final total = order.items.fold(0.0, (s, i) => s + i.total);
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.secondary.withOpacity(0.15),
-                    child: Text('${idx + 1}'),
-                  ),
-                  title: Text(
-                    '${order.items.length} صنف – ${CurrencyFormatter.format(total)}',
-                  ),
-                  subtitle: Text(
-                    order.customerName.isNotEmpty ? 'العميل: ${order.customerName}' : 'بدون عميل',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          _vm.restoreHeldOrder(idx);
-                          Navigator.pop(ctx);
-                          _sheetController.animateTo(0.5,
-                              duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-                        },
-                        icon: const Icon(Icons.refresh,
-                            color: AppColors.primary),
-                        tooltip: 'استرجاع',
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          _vm.deleteHeldOrder(idx);
-                          Navigator.pop(ctx);
-                        },
-                        icon: const Icon(Icons.delete, color: AppColors.error),
-                        tooltip: 'حذف',
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
+    showHeldOrdersDialog(context, _vm, () {
+      _sheetController.animateTo(0.5,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -3133,4 +1429,3 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 }
-

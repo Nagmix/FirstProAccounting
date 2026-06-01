@@ -166,6 +166,7 @@ class PosViewModel extends ChangeNotifier {
 
   /// Add a product to cart with a specific unit.
   void addToCartDirect(Product product, Map<String, dynamic>? unitInfo) {
+    if (product.id == null) return; // Guard: unsaved product cannot be added
     final unitName = unitInfo?['unit_name'] as String? ?? 'قطعة';
     final sellPrice = unitInfo != null
         ? MoneyHelper.readMoney(unitInfo['sell_price'], fallback: product.sellPrice)
@@ -182,7 +183,7 @@ class PosViewModel extends ChangeNotifier {
       );
     } else {
       _cartItems.add(CartItem(
-        productId: product.id,
+        productId: product.id!,
         name: product.nameAr,
         unitPrice: sellPrice,
         quantity: 1,
