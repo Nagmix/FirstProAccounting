@@ -15,6 +15,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../core/viewmodels/invoice_viewmodel.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
@@ -44,6 +45,7 @@ class CreateInvoiceScreen extends StatefulWidget {
 }
 
 class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
+  final _vm = locator<InvoiceViewModel>();
   final _formKey = GlobalKey<FormState>();
   final _notesController = TextEditingController();
   final _discountController = TextEditingController();
@@ -52,122 +54,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _transferNumberController = TextEditingController();
   final _entitySearchController = TextEditingController();
 
-  // Payment mechanism: cash or credit
-  String _paymentMechanism = 'cash';
-  // Payment method: cash, check, transfer, bank, ewallet, bank_transfer
-  String _paymentMethod = 'cash';
-  // Is return invoice
-  bool _isReturn = false;
-  // Auto-pay checkbox
-  bool _autoPay = true;
+  bool get _isSale => _vm.isSale;
 
-  // Entity selection — unified: customers + suppliers
-  int? _selectedEntityId;
-  String? _selectedEntityType; // 'customer' or 'supplier'
-  int? _selectedWarehouseId;
-  int? _selectedCashBoxId;
-  final List<InvoiceItem> _items = [];
-
-  // E-wallet state
-  String? _selectedEwalletProvider;
-  // Bank transfer state
-  String? _selectedBankTransferProvider;
-  // Attachment image
-  String? _attachmentPath;
-
-  // Original invoice for returns
-  String? _originalInvoiceId;
-  String? _originalInvoiceDisplay;
-
-  // Data from DB
-  List<Map<String, dynamic>> _customers = [];
-  List<Map<String, dynamic>> _suppliers = [];
-  List<Map<String, dynamic>> _combinedEntities = [];
-  List<Map<String, dynamic>> _filteredEntities = [];
-  List<Map<String, dynamic>> _warehouses = [];
-  List<Map<String, dynamic>> _cashBoxes = [];
-  List<Map<String, dynamic>> _currencies = [];
-  String _selectedCurrency = 'YER';
-  double _selectedExchangeRate = 1.0;
-  bool _isLoading = true;
-  bool _showEntityDropdown = false;
-
-  bool get _isSale => widget.invoiceType == 'sale';
-
-  String get _title {
-    String base = _isSale ? 'فاتورة مبيعات' : 'فاتورة مشتريات';
-    if (_isReturn) base = 'فاتورة مرتجع $base';
-    return '$base جديدة';
-  }
+  String get _title => _vm.title;
 
   // Entity is required when: credit mechanism OR (paid < total)
-  bool get _isEntityRequired =>
-      _paymentMechanism == 'credit' || _remaining > 0.005;
+  bool get _isEntityRequired => _vm.isEntityRequired;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _vm.setInvoiceType(widget.invoiceType);
+    _vm.loadData();
+    _vm.addListener(_onVmChanged);
     _paidController.text = '0.00';
   }
 
-  Future<void> _loadData() async {
-    final results = await Future.wait([
-      locator<CustomerRepository>().getAllCustomers(),
-      locator<SupplierRepository>().getAllSuppliers(),
-      locator<ReferenceDataRepository>().getAllWarehouses(),
-      locator<CashBoxService>().getAllCashBoxes(),
-      locator<ReferenceDataRepository>().getAllCurrencies(),
-    ]);
-    setState(() {
-      _customers = results[0];
-      _suppliers = results[1];
-      _warehouses = results[2];
-      _cashBoxes = results[3];
-      _currencies = results[4];
-      _buildCombinedEntities();
-      _isLoading = false;
-    });
+  void _onVmChanged() {
+    if (mounted) setState(() {});
   }
 
-  void _buildCombinedEntities() {
-    _combinedEntities = [];
-    for (final c in _customers) {
-      _combinedEntities.add({
-        'id': c['id'],
-        'name': c['name'],
-        'type': 'customer',
-        'balance': MoneyHelper.readMoney(c['balance']),
-        'balance_type': c['balance_type'] ?? 'credit',
-      });
-    }
-    for (final s in _suppliers) {
-      _combinedEntities.add({
-        'id': s['id'],
-        'name': s['name'],
-        'type': 'supplier',
-        'balance': MoneyHelper.readMoney(s['balance']),
-        'balance_type': s['balance_type'] ?? 'credit',
-      });
-    }
-    _filteredEntities = List.from(_combinedEntities);
-  }
 
-  void _filterEntities(String query) {
-    if (query.isEmpty) {
-      _filteredEntities = List.from(_combinedEntities);
-    } else {
-      final q = query.toLowerCase();
-      _filteredEntities = _combinedEntities.where((e) {
-        final name = (e['name'] as String? ?? '').toLowerCase();
-        return name.contains(q);
-      }).toList();
-    }
-    setState(() {});
-  }
 
   @override
   void dispose() {
+    _vm.removeListener(_onVmChanged);
     _notesController.dispose();
     _discountController.dispose();
     _paidController.dispose();
@@ -177,28 +88,30 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     super.dispose();
   }
 
-  double get _subtotal => _items.fold(0.0, (sum, item) => sum + item.totalPrice);
-  double get _discountAmount => double.tryParse(_discountController.text) ?? 0;
-  double get _transportCharges => double.tryParse(_transportChargesController.text) ?? 0;
-  double get _taxAmount => (_subtotal - _discountAmount) * (AppConstants.defaultVatRate / 100);
-  double get _total => _subtotal - _discountAmount + _taxAmount + _transportCharges;
-  double get _paidAmount => double.tryParse(_paidController.text) ?? 0;
-  double get _remaining => _total - _paidAmount;
-  // YER-equivalent getters for multi-currency display
-  double get _totalInBaseCurrency => _total * _selectedExchangeRate;
-  double get _paidAmountInBaseCurrency => _paidAmount * _selectedExchangeRate;
-  double get _remainingInBaseCurrency => _remaining * _selectedExchangeRate;
+  // Read computed values from ViewModel
+  double get _subtotal => _vm.subtotal;
+  double get _discountAmount => _vm.discountAmount;
+  double get _transportCharges => _vm.transportChargesAmount;
+  double get _taxAmount => _vm.taxAmount;
+  double get _total => _vm.total;
+  double get _paidAmount => _vm.paidAmount;
+  double get _remaining => _vm.remaining;
+  double get _totalInBaseCurrency => _vm.totalInBaseCurrency;
+  double get _paidAmountInBaseCurrency => _vm.paidAmountInBaseCurrency;
+  double get _remainingInBaseCurrency => _vm.remainingInBaseCurrency;
 
-  void _updateAutoPay() {
-    if (_autoPay && _total > 0) {
-      _paidController.text = _total.toStringAsFixed(2);
+  String? get _selectedEntityName => _vm.selectedEntityName;
+
+  /// Sync controller text to ViewModel values and trigger auto-pay update.
+  void _syncControllersToVm() {
+    _vm.setDiscount(double.tryParse(_discountController.text) ?? 0);
+    _vm.setTransportCharges(double.tryParse(_transportChargesController.text) ?? 0);
+    _vm.setPaidAmount(double.tryParse(_paidController.text) ?? 0);
+    _vm.updateAutoPay();
+    // Sync auto-pay paid amount back to controller
+    if (_vm.autoPay && _vm.total > 0) {
+      _paidController.text = _vm.total.toStringAsFixed(2);
     }
-  }
-
-  String? get _selectedEntityName {
-    if (_selectedEntityId == null) return null;
-    final entity = _combinedEntities.where((e) => e['id'] == _selectedEntityId && e['type'] == _selectedEntityType).firstOrNull;
-    return entity?['name'] as String?;
   }
 
   // ── Image picker helpers ─────────────────────────────────────
@@ -208,7 +121,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     if (picked != null) {
       final savedPath = await _saveImageLocally(picked);
       if (savedPath != null) {
-        setState(() => _attachmentPath = savedPath);
+        _vm.setAttachmentPath(savedPath);
       }
     }
   }
@@ -219,7 +132,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     if (picked != null) {
       final savedPath = await _saveImageLocally(picked);
       if (savedPath != null) {
-        setState(() => _attachmentPath = savedPath);
+        _vm.setAttachmentPath(savedPath);
       }
     }
   }
@@ -259,7 +172,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
       appBar: _buildAppBar(isDark),
-      body: _isLoading
+      body: _vm.isLoading
             ? Center(child: CircularProgressIndicator(color: _accentBlue))
             : Form(
                 key: _formKey,
@@ -271,123 +184,94 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       // Payment Section (includes partial payment warning when applicable)
                       InvoicePaymentSection(
                         isDark: isDark,
-                        paymentMechanism: _paymentMechanism,
-                        paymentMethod: _paymentMethod,
-                        isReturn: _isReturn,
-                        autoPay: _autoPay,
-                        selectedCurrency: _selectedCurrency,
-                        selectedExchangeRate: _selectedExchangeRate,
-                        selectedCashBoxId: _selectedCashBoxId,
-                        selectedEwalletProvider: _selectedEwalletProvider,
-                        selectedBankTransferProvider: _selectedBankTransferProvider,
-                        attachmentPath: _attachmentPath,
-                        originalInvoiceId: _originalInvoiceId,
-                        originalInvoiceDisplay: _originalInvoiceDisplay,
-                        currencies: _currencies,
-                        cashBoxes: _cashBoxes,
+                        paymentMechanism: _vm.paymentMechanism,
+                        paymentMethod: _vm.paymentMethod,
+                        isReturn: _vm.isReturn,
+                        autoPay: _vm.autoPay,
+                        selectedCurrency: _vm.selectedCurrency,
+                        selectedExchangeRate: _vm.selectedExchangeRate,
+                        selectedCashBoxId: _vm.selectedCashBoxId,
+                        selectedEwalletProvider: _vm.selectedEwalletProvider,
+                        selectedBankTransferProvider: _vm.selectedBankTransferProvider,
+                        attachmentPath: _vm.attachmentPath,
+                        originalInvoiceId: _vm.originalInvoiceId,
+                        originalInvoiceDisplay: _vm.originalInvoiceDisplay,
+                        currencies: _vm.currencies,
+                        cashBoxes: _vm.cashBoxes,
                         paidController: _paidController,
                         transferNumberController: _transferNumberController,
                         total: _total,
                         paidAmount: _paidAmount,
                         remaining: _remaining,
                         isSale: _isSale,
-                        showPartialPaymentWarning: !_autoPay && _paymentMechanism == 'cash' && _paidAmount > 0 && _remaining > 0.005,
-                        onToggleReturn: () => setState(() => _isReturn = !_isReturn),
-                        onSetCashMechanism: () => setState(() => _paymentMechanism = 'cash'),
-                        onSetCreditMechanism: () => setState(() {
-                          _paymentMechanism = 'credit';
-                          _selectedCashBoxId = null;
-                          _autoPay = false;
+                        showPartialPaymentWarning: _vm.showPartialPaymentWarning,
+                        onToggleReturn: () => _vm.toggleReturn(),
+                        onSetCashMechanism: () => _vm.setCashMechanism(),
+                        onSetCreditMechanism: () {
+                          _vm.setCreditMechanism();
                           _paidController.text = '0';
-                        }),
-                        onPaymentMethodChanged: (method) => setState(() {
-                          _paymentMethod = method;
-                          if (method != 'ewallet') _selectedEwalletProvider = null;
-                          if (method != 'bank_transfer') {
-                            _selectedBankTransferProvider = null;
+                        },
+                        onPaymentMethodChanged: (method) {
+                          _vm.setPaymentMethod(method);
+                          if (method == 'bank_transfer') {
                             _transferNumberController.clear();
                           }
-                          if (method != 'ewallet' && method != 'bank_transfer') {
-                            _attachmentPath = null;
-                          }
-                        }),
-                        onCurrencyChanged: (val) {
-                          setState(() {
-                            _selectedCurrency = val;
-                            final currency = _currencies.where((c) => c['code'] == val).firstOrNull;
-                            if (currency != null) {
-                              _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-                            }
-                          });
                         },
-                        onCashBoxChanged: (val) => setState(() => _selectedCashBoxId = val),
-                        onEwalletProviderChanged: (val) => setState(() => _selectedEwalletProvider = val),
-                        onBankTransferProviderChanged: (val) => setState(() => _selectedBankTransferProvider = val),
+                        onCurrencyChanged: (val) => _vm.setCurrency(val),
+                        onCashBoxChanged: (val) => _vm.setCashBox(val),
+                        onEwalletProviderChanged: (val) => _vm.setEwalletProvider(val),
+                        onBankTransferProviderChanged: (val) => _vm.setBankTransferProvider(val),
                         onPickImageFromGallery: _pickImageFromGallery,
                         onPickImageFromCamera: _pickImageFromCamera,
-                        onRemoveAttachment: () => setState(() => _attachmentPath = null),
+                        onRemoveAttachment: () => _vm.setAttachmentPath(null),
                         onToggleAutoPay: () {
-                          setState(() {
-                            _autoPay = !_autoPay;
-                            if (_autoPay) {
-                              _paidController.text = _total.toStringAsFixed(2);
-                            }
-                          });
+                          _vm.toggleAutoPay();
+                          if (_vm.autoPay) {
+                            _paidController.text = _vm.total.toStringAsFixed(2);
+                          }
                         },
                         onShowOriginalInvoiceSelector: _showOriginalInvoiceSelector,
-                        onClearOriginalInvoice: () => setState(() {
-                          _originalInvoiceId = null;
-                          _originalInvoiceDisplay = null;
-                        }),
-                        onPaidChanged: () => setState(() {}),
+                        onClearOriginalInvoice: () => _vm.clearOriginalInvoice(),
+                        onPaidChanged: () => _syncControllersToVm(),
                       ),
                       const SizedBox(height: 16),
                       // Entity Section
                       InvoiceEntitySection(
                         isDark: isDark,
-                        showEntityDropdown: _showEntityDropdown,
-                        selectedEntityId: _selectedEntityId,
-                        selectedEntityType: _selectedEntityType,
+                        showEntityDropdown: _vm.showEntityDropdown,
+                        selectedEntityId: _vm.selectedEntityId,
+                        selectedEntityType: _vm.selectedEntityType,
                         selectedEntityName: _selectedEntityName,
-                        filteredEntities: _filteredEntities,
+                        filteredEntities: _vm.filteredEntities,
                         entitySearchController: _entitySearchController,
                         isEntityRequired: _isEntityRequired,
                         isSale: _isSale,
-                        paymentMechanism: _paymentMechanism,
-                        onToggleDropdown: () => setState(() => _showEntityDropdown = !_showEntityDropdown),
+                        paymentMechanism: _vm.paymentMechanism,
+                        onToggleDropdown: () => _vm.toggleEntityDropdown(),
                         onEntitySelected: (id, type) {
-                          setState(() {
-                            _selectedEntityId = id;
-                            _selectedEntityType = type;
-                            _showEntityDropdown = false;
-                            _entitySearchController.clear();
-                            _filteredEntities = List.from(_combinedEntities);
-                          });
+                          _vm.selectEntity(id, type);
+                          _entitySearchController.clear();
                         },
-                        onClearEntity: () => setState(() {
-                          _selectedEntityId = null;
-                          _selectedEntityType = null;
-                        }),
+                        onClearEntity: () => _vm.clearEntity(),
                         onAddNewEntity: _addNewEntity,
-                        onFilterEntities: _filterEntities,
+                        onFilterEntities: (query) => _vm.filterEntities(query),
                       ),
                       const SizedBox(height: 16),
                       // Items section
                       InvoiceItemsSection(
                         isDark: isDark,
-                        items: _items,
+                        items: _vm.items,
                         onQuantityChanged: (index, qty) {
-                          setState(() {
-                            final item = _items[index];
-                            _items[index] = item.copyWith(quantity: qty, totalPrice: qty * item.unitPrice);
-                            _updateAutoPay();
-                          });
+                          _vm.updateItemQuantity(index, qty);
+                          if (_vm.autoPay) {
+                            _paidController.text = _vm.total.toStringAsFixed(2);
+                          }
                         },
                         onDeleteItem: (index) {
-                          setState(() {
-                            _items.removeAt(index);
-                            _updateAutoPay();
-                          });
+                          _vm.removeItem(index);
+                          if (_vm.autoPay) {
+                            _paidController.text = _vm.total.toStringAsFixed(2);
+                          }
                         },
                         onAddItem: _addItem,
                       ),
@@ -405,18 +289,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         totalInBaseCurrency: _totalInBaseCurrency,
                         paidAmountInBaseCurrency: _paidAmountInBaseCurrency,
                         remainingInBaseCurrency: _remainingInBaseCurrency,
-                        selectedCurrency: _selectedCurrency,
+                        selectedCurrency: _vm.selectedCurrency,
                         discountController: _discountController,
                         transportChargesController: _transportChargesController,
                         notesController: _notesController,
-                        onDiscountChanged: () {
-                          setState(() {});
-                          _updateAutoPay();
-                        },
-                        onTransportChanged: () {
-                          setState(() {});
-                          _updateAutoPay();
-                        },
+                        onDiscountChanged: () => _syncControllersToVm(),
+                        onTransportChanged: () => _syncControllersToVm(),
                       ),
                       const SizedBox(height: 90), // Bottom padding for scroll
                     ],
@@ -483,7 +361,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (_isReturn) ...[
+          if (_vm.isReturn) ...[
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -653,7 +531,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       final createdAt = DateTime.tryParse(inv['created_at'] as String? ?? '');
                       final dateStr = createdAt != null ? DateFormatter.formatDateTime(createdAt) : '';
                       final displayId = invId.length > 12 ? '...${invId.substring(invId.length - 8)}' : invId;
-                      final isSelected = _originalInvoiceId != null && invId == _originalInvoiceId;
+                      final isSelected = _vm.originalInvoiceId != null && invId == _vm.originalInvoiceId;
 
                       return ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -693,10 +571,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                               )
                             : null,
                         onTap: () {
-                          setState(() {
-                            _originalInvoiceId = invId;
-                            _originalInvoiceDisplay = '# $displayId • $entityName • ${CurrencyFormatter.format(total)}';
-                          });
+                          _vm.setOriginalInvoice(invId, '# $displayId • $entityName • ${CurrencyFormatter.format(total)}');
                           Navigator.pop(ctx);
                         },
                       );
@@ -719,7 +594,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // ── Add new entity ───────────────────────────────────────────────
   Future<void> _addNewEntity() async {
-    _showEntityDropdown = false;
+    _vm.setShowEntityDropdown(false);
     _entitySearchController.clear();
 
     if (_isSale) {
@@ -735,15 +610,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
 
     // Reload entities after adding
-    final results = await Future.wait([
-      locator<CustomerRepository>().getAllCustomers(),
-      locator<SupplierRepository>().getAllSuppliers(),
-    ]);
-    setState(() {
-      _customers = results[0];
-      _suppliers = results[1];
-      _buildCombinedEntities();
-    });
+    await _vm.reloadEntities();
   }
 
   // ── Add item ─────────────────────────────────────────────────────
@@ -752,28 +619,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddInvoiceItemSheet(warehouseId: _selectedWarehouseId, invoiceType: widget.invoiceType),
+      builder: (_) => AddInvoiceItemSheet(warehouseId: _vm.selectedWarehouseId, invoiceType: widget.invoiceType),
     );
     if (result != null) {
-      setState(() {
-        _items.add(result);
-        _updateAutoPay();
-      });
+      _vm.addItem(result);
+      if (_vm.autoPay) {
+        _paidController.text = _vm.total.toStringAsFixed(2);
+      }
     }
   }
 
   // ── Save invoice ─────────────────────────────────────────────────
   Future<void> _saveInvoice() async {
+    // Sync controllers to VM before validation
+    _syncControllersToVm();
+
     // Validate
-    if (_items.isEmpty) {
+    if (_vm.items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة صنف واحد على الأقل');
       return;
     }
-    if (_isEntityRequired && _selectedEntityId == null) {
+    if (_vm.isEntityRequired && _vm.selectedEntityId == null) {
       context.showErrorSnackBar('الحساب مطلوب');
       return;
     }
-    if (_paymentMechanism == 'cash' && _selectedCashBoxId == null) {
+    if (_vm.paymentMechanism == 'cash' && _vm.selectedCashBoxId == null) {
       context.showErrorSnackBar('الرجاء اختيار الصندوق');
       return;
     }
@@ -794,14 +664,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       return;
     }
     // Return invoices must be linked to an original invoice
-    if (_isReturn && _originalInvoiceId == null) {
+    if (_vm.isReturn && _vm.originalInvoiceId == null) {
       context.showErrorSnackBar('يجب ربط الفاتورة المرتجعة بالفاتورة الأصلية');
       return;
     }
 
     // Check return limits if this is a return invoice with an original invoice linked
-    if (_isReturn && _originalInvoiceId != null) {
-      final itemsMaps = _items.map((item) => <String, dynamic>{
+    if (_vm.isReturn && _vm.originalInvoiceId != null) {
+      final itemsMaps = _vm.items.map((item) => <String, dynamic>{
         'product_id': item.productId,
         'product_name': item.productName,
         'quantity': item.quantity,
@@ -809,7 +679,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'unit_price': item.unitPrice,
         'total_price': item.totalPrice,
       }).toList();
-      final limitErrors = await locator<InvoiceRepository>().checkReturnLimits(_originalInvoiceId!, itemsMaps);
+      final limitErrors = await locator<InvoiceRepository>().checkReturnLimits(_vm.originalInvoiceId!, itemsMaps);
       if (limitErrors.isNotEmpty && mounted) {
         final errorMessages = limitErrors.values.join('\n');
         showDialog(
@@ -840,19 +710,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
 
     // Determine effective payment mechanism for journal entries
-    final effectivePaymentMechanism = _paymentMechanism;
-    final effectivePaidAmount = _paymentMechanism == 'credit' ? 0.0 : _paidAmount;
+    final effectivePaymentMechanism = _vm.paymentMechanism;
+    final effectivePaidAmount = _vm.paymentMechanism == 'credit' ? 0.0 : _paidAmount;
 
     final invoiceId = const Uuid().v4();
     final invoice = Invoice(
       id: invoiceId,
       type: widget.invoiceType,
-      paymentMechanism: _paymentMechanism,
-      paymentMethod: _paymentMethod,
-      isReturn: _isReturn,
-      cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
-      customerId: _selectedEntityType == 'customer' ? _selectedEntityId : null,
-      supplierId: _selectedEntityType == 'supplier' ? _selectedEntityId : null,
+      paymentMechanism: _vm.paymentMechanism,
+      paymentMethod: _vm.paymentMethod,
+      isReturn: _vm.isReturn,
+      cashBoxId: _vm.paymentMechanism == 'cash' ? _vm.selectedCashBoxId : null,
+      customerId: _vm.selectedEntityType == 'customer' ? _vm.selectedEntityId : null,
+      supplierId: _vm.selectedEntityType == 'supplier' ? _vm.selectedEntityId : null,
       subtotal: _subtotal,
       discountRate: _subtotal > 0 ? (_discountAmount / _subtotal) * 100 : 0.0,
       discountAmount: _discountAmount,
@@ -861,22 +731,22 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       paidAmount: _paidAmount,
       remaining: _remaining,
       status: _remaining <= 0.005 ? 'paid' : _paidAmount > 0.005 ? 'partial' : 'unpaid',
-      warehouseId: _selectedWarehouseId,
+      warehouseId: _vm.selectedWarehouseId,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
-      currency: _selectedCurrency,
-      exchangeRate: _selectedExchangeRate,
-      ewalletProvider: _paymentMethod == 'ewallet' ? _selectedEwalletProvider : null,
-      bankTransferProvider: _paymentMethod == 'bank_transfer' ? _selectedBankTransferProvider : null,
-      transferNumber: _paymentMethod == 'bank_transfer' && _transferNumberController.text.isNotEmpty
+      currency: _vm.selectedCurrency,
+      exchangeRate: _vm.selectedExchangeRate,
+      ewalletProvider: _vm.paymentMethod == 'ewallet' ? _vm.selectedEwalletProvider : null,
+      bankTransferProvider: _vm.paymentMethod == 'bank_transfer' ? _vm.selectedBankTransferProvider : null,
+      transferNumber: _vm.paymentMethod == 'bank_transfer' && _transferNumberController.text.isNotEmpty
           ? _transferNumberController.text
           : null,
-      attachmentPath: (_paymentMethod == 'ewallet' || _paymentMethod == 'bank_transfer')
-          ? _attachmentPath
+      attachmentPath: (_vm.paymentMethod == 'ewallet' || _vm.paymentMethod == 'bank_transfer')
+          ? _vm.attachmentPath
           : null,
-      originalInvoiceId: _isReturn ? _originalInvoiceId : null,
+      originalInvoiceId: _vm.isReturn ? _vm.originalInvoiceId : null,
     );
 
-    final itemsMaps = _items.map((item) => {
+    final itemsMaps = _vm.items.map((item) => {
       'invoice_id': invoiceId,
       'product_id': item.productId,
       'product_name': item.productName,
@@ -894,16 +764,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       itemsMaps,
       invoiceType: invoice.effectiveType,
       paymentMechanism: effectivePaymentMechanism,
-      isReturn: _isReturn,
-      cashBoxId: _paymentMechanism == 'cash' ? _selectedCashBoxId : null,
+      isReturn: _vm.isReturn,
+      cashBoxId: _vm.paymentMechanism == 'cash' ? _vm.selectedCashBoxId : null,
       transportCharges: _transportCharges,
       paidAmount: effectivePaidAmount,
     );
 
     // Update shift totals if this is a return invoice and a shift is active
-    if (_isReturn && _selectedCashBoxId != null) {
+    if (_vm.isReturn && _vm.selectedCashBoxId != null) {
       try {
-        final activeShift = await locator<ShiftService>().getActiveShift(_selectedCashBoxId!);
+        final activeShift = await locator<ShiftService>().getActiveShift(_vm.selectedCashBoxId!);
         if (activeShift != null) {
           final shiftId = activeShift['id'] as int;
           await locator<ShiftService>().updateShiftTotals(shiftId, 0.0, _total, 0.0);
@@ -921,7 +791,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // ── Share invoice details ────────────────────────────────────────
   void _shareInvoice() {
-    if (_items.isEmpty) {
+    if (_vm.items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
       return;
     }
@@ -939,7 +809,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     buffer.writeln('المتبقي: ${CurrencyFormatter.format(_remaining)}');
     buffer.writeln('──────────────────');
     buffer.writeln('الأصناف:');
-    for (final item in _items) {
+    for (final item in _vm.items) {
       buffer.writeln('  ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
     }
     if (_notesController.text.isNotEmpty) buffer.writeln('ملاحظات: ${_notesController.text}');
@@ -948,7 +818,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // ── Share via WhatsApp ───────────────────────────────────────────
   void _shareInvoiceWhatsApp() {
-    if (_items.isEmpty) {
+    if (_vm.items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
       return;
     }
@@ -966,7 +836,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     buffer.writeln('المتبقي: ${CurrencyFormatter.format(_remaining)}');
     buffer.writeln('━━━━━━━━━━━━━━━━━━');
     buffer.writeln('*الأصناف:*');
-    for (final item in _items) {
+    for (final item in _vm.items) {
       buffer.writeln('▫️ ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
     }
     if (_notesController.text.isNotEmpty) buffer.writeln('ملاحظات: ${_notesController.text}');
@@ -975,7 +845,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // ── Print invoice ────────────────────────────────────────────────
   Future<void> _printInvoice() async {
-    if (_items.isEmpty) {
+    if (_vm.items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
       return;
     }
@@ -989,7 +859,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'id': '—',
         'type': widget.invoiceType,
         'is_return': 0,
-        'customer_id': _selectedEntityId,
+        'customer_id': _vm.selectedEntityId,
         'subtotal': _subtotal,
         'discount_amount': _discountAmount,
         'tax_amount': _taxAmount,
@@ -998,14 +868,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'paid_amount': _paidAmount,
         'remaining': _remaining,
         'status': _remaining <= 0 ? 'paid' : 'unpaid',
-        'payment_method': _paymentMethod,
-        'currency': _selectedCurrency,
+        'payment_method': _vm.paymentMethod,
+        'currency': _vm.selectedCurrency,
         'notes': _notesController.text,
         'entity_name': entityName,
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final itemsMap = _items.map((item) => <String, dynamic>{
+      final itemsMap = _vm.items.map((item) => <String, dynamic>{
         'product_name': item.productName,
         'quantity': item.quantity,
         'unit_price': item.unitPrice,
@@ -1022,7 +892,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   /// Print via Bluetooth thermal printer.
   Future<void> _printBluetooth() async {
-    if (_items.isEmpty) {
+    if (_vm.items.isEmpty) {
       context.showErrorSnackBar('الرجاء إضافة أصناف أولاً');
       return;
     }
@@ -1053,14 +923,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
     try {
       final entityName = _selectedEntityName ?? '—';
-      final currencySymbol = _selectedCurrency == 'SAR' ? 'ر.س' : _selectedCurrency == 'USD' ? r'$' : 'ر.ي';
+      final currencySymbol = _vm.selectedCurrency == 'SAR' ? 'ر.س' : _vm.selectedCurrency == 'USD' ? r'$' : 'ر.ي';
 
       await printerService.printReceipt({
         'invoice_number': '—',
         'invoice_type': _isSale ? 'فاتورة مبيعات' : 'فاتورة مشتريات',
         'date': DateTime.now(),
         'customer_name': entityName,
-        'items': _items.map((item) => <String, dynamic>{
+        'items': _vm.items.map((item) => <String, dynamic>{
           'product_name': item.productName,
           'quantity': item.quantity,
           'unit_price': item.unitPrice,
