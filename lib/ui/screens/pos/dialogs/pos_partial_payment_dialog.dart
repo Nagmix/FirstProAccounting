@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_constants.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/viewmodels/pos_viewmodel.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/viewmodels/pos_viewmodel.dart';
 import '../pos_models.dart';
 
 /// Shows the add partial payment dialog.

@@ -1,5 +1,5 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import '../../core/utils/money_helper.dart';
+import '../../../core/utils/money_helper.dart';
 import 'seeds.dart';
 import 'migration_helpers.dart';
 

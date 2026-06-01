@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/extensions/context_extensions.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/viewmodels/pos_viewmodel.dart';
+import '../../../../core/extensions/context_extensions.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/viewmodels/pos_viewmodel.dart';
 
 /// Checkout completed overlay widget.
 class PosCheckoutCompletedOverlay extends StatelessWidget {

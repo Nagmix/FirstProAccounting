@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/viewmodels/pos_viewmodel.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/viewmodels/pos_viewmodel.dart';
 
 /// Shows the edit quantity dialog for a cart item.
 Future<void> showEditQuantityDialog(BuildContext context, PosViewModel vm, int index) async {

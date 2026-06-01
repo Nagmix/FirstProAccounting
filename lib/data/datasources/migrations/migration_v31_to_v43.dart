@@ -1586,7 +1586,6 @@ class MigrationV31ToV43 {
       await txn.execute('CREATE INDEX idx_held_orders_shift ON held_orders (shift_id)');
     });
   }
-  }
 
   /// Migration v39 helper: Fix balance_type for all accounts
   static Future<void> migrateV39Helper(Database db) async {
@@ -1648,7 +1647,6 @@ class MigrationV31ToV43 {
         MigrationHelpers.logMigrationError("migration v39 fix_exchange_account", e);
       }
     });
-  }
   }
 
   /// Migration v41 helper: Accounting tree hierarchy
@@ -1756,7 +1754,6 @@ class MigrationV31ToV43 {
         }
       }
     }
-  }
   }
 
   /// Migration v42 helper: Fix account codes and hierarchy
