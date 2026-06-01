@@ -158,7 +158,11 @@ class MigrationV31ToV43 {
   /// v36: Add unit_cost column to invoice_items
   static Future<void> migrateV36(Database db) async {
       // Add unit_cost column for accurate COGS on deferred POS posting
-      await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_cost INTEGER NOT NULL DEFAULT 0');
+      try {
+        await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_cost INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        MigrationHelpers.logMigrationError("migration v36 unit_cost", e);
+      }
   }
 
   /// v37: Add currency column to products
