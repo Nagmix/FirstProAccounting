@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:convert';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -13,8 +12,7 @@ import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/product_repository.dart';
-import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../core/viewmodels/pos_viewmodel.dart';
 import '../../../data/datasources/repositories/invoice_repository.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
@@ -42,85 +40,41 @@ class PosScreen extends StatefulWidget {
 }
 
 class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
+  // ── ViewModel (single source of truth) ────────────────────────────
+  final _vm = locator<PosViewModel>();
+
   // ── Search & Barcode ──────────────────────────────────────────────
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
   bool _isSearching = false;
 
-  // ── Cart state ────────────────────────────────────────────────────
-  final List<CartItem> _cart = [];
-  double _orderDiscount = 0;
-  DiscountType _discountType = DiscountType.fixed;
-  int? _selectedCustomerId;
-  String _selectedCustomerName = '';
-
-  // ── Checkout phase (replaces _isCheckingOut + showDialog) ──────────
-  // Using a state-based overlay instead of showDialog prevents
-  // dialog stacking which caused the multi-click bug.
-  CheckoutPhase _checkoutPhase = CheckoutPhase.idle;
-  String _lastInvoiceId = '';
-  double _capturedTotal = 0;
-  String _capturedCustomerName = '';
-  String _capturedPaymentLabel = '';
-  int _capturedCartLength = 0;
-  double _capturedSubtotal = 0;
-  double _capturedDiscount = 0;
-  double _capturedTax = 0;
-
-  // ── Payment state ─────────────────────────────────────────────────
-  final List<PaymentEntry> _payments = [];
-  String _activePaymentMethod = 'cash';
-
-  // ── Held orders ───────────────────────────────────────────────────
-  final List<HeldOrder> _heldOrders = [];
-
-  // ── Data from DB ──────────────────────────────────────────────────
-  List<Map<String, dynamic>> _categories = [];
-  List<Product> _products = [];
-  bool _isLoading = true;
-  int? _selectedCategoryId;
-
-  // ── Top sellers (today) ───────────────────────────────────────────
-  List<Map<String, dynamic>> _topSellers = [];
-
-  // ── Shift state ───────────────────────────────────────────────────
-  Map<String, dynamic>? _activeShift;
-  String _shiftCashBoxName = '';
-  String _cashierName = '';
-
   // ── Timer for shift duration ──────────────────────────────────────
   late Ticker _ticker;
-  Duration _shiftDuration = Duration.zero;
 
   // ── Draggable sheet controller ────────────────────────────────────
   final _sheetController = DraggableScrollableController();
   double _sheetExtent = 0.12;
-
-  // ── Invoice counter (for readable IDs) ────────────────────────────
-  int _todayInvoiceCount = 0;
-
-  // ── Currency (H3: dynamic instead of hardcoded YER) ───────────────
-  String _selectedCurrency = 'YER';
 
   @override
   void initState() {
     super.initState();
     _ticker = createTicker(_onTick);
     _searchController.addListener(_onSearchChanged);
-    _loadData();
+    _vm.addListener(_onVmChanged);
+    _vm.loadData();
+  }
+
+  void _onVmChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onTick(Duration elapsed) {
-    if (_activeShift != null && _activeShift!['opened_at'] != null) {
-      final opened = DateTime.parse(_activeShift!['opened_at'].toString());
-      if (mounted) {
-        setState(() => _shiftDuration = DateTime.now().difference(opened));
-      }
-    }
+    _vm.updateShiftDuration();
   }
 
   void _onSearchChanged() {
     final text = _searchController.text;
+    _vm.setSearchQuery(text);
     // Auto-detect barcode: if text matches typical barcode pattern, auto-add
     if (text.length >= 4 && !_isSearching) {
       _isSearching = true;
@@ -129,40 +83,18 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _tryBarcodeMatch(String barcode) async {
-    // 1. Check direct product barcode
-    final match = _products.where(
-      (p) => (p.barcode ?? '').trim() == barcode.trim(),
-    );
-    if (match.isNotEmpty) {
-      _addToCartWithUnit(match.first);
+    final result = await _vm.tryBarcodeMatch(barcode);
+    if (result != null) {
+      _addToCartWithUnit(result.product, unitInfo: result.unitInfo);
       _searchController.clear();
-      _isSearching = false;
-      setState(() {});
-      return;
     }
-
-    // 2. Check unit conversion barcodes
-    final conversion = await locator<ReferenceDataRepository>().findUnitConversionByBarcode(barcode);
-    if (conversion != null) {
-      final productId = conversion['product_id'] as int;
-      final product = _products.where((p) => p.id == productId).firstOrNull;
-      if (product != null) {
-        _addToCartDirect(product, {
-          'unit_name': conversion['from_unit'] as String,
-          'sell_price': MoneyHelper.readMoney(conversion['sell_price'], fallback: product.sellPrice),
-          'conversion_factor': (conversion['conversion_factor'] as num?)?.toDouble() ?? 1.0,
-          'barcode': conversion['barcode'] as String?,
-        });
-        _searchController.clear();
-      }
-    }
-
     _isSearching = false;
     setState(() {});
   }
 
   @override
   void dispose() {
+    _vm.removeListener(_onVmChanged);
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -172,185 +104,13 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  //  DATA LOADING
-  // ═══════════════════════════════════════════════════════════════════
-  Future<void> _loadData() async {
-    final catMaps = await locator<ReferenceDataRepository>().getAllCategories();
-    final prodMaps = await locator<ProductRepository>().getAllProducts(activeOnly: true);
-
-    // Load default cashier name from settings
-    final savedName = await locator<ReferenceDataRepository>().getSetting('user_name');
-
-    // C7: Query DB for today's POS invoice count to avoid ID collisions after restart
-    // IMPORTANT: Date format must match _generateInvoiceId() — NO hyphens!
-    final today = DateTime.now();
-    final todayStr = '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
-    final count = await locator<InvoiceRepository>().getTodayPosInvoiceCount(todayStr);
-
-    // Filter products that are sellable and shown in POS
-    final posProducts = prodMaps
-        .map((m) => Product.fromMap(m))
-        .where((p) => p.isSellable && p.showInPos)
-        .toList();
-
-    if (mounted) {
-      setState(() {
-        _categories = catMaps;
-        _products = posProducts;
-        _isLoading = false;
-        _todayInvoiceCount = count;
-        if (savedName != null && savedName.isNotEmpty) {
-          _cashierName = savedName;
-        }
-      });
-    }
-    await _loadActiveShift();
-    await _loadHeldOrdersFromDb();
-    await _loadTopSellers();
-  }
-
-  Future<void> _loadHeldOrdersFromDb() async {
-    try {
-      final dbOrders = await locator<ShiftService>().getHeldOrders(shiftId: _activeShift?['id']);
-      for (final row in dbOrders) {
-        final cartData = jsonDecode(row['cart_data'] as String) as List;
-        final paymentsData = jsonDecode(row['payments_data'] as String) as List;
-        final cartItems = cartData.map((item) => CartItem(
-          productId: item['productId'] as int,
-          name: item['productName'] as String,
-          quantity: (item['quantity'] as num).toInt(),
-          unitPrice: MoneyHelper.readMoney(item['unitPrice']),
-          unitName: item['unitName'] as String? ?? 'قطعة',
-          conversionFactor: (item['conversionFactor'] as num?)?.toDouble() ?? 1.0, // conversion_factor is non-monetary
-        )).toList();
-        final payments = paymentsData.map((p) => PaymentEntry(
-          amount: MoneyHelper.readMoney(p['amount']),
-          method: p['method'] as String? ?? 'cash',
-        )).toList();
-        final discountTypeStr = row['discount_type'] as String? ?? 'fixed';
-        _heldOrders.add(HeldOrder(
-          items: cartItems,
-          paymentMethod: row['payment_method'] as String? ?? 'cash',
-          payments: payments,
-          discount: MoneyHelper.readMoney(row['discount']),
-          discountType: DiscountType.values.firstWhere((e) => e.name == discountTypeStr, orElse: () => DiscountType.fixed),
-          customerId: row['customer_id'] as int?,
-          customerName: row['customer_name'] as String? ?? '',
-          createdAt: DateTime.tryParse(row['created_at'] as String? ?? '') ?? DateTime.now(),
-          dbId: row['id'] as int?,
-        ));
-      }
-      if (_heldOrders.isNotEmpty && mounted) setState(() {});
-    } catch (e) {
-      debugPrint('Warning: Could not load held orders from DB: $e');
-    }
-  }
-
-  Future<void> _loadActiveShift() async {
-    final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
-    for (final cb in cashBoxes) {
-      final shift = await locator<ShiftService>().getActiveShift(cb['id'] as int);
-      if (shift != null) {
-        setState(() {
-          _activeShift = shift;
-          _shiftCashBoxName = (cb['name'] ?? '').toString();
-          if (shift['cashier_name'] != null) {
-            _cashierName = shift['cashier_name'].toString();
-          }
-          // H3: Initialize currency from active shift (or cash box)
-          _selectedCurrency = (shift['currency'] ?? cb['currency'] ?? 'YER').toString();
-        });
-        if (!_ticker.isActive) _ticker.start();
-        return;
-      }
-    }
-    setState(() {
-      _activeShift = null;
-      _shiftCashBoxName = '';
-      _shiftDuration = Duration.zero;
-    });
-    if (_ticker.isActive) _ticker.stop();
-  }
-
-  Future<void> _loadTopSellers() async {
-    final today = DateTime.now();
-    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    final reportService = locator<ReportService>();
-    final result = await reportService.getTopSellersToday(todayStr);
-    if (mounted) {
-      setState(() => _topSellers = result);
-    }
-  }
-
-  /// Refresh product list to update stock badges after sales
-  Future<void> _refreshProducts() async {
-    final prodMaps = await locator<ProductRepository>().getAllProducts(activeOnly: true);
-    if (mounted) {
-      setState(() {
-        _products = prodMaps.map((m) => Product.fromMap(m)).toList();
-      });
-    }
-  }
-
-  // ── Computed properties ───────────────────────────────────────────
-  List<Product> get _filteredProducts {
-    var result = _products;
-    if (_selectedCategoryId != null) {
-      result = result.where((p) => p.categoryId == _selectedCategoryId).toList();
-    }
-    if (_searchController.text.isNotEmpty) {
-      final q = _searchController.text.toLowerCase();
-      result = result.where((p) =>
-          p.nameAr.contains(q) ||
-          p.nameEn.toLowerCase().contains(q) ||
-          (p.barcode ?? '').contains(q)).toList();
-    }
-    return result;
-  }
-
-  double get _subtotal => _cart.fold(0.0, (sum, i) => sum + i.total);
-
-  double get _effectiveDiscount {
-    if (_discountType == DiscountType.percentage) {
-      return _subtotal * (_orderDiscount / 100);
-    }
-    return _orderDiscount;
-  }
-
-  double get _tax => (_subtotal - _effectiveDiscount) * (AppConstants.defaultVatRate / 100);
-  double get _total => _subtotal - _effectiveDiscount + _tax;
-
-  double get _totalPaid => _payments.fold(0.0, (sum, p) => sum + p.amount);
-  double get _remaining => _total - _totalPaid;
-
-  String _formatDuration(Duration d) {
-    final h = d.inHours.toString().padLeft(2, '0');
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$h:$m:$s';
-  }
-
-  /// Generate readable invoice ID: POS-YYYYMMDD-NNNN
-  /// Generate invoice ID using DB-based sequence (no gaps)
-  /// Uses getNextInvoiceSequence for gap-free numbering
-  Future<String> _generateInvoiceId() async {
-    final now = DateTime.now();
-    final dateStr =
-        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final nextSeq = await locator<InvoiceRepository>().getNextInvoiceSequence('POS-$dateStr', 'pos');
-    _todayInvoiceCount = nextSeq;
-    final seq = nextSeq.toString().padLeft(4, '0');
-    return 'POS-$dateStr-$seq';
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
   //  BUILD
   // ═══════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
-      body: _isLoading
+      body: _vm.isLoading
             ? const Center(child: CircularProgressIndicator())
             : Stack(
                 children: [
@@ -358,46 +118,46 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   // AbsorbPointer prevents taps from leaking through
                   // to main content when a checkout overlay is active.
                   AbsorbPointer(
-                    absorbing: _checkoutPhase != CheckoutPhase.idle,
+                    absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
                     child: Column(
                       children: [
-                        if (_activeShift != null) _buildShiftInfoBar(),
+                        if (_vm.activeShift != null) _buildShiftInfoBar(),
                         _buildSearchBar(),
                         _buildCategoryChips(),
-                        if (_topSellers.isNotEmpty) _buildTopSellers(),
+                        if (_vm.topSellers.isNotEmpty) _buildTopSellers(),
                         Expanded(child: _buildProductGrid()),
                       ],
                     ),
                   ),
                   // Draggable cart sheet at bottom
                   // Positioned at bottom to prevent intercepting taps on product grid
-                  if (_activeShift != null)
+                  if (_vm.activeShift != null)
                     Positioned(
                       left: 0,
                       right: 0,
                       bottom: 0,
                       top: 0,
                       child: AbsorbPointer(
-                        absorbing: _checkoutPhase != CheckoutPhase.idle,
+                        absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
                         child: _buildDraggableCartSheet(),
                       ),
                     ),
                   // Shift overlay when no active shift
-                  if (_activeShift == null) _buildShiftOverlay(),
+                  if (_vm.activeShift == null) _buildShiftOverlay(),
                   // ── Checkout overlays (replaces showDialog) ────────
                   // State-based overlays eliminate dialog stacking bug.
                   // Each overlay uses GestureDetector to absorb ALL taps
                   // (including on the transparent background), preventing
                   // any tap-through to widgets below.
-                  if (_checkoutPhase == CheckoutPhase.confirming)
+                  if (_vm.checkoutPhase == CheckoutPhase.confirming)
                     _buildCheckoutConfirmationOverlay(),
-                  if (_checkoutPhase == CheckoutPhase.completed)
+                  if (_vm.checkoutPhase == CheckoutPhase.completed)
                     _buildCheckoutCompletedOverlay(),
                 ],
               ),
-        floatingActionButton: _activeShift != null
+        floatingActionButton: _vm.activeShift != null
             ? FloatingActionButton(
-                onPressed: _checkoutPhase != CheckoutPhase.idle ? null : _scanBarcode,
+                onPressed: _vm.checkoutPhase != CheckoutPhase.idle ? null : _scanBarcode,
                 backgroundColor: AppColors.secondary,
                 foregroundColor: Colors.white,
                 tooltip: 'مسح باركود',
@@ -424,7 +184,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: _selectedCurrency,
+              value: _vm.selectedCurrency,
               icon: const Icon(Icons.arrow_drop_down, size: 18),
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
               borderRadius: BorderRadius.circular(8),
@@ -434,20 +194,20 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 DropdownMenuItem(value: 'USD', child: Text('USD')),
               ],
               onChanged: (val) {
-                if (val != null) setState(() => _selectedCurrency = val);
+                if (val != null) _vm.setSelectedCurrency(val);
               },
             ),
           ),
         ),
         // X-Report
-        if (_activeShift != null)
+        if (_vm.activeShift != null)
           IconButton(
             onPressed: _showXReport,
             icon: const Icon(Icons.bar_chart),
             tooltip: 'تقرير X',
           ),
         // Z-Report / Close Shift
-        if (_activeShift != null)
+        if (_vm.activeShift != null)
           IconButton(
             onPressed: _showZReport,
             icon: const Icon(Icons.logout),
@@ -455,8 +215,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           ),
         // Held orders
         Badge(
-          isLabelVisible: _heldOrders.isNotEmpty,
-          label: Text('${_heldOrders.length}'),
+          isLabelVisible: _vm.heldOrders.isNotEmpty,
+          label: Text('${_vm.heldOrders.length}'),
           child: IconButton(
             onPressed: _showHeldOrders,
             icon: const Icon(Icons.pause_circle),
@@ -465,7 +225,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         ),
         // Discount
         IconButton(
-          onPressed: _cart.isEmpty ? null : _showDiscountDialog,
+          onPressed: _vm.cartItems.isEmpty ? null : _showDiscountDialog,
           icon: const Icon(Icons.label),
           tooltip: 'خصم',
         ),
@@ -550,7 +310,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  SHIFT INFO BAR
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildShiftInfoBar() {
-    final shift = _activeShift!;
+    final shift = _vm.activeShift!;
     final totalSales = MoneyHelper.readMoney(shift['total_sales']);
     final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
 
@@ -607,7 +367,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               _shiftChip(
                 icon: Icons.person,
                 label: 'الكاشير',
-                value: _cashierName,
+                value: _vm.cashierName,
               ),
               const SizedBox(width: 10),
 
@@ -615,7 +375,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               _shiftChip(
                 icon: Icons.access_time,
                 label: 'المدة',
-                value: _formatDuration(_shiftDuration),
+                value: _vm.formattedShiftDuration,
               ),
               const SizedBox(width: 10),
 
@@ -623,7 +383,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               _shiftChip(
                 icon: Icons.account_balance_wallet,
                 label: 'الصندوق',
-                value: _shiftCashBoxName,
+                value: _vm.shiftCashBoxName,
               ),
               const SizedBox(width: 10),
 
@@ -787,26 +547,26 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        itemCount: _categories.length + 1,
+        itemCount: _vm.categories.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (context, index) {
           if (index == 0) {
-            final isSelected = _selectedCategoryId == null;
+            final isSelected = _vm.selectedCategoryId == null;
             return FilterChip(
               avatar: const Icon(Icons.grid_view, size: 15),
               label: const Text('الكل'),
               selected: isSelected,
-              onSelected: (_) => setState(() => _selectedCategoryId = null),
+              onSelected: (_) => _vm.setSelectedCategory(null),
               selectedColor: AppColors.primary.withOpacity(0.15),
               checkmarkColor: AppColors.primary,
             );
           }
-          final cat = _categories[index - 1];
-          final isSelected = _selectedCategoryId == cat['id'];
+          final cat = _vm.categories[index - 1];
+          final isSelected = _vm.selectedCategoryId == cat['id'];
           return FilterChip(
             label: Text(cat['name'] as String),
             selected: isSelected,
-            onSelected: (_) => setState(() => _selectedCategoryId = cat['id'] as int?),
+            onSelected: (_) => _vm.setSelectedCategory(cat['id'] as int?),
             selectedColor: AppColors.primary.withOpacity(0.15),
             checkmarkColor: AppColors.primary,
           );
@@ -842,14 +602,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             height: 36,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: _topSellers.length,
+              itemCount: _vm.topSellers.length,
               separatorBuilder: (_, __) => const SizedBox(width: 6),
               itemBuilder: (context, index) {
-                final item = _topSellers[index];
+                final item = _vm.topSellers[index];
                 final productName = item['product_name'] as String? ?? '';
                 final qty = (item['total_qty'] as num?)?.toInt() ?? 0;
                 // Find matching product for tap
-                final matchProduct = _products.where((p) => p.id == item['product_id']).firstOrNull;
+                final matchProduct = _vm.products.where((p) => p.id == item['product_id']).firstOrNull;
                 return ActionChip(
                   avatar: const Icon(Icons.local_fire_department, size: 14, color: AppColors.warning),
                   label: Text('$productName ($qty)', style: const TextStyle(fontSize: 11)),
@@ -867,7 +627,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  PRODUCT GRID
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildProductGrid() {
-    final products = _filteredProducts;
+    final products = _vm.filteredProducts;
 
     if (products.isEmpty) {
       return Center(
@@ -888,7 +648,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       builder: (context, constraints) {
         final crossAxisCount = (constraints.maxWidth / 150).floor().clamp(2, 6);
         return RefreshIndicator(
-          onRefresh: _loadData,
+          onRefresh: _vm.loadData,
           child: GridView.builder(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 120), // bottom padding for cart sheet
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -963,7 +723,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
                 // ── Cart items (visible when expanded) ──────────
                 if (isExpanded) ...[
-                  if (_cart.isEmpty)
+                  if (_vm.cartItems.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Column(
@@ -979,7 +739,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       ),
                     )
                   else
-                    ..._cart.asMap().entries.map((entry) {
+                    ..._vm.cartItems.asMap().entries.map((entry) {
                       final idx = entry.key;
                       final item = entry.value;
                       return PosCartItemTile(
@@ -988,10 +748,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         quantity: item.quantity,
                         unitName: item.unitName,
                         total: item.total,
-                        onIncrement: () => _incrementCart(idx),
-                        onDecrement: () => _decrementCart(idx),
+                        onIncrement: () => _vm.incrementCart(idx),
+                        onDecrement: () => _vm.decrementCart(idx),
                         onEditQuantity: () => _editQuantity(idx),
-                        onDelete: () => setState(() => _cart.removeAt(idx)),
+                        onDelete: () => _vm.removeFromCart(idx),
                       );
                     }),
 
@@ -999,65 +759,54 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
                   // ── Payment method selector ───────────────────
                   PosPaymentMethodSelector(
-                    activeMethod: _activePaymentMethod,
+                    activeMethod: _vm.activePaymentMethod,
                     onMethodChanged: (method) {
-                      setState(() {
-                        _activePaymentMethod = method;
-                        if (method != 'credit') {
-                          _selectedCustomerId = null;
-                          _selectedCustomerName = '';
-                        }
-                      });
+                      _vm.setActivePaymentMethod(method);
+                      if (method != 'credit') {
+                        _vm.setSelectedCustomer(null, '');
+                      }
                     },
                   ),
 
                   // ── Payment details for active method ────────
-                  if (_activePaymentMethod == 'credit')
+                  if (_vm.activePaymentMethod == 'credit')
                     _buildCreditCustomerSelector(),
-                  if (_activePaymentMethod == 'ewallet')
+                  if (_vm.activePaymentMethod == 'ewallet')
                     _buildEwalletFields(),
-                  if (_activePaymentMethod == 'bank_transfer')
+                  if (_vm.activePaymentMethod == 'bank_transfer')
                     _buildBankTransferFields(),
 
                   // ── Multi-payment entries ────────────────────
-                  if (_payments.isNotEmpty) _buildMultiPaymentSummary(),
+                  if (_vm.payments.isNotEmpty) _buildMultiPaymentSummary(),
 
                   // ── Totals ──────────────────────────────────
                   PosTotalsSection(
-                    subtotal: _subtotal,
-                    discount: _effectiveDiscount,
-                    discountType: _discountType,
-                    orderDiscount: _orderDiscount,
-                    tax: _tax,
-                    total: _total,
+                    subtotal: _vm.subtotal,
+                    discount: _vm.effectiveDiscount,
+                    discountType: _vm.discountType,
+                    orderDiscount: _vm.orderDiscount,
+                    tax: _vm.tax,
+                    total: _vm.total,
                     vatRate: AppConstants.defaultVatRate,
                   ),
 
                   // ── Action buttons ──────────────────────────
                   PosActionButtons(
-                    cartLength: _cart.length,
-                    total: _total,
-                    activePaymentMethod: _activePaymentMethod,
-                    paymentsLength: _payments.length,
-                    remaining: _remaining,
-                    checkoutPhase: _checkoutPhase,
+                    cartLength: _vm.cartItems.length,
+                    total: _vm.total,
+                    activePaymentMethod: _vm.activePaymentMethod,
+                    paymentsLength: _vm.payments.length,
+                    remaining: _vm.remaining,
+                    checkoutPhase: _vm.checkoutPhase,
                     paymentLabel: _paymentLabel,
-                    onAddPayment: () => _addPayment(_activePaymentMethod, _total),
+                    onAddPayment: () => _vm.addPayment(PaymentEntry(method: _vm.activePaymentMethod, amount: _vm.total)),
                     onAddPartialPayment: _showAddPartialPaymentDialog,
                     onStartCheckout: _startCheckout,
                     onHoldOrder: _holdOrder,
                     onClearInvoice: () {
-                      setState(() {
-                        _cart.clear();
-                        _payments.clear();
-                        _orderDiscount = 0;
-                        _discountType = DiscountType.fixed;
-                        _selectedCustomerId = null;
-                        _selectedCustomerName = '';
-                        _activePaymentMethod = 'cash';
-                        _searchController.clear();
-                        _isSearching = false;
-                      });
+                      _vm.resetForNewInvoice();
+                      _searchController.clear();
+                      _isSearching = false;
                       _sheetController.animateTo(0.12,
                           duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
                     },
@@ -1094,7 +843,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            if (_cart.isNotEmpty) ...[
+            if (_vm.cartItems.isNotEmpty) ...[
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1103,7 +852,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '${_cart.length}',
+                  '${_vm.cartItems.length}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -1113,9 +862,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               ),
             ],
             const Spacer(),
-            if (_cart.isNotEmpty)
+            if (_vm.cartItems.isNotEmpty)
               Text(
-                CurrencyFormatter.format(_total),
+                CurrencyFormatter.format(_vm.total),
                 style: context.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
@@ -1154,10 +903,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               const Icon(Icons.person, size: 18, color: AppColors.info),
               const SizedBox(width: 8),
               Text(
-                _selectedCustomerName.isEmpty ? 'اختر العميل' : _selectedCustomerName,
+                _vm.selectedCustomerName.isEmpty ? 'اختر العميل' : _vm.selectedCustomerName,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: _selectedCustomerName.isEmpty ? AppColors.textHint : AppColors.info,
+                  color: _vm.selectedCustomerName.isEmpty ? AppColors.textHint : AppColors.info,
                 ),
               ),
               const Spacer(),
@@ -1171,7 +920,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   // ── E-Wallet fields ──────────────────────────────────────────────
   Widget _buildEwalletFields() {
-    final ewalletPayment = _payments.where((p) => p.method == 'ewallet').firstOrNull;
+    final ewalletPayment = _vm.payments.where((p) => p.method == 'ewallet').firstOrNull;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Container(
@@ -1208,9 +957,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               ),
               onChanged: (v) {
                 // Update the ewallet provider name in payments
-                final idx = _payments.indexWhere((p) => p.method == 'ewallet');
+                final idx = _vm.payments.indexWhere((p) => p.method == 'ewallet');
                 if (idx >= 0) {
-                  _payments[idx] = _payments[idx].copyWith(providerName: v);
+                  _vm.updatePayment(idx, _vm.payments[idx].copyWith(providerName: v));
                 }
               },
               controller: TextEditingController(text: ewalletPayment?.providerName ?? '')
@@ -1250,7 +999,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   // ── Bank Transfer fields ─────────────────────────────────────────
   Widget _buildBankTransferFields() {
-    final bankPayment = _payments.where((p) => p.method == 'bank_transfer').firstOrNull;
+    final bankPayment = _vm.payments.where((p) => p.method == 'bank_transfer').firstOrNull;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Container(
@@ -1286,9 +1035,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 prefixIcon: const Icon(Icons.account_balance, size: 18),
               ),
               onChanged: (v) {
-                final idx = _payments.indexWhere((p) => p.method == 'bank_transfer');
+                final idx = _vm.payments.indexWhere((p) => p.method == 'bank_transfer');
                 if (idx >= 0) {
-                  _payments[idx] = _payments[idx].copyWith(providerName: v);
+                  _vm.updatePayment(idx, _vm.payments[idx].copyWith(providerName: v));
                 }
               },
               controller: TextEditingController(text: bankPayment?.providerName ?? '')
@@ -1306,9 +1055,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 prefixIcon: const Icon(Icons.tag, size: 18),
               ),
               onChanged: (v) {
-                final idx = _payments.indexWhere((p) => p.method == 'bank_transfer');
+                final idx = _vm.payments.indexWhere((p) => p.method == 'bank_transfer');
                 if (idx >= 0) {
-                  _payments[idx] = _payments[idx].copyWith(referenceNumber: v);
+                  _vm.updatePayment(idx, _vm.payments[idx].copyWith(referenceNumber: v));
                 }
               },
               controller: TextEditingController(text: bankPayment?.referenceNumber ?? '')
@@ -1351,9 +1100,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
     if (image != null) {
-      final idx = _payments.indexWhere((p) => p.method == method);
+      final idx = _vm.payments.indexWhere((p) => p.method == method);
       if (idx >= 0) {
-        setState(() => _payments[idx] = _payments[idx].copyWith(imagePath: image.path));
+        _vm.updatePayment(idx, _vm.payments[idx].copyWith(imagePath: image.path));
       }
     }
   }
@@ -1362,9 +1111,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (image != null) {
-      final idx = _payments.indexWhere((p) => p.method == method);
+      final idx = _vm.payments.indexWhere((p) => p.method == method);
       if (idx >= 0) {
-        setState(() => _payments[idx] = _payments[idx].copyWith(imagePath: image.path));
+        _vm.updatePayment(idx, _vm.payments[idx].copyWith(imagePath: image.path));
       }
     }
   }
@@ -1397,7 +1146,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               ],
             ),
             const SizedBox(height: 6),
-            ..._payments.map((p) => Padding(
+            ..._vm.payments.map((p) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1442,7 +1191,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                           ),
                           const SizedBox(width: 4),
                           InkWell(
-                            onTap: () => setState(() => _payments.remove(p)),
+                            onTap: () => _vm.removePayment(_vm.payments.indexOf(p)),
                             child: const Icon(
                               Icons.close,
                               size: 14,
@@ -1454,25 +1203,25 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     ],
                   ),
                 )),
-            if (_remaining.abs() > 0.01) ...[
+            if (_vm.remaining.abs() > 0.01) ...[
               const Divider(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    _remaining > 0 ? 'المتبقي' : 'الزيادة',
+                    _vm.remaining > 0 ? 'المتبقي' : 'الزيادة',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
-                      color: _remaining > 0 ? AppColors.error : AppColors.success,
+                      color: _vm.remaining > 0 ? AppColors.error : AppColors.success,
                     ),
                   ),
                   Text(
-                    CurrencyFormatter.format(_remaining.abs()),
+                    CurrencyFormatter.format(_vm.remaining.abs()),
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
-                      color: _remaining > 0 ? AppColors.error : AppColors.success,
+                      color: _vm.remaining > 0 ? AppColors.error : AppColors.success,
                     ),
                   ),
                 ],
@@ -1515,7 +1264,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     int? selectedCashBoxId = cashBoxes.first['id'] as int?;
     final amountController = TextEditingController(text: '0');
-    final cashierNameController = TextEditingController(text: _cashierName);
+    final cashierNameController = TextEditingController(text: _vm.cashierName);
     final notesController = TextEditingController();
 
     await showModalBottomSheet(
@@ -1700,19 +1449,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         'total_returns': 0.0,
                         'total_discounts': 0.0,
                         'transaction_count': 0,
-                        'currency': _selectedCurrency,
+                        'currency': _vm.selectedCurrency,
                         'created_at': now.toIso8601String(),
                         'updated_at': now.toIso8601String(),
                       };
-                      await locator<ShiftService>().openShift(shiftMap);
-
-                      // Save cashier name to settings
-                      await locator<ReferenceDataRepository>().setSetting('user_name', cashierName);
+                      await _vm.openShift(shiftMap);
 
                       if (!mounted) return;
                       Navigator.pop(ctx);
-                      _cashierName = cashierName;
-                      await _loadActiveShift();
                       context.showSuccessSnackBar('تم فتح الوردية $shiftNum بنجاح');
                     },
                     style: ElevatedButton.styleFrom(
@@ -1735,7 +1479,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  CASH IN / CASH OUT DIALOG
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showCashInOutDialog(bool isCashIn) async {
-    if (_activeShift == null) {
+    if (_vm.activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;
     }
@@ -1837,8 +1581,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
                     // Record the cash in/out transaction in the database
                     try {
-                      final shiftId = _activeShift!['id'] as int;
-                      final cashBoxId = _activeShift!['cash_box_id'] as int;
+                      final shiftId = _vm.activeShift!['id'] as int;
+                      final cashBoxId = _vm.activeShift!['cash_box_id'] as int;
                       final reason = reasonController.text.trim().isNotEmpty
                           ? reasonController.text.trim()
                           : (isCashIn ? 'إيداع نقدي في الوردية' : 'سحب نقدي من الوردية');
@@ -1849,11 +1593,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         amount: amount,
                         isCashIn: isCashIn,
                         reason: reason,
-                        currency: _selectedCurrency,
+                        currency: _vm.selectedCurrency,
                       );
 
-                      // Refresh shift data
-                      await _loadActiveShift();
+                      await _vm.loadData();
 
                       if (!mounted) return;
                       Navigator.pop(ctx);
@@ -1890,9 +1633,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  X-REPORT (Mid-Shift Report)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showXReport() async {
-    if (_activeShift == null) return;
+    if (_vm.activeShift == null) return;
 
-    final shift = _activeShift!;
+    final shift = _vm.activeShift!;
     final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
     final totalSales = MoneyHelper.readMoney(shift['total_sales']);
     final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
@@ -1947,9 +1690,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 20),
               _reportRow('رقم الوردية', shift['shift_number']?.toString() ?? '-'),
-              _reportRow('الكاشير', _cashierName),
-              _reportRow('الصندوق', _shiftCashBoxName),
-              _reportRow('المدة', _formatDuration(_shiftDuration)),
+              _reportRow('الكاشير', _vm.cashierName),
+              _reportRow('الصندوق', _vm.shiftCashBoxName),
+              _reportRow('المدة', _vm.formattedShiftDuration),
               const Divider(height: 24),
               _reportRow('رصيد الافتتاح', CurrencyFormatter.format(openingAmount), valueColor: AppColors.primary),
               _reportRow('إجمالي المبيعات', CurrencyFormatter.format(totalSales), valueColor: AppColors.success),
@@ -1997,9 +1740,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  Z-REPORT / CLOSE SHIFT (with deferred posting)
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _showZReport() async {
-    if (_activeShift == null) return;
+    if (_vm.activeShift == null) return;
 
-    final shift = _activeShift!;
+    final shift = _vm.activeShift!;
     final shiftId = shift['id'] as int;
     final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
     final totalSales = MoneyHelper.readMoney(shift['total_sales']);
@@ -2060,9 +1803,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 const SizedBox(height: 20),
 
                 _reportRow('رقم الوردية', shift['shift_number']?.toString() ?? '-'),
-                _reportRow('الكاشير', _cashierName),
-                _reportRow('الصندوق', _shiftCashBoxName),
-                _reportRow('المدة', _formatDuration(_shiftDuration)),
+                _reportRow('الكاشير', _vm.cashierName),
+                _reportRow('الصندوق', _vm.shiftCashBoxName),
+                _reportRow('المدة', _vm.formattedShiftDuration),
                 const Divider(height: 20),
 
                 _reportRow('رصيد الافتتاح', CurrencyFormatter.format(openingAmount)),
@@ -2126,8 +1869,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
                       // ── Step 1: Post all shift invoices (deferred posting) ──
                       await locator<ShiftService>().postShiftInvoices(shiftId);
-
-                      // ── Step 2: Close the shift ──
                       final closeData = {
                         'closing_amount': closingAmount,
                         'expected_amount': expectedAmount,
@@ -2137,11 +1878,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         'notes': notesController.text.isEmpty ? shift['notes'] : notesController.text,
                         'updated_at': now.toIso8601String(),
                       };
-                      await locator<ShiftService>().closeShift(shiftId, closeData);
+                      await _vm.closeShift(shiftId, closeData);
 
                       if (!mounted) return;
                       Navigator.pop(ctx);
-                      await _loadActiveShift();
 
                       // Show result dialog
                       showDialog(
@@ -2323,7 +2063,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                         final cName = c['name']?.toString() ?? '';
                         final cPhone = c['phone']?.toString() ?? '';
                         final cBalance = MoneyHelper.readMoney(c['balance']);
-                        final isSelected = _selectedCustomerId == cId;
+                        final isSelected = _vm.selectedCustomerId == cId;
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: isSelected
@@ -2346,10 +2086,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                           ),
                           selected: isSelected,
                           onTap: () {
-                            setState(() {
-                              _selectedCustomerId = cId;
-                              _selectedCustomerName = cName;
-                            });
+                            _vm.setSelectedCustomer(cId, cName);
                             Navigator.pop(ctx);
                           },
                         );
@@ -2369,12 +2106,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  DISCOUNT DIALOG
   // ═══════════════════════════════════════════════════════════════════
   void _showDiscountDialog() {
-    if (_activeShift == null) {
+    if (_vm.activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;
     }
     final controller = TextEditingController(
-      text: _orderDiscount > 0 ? _orderDiscount.toStringAsFixed(2) : '',
+      text: _vm.orderDiscount > 0 ? _vm.orderDiscount.toStringAsFixed(2) : '',
     );
     showDialog(
       context: context,
@@ -2389,8 +2126,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 controller: controller,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: _discountType == DiscountType.percentage ? 'نسبة الخصم %' : 'مبلغ الخصم',
-                  suffixText: _discountType == DiscountType.percentage ? '%' : AppConstants.currency,
+                  labelText: _vm.discountType == DiscountType.percentage ? 'نسبة الخصم %' : 'مبلغ الخصم',
+                  suffixText: _vm.discountType == DiscountType.percentage ? '%' : AppConstants.currency,
                 ),
               ),
               const SizedBox(height: 12),
@@ -2400,14 +2137,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   const SizedBox(width: 8),
                   ChoiceChip(
                     label: const Text('مبلغ ثابت'),
-                    selected: _discountType == DiscountType.fixed,
-                    onSelected: (_) => setState(() => _discountType = DiscountType.fixed),
+                    selected: _vm.discountType == DiscountType.fixed,
+                    onSelected: (_) => _vm.setOrderDiscount(_vm.orderDiscount, DiscountType.fixed),
                   ),
                   const SizedBox(width: 6),
                   ChoiceChip(
                     label: const Text('نسبة مئوية'),
-                    selected: _discountType == DiscountType.percentage,
-                    onSelected: (_) => setState(() => _discountType = DiscountType.percentage),
+                    selected: _vm.discountType == DiscountType.percentage,
+                    onSelected: (_) => _vm.setOrderDiscount(_vm.orderDiscount, DiscountType.percentage),
                   ),
                 ],
               ),
@@ -2416,7 +2153,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           actions: [
             TextButton(
               onPressed: () {
-                setState(() => _orderDiscount = 0);
+                setState(() => _vm.setOrderDiscount(0, DiscountType.fixed));
                 Navigator.pop(ctx);
               },
               child: const Text('إزالة الخصم'),
@@ -2432,22 +2169,20 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   return;
                 }
                 // Validation: fixed discount must not exceed total
-                if (_discountType == DiscountType.fixed && value > _subtotal) {
+                if (_vm.discountType == DiscountType.fixed && value > _vm.subtotal) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('الخصم لا يمكن أن يتجاوز الإجمالي'), backgroundColor: AppColors.error),
                   );
                   return;
                 }
                 // Validation: percentage discount must not exceed 100%
-                if (_discountType == DiscountType.percentage && value > 100) {
+                if (_vm.discountType == DiscountType.percentage && value > 100) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('نسبة الخصم لا يمكن أن تتجاوز 100%'), backgroundColor: AppColors.error),
                   );
                   return;
                 }
-                setState(() {
-                  _orderDiscount = value;
-                });
+                _vm.setOrderDiscount(value, _vm.discountType);
                 Navigator.pop(ctx);
               },
               child: const Text('تطبيق'),
@@ -2463,8 +2198,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
 
   /// Add to cart with unit selection dialog when multiple units exist.
-  void _addToCartWithUnit(Product product) async {
-    if (_activeShift == null) {
+  void _addToCartWithUnit(Product product, {Map<String, dynamic>? unitInfo}) async {
+    if (_vm.activeShift == null) {
       if (mounted) {
         context.showErrorSnackBar('يجب فتح وردية أولاً');
       }
@@ -2480,9 +2215,15 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       return;
     }
 
+    // If unitInfo was provided (e.g., from barcode), add directly
+    if (unitInfo != null) {
+      _addToCartDirect(product, unitInfo);
+      return;
+    }
+
     List<Map<String, dynamic>> availableUnits;
     try {
-      availableUnits = await locator<ReferenceDataRepository>().getAvailableUnitsForProduct(product.id!);
+      availableUnits = await _vm.getAvailableUnitsForProduct(product.id!) ?? [];
     } catch (e) {
       debugPrint('Error loading units for product: $e');
       // Fallback: add directly with base unit
@@ -2570,7 +2311,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   /// Add to cart with a specific unit (from dialog or barcode scan).
   void _addToCartDirect(Product product, Map<String, dynamic>? unitInfo) {
-    if (_activeShift == null) {
+    if (_vm.activeShift == null) {
       if (mounted) {
         context.showErrorSnackBar('يجب فتح وردية أولاً');
       }
@@ -2588,9 +2329,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     final factor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
     final unitName = (unitInfo?['unit_name'] as String?) ?? 'قطعة';
-    final existingIndex = _cart.indexWhere((i) =>
+    final existingIndex = _vm.cartItems.indexWhere((i) =>
         i.productId == product.id && i.unitName == unitName);
-    final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
+    final requestedQty = existingIndex >= 0 ? _vm.cartItems[existingIndex].quantity + 1 : 1;
 
     // Stock check: show warning but always allow adding to cart
     final baseQtyNeeded = requestedQty * factor;
@@ -2612,50 +2353,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       }
     }
 
-    _doAddToCartWithUnit(existingIndex, product, unitInfo);
-  }
-
-  /// Internal: actually add the item to cart with unit info.
-  void _doAddToCartWithUnit(int existingIndex, Product product, Map<String, dynamic>? unitInfo) {
-    if (!mounted) return;
-
-    final unitName = (unitInfo?['unit_name'] as String?) ?? 'قطعة';
-    final unitPrice = (unitInfo?['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
-    final unitBarcode = unitInfo?['barcode'] as String?;
-    final factor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
-
-    if (existingIndex >= 0) {
-      setState(() {
-        _cart[existingIndex] = _cart[existingIndex].copyWith(
-          quantity: _cart[existingIndex].quantity + 1,
-        );
-      });
-    } else {
-      setState(() {
-        _cart.add(CartItem(
-          productId: product.id!,
-          name: product.nameAr,
-          unitPrice: unitPrice,
-          quantity: 1,
-          unitName: unitName,
-          conversionFactor: factor,
-          unitBarcode: unitBarcode,
-        ));
-      });
-    }
-
-    // Auto-add a default payment if none exists
-    if (_payments.isEmpty && _activePaymentMethod != 'credit') {
-      _payments.add(PaymentEntry(
-        method: _activePaymentMethod,
-        amount: _total,
-      ));
-    } else if (_payments.isNotEmpty) {
-      // Update the first payment amount if single payment
-      if (_payments.length == 1 && _activePaymentMethod != 'credit') {
-        _payments[0] = _payments[0].copyWith(amount: _total);
-      }
-    }
+    _vm.addToCartDirect(product, unitInfo);
 
     // Expand cart sheet slightly to show the item
     if (_sheetExtent < 0.3) {
@@ -2668,14 +2366,17 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 
+  /// Internal: actually add the item to cart with unit info (now handled by VM).
+  // Removed _doAddToCartWithUnit – _vm.addToCartDirect handles cart + payments.
+
   void _addToCart(Product product) {
-    if (_activeShift == null) {
+    if (_vm.activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;
     }
     // Stock validation – check if enough stock before adding
-    final existingIndex = _cart.indexWhere((i) => i.productId == product.id);
-    final requestedQty = existingIndex >= 0 ? _cart[existingIndex].quantity + 1 : 1;
+    final existingIndex = _vm.cartItems.indexWhere((i) => i.productId == product.id);
+    final requestedQty = existingIndex >= 0 ? _vm.cartItems[existingIndex].quantity + 1 : 1;
     final availableStock = product.currentStock;
 
     // Show low stock warning but always allow adding to cart
@@ -2692,7 +2393,13 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       }
     }
 
-    _doAddToCart(existingIndex, product);
+    _vm.addToCart(product);
+
+    // Expand cart sheet slightly
+    if (_sheetExtent < 0.3) {
+      _sheetController.animateTo(0.3,
+          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+    }
   }
 
   /// H6: Show low-stock warning dialog; user can proceed or cancel.
@@ -2738,79 +2445,24 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     if (proceed == true) {
       if (unitInfo != null) {
-        _doAddToCartWithUnit(existingIndex, product, unitInfo);
+        _vm.addToCartDirect(product, unitInfo);
       } else {
-        _doAddToCart(existingIndex, product);
+        _vm.addToCart(product);
       }
     }
   }
 
-  /// Internal: actually add the item to cart (called after optional stock check).
-  void _doAddToCart(int existingIndex, Product product) {
-    if (existingIndex >= 0) {
-      setState(() {
-        _cart[existingIndex] = _cart[existingIndex].copyWith(
-          quantity: _cart[existingIndex].quantity + 1,
-        );
-      });
-    } else {
-      setState(() {
-        _cart.add(CartItem(
-          productId: product.id!,
-          name: product.nameAr,
-          unitPrice: product.sellPrice,
-          quantity: 1,
-        ));
-      });
-    }
+  /// Internal: actually add the item to cart (now handled by VM).
+  // Removed _doAddToCart – _vm.addToCart handles cart + payments.
 
-    // Auto-add a default payment if none exists
-    if (_payments.isEmpty && _activePaymentMethod != 'credit') {
-      _payments.add(PaymentEntry(
-        method: _activePaymentMethod,
-        amount: _total,
-      ));
-    } else if (_payments.isNotEmpty) {
-      // Update the first payment amount if single payment
-      if (_payments.length == 1 && _activePaymentMethod != 'credit') {
-        _payments[0] = _payments[0].copyWith(amount: _total);
-      }
-    }
-
-    // Expand cart sheet slightly
-    if (_sheetExtent < 0.3) {
-      _sheetController.animateTo(0.3,
-          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-    }
-  }
-
-  void _incrementCart(int index) {
-    setState(() {
-      _cart[index] = _cart[index].copyWith(quantity: _cart[index].quantity + 1);
-    });
-    _syncPaymentsWithTotal();
-  }
-
-  void _decrementCart(int index) {
-    setState(() {
-      if (_cart[index].quantity > 1) {
-        _cart[index] = _cart[index].copyWith(quantity: _cart[index].quantity - 1);
-      } else {
-        _cart.removeAt(index);
-      }
-    });
-    _syncPaymentsWithTotal();
-  }
-
-  /// Allow user to manually enter a quantity via keyboard.
-  Future<void> _editQuantity(int index) async {
-    final controller = TextEditingController(text: '${_cart[index].quantity}');
+  void _editQuantity(int index) async {
+    final controller = TextEditingController(text: '${_vm.cartItems[index].quantity}');
     final result = await showDialog<int>(
       context: context,
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: Text('الكمية - ${_cart[index].name}'),
+          title: Text('الكمية - ${_vm.cartItems[index].name}'),
           content: TextField(
             controller: controller,
             autofocus: true,
@@ -2844,34 +2496,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     controller.dispose();
 
     if (result != null && result > 0) {
-      setState(() {
-        _cart[index] = _cart[index].copyWith(quantity: result);
-      });
-      _syncPaymentsWithTotal();
+      _vm.updateCartQuantity(index, result);
     }
   }
 
-  void _syncPaymentsWithTotal() {
-    // If single payment, update the amount
-    if (_payments.length == 1 && _activePaymentMethod != 'credit') {
-      setState(() {
-        _payments[0] = _payments[0].copyWith(amount: _total);
-      });
-    }
-  }
-
-  void _addPayment(String method, double amount) {
-    setState(() {
-      _payments.add(PaymentEntry(
-        method: method,
-        amount: amount,
-      ));
-    });
-  }
+  // Removed _syncPaymentsWithTotal – VM handles payment sync internally.
+  // Removed _addPayment – use _vm.addPayment() directly.
 
   Future<void> _showAddPartialPaymentDialog() async {
     final amountController = TextEditingController();
-    String selectedMethod = _activePaymentMethod;
+    String selectedMethod = _vm.activePaymentMethod;
 
     await showDialog(
       context: context,
@@ -2886,7 +2520,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 value: selectedMethod,
                 decoration: const InputDecoration(labelText: 'طريقة الدفع'),
                 items: [
-                  DropdownMenuItem(value: 'cash', child: Text('نقدي - المتبقي: ${CurrencyFormatter.format(_remaining)}')),
+                  DropdownMenuItem(value: 'cash', child: Text('نقدي - المتبقي: ${CurrencyFormatter.format(_vm.remaining)}')),
                   DropdownMenuItem(value: 'card', child: const Text('بطاقة')),
                   DropdownMenuItem(value: 'ewallet', child: const Text('محفظة إلكترونية')),
                   DropdownMenuItem(value: 'bank_transfer', child: const Text('تحويل بنكي')),
@@ -2914,7 +2548,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               onPressed: () {
                 final amount = double.tryParse(amountController.text) ?? 0.0;
                 if (amount > 0) {
-                  _addPayment(selectedMethod, amount);
+                  _vm.addPayment(PaymentEntry(method: selectedMethod, amount: amount));
                 }
                 Navigator.pop(ctx);
               },
@@ -2942,22 +2576,22 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   /// Step 1: Start checkout – capture values and show confirmation overlay
   void _startCheckout() async {
-    if (_checkoutPhase != CheckoutPhase.idle) return;
-    if (_activeShift == null) {
+    if (_vm.checkoutPhase != CheckoutPhase.idle) return;
+    if (_vm.activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً قبل إتمام عملية البيع');
       return;
     }
 
-    final primaryMethod = _payments.isNotEmpty ? _payments.first.method : _activePaymentMethod;
+    final primaryMethod = _vm.payments.isNotEmpty ? _vm.payments.first.method : _vm.activePaymentMethod;
 
-    if (primaryMethod == 'credit' && _selectedCustomerId == null) {
+    if (primaryMethod == 'credit' && _vm.selectedCustomerId == null) {
       context.showErrorSnackBar('يجب اختيار عميل للبيع آجل');
       return;
     }
 
     // ── التحقق من سقف الدين للعميل عند البيع الآجل ──
-    if (primaryMethod == 'credit' && _selectedCustomerId != null) {
-      final isOverCeiling = await locator<CustomerRepository>().isCustomerOverDebtCeiling(_selectedCustomerId!, _total);
+    if (primaryMethod == 'credit' && _vm.selectedCustomerId != null) {
+      final isOverCeiling = await locator<CustomerRepository>().isCustomerOverDebtCeiling(_vm.selectedCustomerId!, _vm.total);
       if (isOverCeiling) {
         if (mounted) {
           context.showErrorSnackBar('تجاوز سقف الدين! لا يمكن إتمام البيع الآجل لهذا العميل');
@@ -2966,39 +2600,29 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       }
     }
 
-    if (primaryMethod != 'credit' && _totalPaid < _total - 0.01 && _payments.isNotEmpty) {
+    if (primaryMethod != 'credit' && _vm.totalPaid < _vm.total - 0.01 && _vm.payments.isNotEmpty) {
       context.showErrorSnackBar('المبلغ المدفوع أقل من الإجمالي');
       return;
     }
 
     // Capture all values BEFORE changing phase
-    setState(() {
-      _capturedCartLength = _cart.length;
-      _capturedSubtotal = _subtotal;
-      _capturedDiscount = _effectiveDiscount;
-      _capturedTax = _tax;
-      _capturedTotal = _total;
-      _capturedCustomerName = _selectedCustomerName;
-      _capturedPaymentLabel = _paymentLabel(primaryMethod);
-      _checkoutPhase = CheckoutPhase.confirming;
-    });
+    _vm.captureCheckoutSnapshot();
+    _vm.setCheckoutPhase(CheckoutPhase.confirming);
   }
 
   /// Step 2: User confirmed – save invoice and show completion overlay
   Future<void> _confirmCheckout() async {
     // GUARD: Prevent double-execution from rapid taps.
-    // setState is async (rebuild happens next frame), so a second tap
-    // could call this method again before the overlay is removed.
-    if (_checkoutPhase != CheckoutPhase.confirming) return;
+    if (_vm.checkoutPhase != CheckoutPhase.confirming) return;
 
-    final primaryMethod = _payments.isNotEmpty ? _payments.first.method : _activePaymentMethod;
+    final primaryMethod = _vm.payments.isNotEmpty ? _vm.payments.first.method : _vm.activePaymentMethod;
 
-    setState(() => _checkoutPhase = CheckoutPhase.saving);
+    _vm.setCheckoutPhase(CheckoutPhase.saving);
 
     try {
-      final invoiceId = await _generateInvoiceId();
-      final cashBoxId = _activeShift!['cash_box_id'] as int;
-      final shiftId = _activeShift!['id'] as int;
+      final invoiceId = await _vm.generateInvoiceId();
+      final cashBoxId = _vm.activeShift!['cash_box_id'] as int;
+      final shiftId = _vm.activeShift!['id'] as int;
       final now = DateTime.now();
 
       String paymentMechanism = primaryMethod == 'credit' ? 'credit' : 'cash';
@@ -3011,25 +2635,25 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         'payment_method': paymentMethod,
         'is_return': 0,
         'cash_box_id': cashBoxId,
-        'customer_id': _selectedCustomerId,
-        'subtotal': _subtotal,
-        'discount_rate': _discountType == DiscountType.percentage
-            ? _orderDiscount
-            : (_subtotal > 0 ? (_effectiveDiscount / _subtotal) * 100 : 0.0),
-        'discount_amount': _effectiveDiscount,
-        'tax_amount': _tax,
-        'total': _total,
-        'paid_amount': primaryMethod == 'credit' ? 0.0 : _total,
-        'remaining': primaryMethod == 'credit' ? _total : 0.0,
+        'customer_id': _vm.selectedCustomerId,
+        'subtotal': _vm.subtotal,
+        'discount_rate': _vm.discountType == DiscountType.percentage
+            ? _vm.orderDiscount
+            : (_vm.subtotal > 0 ? (_vm.effectiveDiscount / _vm.subtotal) * 100 : 0.0),
+        'discount_amount': _vm.effectiveDiscount,
+        'tax_amount': _vm.tax,
+        'total': _vm.total,
+        'paid_amount': primaryMethod == 'credit' ? 0.0 : _vm.total,
+        'remaining': primaryMethod == 'credit' ? _vm.total : 0.0,
         'status': primaryMethod == 'credit' ? 'unpaid' : 'paid',
-        'cashier_name': _cashierName,
+        'cashier_name': _vm.cashierName,
         'shift_id': shiftId,
         'is_posted': 0,
-        'currency': _selectedCurrency,
+        'currency': _vm.selectedCurrency,
         'created_at': now.toIso8601String(),
       };
 
-      final items = _cart.map((item) => {
+      final items = _vm.cartItems.map((item) => {
         'invoice_id': invoiceId,
         'product_id': item.productId,
         'product_name': item.name,
@@ -3051,26 +2675,24 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         deferPosting: true,
       );
 
-      await locator<ShiftService>().updateShiftTotals(shiftId, _total, 0.0, _effectiveDiscount);
-      await _loadActiveShift();
+      await locator<ShiftService>().updateShiftTotals(shiftId, _vm.total, 0.0, _vm.effectiveDiscount);
+      await _vm.loadData();
 
       if (!mounted) return;
 
       // Save invoice ID for print and display
-      _lastInvoiceId = invoiceId;
+      _vm.setLastInvoiceId(invoiceId);
 
       // Reset cart for next invoice
-      _resetForNewInvoice();
-
-      // Refresh top sellers and products after successful checkout
-      _loadTopSellers();
-      _refreshProducts();
+      _vm.resetForNewInvoice();
+      _searchController.clear();
+      _isSearching = false;
 
       // Show completion overlay
-      setState(() => _checkoutPhase = CheckoutPhase.completed);
+      _vm.setCheckoutPhase(CheckoutPhase.completed);
     } catch (e) {
       if (mounted) {
-        setState(() => _checkoutPhase = CheckoutPhase.idle);
+        _vm.setCheckoutPhase(CheckoutPhase.idle);
         context.showErrorSnackBar('حدث خطأ أثناء حفظ الفاتورة');
       }
     }
@@ -3078,12 +2700,13 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   /// Cancel checkout – go back to idle
   void _cancelCheckout() {
-    setState(() => _checkoutPhase = CheckoutPhase.idle);
+    _vm.setCheckoutPhase(CheckoutPhase.idle);
   }
 
   /// Dismiss completion overlay – go back to idle
   void _dismissCompletion() {
-    setState(() => _checkoutPhase = CheckoutPhase.idle);
+    _vm.setCheckoutPhase(CheckoutPhase.idle);
+    _vm.setLastInvoiceId('');
   }
 
   // ── Checkout Confirmation Overlay ──────────────────────────────────
@@ -3118,19 +2741,19 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _reportRow('عدد الأصناف', '$_capturedCartLength'),
-                  _reportRow('المجموع الفرعي', CurrencyFormatter.format(_capturedSubtotal)),
-                  if (_capturedDiscount > 0)
-                    _reportRow('الخصم', '- ${CurrencyFormatter.format(_capturedDiscount)}', valueColor: AppColors.error),
-                  if (_capturedTax > 0)
-                    _reportRow('الضريبة', CurrencyFormatter.format(_capturedTax)),
+                  _reportRow('عدد الأصناف', '${_vm.capturedCartLength}'),
+                  _reportRow('المجموع الفرعي', CurrencyFormatter.format(_vm.capturedSubtotal)),
+                  if (_vm.capturedDiscount > 0)
+                    _reportRow('الخصم', '- ${CurrencyFormatter.format(_vm.capturedDiscount)}', valueColor: AppColors.error),
+                  if (_vm.capturedTax > 0)
+                    _reportRow('الضريبة', CurrencyFormatter.format(_vm.capturedTax)),
                   const Divider(height: 20),
-                  _reportRow('الإجمالي', CurrencyFormatter.format(_capturedTotal),
+                  _reportRow('الإجمالي', CurrencyFormatter.format(_vm.capturedTotal),
                       valueColor: AppColors.primary, isBold: true),
                   const SizedBox(height: 8),
-                  _reportRow('طريقة الدفع', _capturedPaymentLabel),
-                  if (_capturedCustomerName.isNotEmpty)
-                    _reportRow('العميل', _capturedCustomerName),
+                  _reportRow('طريقة الدفع', _vm.capturedPaymentLabel),
+                  if (_vm.selectedCustomerName.isNotEmpty)
+                    _reportRow('العميل', _vm.selectedCustomerName),
                   const SizedBox(height: 6),
                   Text(
                     'سيتم تسجيل الفاتورة وترحيلها عند إغلاق الوردية',
@@ -3205,17 +2828,17 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text('رقم الفاتورة: $_lastInvoiceId',
+                  Text('رقم الفاتورة: ${_vm.lastInvoiceId}',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text('الإجمالي: ${CurrencyFormatter.format(_capturedTotal)}',
+                  Text('الإجمالي: ${CurrencyFormatter.format(_vm.capturedTotal)}',
                       style: const TextStyle(fontSize: 14)),
                   const SizedBox(height: 4),
-                  Text('طريقة الدفع: $_capturedPaymentLabel',
+                  Text('طريقة الدفع: ${_vm.capturedPaymentLabel}',
                       style: const TextStyle(fontSize: 14)),
-                  if (_capturedCustomerName.isNotEmpty) ...[
+                  if (_vm.selectedCustomerName.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text('العميل: $_capturedCustomerName',
+                    Text('العميل: ${_vm.selectedCustomerName}',
                         style: const TextStyle(fontSize: 14)),
                   ],
                   const SizedBox(height: 10),
@@ -3229,7 +2852,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            _showPrintOptions(_lastInvoiceId);
+                            _showPrintOptions(_vm.lastInvoiceId);
                           },
                           icon: const Icon(Icons.print, size: 18),
                           label: const Text('طباعه'),
@@ -3263,22 +2886,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     );
   }
 
-  /// Reset all state for a new invoice.
-  void _resetForNewInvoice() {
-    setState(() {
-      _cart.clear();
-      _payments.clear();
-      _orderDiscount = 0;
-      _discountType = DiscountType.fixed;
-      _selectedCustomerId = null;
-      _selectedCustomerName = '';
-      _activePaymentMethod = 'cash';
-      _searchController.clear();
-      _isSearching = false;
-    });
-    _sheetController.animateTo(0.12,
-        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-  }
+  /// Reset all state for a new invoice (now handled by VM).
+  // Removed _resetForNewInvoice – use _vm.resetForNewInvoice() + UI cleanup.
 
   /// Show print options (PDF or Bluetooth thermal).
   void _showPrintOptions(String invoiceId) {
@@ -3375,25 +2984,25 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
 
     try {
-      final currencySymbol = _selectedCurrency == 'SAR' ? 'ر.س' : _selectedCurrency == 'USD' ? r'$' : 'ر.ي';
+      final currencySymbol = _vm.selectedCurrency == 'SAR' ? 'ر.س' : _vm.selectedCurrency == 'USD' ? r'$' : 'ر.ي';
 
       await printerService.printReceipt({
         'invoice_number': invoiceId,
         'invoice_type': 'فاتورة نقاط بيع',
         'date': DateTime.now(),
-        'customer_name': _selectedCustomerName.isEmpty ? 'بدون عميل' : _selectedCustomerName,
-        'items': _cart.map((item) => <String, dynamic>{
+        'customer_name': _vm.selectedCustomerName.isEmpty ? 'بدون عميل' : _vm.selectedCustomerName,
+        'items': _vm.cartItems.map((item) => <String, dynamic>{
           'product_name': item.name,
           'unit_name': item.unitName,
           'quantity': item.quantity,
           'unit_price': item.unitPrice,
           'total_price': item.total,
         }).toList(),
-        'subtotal': _subtotal,
-        'discount': _effectiveDiscount,
-        'tax': _tax,
-        'total': _total,
-        'paid': _total,
+        'subtotal': _vm.subtotal,
+        'discount': _vm.effectiveDiscount,
+        'tax': _vm.tax,
+        'total': _vm.total,
+        'paid': _vm.total,
         'remaining': 0.0,
         'currency': currencySymbol,
       });
@@ -3421,63 +3030,20 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  HELD ORDERS
   // ═══════════════════════════════════════════════════════════════════
   void _holdOrder() async {
-    if (_activeShift == null) {
+    if (_vm.activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;
     }
-    _heldOrders.add(HeldOrder(
-      items: List.from(_cart),
-      paymentMethod: _activePaymentMethod,
-      payments: List.from(_payments),
-      discount: _orderDiscount,
-      discountType: _discountType,
-      customerId: _selectedCustomerId,
-      customerName: _selectedCustomerName,
-      createdAt: DateTime.now(),
-    ));
-
-    // Persist to database
-    try {
-      final cartJson = _cart.map((item) => {
-        'productId': item.productId,
-        'productName': item.name,
-        'quantity': item.quantity,
-        'unitPrice': item.unitPrice,
-        'unitName': item.unitName,
-        'conversionFactor': item.conversionFactor,
-      }).toList();
-      final paymentsJson = _payments.map((p) => {
-        'amount': p.amount,
-        'method': p.method,
-      }).toList();
-      await locator<ShiftService>().insertHeldOrder({
-        'shift_id': _activeShift?['id'],
-        'cart_data': jsonEncode(cartJson),
-        'payment_method': _activePaymentMethod,
-        'payments_data': jsonEncode(paymentsJson),
-        'discount': _orderDiscount,
-        'discount_type': _discountType.name,
-        'customer_id': _selectedCustomerId,
-        'customer_name': _selectedCustomerName,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('Warning: Could not persist held order to DB: $e');
-    }
-    setState(() {
-      _cart.clear();
-      _payments.clear();
-      _orderDiscount = 0;
-      _selectedCustomerId = null;
-      _selectedCustomerName = '';
-      _sheetController.animateTo(0.12,
-          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-    });
+    await _vm.holdOrder();
+    _searchController.clear();
+    _isSearching = false;
+    _sheetController.animateTo(0.12,
+        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
     context.showSuccessSnackBar('تم تعليق الطلب');
   }
 
   void _showHeldOrders() {
-    if (_heldOrders.isEmpty) {
+    if (_vm.heldOrders.isEmpty) {
       context.showSnackBar('لا توجد طلبات معلقة');
       return;
     }
@@ -3495,7 +3061,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             children: [
               Text('الطلبات المعلقة', style: context.textTheme.titleLarge),
               const SizedBox(height: 12),
-              ..._heldOrders.asMap().entries.map((entry) {
+              ..._vm.heldOrders.asMap().entries.map((entry) {
                 final idx = entry.key;
                 final order = entry.value;
                 final total = order.items.fold(0.0, (s, i) => s + i.total);
@@ -3515,22 +3081,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     children: [
                       IconButton(
                         onPressed: () {
-                          // Delete from DB if persisted
-                          if (order.dbId != null) {
-                            locator<ShiftService>().deleteHeldOrder(order.dbId!);
-                          }
-                          setState(() {
-                            _cart.clear();
-                            _cart.addAll(order.items);
-                            _activePaymentMethod = order.paymentMethod;
-                            _payments.clear();
-                            _payments.addAll(order.payments);
-                            _orderDiscount = order.discount;
-                            _discountType = order.discountType;
-                            _selectedCustomerId = order.customerId;
-                            _selectedCustomerName = order.customerName;
-                            _heldOrders.removeAt(idx);
-                          });
+                          _vm.restoreHeldOrder(idx);
                           Navigator.pop(ctx);
                           _sheetController.animateTo(0.5,
                               duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
@@ -3541,11 +3092,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                       ),
                       IconButton(
                         onPressed: () {
-                          // Delete from DB if persisted
-                          if (order.dbId != null) {
-                            locator<ShiftService>().deleteHeldOrder(order.dbId!);
-                          }
-                          setState(() => _heldOrders.removeAt(idx));
+                          _vm.deleteHeldOrder(idx);
                           Navigator.pop(ctx);
                         },
                         icon: const Icon(Icons.delete, color: AppColors.error),
@@ -3566,7 +3113,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   //  BARCODE SCANNER
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _scanBarcode() async {
-    if (_activeShift == null) {
+    if (_vm.activeShift == null) {
       context.showErrorSnackBar('يجب فتح وردية أولاً');
       return;
     }
@@ -3575,32 +3122,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
     );
     if (result != null && result.isNotEmpty) {
-      // Try direct product barcode match first
-      final match = _products.where((p) => (p.barcode ?? '').trim() == result.trim());
-      if (match.isNotEmpty) {
-        _addToCartWithUnit(match.first);
+      final matchResult = await _vm.tryBarcodeMatch(result);
+      if (matchResult != null) {
+        _addToCartWithUnit(matchResult.product, unitInfo: matchResult.unitInfo);
       } else {
-        // Try unit conversion barcode match
-        final conversion = await locator<ReferenceDataRepository>().findUnitConversionByBarcode(result);
-        if (conversion != null) {
-          final productId = conversion['product_id'] as int;
-          final product = _products.where((p) => p.id == productId).firstOrNull;
-          if (product != null) {
-            _addToCartDirect(product, {
-              'unit_name': conversion['from_unit'] as String,
-              'sell_price': MoneyHelper.readMoney(conversion['sell_price'], fallback: product.sellPrice),
-              'conversion_factor': (conversion['conversion_factor'] as num?)?.toDouble() ?? 1.0,
-              'barcode': conversion['barcode'] as String?,
-            });
-          } else {
-            if (mounted) {
-              context.showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
-            }
-          }
-        } else {
-          if (mounted) {
-            context.showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
-          }
+        if (mounted) {
+          context.showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
         }
       }
     }
