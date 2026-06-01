@@ -157,17 +157,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   // Draggable cart sheet at bottom
-                  // Positioned at bottom to prevent intercepting taps on product grid
+                  // DraggableScrollableSheet must be a direct child of Stack
+                  // (not wrapped in Positioned) for correct gesture handling.
                   if (_vm.activeShift != null)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      top: 0,
-                      child: AbsorbPointer(
-                        absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
-                        child: _buildDraggableCartSheet(),
-                      ),
+                    AbsorbPointer(
+                      absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
+                      child: _buildDraggableCartSheet(),
                     ),
                   // Shift overlay when no active shift
                   if (_vm.activeShift == null) _buildShiftOverlay(),
@@ -545,8 +540,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         initialChildSize: 0.12,
         minChildSize: 0.12,
         maxChildSize: 0.88,
+        snap: true,
+        snapSizes: const [0.12, 0.5, 0.88],
         builder: (context, scrollController) {
-          final isExpanded = _sheetExtent > 0.5;
           return Container(
             decoration: BoxDecoration(
               color: context.isDarkMode ? AppColors.darkSurface : Colors.white,
@@ -579,97 +575,97 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 // ── Cart header (always visible) ─────────────────
                 _buildCartHeader(),
 
-                // ── Cart items (visible when expanded) ──────────
-                if (isExpanded) ...[
-                  if (_vm.cartItems.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 32),
-                      child: Column(
-                        children: [
-                          Icon(Icons.shopping_cart,
-                              size: 48, color: AppColors.textHint),
-                          const SizedBox(height: 8),
-                          Text('السلة فارغة', style: context.textTheme.bodyLarge),
-                          const SizedBox(height: 4),
-                          Text('اضغط على المنتج لإضافته',
-                              style: context.textTheme.bodySmall),
-                        ],
-                      ),
-                    )
-                  else
-                    ..._vm.cartItems.asMap().entries.map((entry) {
-                      final idx = entry.key;
-                      final item = entry.value;
-                      return PosCartItemTile(
-                        name: item.name,
-                        unitPrice: item.unitPrice,
-                        quantity: item.quantity,
-                        unitName: item.unitName,
-                        total: item.total,
-                        onIncrement: () => _vm.incrementCart(idx),
-                        onDecrement: () => _vm.decrementCart(idx),
-                        onEditQuantity: () => _editQuantity(idx),
-                        onDelete: () => _vm.removeFromCart(idx),
-                      );
-                    }),
-
-                  const Divider(height: 1),
-
-                  // ── Payment method selector ───────────────────
-                  PosPaymentMethodSelector(
-                    activeMethod: _vm.activePaymentMethod,
-                    onMethodChanged: (method) {
-                      _vm.setActivePaymentMethod(method);
-                      if (method != 'credit') {
-                        _vm.setSelectedCustomer(null, '');
-                      }
-                    },
-                  ),
-
-                  // ── Payment details for active method ────────
-                  if (_vm.activePaymentMethod == 'credit')
-                    _buildCreditCustomerSelector(),
-                  if (_vm.activePaymentMethod == 'ewallet')
-                    _buildEwalletFields(),
-                  if (_vm.activePaymentMethod == 'bank_transfer')
-                    _buildBankTransferFields(),
-
-                  // ── Multi-payment entries ────────────────────
-                  if (_vm.payments.isNotEmpty) _buildMultiPaymentSummary(),
-
-                  // ── Totals ──────────────────────────────────
-                  PosTotalsSection(
-                    subtotal: _vm.subtotal,
-                    discount: _vm.effectiveDiscount,
-                    discountType: _vm.discountType,
-                    orderDiscount: _vm.orderDiscount,
-                    tax: _vm.tax,
-                    total: _vm.total,
-                    vatRate: AppConstants.defaultVatRate,
-                  ),
-
-                  // ── Action buttons ──────────────────────────
-                  PosActionButtons(
-                    cartLength: _vm.cartItems.length,
-                    total: _vm.total,
-                    activePaymentMethod: _vm.activePaymentMethod,
-                    paymentsLength: _vm.payments.length,
-                    remaining: _vm.remaining,
-                    checkoutPhase: _vm.checkoutPhase,
-                    paymentLabel: _paymentLabel,
-                    onAddPayment: () => _vm.addPayment(PaymentEntry(method: _vm.activePaymentMethod, amount: _vm.total)),
-                    onAddPartialPayment: _showAddPartialPaymentDialog,
-                    onStartCheckout: _startCheckout,
-                    onHoldOrder: _holdOrder,
-                    onClearInvoice: () {
-                      _vm.resetForNewInvoice();
-                      _searchController.clear();
-                      _isSearching = false;
-                      _sheetController.animateTo(0.12,
-                          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-                    },
-                  ),
+                // ── Cart content (always rendered; ListView handles
+                //    visibility efficiently via lazy layout) ─────
+                if (_vm.cartItems.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Column(
+                      children: [
+                        Icon(Icons.shopping_cart,
+                            size: 48, color: AppColors.textHint),
+                        const SizedBox(height: 8),
+                        Text('السلة فارغة', style: context.textTheme.bodyLarge),
+                        const SizedBox(height: 4),
+                        Text('اضغط على المنتج لإضافته',
+                            style: context.textTheme.bodySmall),
+                      ],
+                    ),
+                  )
+                else ...[
+                  ..._vm.cartItems.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final item = entry.value;
+                    return PosCartItemTile(
+                      name: item.name,
+                      unitPrice: item.unitPrice,
+                      quantity: item.quantity,
+                      unitName: item.unitName,
+                      total: item.total,
+                      onIncrement: () => _vm.incrementCart(idx),
+                      onDecrement: () => _vm.decrementCart(idx),
+                      onEditQuantity: () => _editQuantity(idx),
+                      onDelete: () => _vm.removeFromCart(idx),
+                    );
+                  }),
                 ],
+
+                const Divider(height: 1),
+
+                // ── Payment method selector ───────────────────
+                PosPaymentMethodSelector(
+                  activeMethod: _vm.activePaymentMethod,
+                  onMethodChanged: (method) {
+                    _vm.setActivePaymentMethod(method);
+                    if (method != 'credit') {
+                      _vm.setSelectedCustomer(null, '');
+                    }
+                  },
+                ),
+
+                // ── Payment details for active method ────────
+                if (_vm.activePaymentMethod == 'credit')
+                  _buildCreditCustomerSelector(),
+                if (_vm.activePaymentMethod == 'ewallet')
+                  _buildEwalletFields(),
+                if (_vm.activePaymentMethod == 'bank_transfer')
+                  _buildBankTransferFields(),
+
+                // ── Multi-payment entries ────────────────────
+                if (_vm.payments.isNotEmpty) _buildMultiPaymentSummary(),
+
+                // ── Totals ──────────────────────────────────
+                PosTotalsSection(
+                  subtotal: _vm.subtotal,
+                  discount: _vm.effectiveDiscount,
+                  discountType: _vm.discountType,
+                  orderDiscount: _vm.orderDiscount,
+                  tax: _vm.tax,
+                  total: _vm.total,
+                  vatRate: AppConstants.defaultVatRate,
+                ),
+
+                // ── Action buttons ──────────────────────────
+                PosActionButtons(
+                  cartLength: _vm.cartItems.length,
+                  total: _vm.total,
+                  activePaymentMethod: _vm.activePaymentMethod,
+                  paymentsLength: _vm.payments.length,
+                  remaining: _vm.remaining,
+                  checkoutPhase: _vm.checkoutPhase,
+                  paymentLabel: _paymentLabel,
+                  onAddPayment: () => _vm.addPayment(PaymentEntry(method: _vm.activePaymentMethod, amount: _vm.total)),
+                  onAddPartialPayment: _showAddPartialPaymentDialog,
+                  onStartCheckout: _startCheckout,
+                  onHoldOrder: _holdOrder,
+                  onClearInvoice: () {
+                    _vm.resetForNewInvoice();
+                    _searchController.clear();
+                    _isSearching = false;
+                    _sheetController.animateTo(0.12,
+                        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+                  },
+                ),
               ],
             ),
           );
@@ -1047,11 +1043,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     _vm.addToCartDirect(product, unitInfo);
 
-    // Expand cart sheet slightly to show the item
-    if (_sheetExtent < 0.3) {
+    // Expand cart sheet to show the item and action buttons
+    if (_sheetExtent < 0.5) {
       try {
-        _sheetController.animateTo(0.3,
-            duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+        _sheetController.animateTo(0.5,
+            duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
       } catch (e) {
         debugPrint('Sheet animation error (non-critical): $e');
       }
@@ -1084,10 +1080,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     _vm.addToCart(product);
 
-    // Expand cart sheet slightly
-    if (_sheetExtent < 0.3) {
-      _sheetController.animateTo(0.3,
-          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+    // Expand cart sheet to show the item and action buttons
+    if (_sheetExtent < 0.5) {
+      _sheetController.animateTo(0.5,
+          duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
     }
   }
 
