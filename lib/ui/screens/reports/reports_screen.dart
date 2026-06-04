@@ -1,20 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_formatter.dart';
-import '../../../core/utils/excel_exporter.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/account_repository.dart';
-import '../../../data/datasources/repositories/customer_repository.dart';
-import '../../../data/datasources/repositories/supplier_repository.dart';
-import '../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../data/datasources/services/cash_box_service.dart';
-import '../../../data/datasources/services/report_service.dart';
-import '../../../data/datasources/services/shift_service.dart';
 import 'trial_balance_screen.dart';
 import 'financial_statements_screen.dart';
+import 'widgets/report_helpers.dart';
+import 'widgets/report_data_loader.dart';
+import 'widgets/report_card_widget.dart';
+import 'widgets/report_filters_widget.dart';
+import 'widgets/report_results_widget.dart';
+import 'widgets/report_export_button.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Reports Screen – Professional Redesign
@@ -29,54 +23,11 @@ class ReportsScreen extends StatefulWidget {
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-// ── Report Group ────────────────────────────────────────────────
-
-class _ReportGroup {
-  final String name;
-  final IconData icon;
-  final Color color;
-  final List<_ReportItem> items;
-  bool isExpanded;
-
-  _ReportGroup({
-    required this.name,
-    required this.icon,
-    required this.color,
-    required this.items,
-    this.isExpanded = false,
-  });
-}
-
-class _ReportItem {
-  final String name;
-  final IconData icon;
-  final Color color;
-  final String key;
-
-  const _ReportItem({
-    required this.name,
-    required this.icon,
-    required this.color,
-    required this.key,
-  });
-}
-
-// ── Date Preset ─────────────────────────────────────────────────
-
-enum _DatePreset {
-  today,
-  thisWeek,
-  thisMonth,
-  thisQuarter,
-  thisYear,
-  custom,
-}
-
 // ── State ───────────────────────────────────────────────────────
 
 class _ReportsScreenState extends State<ReportsScreen>
     with SingleTickerProviderStateMixin {
-  late List<_ReportGroup> _groups;
+  late List<ReportGroup> _groups;
   String? _selectedReportKey;
   bool _isLoading = false;
   bool _hasData = false;
@@ -99,21 +50,7 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   // New UI state
   late TabController _tabController;
-  _DatePreset _selectedDatePreset = _DatePreset.thisMonth;
-  int? _sortColumnIndex;
-  bool _sortAscending = true;
-  String _searchQuery = '';
-
-  static const _currencyOptions = ['ر.ي', 'ر.س', r'$'];
-  static const _accountTypes = [
-    MapEntry('الكل', 'الكل'),
-    MapEntry('أصول', 'ASSET'),
-    MapEntry('خصوم', 'LIABILITY'),
-    MapEntry('حقوق الملكية', 'EQUITY'),
-    MapEntry('تكاليف', 'COST'),
-    MapEntry('إيرادات', 'REVENUE'),
-    MapEntry('مصاريف', 'EXPENSE'),
-  ];
+  DatePreset _selectedDatePreset = DatePreset.thisMonth;
 
   @override
   void initState() {
@@ -135,236 +72,83 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   void _initGroups() {
     _groups = [
-      _ReportGroup(
+      ReportGroup(
         name: 'المبيعات والمشتريات',
         icon: Icons.swap_horiz,
         color: AppColors.primary,
         isExpanded: true,
         items: [
-          const _ReportItem(name: 'تقرير المبيعات', icon: Icons.trending_up, color: AppColors.success, key: 'sales'),
-          const _ReportItem(name: 'تقرير المشتريات', icon: Icons.shopping_cart, color: AppColors.error, key: 'purchases'),
-          const _ReportItem(name: 'مرتجعات المبيعات', icon: Icons.undo, color: AppColors.warning, key: 'sales_returns'),
-          const _ReportItem(name: 'مرتجعات المشتريات', icon: Icons.undo, color: AppColors.warning, key: 'purchase_returns'),
-          const _ReportItem(name: 'الأرباح والخسائر', icon: Icons.assessment, color: AppColors.primary, key: 'profit_loss'),
-          const _ReportItem(name: 'ربح الفواتير', icon: Icons.receipt_long, color: AppColors.secondary, key: 'invoice_profit'),
-          const _ReportItem(name: 'المبيعات حسب المنتج', icon: Icons.inventory, color: AppColors.info, key: 'sales_by_product'),
-          const _ReportItem(name: 'المبيعات حسب العميل', icon: Icons.people, color: AppColors.success, key: 'sales_by_customer'),
+          const ReportItem(name: 'تقرير المبيعات', icon: Icons.trending_up, color: AppColors.success, key: 'sales'),
+          const ReportItem(name: 'تقرير المشتريات', icon: Icons.shopping_cart, color: AppColors.error, key: 'purchases'),
+          const ReportItem(name: 'مرتجعات المبيعات', icon: Icons.undo, color: AppColors.warning, key: 'sales_returns'),
+          const ReportItem(name: 'مرتجعات المشتريات', icon: Icons.undo, color: AppColors.warning, key: 'purchase_returns'),
+          const ReportItem(name: 'الأرباح والخسائر', icon: Icons.assessment, color: AppColors.primary, key: 'profit_loss'),
+          const ReportItem(name: 'ربح الفواتير', icon: Icons.receipt_long, color: AppColors.secondary, key: 'invoice_profit'),
+          const ReportItem(name: 'المبيعات حسب المنتج', icon: Icons.inventory, color: AppColors.info, key: 'sales_by_product'),
+          const ReportItem(name: 'المبيعات حسب العميل', icon: Icons.people, color: AppColors.success, key: 'sales_by_customer'),
         ],
       ),
-      _ReportGroup(
+      ReportGroup(
         name: 'المحاسبة والمالية',
         icon: Icons.account_balance,
         color: AppColors.info,
         items: [
-          const _ReportItem(name: 'حركة حساب', icon: Icons.swap_horiz, color: AppColors.info, key: 'account_movement'),
-          const _ReportItem(name: 'حركة جميع الحسابات', icon: Icons.view_list, color: AppColors.info, key: 'all_account_movement'),
-          const _ReportItem(name: 'ميزان المراجعة', icon: Icons.balance, color: AppColors.primary, key: 'trial_balance'),
-          const _ReportItem(name: 'ميزان المراجعة (شاشة كاملة)', icon: Icons.balance, color: AppColors.primary, key: 'trial_balance_screen'),
-          const _ReportItem(name: 'القوائم المالية', icon: Icons.account_balance, color: AppColors.info, key: 'financial_statements'),
-          const _ReportItem(name: 'حركة الصندوق', icon: Icons.account_balance_wallet, color: AppColors.success, key: 'cash_box'),
-          const _ReportItem(name: 'حسابات بدون حركة', icon: Icons.block, color: AppColors.textHint, key: 'accounts_no_movement'),
-          const _ReportItem(name: 'كشف حساب عميل', icon: Icons.person, color: AppColors.success, key: 'customer_statement'),
-          const _ReportItem(name: 'كشف حساب مورد', icon: Icons.local_shipping, color: AppColors.error, key: 'supplier_statement'),
-          const _ReportItem(name: 'تقرير المصروفات', icon: Icons.money_off, color: AppColors.warning, key: 'expenses'),
+          const ReportItem(name: 'حركة حساب', icon: Icons.swap_horiz, color: AppColors.info, key: 'account_movement'),
+          const ReportItem(name: 'حركة جميع الحسابات', icon: Icons.view_list, color: AppColors.info, key: 'all_account_movement'),
+          const ReportItem(name: 'ميزان المراجعة', icon: Icons.balance, color: AppColors.primary, key: 'trial_balance'),
+          const ReportItem(name: 'ميزان المراجعة (شاشة كاملة)', icon: Icons.balance, color: AppColors.primary, key: 'trial_balance_screen'),
+          const ReportItem(name: 'القوائم المالية', icon: Icons.account_balance, color: AppColors.info, key: 'financial_statements'),
+          const ReportItem(name: 'حركة الصندوق', icon: Icons.account_balance_wallet, color: AppColors.success, key: 'cash_box'),
+          const ReportItem(name: 'حسابات بدون حركة', icon: Icons.block, color: AppColors.textHint, key: 'accounts_no_movement'),
+          const ReportItem(name: 'كشف حساب عميل', icon: Icons.person, color: AppColors.success, key: 'customer_statement'),
+          const ReportItem(name: 'كشف حساب مورد', icon: Icons.local_shipping, color: AppColors.error, key: 'supplier_statement'),
+          const ReportItem(name: 'تقرير المصروفات', icon: Icons.money_off, color: AppColors.warning, key: 'expenses'),
         ],
       ),
-      _ReportGroup(
+      ReportGroup(
         name: 'المخزون',
         icon: Icons.inventory_2,
         color: AppColors.success,
         items: [
-          const _ReportItem(name: 'تقرير المخزون', icon: Icons.inventory_2, color: AppColors.success, key: 'inventory'),
-          const _ReportItem(name: 'حركة المخزون', icon: Icons.swap_vert, color: AppColors.primary, key: 'inventory_movement'),
-          const _ReportItem(name: 'تكلفة المخزون', icon: Icons.attach_money, color: AppColors.warning, key: 'inventory_cost'),
-          const _ReportItem(name: 'الأصناف المنتهية', icon: Icons.warning, color: AppColors.error, key: 'out_of_stock'),
-          const _ReportItem(name: 'الأصناف قاربت على النفاد', icon: Icons.notification_important, color: AppColors.warning, key: 'low_stock'),
+          const ReportItem(name: 'تقرير المخزون', icon: Icons.inventory_2, color: AppColors.success, key: 'inventory'),
+          const ReportItem(name: 'حركة المخزون', icon: Icons.swap_vert, color: AppColors.primary, key: 'inventory_movement'),
+          const ReportItem(name: 'تكلفة المخزون', icon: Icons.attach_money, color: AppColors.warning, key: 'inventory_cost'),
+          const ReportItem(name: 'الأصناف المنتهية', icon: Icons.warning, color: AppColors.error, key: 'out_of_stock'),
+          const ReportItem(name: 'الأصناف قاربت على النفاد', icon: Icons.notification_important, color: AppColors.warning, key: 'low_stock'),
         ],
       ),
-      _ReportGroup(
+      ReportGroup(
         name: 'الديون',
         icon: Icons.people,
         color: AppColors.warning,
         items: [
-          const _ReportItem(name: 'ديون العملاء', icon: Icons.people, color: AppColors.warning, key: 'customer_debts'),
-          const _ReportItem(name: 'ديون الموردين', icon: Icons.local_shipping, color: AppColors.error, key: 'supplier_debts'),
+          const ReportItem(name: 'ديون العملاء', icon: Icons.people, color: AppColors.warning, key: 'customer_debts'),
+          const ReportItem(name: 'ديون الموردين', icon: Icons.local_shipping, color: AppColors.error, key: 'supplier_debts'),
         ],
       ),
-      _ReportGroup(
+      ReportGroup(
         name: 'العمليات',
         icon: Icons.settings,
         color: AppColors.secondary,
         items: [
-          const _ReportItem(name: 'تحويلات الصناديق', icon: Icons.swap_horiz, color: AppColors.info, key: 'cash_transfers'),
-          const _ReportItem(name: 'صرافة العملات', icon: Icons.currency_exchange, color: AppColors.secondary, key: 'currency_exchanges'),
-          const _ReportItem(name: 'السندات', icon: Icons.assignment, color: AppColors.primary, key: 'vouchers'),
-          const _ReportItem(name: 'الورديات', icon: Icons.access_time, color: AppColors.info, key: 'shifts'),
+          const ReportItem(name: 'تحويلات الصناديق', icon: Icons.swap_horiz, color: AppColors.info, key: 'cash_transfers'),
+          const ReportItem(name: 'صرافة العملات', icon: Icons.currency_exchange, color: AppColors.secondary, key: 'currency_exchanges'),
+          const ReportItem(name: 'السندات', icon: Icons.assignment, color: AppColors.primary, key: 'vouchers'),
+          const ReportItem(name: 'الورديات', icon: Icons.access_time, color: AppColors.info, key: 'shifts'),
         ],
       ),
     ];
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  Date Preset Helpers
-  // ══════════════════════════════════════════════════════════════
+  // ── Date Preset Helper ──────────────────────────────────────
 
-  void _applyDatePreset(_DatePreset preset) {
-    final now = DateTime.now();
+  void _applyDatePreset(DatePreset preset) {
+    final result = applyDatePreset(preset);
     setState(() {
       _selectedDatePreset = preset;
-      switch (preset) {
-        case _DatePreset.today:
-          _dateFrom = DateTime(now.year, now.month, now.day);
-          _dateTo = DateTime(now.year, now.month, now.day);
-        case _DatePreset.thisWeek:
-          final weekday = now.weekday;
-          final weekStart = now.subtract(Duration(days: weekday - 1));
-          _dateFrom = DateTime(weekStart.year, weekStart.month, weekStart.day);
-          _dateTo = DateTime(now.year, now.month, now.day);
-        case _DatePreset.thisMonth:
-          _dateFrom = DateTime(now.year, now.month, 1);
-          _dateTo = DateTime(now.year, now.month, now.day);
-        case _DatePreset.thisQuarter:
-          final quarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-          _dateFrom = DateTime(now.year, quarterStartMonth, 1);
-          _dateTo = DateTime(now.year, now.month, now.day);
-        case _DatePreset.thisYear:
-          _dateFrom = DateTime(now.year, 1, 1);
-          _dateTo = DateTime(now.year, now.month, now.day);
-        case _DatePreset.custom:
-          // Don't change dates – let user pick
-          break;
-      }
+      if (result.from != null) _dateFrom = result.from;
+      if (result.to != null) _dateTo = result.to;
     });
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  Helpers
-  // ══════════════════════════════════════════════════════════════
-
-  String? _currencyCode() {
-    switch (_selectedCurrency) {
-      case 'ر.ي': return 'YER';
-      case 'ر.س': return 'SAR';
-      case r'$': return 'USD';
-      default: return null;
-    }
-  }
-
-  String _fmtDate(String? iso) {
-    if (iso == null || iso.isEmpty) return '-';
-    try {
-      final dt = DateTime.parse(iso);
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
-    } catch (e) {
-      debugPrint('ReportsScreen._fmtDate: $e');
-      return iso.length > 10 ? iso.substring(0, 10) : iso;
-    }
-  }
-
-  String _fmtNum(double v) {
-    if (v == v.roundToDouble()) return v.toInt().toString();
-    return v.toStringAsFixed(2);
-  }
-
-  String _fmtMoney(double v) => CurrencyFormatter.format(v);
-
-  String _accountTypeAr(String type) {
-    switch (type) {
-      case 'ASSET': return 'أصول';
-      case 'LIABILITY': return 'خصوم';
-      case 'EQUITY': return 'حقوق الملكية';
-      case 'COST': return 'تكاليف';
-      case 'REVENUE': return 'إيرادات';
-      case 'EXPENSE': return 'مصاريف';
-      default: return type;
-    }
-  }
-
-  String _invoiceTypeAr(String type, {int? isReturn}) {
-    final isRet = isReturn == 1;
-    switch (type) {
-      case 'sale': case 'pos': return isRet ? 'مرتجع مبيعات' : 'مبيعات';
-      case 'purchase': return isRet ? 'مرتجع مشتريات' : 'مشتريات';
-      default: return type;
-    }
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  Which filters are needed per report?
-  // ══════════════════════════════════════════════════════════════
-
-  bool _needsDateFilter() {
-    if (_selectedReportKey == null) return false;
-    const noDate = {'accounts_no_movement', 'inventory', 'out_of_stock', 'low_stock', 'inventory_cost'};
-    return !noDate.contains(_selectedReportKey);
-  }
-
-  bool _needsCurrencyFilter() {
-    if (_selectedReportKey == null) return false;
-    const noCurrency = {'accounts_no_movement', 'inventory_movement', 'cash_transfers', 'currency_exchanges', 'shifts'};
-    return !noCurrency.contains(_selectedReportKey);
-  }
-
-  bool _needsAccountFilter() {
-    return _selectedReportKey == 'account_movement';
-  }
-
-  bool _needsCustomerFilter() {
-    return _selectedReportKey == 'customer_statement';
-  }
-
-  bool _needsSupplierFilter() {
-    return _selectedReportKey == 'supplier_statement';
-  }
-
-  bool _needsCashBoxFilter() {
-    return _selectedReportKey == 'cash_box';
-  }
-
-  bool _needsWarehouseFilter() {
-    return const {'inventory', 'out_of_stock', 'low_stock'}.contains(_selectedReportKey);
-  }
-
-  bool _needsCategoryFilter() {
-    return const {'inventory', 'out_of_stock', 'low_stock', 'sales_by_product'}.contains(_selectedReportKey);
-  }
-
-  bool _needsAccountTypeFilter() {
-    return const {'trial_balance', 'all_account_movement'}.contains(_selectedReportKey);
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  Date Pickers
-  // ══════════════════════════════════════════════════════════════
-
-  Future<void> _pickDateFrom() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _dateFrom ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && mounted) {
-      setState(() {
-        _dateFrom = picked;
-        _selectedDatePreset = _DatePreset.custom;
-      });
-    }
-  }
-
-  Future<void> _pickDateTo() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _dateTo ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && mounted) {
-      setState(() {
-        _dateTo = picked;
-        _selectedDatePreset = _DatePreset.custom;
-      });
-    }
   }
 
   void _clearFilters() {
@@ -379,16 +163,11 @@ class _ReportsScreenState extends State<ReportsScreen>
       _selectedWarehouseId = null;
       _selectedCategoryId = null;
       _selectedAccountType = 'الكل';
-      _selectedDatePreset = _DatePreset.custom;
-      _searchQuery = '';
-      _sortColumnIndex = null;
-      _sortAscending = true;
+      _selectedDatePreset = DatePreset.custom;
     });
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  Load Report Data
-  // ══════════════════════════════════════════════════════════════
+  // ── Load Report Data ────────────────────────────────────────
 
   Future<void> _loadReport() async {
     if (_selectedReportKey == null) return;
@@ -415,75 +194,23 @@ class _ReportsScreenState extends State<ReportsScreen>
 
     setState(() { _isLoading = true; _hasData = false; });
     try {
-      _reportRows = [];
-      _reportTotals = {};
-
-      switch (_selectedReportKey) {
-        // ── SALES & PURCHASES ──
-        case 'sales':
-          await _loadSalesReport(typeFilter: "i.type IN ('sale','pos') AND i.is_return=0");
-        case 'purchases':
-          await _loadSalesReport(typeFilter: "i.type='purchase' AND i.is_return=0");
-        case 'sales_returns':
-          await _loadSalesReport(typeFilter: "i.type IN ('sale','pos') AND i.is_return=1");
-        case 'purchase_returns':
-          await _loadSalesReport(typeFilter: "i.type='purchase' AND i.is_return=1");
-        case 'profit_loss':
-          await _loadProfitLossReport();
-        case 'invoice_profit':
-          await _loadInvoiceProfitReport();
-        case 'sales_by_product':
-          await _loadSalesByProductReport();
-        case 'sales_by_customer':
-          await _loadSalesByCustomerReport();
-
-        // ── ACCOUNTING ──
-        case 'account_movement':
-          await _loadAccountMovementReport();
-        case 'all_account_movement':
-          await _loadAllAccountMovementReport();
-        case 'trial_balance':
-          await _loadTrialBalanceReport();
-        case 'cash_box':
-          await _loadCashBoxReport();
-        case 'accounts_no_movement':
-          await _loadAccountsWithoutMovementReport();
-        case 'customer_statement':
-          await _loadCustomerStatementReport();
-        case 'supplier_statement':
-          await _loadSupplierStatementReport();
-        case 'expenses':
-          await _loadExpensesReport();
-
-        // ── INVENTORY ──
-        case 'inventory':
-          await _loadInventoryReport();
-        case 'inventory_movement':
-          await _loadInventoryMovementReport();
-        case 'inventory_cost':
-          await _loadInventoryCostReport();
-        case 'out_of_stock':
-          await _loadOutOfStockReport();
-        case 'low_stock':
-          await _loadLowStockReport();
-
-        // ── DEBTS ──
-        case 'customer_debts':
-          await _loadDebtReport(isCustomer: true);
-        case 'supplier_debts':
-          await _loadDebtReport(isCustomer: false);
-
-        // ── OPERATIONS ──
-        case 'cash_transfers':
-          await _loadCashTransfersReport();
-        case 'currency_exchanges':
-          await _loadCurrencyExchangesReport();
-        case 'vouchers':
-          await _loadVouchersReport();
-        case 'shifts':
-          await _loadShiftsReport();
-      }
-
+      final result = await ReportDataLoader.load(
+        reportKey: _selectedReportKey!,
+        params: ReportFilterParams(
+          dateFrom: _dateFrom,
+          dateTo: _dateTo,
+          selectedCurrency: _selectedCurrency,
+          selectedAccountId: _selectedAccountId,
+          selectedCustomerId: _selectedCustomerId,
+          selectedSupplierId: _selectedSupplierId,
+          selectedCashBoxId: _selectedCashBoxId,
+          selectedWarehouseId: _selectedWarehouseId,
+          selectedCategoryId: _selectedCategoryId,
+          selectedAccountType: _selectedAccountType,
+        ),
+      );
+      _reportRows = result.rows;
+      _reportTotals = result.totals;
       _hasData = true;
     } catch (e) {
       if (mounted) {
@@ -500,852 +227,29 @@ class _ReportsScreenState extends State<ReportsScreen>
     if (mounted) setState(() => _isLoading = false);
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  Individual Report Queries
-  // ══════════════════════════════════════════════════════════════
+  // ── Report Selection ────────────────────────────────────────
 
-  Future<void> _loadSalesReport({required String typeFilter}) async {
-    final results = await locator<ReportService>().getSalesReport(
-      typeFilter: typeFilter,
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      currency: _currencyCode(),
-      cashBoxId: _selectedCashBoxId,
-    );
-
-    double totalAmount = 0, totalPaid = 0, totalRemaining = 0;
-    _reportRows = results.map((r) {
-      final total = MoneyHelper.readMoney(r['total']);
-      final paid = MoneyHelper.readMoney(r['paid_amount']);
-      final remaining = MoneyHelper.readMoney(r['remaining']);
-      totalAmount += total;
-      totalPaid += paid;
-      totalRemaining += remaining;
-      return {
-        'رقم الفاتورة': () { final idStr = (r['id'] as String?) ?? ''; return idStr.length > 12 ? idStr.substring(0, 12) : idStr; }(),
-        'النوع': _invoiceTypeAr(r['type'] as String? ?? '', isReturn: r['is_return'] as int?),
-        'الجهة': r['entity_name'] as String? ?? '',
-        'الإجمالي': total,
-        'المدفوع': paid,
-        'المتبقي': remaining,
-        'العملة': r['currency'] as String? ?? 'YER',
-        'التاريخ': r['created_at'] as String? ?? '',
-      };
-    }).toList();
-    _reportTotals = {'الإجمالي': totalAmount, 'المدفوع': totalPaid, 'المتبقي': totalRemaining, 'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadProfitLossReport() async {
-    final reportData = await locator<ReportService>().getProfitLossReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      currency: _currencyCode(),
-    );
-    // Extract values from report data (raw DB integers)
-    final dataMap = <String, dynamic>{};
-    for (final row in reportData) {
-      dataMap[row['item'] as String] = row['amount'];
-    }
-    final revenue = MoneyHelper.readCalculatedMoney(dataMap['revenue']);
-    final purchases = MoneyHelper.readCalculatedMoney(dataMap['purchases']);
-    final salesReturns = MoneyHelper.readCalculatedMoney(dataMap['sales_returns']);
-    final purchaseReturns = MoneyHelper.readCalculatedMoney(dataMap['purchase_returns']);
-    final expenses = MoneyHelper.readCalculatedMoney(dataMap['expenses']);
-    final cogs = MoneyHelper.readCalculatedMoney(dataMap['cogs']);
-
-    final netSales = revenue - salesReturns;
-    final netPurchases = purchases - purchaseReturns;
-
-    final grossProfit = netSales - cogs;
-    final netProfit = grossProfit - expenses;
-
-    _reportRows = [
-      {'البند': 'إجمالي المبيعات', 'المبلغ': revenue, 'ملاحظة': 'فواتير البيع'},
-      {'البند': 'مرتجعات المبيعات', 'المبلغ': -salesReturns, 'ملاحظة': 'فواتير المرتجع'},
-      {'البند': 'صافي المبيعات', 'المبلغ': netSales, 'ملاحظة': ''},
-      {'البند': 'تكلفة البضاعة المباعة', 'المبلغ': cogs, 'ملاحظة': 'محسوبة من تكلفة الأصناف المباعة'},
-      {'البند': 'مجمل الربح', 'المبلغ': grossProfit, 'ملاحظة': 'صافي المبيعات - تكلفة البضاعة'},
-      {'البند': 'المصاريف التشغيلية', 'المبلغ': -expenses, 'ملاحظة': ''},
-      {'البند': 'صافي الربح', 'المبلغ': netProfit, 'ملاحظة': 'مجمل الربح - المصاريف'},
-    ];
-    _reportTotals = {'صافي المبيعات': netSales, 'تكلفة البضاعة': cogs, 'صافي الربح': netProfit};
-  }
-
-  Future<void> _loadInvoiceProfitReport() async {
-    final items = await locator<ReportService>().getInvoiceProfitReport(startDate: _dateFrom, endDate: _dateTo);
-    double totalProfit = 0, totalRevenue = 0, totalCost = 0;
-    _reportRows = items.map((item) {
-      // profit and cost_total are CAST AS INTEGER in SQL, so readMoney works for int results
-      // But for safety with SQL-calculated values, use readCalculatedMoney
-      final profit = MoneyHelper.readCalculatedMoney(item['profit']);
-      final total = MoneyHelper.readCalculatedMoney(item['sale_total']);
-      final cost = MoneyHelper.readCalculatedMoney(item['cost_total']);
-      totalProfit += profit;
-      totalRevenue += total;
-      totalCost += cost;
-      final idStr = (item['invoice_id']?.toString() ?? '');
-      return {
-        'رقم الفاتورة': idStr.length > 12 ? idStr.substring(0, 12) : idStr,
-        'الجهة': item['entity_name'] as String? ?? '',
-        'إجمالي الفاتورة': total,
-        'تكلفة الفاتورة': cost,
-        'الربح': profit,
-        'هامش الربح': total > 0 ? (profit / total * 100) : 0.0,
-        'العملة': item['currency'] as String? ?? 'YER',
-        'التاريخ': item['created_at'] as String? ?? '',
-      };
-    }).toList();
-    _reportTotals = {'إجمالي الإيرادات': totalRevenue, 'إجمالي التكلفة': totalCost, 'إجمالي الربح': totalProfit, 'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadSalesByProductReport() async {
-    final results = await locator<ReportService>().getSalesByProductReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      currency: _currencyCode(),
-      categoryId: _selectedCategoryId,
-    );
-    double totalRevenue = 0, totalCost = 0, totalProfit = 0;
-    int totalQty = 0;
-    _reportRows = results.map((r) {
-      final rev = MoneyHelper.readCalculatedMoney(r['revenue']);
-      final cost = MoneyHelper.readCalculatedMoney(r['cost_total']);
-      final qty = (r['qty'] as num?)?.toDouble() ?? 0;
-      final profit = rev - cost;
-      totalRevenue += rev;
-      totalCost += cost;
-      totalProfit += profit;
-      totalQty += qty.toInt();
-      return {
-        'المنتج': r['product_name'] as String? ?? '',
-        'الكمية المباعة': qty,
-        'إجمالي المبيعات': rev,
-        'تكلفة المبيعات': cost,
-        'الربح': profit,
-        'هامش الربح': rev > 0 ? (profit / rev * 100) : 0.0,
-        'عدد الفواتير': (r['inv_count'] as num?)?.toInt() ?? 0,
-      };
-    }).toList();
-    _reportTotals = {'إجمالي المبيعات': totalRevenue, 'إجمالي التكلفة': totalCost, 'إجمالي الربح': totalProfit, 'إجمالي الكمية': totalQty.toDouble(), 'عدد الأصناف': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadSalesByCustomerReport() async {
-    final results = await locator<ReportService>().getSalesByCustomerReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      currency: _currencyCode(),
-    );
-    double totalSales = 0;
-    _reportRows = results.map((r) {
-      // SUM() results with CAST AS INTEGER may still return REAL from SQLite;
-      // use readCalculatedMoney to always divide by 100
-      final sales = MoneyHelper.readCalculatedMoney(r['total_sales']);
-      totalSales += sales;
-      return {
-        'العميل': r['customer_name'] as String? ?? 'بدون عميل',
-        'العملة': r['currency'] as String? ?? 'YER',
-        'عدد الفواتير': (r['inv_count'] as num?)?.toInt() ?? 0,
-        'إجمالي المبيعات': sales,
-        'المدفوع': MoneyHelper.readCalculatedMoney(r['total_paid']),
-        'المتبقي': MoneyHelper.readCalculatedMoney(r['total_remaining']),
-      };
-    }).toList();
-    _reportTotals = {'إجمالي المبيعات': totalSales, 'عدد العملاء': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadAccountMovementReport() async {
-    if (_selectedAccountId == null) return;
-    final transactions = await locator<ReportService>().getAccountMovementReport(
-      accountId: _selectedAccountId!,
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-    );
-    final balanceType = await locator<ReportService>().getAccountBalanceType(_selectedAccountId!);
-    final isDebitNature = balanceType == 'debit';
-
-    double running = 0;
-    double totalDebit = 0, totalCredit = 0;
-    _reportRows = [];
-    for (final tx in transactions) {
-      final debit = MoneyHelper.readMoney(tx['debit']);
-      final credit = MoneyHelper.readMoney(tx['credit']);
-      // W-01: حساب الرصيد حسب طبيعة الحساب
-      if (isDebitNature) {
-        running += (debit - credit); // أصول وتكاليف: المدين يزيد والدائن ينقص
-      } else {
-        running += (credit - debit); // خصوم وإيرادات وحقوق ملكية: الدائن يزيد والمدين ينقص
-      }
-      totalDebit += debit;
-      totalCredit += credit;
-      _reportRows.add({
-        'التاريخ': tx['date'] as String? ?? '',
-        'البيان': tx['description'] as String? ?? '',
-        'مدين': debit,
-        'دائن': credit,
-        'الرصيد': running,
-      });
-    }
-    _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadAllAccountMovementReport() async {
-    String? typeCode;
-    if (_selectedAccountType != 'الكل') {
-      typeCode = _accountTypes.firstWhere((e) => e.key == _selectedAccountType, orElse: () => const MapEntry('الكل', 'الكل')).value;
-      if (typeCode == 'الكل') typeCode = null;
-    }
-    final allTx = await locator<ReportService>().getAllAccountMovementReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      currency: _currencyCode(),
-      accountType: typeCode,
-    );
-    double totalDebit = 0, totalCredit = 0;
-    _reportRows = allTx.map((tx) {
-      final debit = MoneyHelper.readMoney(tx['debit']);
-      final credit = MoneyHelper.readMoney(tx['credit']);
-      totalDebit += debit;
-      totalCredit += credit;
-      return {
-        'التاريخ': tx['date'] as String? ?? '',
-        'كود الحساب': tx['account_code'] as String? ?? '',
-        'اسم الحساب': tx['account_name'] as String? ?? 'غير معروف',
-        'البيان': tx['description'] as String? ?? '',
-        'مدين': debit,
-        'دائن': credit,
-        'العملة': tx['currency'] as String? ?? 'YER',
-      };
-    }).toList();
-    _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadTrialBalanceReport() async {
-    String? typeCode;
-    if (_selectedAccountType != 'الكل') {
-      typeCode = _accountTypes.firstWhere((e) => e.key == _selectedAccountType, orElse: () => const MapEntry('الكل', 'الكل')).value;
-      if (typeCode == 'الكل') typeCode = null;
-    }
-    final results = await locator<ReportService>().getTrialBalanceReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      currency: _currencyCode(),
-      accountType: typeCode,
-    );
-    double totalDebit = 0, totalCredit = 0;
-    _reportRows = results.map((r) {
-      final debit = MoneyHelper.readCalculatedMoney(r['debit']);
-      final credit = MoneyHelper.readCalculatedMoney(r['credit']);
-      totalDebit += debit;
-      totalCredit += credit;
-      return {
-        'كود الحساب': r['account_code'] as String? ?? '',
-        'اسم الحساب': r['name_ar'] as String? ?? '',
-        'نوع الحساب': _accountTypeAr(r['account_type'] as String? ?? ''),
-        'العملة': r['currency'] as String? ?? 'YER',
-        'مدين': debit,
-        'دائن': credit,
-      };
-    }).toList();
-    _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الفرق': (totalDebit - totalCredit).abs(), 'عدد الحسابات': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadCashBoxReport() async {
-    final cashBoxes = await locator<ReportService>().getCashBoxesReport(
-      currency: _currencyCode(),
-      cashBoxId: _selectedCashBoxId,
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-    );
-    double totalBalance = 0;
-    _reportRows = [];
-    for (final cb in cashBoxes) {
-      final balance = MoneyHelper.readMoney(cb['balance']);
-      final isCredit = (cb['balance_type'] as String? ?? 'credit') == 'credit';
-      final signedBalance = isCredit ? balance : -balance;
-      totalBalance += signedBalance;
-      final salesTotal = MoneyHelper.readCalculatedMoney(cb['sales_total']);
-      final purchaseTotal = MoneyHelper.readCalculatedMoney(cb['purchase_total']);
-      _reportRows.add({
-        'الصندوق': cb['name'] as String? ?? '',
-        'النوع': cb['type'] == 'bank' ? 'بنك' : 'صندوق',
-        'العملة': cb['currency'] as String? ?? 'YER',
-        'الرصيد': balance,
-        'حالة الرصيد': isCredit ? 'له' : 'عليه',
-        'المبيعات': salesTotal,
-        'المشتريات': purchaseTotal,
-      });
-    }
-    _reportTotals = {'إجمالي الأرصدة': totalBalance.abs(), 'عدد الصناديق': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadAccountsWithoutMovementReport() async {
-    final accounts = await locator<ReportService>().getAccountsWithoutMovementReport(
-      currency: _currencyCode(),
-      accountType: _selectedAccountType != 'الكل' ? _selectedAccountType : null,
-    );
-    _reportRows = accounts.map((a) => {
-      'كود الحساب': a['account_code'] as String? ?? '',
-      'اسم الحساب': a['name_ar'] as String? ?? '',
-      'نوع الحساب': _accountTypeAr(a['account_type'] as String? ?? ''),
-      'العملة': a['currency'] as String? ?? 'YER',
-    }).toList();
-    _reportTotals = {'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadCustomerStatementReport() async {
-    if (_selectedCustomerId == null) return;
-    // Get customer info
-    final customer = await locator<CustomerRepository>().getAllCustomers();
-    final cust = customer.firstWhere((c) => c['id'] == _selectedCustomerId, orElse: () => <String, dynamic>{});
-    final custName = cust['name'] as String? ?? '';
-    final custCurrency = cust['currency'] as String? ?? 'YER';
-
-    final txs = await locator<ReportService>().getCustomerStatementReport(
-      customerId: _selectedCustomerId!,
-      customerName: custName,
-      customerCurrency: custCurrency,
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-    );
-    double running = 0, totalDebit = 0, totalCredit = 0;
-    _reportRows = txs.map((tx) {
-      final debit = MoneyHelper.readMoney(tx['debit']);
-      final credit = MoneyHelper.readMoney(tx['credit']);
-      running += (debit - credit);
-      totalDebit += debit;
-      totalCredit += credit;
-      return {
-        'التاريخ': tx['date'] as String? ?? '',
-        'البيان': tx['description'] as String? ?? '',
-        'عليه (مدين)': debit,
-        'له (دائن)': credit,
-        'الرصيد': running,
-      };
-    }).toList();
-    _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'العميل': 0};
-    // Add customer name to totals for display
-    if (custName.isNotEmpty) {
-      _reportTotals['اسم العميل'] = 0; // placeholder key for name display
-    }
-  }
-
-  Future<void> _loadSupplierStatementReport() async {
-    if (_selectedSupplierId == null) return;
-    final suppliers = await locator<SupplierRepository>().getAllSuppliers();
-    final sup = suppliers.firstWhere((s) => s['id'] == _selectedSupplierId, orElse: () => <String, dynamic>{});
-    final supName = sup['name'] as String? ?? '';
-    final supCurrency = sup['currency'] as String? ?? 'YER';
-
-    final txs = await locator<ReportService>().getSupplierMovementReport(
-      supplierId: _selectedSupplierId!,
-      supplierName: supName,
-      supplierCurrency: supCurrency,
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-    );
-    if (txs.isEmpty) { _reportRows = []; return; }
-    double running = 0, totalDebit = 0, totalCredit = 0;
-    _reportRows = txs.map((tx) {
-      final debit = MoneyHelper.readMoney(tx['debit']);
-      final credit = MoneyHelper.readMoney(tx['credit']);
-      running += (debit - credit);
-      totalDebit += debit;
-      totalCredit += credit;
-      return {
-        'التاريخ': tx['date'] as String? ?? '',
-        'البيان': tx['description'] as String? ?? '',
-        'عليه (مدين)': debit,
-        'له (دائن)': credit,
-        'الرصيد': running,
-      };
-    }).toList();
-    _reportTotals = {'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'المورد': 0};
-    // Add supplier name to totals for display
-    if (supName.isNotEmpty) {
-      _reportTotals['اسم المورد'] = 0; // placeholder key for name display
-    }
-  }
-
-  Future<void> _loadExpensesReport() async {
-    final results = await locator<ReportService>().getExpensesReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      currency: _currencyCode(),
-    );
-    double totalAmount = 0;
-    _reportRows = results.map((r) {
-      final amount = MoneyHelper.readMoney(r['amount']);
-      totalAmount += amount;
-      return {
-        'العنوان': r['title'] as String? ?? '',
-        'المبلغ': amount,
-        'العملة': r['currency'] as String? ?? 'YER',
-        'التاريخ': r['expense_date'] as String? ?? '',
-        'الفئة': r['category'] as String? ?? '',
-        'طريقة الدفع': r['payment_method'] as String? ?? '',
-        'المستفيد': r['beneficiary'] as String? ?? '',
-      };
-    }).toList();
-    _reportTotals = {'إجمالي المصروفات': totalAmount, 'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadInventoryReport() async {
-    final results = await locator<ReportService>().getInventoryReport(
-      warehouseId: _selectedWarehouseId,
-      categoryId: _selectedCategoryId,
-    );
-    double totalValue = 0;
-    _reportRows = results.map((p) {
-      final stock = (p['current_stock'] as num?)?.toDouble() ?? 0;
-      final cost = MoneyHelper.readCalculatedMoney(p['cost_price']);
-      final value = stock * cost;
-      totalValue += value;
-      return {
-        'الصنف': p['name_ar'] as String? ?? '',
-        'الباركود': p['barcode'] as String? ?? '',
-        'الكمية': stock,
-        'سعر التكلفة': cost,
-        'سعر البيع': MoneyHelper.readCalculatedMoney(p['sell_price']),
-        'قيمة المخزون': value,
-        'العملة': p['currency'] as String? ?? 'YER',
-        'المخزن': p['warehouse_name'] as String? ?? '',
-        'الفئة': p['category_name'] as String? ?? '',
-      };
-    }).toList();
-    _reportTotals = {'قيمة المخزون': totalValue, 'عدد الأصناف': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadInventoryMovementReport() async {
-    final items = await locator<ReportService>().getInventoryMovementReport(startDate: _dateFrom, endDate: _dateTo);
-    _reportRows = items.map((item) {
-      final qtyIn = (item['qty_in'] as num?)?.toDouble() ?? 0.0;
-      final qtyOut = (item['qty_out'] as num?)?.toDouble() ?? 0.0;
-      final revenue = MoneyHelper.readCalculatedMoney(item['total_revenue']);
-      final cost = MoneyHelper.readCalculatedMoney(item['total_cost']);
-      return {
-        'الصنف': (item['name_ar'] ?? item['product_name']) as String? ?? '',
-        'الوارد': qtyIn,
-        'الصادر': qtyOut,
-        'الصافي': qtyIn - qtyOut,
-        'إجمالي المبيعات': revenue,
-        'إجمالي المشتريات': cost,
-      };
-    }).toList();
-    final totalIn = _reportRows.fold(0.0, (s, r) => s + ((r['الوارد'] as num?)?.toDouble() ?? 0.0));
-    final totalOut = _reportRows.fold(0.0, (s, r) => s + ((r['الصادر'] as num?)?.toDouble() ?? 0.0));
-    final totalRevenue = _reportRows.fold(0.0, (s, r) => s + ((r['إجمالي المبيعات'] as num?)?.toDouble() ?? 0.0));
-    final totalCost = _reportRows.fold(0.0, (s, r) => s + ((r['إجمالي المشتريات'] as num?)?.toDouble() ?? 0.0));
-    _reportTotals = {'إجمالي الوارد': totalIn, 'إجمالي الصادر': totalOut, 'الصافي': totalIn - totalOut, 'إجمالي المبيعات': totalRevenue, 'إجمالي المشتريات': totalCost};
-  }
-
-  Future<void> _loadInventoryCostReport() async {
-    final items = await locator<ReportService>().getInventoryCostReport();
-    double totalCost = 0, totalSell = 0;
-    _reportRows = items.map((item) {
-      final costVal = MoneyHelper.readCalculatedMoney(item['stock_cost_value']);
-      final sellVal = MoneyHelper.readCalculatedMoney(item['stock_sell_value']);
-      totalCost += costVal;
-      totalSell += sellVal;
-      return {
-        'الصنف': (item['name_ar'] ?? item['product_name']) as String? ?? '',
-        'الباركود': item['barcode'] as String? ?? '',
-        'الكمية': (item['current_stock'] as num?)?.toDouble() ?? 0,
-        'سعر التكلفة': MoneyHelper.readCalculatedMoney(item['cost_price']),
-        'سعر البيع': MoneyHelper.readCalculatedMoney(item['sell_price']),
-        'تكلفة المخزون': costVal,
-        'قيمة البيع': sellVal,
-        'الفئة': item['category_name'] as String? ?? '',
-        'المخزن': item['warehouse_name'] as String? ?? '',
-      };
-    }).toList();
-    _reportTotals = {'تكلفة المخزون': totalCost, 'قيمة البيع': totalSell, 'الربح المتوقع': totalSell - totalCost};
-  }
-
-  Future<void> _loadOutOfStockReport() async {
-    final results = await locator<ReportService>().getOutOfStockReport(
-      warehouseId: _selectedWarehouseId,
-      categoryId: _selectedCategoryId,
-    );
-    _reportRows = results.map((p) => {
-      'الصنف': p['name_ar'] as String? ?? '',
-      'الباركود': p['barcode'] as String? ?? '',
-      'سعر التكلفة': MoneyHelper.readCalculatedMoney(p['cost_price']),
-      'سعر البيع': MoneyHelper.readCalculatedMoney(p['sell_price']),
-      'المخزن': p['warehouse_name'] as String? ?? '',
-      'الفئة': p['category_name'] as String? ?? '',
-    }).toList();
-    _reportTotals = {'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadLowStockReport() async {
-    final results = await locator<ReportService>().getLowStockReport(
-      warehouseId: _selectedWarehouseId,
-      categoryId: _selectedCategoryId,
-    );
-    _reportRows = results.map((p) {
-      final stock = (p['current_stock'] as num?)?.toDouble() ?? 0;
-      final min = (p['min_stock'] as num?)?.toDouble() ?? 0;
-      return {
-        'الصنف': p['name_ar'] as String? ?? '',
-        'الباركود': p['barcode'] as String? ?? '',
-        'الكمية الحالية': stock,
-        'الحد الأدنى': min,
-        'سعر التكلفة': MoneyHelper.readCalculatedMoney(p['cost_price']),
-        'سعر البيع': MoneyHelper.readCalculatedMoney(p['sell_price']),
-        'المخزن': p['warehouse_name'] as String? ?? '',
-        'الفئة': p['category_name'] as String? ?? '',
-      };
-    }).toList();
-    _reportTotals = {'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadDebtReport({required bool isCustomer}) async {
-    _reportRows = [];
-    double totalBalance = 0;
-    if (isCustomer) {
-      final customers = await locator<CustomerRepository>().getAllCustomers();
-      for (final c in customers) {
-        final balance = MoneyHelper.readMoney(c['balance']);
-        if (balance > 0) {
-          totalBalance += balance;
-          _reportRows.add({
-            'الاسم': c['name'] as String? ?? '',
-            'الرصيد': balance,
-            'نوع الرصيد': (c['balance_type'] as String? ?? 'credit') == 'credit' ? 'له (علينا)' : 'عليه (لنا)',
-            'العملة': c['currency'] as String? ?? 'YER',
-            'الهاتف': c['phone'] as String? ?? '',
-            'سقف الدين': MoneyHelper.readMoney(c['debt_ceiling']),
-          });
-        }
-      }
-    } else {
-      final suppliers = await locator<SupplierRepository>().getAllSuppliers();
-      for (final s in suppliers) {
-        final balance = MoneyHelper.readMoney(s['balance']);
-        if (balance > 0) {
-          totalBalance += balance;
-          _reportRows.add({
-            'الاسم': s['name'] as String? ?? '',
-            'الرصيد': balance,
-            'نوع الرصيد': (s['balance_type'] as String? ?? 'debit') == 'debit' ? 'عليه (لنا)' : 'له (علينا)',
-            'العملة': s['currency'] as String? ?? 'YER',
-            'الهاتف': s['phone'] as String? ?? '',
-            'سقف الدين': MoneyHelper.readMoney(s['debt_ceiling']),
-          });
-        }
-      }
-    }
-    _reportTotals = {'إجمالي الديون': totalBalance, 'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadCashTransfersReport() async {
-    final results = await locator<ReportService>().getCashTransfersReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-    );
-    double totalAmount = 0;
-    _reportRows = results.map((r) {
-      final amount = MoneyHelper.readMoney(r['amount']);
-      totalAmount += amount;
-      return {
-        'من صندوق': r['from_name'] as String? ?? '',
-        'إلى صندوق': r['to_name'] as String? ?? '',
-        'المبلغ': amount,
-        'العملة': r['currency'] as String? ?? 'YER',
-        'التاريخ': r['created_at'] as String? ?? '',
-        'ملاحظات': r['notes'] as String? ?? '',
-      };
-    }).toList();
-    _reportTotals = {'إجمالي المبالغ': totalAmount, 'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadCurrencyExchangesReport() async {
-    final results = await locator<ReportService>().getCurrencyExchangesReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-    );
-    _reportRows = results.map((r) => {
-      'من عملة': r['from_currency'] as String? ?? '',
-      'إلى عملة': r['to_currency'] as String? ?? '',
-      'المبلغ المصروف': MoneyHelper.readMoney(r['from_amount']),
-      'المبلغ المستلم': MoneyHelper.readMoney(r['to_amount']),
-      'سعر الصرف': (r['exchange_rate'] as num?)?.toDouble() ?? 0,
-      'من صندوق': r['from_name'] as String? ?? '',
-      'إلى صندوق': r['to_name'] as String? ?? '',
-      'التاريخ': r['created_at'] as String? ?? '',
-    }).toList();
-    _reportTotals = {'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadVouchersReport() async {
-    final results = await locator<ReportService>().getVouchersReport(
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-    );
-    double totalAmount = 0;
-    _reportRows = results.map((r) {
-      final amount = MoneyHelper.readMoney(r['total_amount']);
-      totalAmount += amount;
-      final vType = r['voucher_type'] as String? ?? '';
-      String typeAr;
-      switch (vType) {
-        case 'receipt': typeAr = 'سند قبض'; break;
-        case 'payment': typeAr = 'سند صرف'; break;
-        default: typeAr = vType;
-      }
-      return {
-        'رقم السند': r['voucher_number'] as String? ?? '',
-        'النوع': typeAr,
-        'المبلغ': amount,
-        'العملة': r['currency'] as String? ?? 'YER',
-        'الصندوق': r['cash_box_name'] as String? ?? '',
-        'الوصف': r['description'] as String? ?? '',
-        'التاريخ': r['date'] as String? ?? '',
-      };
-    }).toList();
-    _reportTotals = {'إجمالي المبالغ': totalAmount, 'العدد': _reportRows.length.toDouble()};
-  }
-
-  Future<void> _loadShiftsReport() async {
-    final results = await locator<ReportService>().getShiftsReport();
-    _reportRows = results.map((r) => {
-      'رقم الوردية': r['shift_number'] as String? ?? '',
-      'الكاشير': r['cashier_name'] as String? ?? '',
-      'الصندوق': r['cash_box_name'] as String? ?? '',
-      'المبيعات': MoneyHelper.readMoney(r['total_sales']),
-      'المرتجعات': MoneyHelper.readMoney(r['total_returns']),
-      'الخصومات': MoneyHelper.readMoney(r['total_discounts']),
-      'الحالة': (r['status'] as String? ?? '') == 'open' ? 'مفتوحة' : 'مغلقة',
-      'تاريخ الفتح': r['opened_at'] as String? ?? '',
-      'تاريخ الإغلاق': r['closed_at'] as String? ?? '',
-    }).toList();
-    _reportTotals = {'العدد': _reportRows.length.toDouble()};
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  Excel Export
-  // ══════════════════════════════════════════════════════════════
-
-  Future<void> _exportToExcel() async {
-    if (_reportRows.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا توجد بيانات للتصدير'), backgroundColor: AppColors.warning),
-      );
+  void _onReportSelected(ReportItem item) {
+    // Navigate to standalone screens for dedicated report views
+    if (item.key == 'trial_balance_screen') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const TrialBalanceScreen()));
       return;
     }
-    try {
-      await ExcelExporter.exportGenericReport(
-        reportName: _getSelectedReportName(),
-        rows: _reportRows,
-        totals: _reportTotals,
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error),
-        );
-      }
+    if (item.key == 'financial_statements') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const FinancialStatementsScreen()));
+      return;
     }
-  }
-
-  String _getSelectedReportName() {
-    if (_selectedReportKey == null) return 'تقرير';
-    for (final group in _groups) {
-      for (final item in group.items) {
-        if (item.key == _selectedReportKey) return item.name;
-      }
-    }
-    return 'تقرير';
+    setState(() {
+      _selectedReportKey = item.key;
+      _hasData = false;
+      _reportRows = [];
+      _reportTotals = {};
+      _clearFilters();
+    });
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  Dropdown Helpers (preserved)
-  // ══════════════════════════════════════════════════════════════
-
-  Widget _buildCurrencyDropdown(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedCurrency,
-          isDense: true,
-          icon: const Icon(Icons.arrow_drop_down, size: 16),
-          style: theme.textTheme.bodySmall?.copyWith(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
-          items: _currencyOptions.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 11)))).toList(),
-          onChanged: (val) { if (val != null) setState(() => _selectedCurrency = val); },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAccountDropdown(ThemeData theme) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: locator<AccountRepository>().getAllAccounts(),
-      builder: (ctx, snap) {
-        if (!snap.hasData) return const SizedBox.shrink();
-        return _buildDropdown<int>(
-          theme: theme,
-          value: _selectedAccountId,
-          items: snap.data!.map((a) => DropdownMenuItem<int>(
-            value: a['id'] as int,
-            child: Text('${a['name_ar']} (${a['currency']})', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )).toList(),
-          onChanged: (v) => setState(() => _selectedAccountId = v),
-          hint: 'اختر الحساب',
-        );
-      },
-    );
-  }
-
-  Widget _buildCustomerDropdown(ThemeData theme) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: locator<CustomerRepository>().getAllCustomers(),
-      builder: (ctx, snap) {
-        if (!snap.hasData) return const SizedBox.shrink();
-        return _buildDropdown<int>(
-          theme: theme,
-          value: _selectedCustomerId,
-          items: snap.data!.map((c) => DropdownMenuItem<int>(
-            value: c['id'] as int,
-            child: Text(c['name'] as String? ?? '', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )).toList(),
-          onChanged: (v) => setState(() => _selectedCustomerId = v),
-          hint: 'اختر العميل',
-        );
-      },
-    );
-  }
-
-  Widget _buildSupplierDropdown(ThemeData theme) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: locator<SupplierRepository>().getAllSuppliers(),
-      builder: (ctx, snap) {
-        if (!snap.hasData) return const SizedBox.shrink();
-        return _buildDropdown<int>(
-          theme: theme,
-          value: _selectedSupplierId,
-          items: snap.data!.map((s) => DropdownMenuItem<int>(
-            value: s['id'] as int,
-            child: Text(s['name'] as String? ?? '', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )).toList(),
-          onChanged: (v) => setState(() => _selectedSupplierId = v),
-          hint: 'اختر المورد',
-        );
-      },
-    );
-  }
-
-  Widget _buildCashBoxDropdown(ThemeData theme) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: locator<CashBoxService>().getAllCashBoxes(),
-      builder: (ctx, snap) {
-        if (!snap.hasData) return const SizedBox.shrink();
-        return _buildDropdown<int>(
-          theme: theme,
-          value: _selectedCashBoxId,
-          items: snap.data!.map((cb) => DropdownMenuItem<int>(
-            value: cb['id'] as int,
-            child: Text('${cb['name']} (${cb['currency']})', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )).toList(),
-          onChanged: (v) => setState(() => _selectedCashBoxId = v),
-          hint: 'اختر الصندوق',
-        );
-      },
-    );
-  }
-
-  Widget _buildWarehouseDropdown(ThemeData theme) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: locator<ReferenceDataRepository>().getAllWarehouses(),
-      builder: (ctx, snap) {
-        if (!snap.hasData) return const SizedBox.shrink();
-        final items = [DropdownMenuItem<int>(value: null, child: Text('كل المخازن', style: TextStyle(fontSize: 12)))];
-        items.addAll(snap.data!.map((w) => DropdownMenuItem<int>(
-          value: w['id'] as int,
-          child: Text(w['name'] as String? ?? '', style: const TextStyle(fontSize: 12)),
-        )));
-        return _buildDropdown<int>(
-          theme: theme,
-          value: _selectedWarehouseId,
-          items: items,
-          onChanged: (v) => setState(() => _selectedWarehouseId = v),
-          hint: 'المخزن',
-        );
-      },
-    );
-  }
-
-  Widget _buildCategoryDropdown(ThemeData theme) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: locator<ReferenceDataRepository>().getAllCategories(),
-      builder: (ctx, snap) {
-        if (!snap.hasData) return const SizedBox.shrink();
-        final items = [DropdownMenuItem<int>(value: null, child: Text('كل الفئات', style: TextStyle(fontSize: 12)))];
-        items.addAll(snap.data!.map((c) => DropdownMenuItem<int>(
-          value: c['id'] as int,
-          child: Text(c['name'] as String? ?? '', style: const TextStyle(fontSize: 12)),
-        )));
-        return _buildDropdown<int>(
-          theme: theme,
-          value: _selectedCategoryId,
-          items: items,
-          onChanged: (v) => setState(() => _selectedCategoryId = v),
-          hint: 'الفئة',
-        );
-      },
-    );
-  }
-
-  Widget _buildAccountTypeDropdown(ThemeData theme) {
-    return _buildDropdown<String>(
-      theme: theme,
-      value: _selectedAccountType,
-      items: _accountTypes.map((e) => DropdownMenuItem<String>(
-        value: e.key,
-        child: Text(e.key, style: const TextStyle(fontSize: 12)),
-      )).toList(),
-      onChanged: (v) { if (v != null) setState(() => _selectedAccountType = v); },
-      hint: 'نوع الحساب',
-    );
-  }
-
-  Widget _buildDropdown<T>({
-    required ThemeData theme,
-    required T? value,
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?> onChanged,
-    required String hint,
-  }) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          isDense: true,
-          isExpanded: true,
-          icon: const Icon(Icons.arrow_drop_down, size: 16),
-          hint: Text(hint, style: TextStyle(fontSize: 11, color: AppColors.primary.withOpacity(0.6))),
-          style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
-          items: items,
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  Build – NEW UI
+  //  Build
   // ══════════════════════════════════════════════════════════════
 
   @override
@@ -1363,7 +267,11 @@ class _ReportsScreenState extends State<ReportsScreen>
           body: _buildBody(theme, isDark),
         ),
         floatingActionButton: _hasData && _reportRows.isNotEmpty
-            ? _buildExportFab(theme, isDark)
+            ? ReportExportFab(
+                reportRows: _reportRows,
+                reportTotals: _reportTotals,
+                reportName: getReportName(_selectedReportKey, _groups),
+              )
             : null,
       ),
     );
@@ -1410,808 +318,81 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
   }
 
-  Widget _buildTabContent(ThemeData theme, bool isDark, _ReportGroup group) {
+  Widget _buildTabContent(ThemeData theme, bool isDark, ReportGroup group) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Report cards grid
-          _buildReportCardsGrid(theme, isDark, group),
+          ReportCardsGrid(
+            group: group,
+            selectedReportKey: _selectedReportKey,
+            onReportSelected: _onReportSelected,
+          ),
           // Filters section (only when a report is selected from this group)
           if (_selectedReportKey != null && group.items.any((i) => i.key == _selectedReportKey)) ...[
             const SizedBox(height: 12),
-            _buildFiltersSection(theme, isDark),
+            ReportFiltersSection(
+              selectedReportKey: _selectedReportKey,
+              selectedDatePreset: _selectedDatePreset,
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              selectedCurrency: _selectedCurrency,
+              selectedAccountId: _selectedAccountId,
+              selectedCustomerId: _selectedCustomerId,
+              selectedSupplierId: _selectedSupplierId,
+              selectedCashBoxId: _selectedCashBoxId,
+              selectedWarehouseId: _selectedWarehouseId,
+              selectedCategoryId: _selectedCategoryId,
+              selectedAccountType: _selectedAccountType,
+              onDatePresetChanged: _applyDatePreset,
+              onDateFromChanged: (v) => setState(() => _dateFrom = v),
+              onDateToChanged: (v) => setState(() => _dateTo = v),
+              onCurrencyChanged: (v) => setState(() => _selectedCurrency = v),
+              onAccountChanged: (v) => setState(() => _selectedAccountId = v),
+              onCustomerChanged: (v) => setState(() => _selectedCustomerId = v),
+              onSupplierChanged: (v) => setState(() => _selectedSupplierId = v),
+              onCashBoxChanged: (v) => setState(() => _selectedCashBoxId = v),
+              onWarehouseChanged: (v) => setState(() => _selectedWarehouseId = v),
+              onCategoryChanged: (v) => setState(() => _selectedCategoryId = v),
+              onAccountTypeChanged: (v) => setState(() => _selectedAccountType = v),
+            ),
             const SizedBox(height: 12),
-            _buildLoadButton(theme, isDark),
+            // Load button
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _isLoading ? null : _loadReport,
+                icon: _isLoading
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.search, size: 20),
+                label: Text(_isLoading ? 'جاري التحميل...' : 'عرض التقرير'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
             // Results area
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 350),
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
-              child: _buildResultsArea(theme, isDark),
+              child: ReportResultsArea(
+                key: ValueKey(_selectedReportKey),
+                isLoading: _isLoading,
+                hasData: _hasData,
+                reportRows: _reportRows,
+                reportTotals: _reportTotals,
+              ),
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  // ── Report Cards Grid ────────────────────────────────────────
-
-  Widget _buildReportCardsGrid(ThemeData theme, bool isDark, _ReportGroup group) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 2.2,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: group.items.length,
-      itemBuilder: (context, index) {
-        final item = group.items[index];
-        final isSelected = _selectedReportKey == item.key;
-        return _buildReportCard(theme, isDark, item, isSelected);
-      },
-    );
-  }
-
-  Widget _buildReportCard(ThemeData theme, bool isDark, _ReportItem item, bool isSelected) {
-    final bgColor = isSelected
-        ? item.color.withOpacity(isDark ? 0.25 : 0.1)
-        : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant);
-    final borderColor = isSelected ? item.color : (isDark ? AppColors.darkBorder : AppColors.border);
-    final iconColor = isSelected ? item.color : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary);
-
-    return GestureDetector(
-      onTap: () => _onReportSelected(item),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
-          boxShadow: isSelected
-              ? [BoxShadow(color: item.color.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))]
-              : null,
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              children: [
-                Icon(item.icon, size: 28, color: iconColor),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.name,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                      color: isSelected
-                          ? item.color
-                          : (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (isSelected)
-                  Icon(Icons.check_circle, size: 18, color: item.color),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _getReportDescription(item.key),
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 10,
-                color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getReportDescription(String key) {
-    const descriptions = {
-      'sales': 'تفاصيل فواتير المبيعات',
-      'purchases': 'تفاصيل فواتير المشتريات',
-      'sales_returns': 'فواتير المرتجعات للمبيعات',
-      'purchase_returns': 'فواتير المرتجعات للمشتريات',
-      'profit_loss': 'ملخص الأرباح والخسائر',
-      'invoice_profit': 'ربح كل فاتورة بالتفصيل',
-      'sales_by_product': 'ترتيب المنتجات حسب المبيعات',
-      'sales_by_customer': 'ترتيب العملاء حسب المشتريات',
-      'account_movement': 'حركة حساب محدد بالتفصيل',
-      'all_account_movement': 'كل حركات الحسابات',
-      'trial_balance': 'ميزان المراجعة للتحقق',
-      'trial_balance_screen': 'شاشة كاملة لميزان المراجعة',
-      'financial_statements': 'قائمة الدخل والمركزية المالي',
-      'cash_box': 'أرصدة وحركة الصناديق',
-      'accounts_no_movement': 'حسابات بلا قيود',
-      'customer_statement': 'كشف حساب عميل',
-      'supplier_statement': 'كشف حساب مورد',
-      'expenses': 'تفاصيل المصروفات',
-      'inventory': 'حالة المخزون الحالية',
-      'inventory_movement': 'وارد وصادر المخزون',
-      'inventory_cost': 'تكلفة وقيمة المخزون',
-      'out_of_stock': 'أصناف نفدت من المخزون',
-      'low_stock': 'أصناف تحت الحد الأدنى',
-      'customer_debts': 'ديون العملاء المستحقة',
-      'supplier_debts': 'ديون الموردين المستحقة',
-      'cash_transfers': 'التحويلات بين الصناديق',
-      'currency_exchanges': 'عمليات صرافة العملات',
-      'vouchers': 'سندات القبض والصرف',
-      'shifts': 'تقرير الورديات',
-    };
-    return descriptions[key] ?? 'تقرير';
-  }
-
-  void _onReportSelected(_ReportItem item) {
-    // Navigate to standalone screens for dedicated report views
-    if (item.key == 'trial_balance_screen') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const TrialBalanceScreen()));
-      return;
-    }
-    if (item.key == 'financial_statements') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const FinancialStatementsScreen()));
-      return;
-    }
-    setState(() {
-      _selectedReportKey = item.key;
-      _hasData = false;
-      _reportRows = [];
-      _reportTotals = {};
-      _searchQuery = '';
-      _sortColumnIndex = null;
-      _sortAscending = true;
-    });
-  }
-
-  // ── Filters Section ──────────────────────────────────────────
-
-  Widget _buildFiltersSection(ThemeData theme, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Quick date presets
-          if (_needsDateFilter()) ...[
-            _buildDatePresetsRow(theme, isDark),
-            const SizedBox(height: 8),
-            // Custom date pickers (show only when custom is selected)
-            if (_selectedDatePreset == _DatePreset.custom)
-              _buildCustomDateRow(theme, isDark),
-          ],
-          // Currency and entity filters
-          if (_needsCurrencyFilter() || _needsAccountFilter() || _needsCustomerFilter() ||
-              _needsSupplierFilter() || _needsCashBoxFilter() || _needsWarehouseFilter() ||
-              _needsCategoryFilter() || _needsAccountTypeFilter()) ...[
-            const SizedBox(height: 8),
-            _buildEntityFiltersRow(theme),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDatePresetsRow(ThemeData theme, bool isDark) {
-    final presets = [
-      (_DatePreset.today, 'اليوم'),
-      (_DatePreset.thisWeek, 'هذا الأسبوع'),
-      (_DatePreset.thisMonth, 'هذا الشهر'),
-      (_DatePreset.thisQuarter, 'هذا الربع'),
-      (_DatePreset.thisYear, 'هذا العام'),
-      (_DatePreset.custom, 'مخصص'),
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: presets.map((p) {
-          final isSelected = _selectedDatePreset == p.$1;
-          return Padding(
-            padding: const EdgeInsets.only(left: 6),
-            child: ChoiceChip(
-              label: Text(p.$2),
-              selected: isSelected,
-              selectedColor: AppColors.primary.withOpacity(0.2),
-              backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
-              side: BorderSide(
-                color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.border),
-              ),
-              labelStyle: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? AppColors.primary : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
-              ),
-              visualDensity: VisualDensity.compact,
-              onSelected: (_) => _applyDatePreset(p.$1),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildCustomDateRow(ThemeData theme, bool isDark) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildFilterChip(theme, Icons.calendar_today,
-            _dateFrom != null ? _fmtDate(_dateFrom!.toIso8601String()) : 'من تاريخ', _pickDateFrom),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildFilterChip(theme, Icons.calendar_today,
-            _dateTo != null ? _fmtDate(_dateTo!.toIso8601String()) : 'إلى تاريخ', _pickDateTo),
-        ),
-        if (_dateFrom != null || _dateTo != null) ...[
-          const SizedBox(width: 4),
-          IconButton(
-            icon: Icon(Icons.clear, size: 18, color: AppColors.error),
-            tooltip: 'مسح التاريخ',
-            onPressed: () {
-              setState(() {
-                _dateFrom = null;
-                _dateTo = null;
-              });
-            },
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildEntityFiltersRow(ThemeData theme) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        if (_needsCurrencyFilter())
-          SizedBox(width: 100, child: _buildCurrencyDropdown(theme)),
-        if (_needsAccountFilter())
-          SizedBox(width: 180, child: _buildAccountDropdown(theme)),
-        if (_needsCustomerFilter())
-          SizedBox(width: 180, child: _buildCustomerDropdown(theme)),
-        if (_needsSupplierFilter())
-          SizedBox(width: 180, child: _buildSupplierDropdown(theme)),
-        if (_needsCashBoxFilter())
-          SizedBox(width: 180, child: _buildCashBoxDropdown(theme)),
-        if (_needsWarehouseFilter())
-          SizedBox(width: 140, child: _buildWarehouseDropdown(theme)),
-        if (_needsCategoryFilter())
-          SizedBox(width: 140, child: _buildCategoryDropdown(theme)),
-        if (_needsAccountTypeFilter())
-          SizedBox(width: 140, child: _buildAccountTypeDropdown(theme)),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(ThemeData theme, IconData icon, String label, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: AppColors.primary),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(label, style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600,
-              ), overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Load Button ──────────────────────────────────────────────
-
-  Widget _buildLoadButton(ThemeData theme, bool isDark) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton.icon(
-        onPressed: _isLoading ? null : _loadReport,
-        icon: _isLoading
-            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Icon(Icons.search, size: 20),
-        label: Text(_isLoading ? 'جاري التحميل...' : 'عرض التقرير'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 2,
-        ),
-      ),
-    );
-  }
-
-  // ── Results Area ─────────────────────────────────────────────
-
-  Widget _buildResultsArea(ThemeData theme, bool isDark) {
-    // No report selected yet
-    if (_selectedReportKey == null || !_groups.any((g) => g.items.any((i) => i.key == _selectedReportKey))) {
-      return _buildEmptyState(
-        icon: Icons.description_outlined,
-        title: 'اختر تقريراً للبدء',
-        subtitle: 'اختر نوع التقرير من البطاقات أعلاه',
-        color: AppColors.textHint,
-      );
-    }
-
-    // Loading state with shimmer
-    if (_isLoading) {
-      return _buildShimmerLoading(theme, isDark);
-    }
-
-    // Report selected but not yet loaded
-    if (!_hasData) {
-      return _buildEmptyState(
-        icon: Icons.filter_list_alt,
-        title: 'حدد الفلاتر واضغط "عرض التقرير"',
-        subtitle: 'اختر الفترة والعملة ثم اضغط العرض',
-        color: AppColors.primary,
-      );
-    }
-
-    // Loaded but no data
-    if (_reportRows.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.inbox_outlined,
-        title: 'لا توجد بيانات',
-        subtitle: 'جرّب تغيير الفلاتر أو اختيار فترة مختلفة',
-        color: AppColors.warning,
-      );
-    }
-
-    // Has data: KPI cards + search + sortable table
-    return Column(
-      key: const ValueKey('results'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // KPI Summary Cards
-        if (_reportTotals.isNotEmpty) ...[
-          _buildKPICards(theme, isDark),
-          const SizedBox(height: 12),
-        ],
-        // Search bar
-        _buildSearchBar(theme, isDark),
-        const SizedBox(height: 8),
-        // Sortable data table
-        _buildSortableDataTable(theme, isDark),
-      ],
-    );
-  }
-
-  // ── Empty / Illustration States ──────────────────────────────
-
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 40, color: color.withOpacity(0.5)),
-            ),
-            const SizedBox(height: 16),
-            Text(title, style: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w700, color: color,
-            )),
-            const SizedBox(height: 4),
-            Text(subtitle, style: TextStyle(
-              fontSize: 13, color: color.withOpacity(0.6),
-            ), textAlign: TextAlign.center),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Shimmer Loading ──────────────────────────────────────────
-
-  Widget _buildShimmerLoading(ThemeData theme, bool isDark) {
-    final baseColor = isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant;
-    final highlightColor = isDark ? AppColors.darkSurface : AppColors.surface;
-
-    return Column(
-      children: [
-        // KPI shimmer cards
-        SizedBox(
-          height: 80,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            itemCount: 4,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, __) => _shimmerBox(baseColor, highlightColor, 140, 80),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Table shimmer rows
-        ...List.generate(6, (_) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: _shimmerBox(baseColor, highlightColor, double.infinity, 36),
-        )),
-      ],
-    );
-  }
-
-  Widget _shimmerBox(Color base, Color highlight, double width, double height) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.3, end: 1.0),
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.easeInOut,
-      builder: (context, value, child) {
-        return Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            color: base.withOpacity(0.3 + value * 0.4),
-            borderRadius: BorderRadius.circular(8),
-          ),
-        );
-      },
-      onEnd: () {}, // Rebuild will restart animation via setState from loading
-    );
-  }
-
-  // ── KPI Summary Cards ────────────────────────────────────────
-
-  Widget _buildKPICards(ThemeData theme, bool isDark) {
-    final entries = _reportTotals.entries
-        .where((e) => e.key != 'العدد' && e.key != 'عدد الحسابات' &&
-                      e.key != 'عدد الأصناف' && e.key != 'عدد العملاء' &&
-                      e.key != 'عدد الصناديق' && e.key != 'العميل' && e.key != 'المورد')
-        .take(4)
-        .toList();
-    if (entries.isEmpty) return const SizedBox.shrink();
-
-    return SizedBox(
-      height: 84,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: entries.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final entry = entries[index];
-          return _buildKPICard(theme, isDark, entry.key, entry.value);
-        },
-      ),
-    );
-  }
-
-  Widget _buildKPICard(ThemeData theme, bool isDark, String label, double value) {
-    // Determine color based on label semantics
-    Color cardColor;
-    IconData cardIcon;
-    if (label.contains('ربح') || label.contains('إيرادات') || label.contains('مبيعات') ||
-        label.contains('البيع') || label.contains('الوارد')) {
-      cardColor = value >= 0 ? AppColors.success : AppColors.error;
-      cardIcon = value >= 0 ? Icons.trending_up : Icons.trending_down;
-    } else if (label.contains('مشتريات') || label.contains('تكلفة') ||
-               label.contains('مصروف') || label.contains('دين') || label.contains('متبقي') ||
-               label.contains('الصادر') || label.contains('خسائر')) {
-      cardColor = AppColors.error;
-      cardIcon = Icons.trending_down;
-    } else {
-      cardColor = AppColors.primary;
-      cardIcon = Icons.analytics_outlined;
-    }
-
-    final bgColor = cardColor.withOpacity(isDark ? 0.2 : 0.08);
-    final borderColor = cardColor.withOpacity(isDark ? 0.4 : 0.3);
-
-    return Container(
-      width: 150,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Icon(cardIcon, size: 16, color: cardColor),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(label, style: theme.textTheme.labelSmall?.copyWith(
-                  color: cardColor, fontWeight: FontWeight.w600, fontSize: 10,
-                ), maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _fmtMoney(value.abs()),
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w900, color: cardColor, fontSize: 16,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Search Bar ───────────────────────────────────────────────
-
-  Widget _buildSearchBar(ThemeData theme, bool isDark) {
-    return TextField(
-      onChanged: (val) => setState(() => _searchQuery = val),
-      decoration: InputDecoration(
-        hintText: 'بحث في النتائج...',
-        hintStyle: TextStyle(color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary, fontSize: 13),
-        prefixIcon: Icon(Icons.search, size: 20, color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
-        suffixIcon: _searchQuery.isNotEmpty
-            ? IconButton(
-                icon: Icon(Icons.clear, size: 18, color: AppColors.textHint),
-                onPressed: () => setState(() => _searchQuery = ''),
-              )
-            : null,
-        filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-      ),
-      style: theme.textTheme.bodyMedium,
-    );
-  }
-
-  // ── Sortable Data Table ──────────────────────────────────────
-
-  List<Map<String, dynamic>> get _filteredRows {
-    if (_searchQuery.isEmpty) return _reportRows;
-    final q = _searchQuery.toLowerCase();
-    return _reportRows.where((row) {
-      return row.values.any((v) => v.toString().toLowerCase().contains(q));
-    }).toList();
-  }
-
-  List<Map<String, dynamic>> get _sortedRows {
-    final rows = List<Map<String, dynamic>>.from(_filteredRows);
-    if (_sortColumnIndex == null) return rows;
-    final columns = rows.first.keys.toList();
-    final sortCol = columns[_sortColumnIndex!];
-    rows.sort((a, b) {
-      final va = a[sortCol];
-      final vb = b[sortCol];
-      int cmp;
-      if (va is num && vb is num) {
-        cmp = va.compareTo(vb);
-      } else {
-        cmp = va.toString().compareTo(vb.toString());
-      }
-      return _sortAscending ? cmp : -cmp;
-    });
-    return rows;
-  }
-
-  Widget _buildSortableDataTable(ThemeData theme, bool isDark) {
-    final filteredRows = _filteredRows;
-    if (filteredRows.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.search_off,
-        title: 'لا توجد نتائج',
-        subtitle: 'جرّب كلمة بحث مختلفة',
-        color: AppColors.textHint,
-      );
-    }
-
-    final columns = filteredRows.first.keys.toList();
-    final sortedRows = _sortedRows;
-
-    // Identify numeric columns
-    final numericKeys = <String>{};
-    for (final row in _reportRows) {
-      for (final key in columns) {
-        final v = row[key];
-        if (v is double || v is int) numericKeys.add(key);
-      }
-    }
-
-    final dateKeys = {'التاريخ', 'تاريخ الفتح', 'تاريخ الإغلاق'};
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.only(bottom: 16),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 24),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.zero,
-          child: DataTable(
-            sortColumnIndex: _sortColumnIndex,
-            sortAscending: _sortAscending,
-            headingRowColor: WidgetStateProperty.all(
-              AppColors.primary.withOpacity(isDark ? 0.15 : 0.08),
-            ),
-            headingTextStyle: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 11,
-            ),
-            dataTextStyle: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
-            columnSpacing: 16,
-            horizontalMargin: 12,
-            columns: columns.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final col = entry.value;
-              return DataColumn(
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(col, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    if (_sortColumnIndex == idx)
-                      Icon(
-                        _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                        size: 14, color: AppColors.primary,
-                      ),
-                  ],
-                ),
-                numeric: numericKeys.contains(col),
-                onSort: (columnIndex, ascending) {
-                  setState(() {
-                    _sortColumnIndex = columnIndex;
-                    _sortAscending = ascending;
-                  });
-                },
-              );
-            }).toList(),
-            rows: sortedRows.map((row) {
-              return DataRow(cells: columns.map((col) {
-                final v = row[col];
-                String display;
-                if (v == null) {
-                  display = '-';
-                } else if (v is double) {
-                  if (dateKeys.contains(col)) {
-                    display = _fmtDate(v.toString());
-                  } else if (numericKeys.contains(col) && (col.contains('الكمية') || col.contains('الوارد') || col.contains('الصادر') || col.contains('الصافي') || col.contains('الحد') || col.contains('عدد'))) {
-                    display = _fmtNum(v);
-                  } else if (col.contains('هامش')) {
-                    display = '${v.toStringAsFixed(1)}%';
-                  } else if (col.contains('سعر الصرف')) {
-                    display = v.toStringAsFixed(4);
-                  } else {
-                    display = _fmtMoney(v);
-                  }
-                } else if (v is int) {
-                  display = v.toString();
-                } else {
-                  final str = v.toString();
-                  display = dateKeys.contains(col) ? _fmtDate(str) : str;
-                }
-                // Color negative values in red
-                Color? textColor;
-                if (v is double && v < 0 && numericKeys.contains(col) && !dateKeys.contains(col)) {
-                  textColor = AppColors.error;
-                }
-                return DataCell(Text(
-                  display,
-                  style: textColor != null ? TextStyle(color: textColor) : null,
-                  textAlign: numericKeys.contains(col) ? TextAlign.left : TextAlign.right,
-                ));
-              }).toList());
-            }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Export FAB / PopupMenu ───────────────────────────────────
-
-  Widget _buildExportFab(ThemeData theme, bool isDark) {
-    return PopupMenuButton<String>(
-      offset: const Offset(0, -80),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isDark ? AppColors.darkSurface : AppColors.surface,
-      onSelected: (value) {
-        switch (value) {
-          case 'excel':
-            _exportToExcel();
-          case 'print':
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('طباعة – قريباً'), backgroundColor: AppColors.info),
-            );
-        }
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'excel',
-          child: Row(
-            children: [
-              Icon(Icons.table_chart, size: 20, color: AppColors.success),
-              const SizedBox(width: 8),
-              Text('تصدير Excel', style: theme.textTheme.bodyMedium),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'print',
-          child: Row(
-            children: [
-              Icon(Icons.print, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text('طباعة', style: theme.textTheme.bodyMedium),
-            ],
-          ),
-        ),
-      ],
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.file_download, color: Colors.white, size: 22),
-            SizedBox(width: 8),
-            Text('تصدير', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-            SizedBox(width: 4),
-            Icon(Icons.arrow_drop_up, color: Colors.white, size: 18),
-          ],
-        ),
       ),
     );
   }

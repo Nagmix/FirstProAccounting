@@ -16,6 +16,14 @@ import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/models/product_model.dart';
 import '../../../data/models/unit_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
+import 'widgets/product_basic_data_step.dart';
+import 'widgets/product_units_step.dart';
+import 'widgets/product_pricing_step.dart';
+import 'widgets/product_inventory_step.dart';
+import 'widgets/product_suppliers_step.dart';
+import 'widgets/product_barcodes_step.dart';
+import 'widgets/product_sales_settings_step.dart';
+import 'widgets/product_accounting_step.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Step definitions
@@ -39,17 +47,17 @@ const _steps = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════
-//  Unit conversion row model
+//  Unit conversion row model (public — shared with step widgets)
 // ═══════════════════════════════════════════════════════════════════
 
-class _UnitConversionRow {
+class UnitConversionRow {
   int? unitId;
   double factor;
   String barcode;
   double sellPrice;
   double costPrice;
 
-  _UnitConversionRow({
+  UnitConversionRow({
     this.unitId,
     this.factor = 1.0,
     this.barcode = '',
@@ -130,7 +138,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
   bool get _isEditMode => widget.existing != null;
 
   // ── Unit conversions ──────────────────────────────────────────
-  List<_UnitConversionRow> _unitConversions = [];
+  List<UnitConversionRow> _unitConversions = [];
 
   // ── Dropdown data from DB ─────────────────────────────────────
   List<Map<String, dynamic>> _categories = [];
@@ -159,6 +167,20 @@ class _AddProductSheetState extends State<AddProductSheet> {
       return _selectedPurchaseUnitId;
     }
     return _selectedBaseUnitId;
+  }
+
+  /// Whether the current setup has multi-unit (base ≠ purchase)
+  bool get _hasMultiUnits =>
+      _selectedBaseUnitId != null &&
+      _selectedPurchaseUnitId != null &&
+      _selectedPurchaseUnitId != _selectedBaseUnitId;
+
+  /// Get the conversion factor for the purchase unit
+  double get _purchaseUnitFactor {
+    if (!_hasMultiUnits) return 1.0;
+    final conv = _unitConversions.where((uc) => uc.unitId == _selectedPurchaseUnitId);
+    if (conv.isNotEmpty) return conv.first.factor;
+    return 1.0;
   }
 
   @override
@@ -332,7 +354,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     setState(() {
       _unitConversions = conversions.map((c) {
         final fromUnitId = c['from_unit_id'] as int?;
-        return _UnitConversionRow(
+        return UnitConversionRow(
           unitId: fromUnitId,
           factor: (c['conversion_factor'] as num?)?.toDouble() ?? 1.0,
           barcode: (c['barcode'] as String?) ?? '',
@@ -431,8 +453,6 @@ class _AddProductSheetState extends State<AddProductSheet> {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_stepScrollController.hasClients) {
         final maxScroll = _stepScrollController.position.maxScrollExtent;
-        final viewportWidth = _stepScrollController.position.viewportDimension;
-        // Each step chip is roughly 120px wide + 30px for arrow
         final targetOffset = (step * 100.0).clamp(0.0, maxScroll);
         _stepScrollController.animateTo(
           targetOffset,
@@ -503,6 +523,49 @@ class _AddProductSheetState extends State<AddProductSheet> {
     if (_currentStep > 0) {
       _goToStep(_currentStep - 1);
     }
+  }
+
+  // ── Unit helpers ──────────────────────────────────────────────
+
+  void _autoPopulateConversions() {
+    if (_selectedPurchaseUnitId != null &&
+        _selectedPurchaseUnitId != _selectedBaseUnitId) {
+      // Check if purchase unit already in conversions
+      final existingIdx = _unitConversions.indexWhere(
+        (uc) => uc.unitId == _selectedPurchaseUnitId,
+      );
+      if (existingIdx == -1) {
+        // Add purchase unit as first conversion row
+        _unitConversions.insert(
+          0,
+          UnitConversionRow(
+            unitId: _selectedPurchaseUnitId,
+            factor: 1.0, // User must fill
+          ),
+        );
+      } else if (existingIdx > 0) {
+        // Move to first position
+        final row = _unitConversions.removeAt(existingIdx);
+        _unitConversions.insert(0, row);
+      }
+    }
+  }
+
+  void _addConversionRow() {
+    setState(() {
+      _unitConversions.add(UnitConversionRow());
+    });
+  }
+
+  /// Auto-calculate opening stock from purchase unit quantity
+  void _autoCalculateOpeningStock() {
+    if (!_hasMultiUnits) return;
+    final purchaseQty = double.tryParse(_purchaseUnitQtyController.text);
+    if (purchaseQty == null || purchaseQty <= 0) return;
+    final factor = _purchaseUnitFactor;
+    if (factor <= 0) return;
+    final totalBaseQty = purchaseQty * factor;
+    _openingStockController.text = totalBaseQty.toStringAsFixed(0);
   }
 
   // ── Save ─────────────────────────────────────────────────────
@@ -826,7 +889,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
   }
 
-  // ── Modern arrow-based step indicator (ISSUE 2) ──────────────
+  // ── Modern arrow-based step indicator ─────────────────────────
 
   Widget _buildArrowStepIndicator() {
     return Container(
@@ -934,1730 +997,183 @@ class _AddProductSheetState extends State<AddProductSheet> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  STEP 1 – البيانات الأساسية (ISSUE 3)
+  //  Step builders — delegate to extracted widgets
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildBasicDataStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _stepTitle(_steps[0].title, _steps[0].icon),
-
-        // ── Image ─────────────────────────────────────────────
-        Center(
-          child: GestureDetector(
-            onTap: _pickImage,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.2),
-                  style: BorderStyle.solid,
-                ),
-              ),
-              child: _imagePath != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.file(
-                        File(_imagePath!),
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.image,
-                          size: 40,
-                          color: AppColors.primary.withOpacity(0.4),
-                        ),
-                      ),
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt,
-                            size: 32,
-                            color: AppColors.primary.withOpacity(0.5)),
-                        const SizedBox(height: 6),
-                        Text('صورة الصنف',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.primary.withOpacity(0.7))),
-                      ],
-                    ),
-            ),
-          ),
-        ),
-        if (_imagePath != null) ...[
-          const SizedBox(height: 4),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => setState(() => _imagePath = null),
-              icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
-              label: const Text('إزالة الصورة',
-                  style: TextStyle(color: AppColors.error, fontSize: 12)),
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-
-        // ── اسم الصنف بالعربي * ─────────────────────────────
-        TextFormField(
-          controller: _nameArController,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            isDense: true,
-            labelText: 'اسم الصنف بالعربي *',
-            prefixIcon: Icon(Icons.text_fields),
-          ),
-          validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'اسم الصنف بالعربي مطلوب' : null,
-        ),
-        const SizedBox(height: 14),
-
-        // ── اسم الصنف بالإنجليزي ────────────────────────────
-        TextFormField(
-          controller: _nameEnController,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            isDense: true,
-            labelText: 'اسم الصنف بالإنجليزي',
-            prefixIcon: Icon(Icons.text_fields),
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // ── SKU / رمز الصنف ─────────────────────────────────
-        TextFormField(
-          controller: _itemCodeController,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(
-            isDense: true,
-            labelText: 'SKU / رمز الصنف',
-            prefixIcon: const Icon(Icons.tag),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.refresh, size: 18),
-              tooltip: 'توليد رمز جديد',
-              onPressed: _generateItemCode,
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // ── باركود ──────────────────────────────────────────
-        TextFormField(
-          controller: _barcodeController,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(
-            isDense: true,
-            labelText: 'باركود',
-            prefixIcon: const Icon(Icons.qr_code),
-            suffixIcon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_barcodeController.text.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () {
-                      _barcodeController.clear();
-                      setState(() {});
-                    },
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.camera_alt, size: 20),
-                  tooltip: 'مسح الباركود بالكاميرا',
-                  onPressed: _scanBarcode,
-                ),
-              ],
-            ),
-          ),
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 14),
-
-        // ── التصنيف (Searchable + "+" button) ────────────────
-        _buildSearchableDropdownWithAdd(
-          label: 'التصنيف',
-          icon: Icons.folder,
-          items: _categories,
-          idKey: 'id',
-          nameKey: 'name',
-          selectedId: _selectedCategoryId,
-          onChanged: (v) => setState(() => _selectedCategoryId = v),
-          onAdd: () => _showAddCategoryDialog(),
-        ),
-        const SizedBox(height: 14),
-
-        // ── وصف الصنف ───────────────────────────────────────
-        TextFormField(
-          controller: _descriptionController,
-          textInputAction: TextInputAction.next,
-          maxLines: 2,
-          minLines: 1,
-          decoration: const InputDecoration(
-            isDense: true,
-            labelText: 'وصف الصنف',
-            prefixIcon: Icon(Icons.edit_note),
-            alignLabelWithHint: true,
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // ── حالة الصنف ─────────────────────────────────────
-        _switchTile(
-          title: 'حالة الصنف',
-          subtitle: _isActive ? 'نشط' : 'غير نشط',
-          value: _isActive,
-          onChanged: (v) => setState(() => _isActive = v),
-        ),
-        const SizedBox(height: 14),
-
-        // ── ملاحظات ─────────────────────────────────────────
-        TextFormField(
-          controller: _notesController,
-          textInputAction: TextInputAction.done,
-          maxLines: 2,
-          minLines: 1,
-          decoration: const InputDecoration(
-            isDense: true,
-            labelText: 'ملاحظات',
-            prefixIcon: Icon(Icons.note),
-            alignLabelWithHint: true,
-          ),
-        ),
-        const SizedBox(height: 40),
-      ],
+    return ProductBasicDataStep(
+      nameArController: _nameArController,
+      nameEnController: _nameEnController,
+      itemCodeController: _itemCodeController,
+      barcodeController: _barcodeController,
+      descriptionController: _descriptionController,
+      notesController: _notesController,
+      selectedCategoryId: _selectedCategoryId,
+      imagePath: _imagePath,
+      isActive: _isActive,
+      categories: _categories,
+      onPickImage: _pickImage,
+      onImageRemoved: () => setState(() => _imagePath = null),
+      onGenerateItemCode: _generateItemCode,
+      onScanBarcode: _scanBarcode,
+      onBarcodeCleared: () {
+        _barcodeController.clear();
+        setState(() {});
+      },
+      onCategoryChanged: (v) => setState(() => _selectedCategoryId = v),
+      onShowAddCategoryDialog: _showAddCategoryDialog,
+      onActiveChanged: (v) => setState(() => _isActive = v),
+      onBarcodeChanged: () => setState(() {}),
     );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  STEP 2 – الوحدات (ISSUE 4)
-  // ═══════════════════════════════════════════════════════════════
-
-  /// Whether the current setup has multi-unit (base ≠ purchase)
-  bool get _hasMultiUnits =>
-      _selectedBaseUnitId != null &&
-      _selectedPurchaseUnitId != null &&
-      _selectedPurchaseUnitId != _selectedBaseUnitId;
-
-  /// Get the conversion factor for the purchase unit
-  double get _purchaseUnitFactor {
-    if (!_hasMultiUnits) return 1.0;
-    final conv = _unitConversions.where((uc) => uc.unitId == _selectedPurchaseUnitId);
-    if (conv.isNotEmpty) return conv.first.factor;
-    return 1.0;
   }
 
   Widget _buildUnitsStep() {
-    // Show ALL units in the base unit dropdown (not just is_base_unit)
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _stepTitle(_steps[1].title, _steps[1].icon),
-
-        // ── الوحدة الأساسية * (Searchable + "+") ────────────
-        _buildSearchableDropdownWithAdd(
-          label: 'الوحدة الأساسية *',
-          icon: Icons.straighten,
-          items: _units,
-          idKey: 'id',
-          nameKey: 'name_ar',
-          selectedId: _selectedBaseUnitId,
-          onChanged: (v) {
-            setState(() {
-              _selectedBaseUnitId = v;
-              // If base unit same as purchase unit, clear conversions
-              if (_selectedBaseUnitId == _selectedPurchaseUnitId) {
-                _unitConversions.clear();
-              }
-            });
-          },
-          onAdd: () => _showAddUnitDialog(),
-        ),
-        const SizedBox(height: 14),
-
-        // ── وحدة الشراء الافتراضية (Searchable + "+") ───────
-        _buildSearchableDropdownWithAdd(
-          label: 'وحدة الشراء الافتراضية',
-          icon: Icons.shopping_cart,
-          items: _units,
-          idKey: 'id',
-          nameKey: 'name_ar',
-          selectedId: _selectedPurchaseUnitId,
-          onChanged: (v) {
-            setState(() {
-              _selectedPurchaseUnitId = v;
-              // If purchase unit same as base unit, clear conversions
-              if (_selectedPurchaseUnitId == _selectedBaseUnitId) {
-                _unitConversions.clear();
-              } else {
-                _autoPopulateConversions();
-              }
-            });
-          },
-          onAdd: () => _showAddUnitDialog(),
-        ),
-        const SizedBox(height: 14),
-
-        // ── وحدة البيع الافتراضية (Checkbox approach) ───────
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('وحدة البيع الافتراضية',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      )),
-              const SizedBox(height: 8),
-              // Checkbox for base unit
-              _buildSaleUnitCheckbox(
-                label: _selectedBaseUnitId != null
-                    ? '${_unitNameById(_selectedBaseUnitId)} (الوحدة الأساسية)'
-                    : 'الوحدة الأساسية',
-                value: _saleUnitSource == 0,
-                onChanged: (v) {
-                  if (v == true) {
-                    setState(() => _saleUnitSource = 0);
-                  }
-                },
-              ),
-              // Checkbox for purchase unit
-              _buildSaleUnitCheckbox(
-                label: _selectedPurchaseUnitId != null
-                    ? '${_unitNameById(_selectedPurchaseUnitId)} (وحدة الشراء)'
-                    : 'وحدة الشراء الافتراضية',
-                value: _saleUnitSource == 1,
-                onChanged: (v) {
-                  if (v == true && _selectedPurchaseUnitId != null) {
-                    setState(() => _saleUnitSource = 1);
-                  } else if (_selectedPurchaseUnitId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('يجب اختيار وحدة الشراء أولاً'),
-                        backgroundColor: AppColors.warning,
-                      ),
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // ── جدول التحويلات ──────────────────────────────────
-        Row(
-          children: [
-            Icon(Icons.swap_horiz, size: 20, color: AppColors.primary),
-            const SizedBox(width: 8),
-            Text(
-              'جدول التحويلات',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-            ),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: _addConversionRow,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('إضافة تحويل'),
-              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        // Info card
-        if (_selectedBaseUnitId != null)
-          Container(
-            padding: const EdgeInsets.all(10),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: AppColors.infoLight.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, size: 18, color: AppColors.info),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'كم ${_unitNameById(_selectedBaseUnitId)} تساوي الوحدة الأكبر؟',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.info,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // Conversion rows
-        if (_unitConversions.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(Icons.add_circle_outline,
-                      size: 40, color: AppColors.textTertiary.withOpacity(0.4)),
-                  const SizedBox(height: 8),
-                  Text('لا توجد تحويلات',
-                      style: TextStyle(
-                          color: AppColors.textTertiary.withOpacity(0.6))),
-                  const SizedBox(height: 4),
-                  Text('اضغط "إضافة تحويل" لتحديد وحدة أكبر',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textTertiary,
-                          )),
-                ],
-              ),
-            ),
-          )
-        else ...[
-          // Header row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Expanded(flex: 3, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                const Expanded(flex: 3, child: Text('معامل التحويل', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                const Expanded(flex: 2, child: Text('سعر البيع', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                const Expanded(flex: 2, child: Text('سعر التكلفة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                const SizedBox(width: 40),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          ...List.generate(_unitConversions.length, (i) {
-            final row = _unitConversions[i];
-            return _buildConversionRow(row, i);
-          }),
-        ],
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildSaleUnitCheckbox({
-    required String label,
-    required bool value,
-    required ValueChanged<bool?> onChanged,
-  }) {
-    return InkWell(
-      onTap: () => onChanged(!value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Checkbox(
-              value: value,
-              onChanged: onChanged,
-              activeColor: AppColors.primary,
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(label,
-                  style: TextStyle(
-                    fontWeight: value ? FontWeight.w600 : FontWeight.w400,
-                    color: value ? AppColors.primary : AppColors.textSecondary,
-                  )),
-            ),
-            if (value)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text('وحدة بيع افتراضية',
-                    style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600)),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _autoPopulateConversions() {
-    if (_selectedPurchaseUnitId != null &&
-        _selectedPurchaseUnitId != _selectedBaseUnitId) {
-      // Check if purchase unit already in conversions
-      final existingIdx = _unitConversions.indexWhere(
-        (uc) => uc.unitId == _selectedPurchaseUnitId,
-      );
-      if (existingIdx == -1) {
-        // Add purchase unit as first conversion row
-        _unitConversions.insert(
-          0,
-          _UnitConversionRow(
-            unitId: _selectedPurchaseUnitId,
-            factor: 1.0, // User must fill
-          ),
-        );
-      } else if (existingIdx > 0) {
-        // Move to first position
-        final row = _unitConversions.removeAt(existingIdx);
-        _unitConversions.insert(0, row);
-      }
-    }
-  }
-
-  Widget _buildConversionRow(_UnitConversionRow row, int index) {
-    final baseUnitName = _unitNameById(_selectedBaseUnitId);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          // Unit dropdown
-          Expanded(
-            flex: 3,
-            child: DropdownButtonFormField<int>(
-              value: row.unitId,
-              isDense: true,
-              decoration: const InputDecoration(
-                isDense: true,
-                labelText: 'الوحدة',
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              items: _units
-                  .where((u) => u['id'] != _selectedBaseUnitId)
-                  .map((u) => DropdownMenuItem<int>(
-                        value: u['id'] as int,
-                        child: Text(u['name_ar'] as String,
-                            style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis),
-                      ))
-                  .toList(),
-              onChanged: (v) => setState(() => row.unitId = v),
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // Factor field
-          Expanded(
-            flex: 3,
-            child: TextFormField(
-              initialValue: row.factor == 1.0 ? '' : row.factor.toStringAsFixed(0),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,4}')),
-              ],
-              decoration: InputDecoration(
-                isDense: true,
-                labelText: row.unitId != null
-                    ? '${_unitNameById(row.unitId)} كم $baseUnitName؟'
-                    : 'الكمية',
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              onChanged: (v) {
-                row.factor = double.tryParse(v) ?? 1.0;
-                // Recalculate inventory if this is the purchase unit
-                if (row.unitId == _selectedPurchaseUnitId) {
-                  _autoCalculateOpeningStock();
-                }
-                setState(() {}); // Rebuild to update calculation displays
-              },
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // Sell price
-          Expanded(
-            flex: 2,
-            child: TextFormField(
-              initialValue: row.sellPrice > 0 ? row.sellPrice.toStringAsFixed(2) : '',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-              ],
-              decoration: InputDecoration(
-                isDense: true,
-                labelText: 'سعر البيع',
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              onChanged: (v) => row.sellPrice = double.tryParse(v) ?? 0.0,
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // Cost price — auto-calculated from Step3 purchase unit cost price
-          Expanded(
-            flex: 2,
-            child: _buildAutoCostPriceField(row),
-          ),
-
-          // Delete
-          IconButton(
-            icon: Icon(Icons.delete_outline,
-                size: 20, color: AppColors.error.withOpacity(0.7)),
-            onPressed: () =>
-                setState(() => _unitConversions.removeAt(index)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build auto-calculated cost price field for conversion row.
-  /// The cost price is derived from Step3's cost price (purchase unit wholesale)
-  /// divided by the conversion factor.
-  /// For the purchase unit row: costPrice = costPriceController value (same as wholesale).
-  /// For other units: costPrice = (purchaseUnitCostPrice / purchaseUnitFactor) * thisRowFactor.
-  Widget _buildAutoCostPriceField(_UnitConversionRow row) {
-    final purchaseUnitCost = double.tryParse(_costPriceController.text) ?? 0.0;
-    final baseUnitName = _unitNameById(_selectedBaseUnitId);
-
-    double autoCost = 0.0;
-    if (_hasMultiUnits && purchaseUnitCost > 0 && row.factor > 0) {
-      if (row.unitId == _selectedPurchaseUnitId) {
-        // This IS the purchase unit — cost = what user entered in Step3
-        autoCost = purchaseUnitCost;
-      } else {
-        // Other unit: cost per this unit = base unit cost * factor
-        // base unit cost = purchaseUnitCost / purchaseUnitFactor
-        final purchaseFactor = _purchaseUnitFactor;
-        if (purchaseFactor > 0) {
-          final baseUnitCost = purchaseUnitCost / purchaseFactor;
-          autoCost = baseUnitCost * row.factor;
+    return ProductUnitsStep(
+      costPriceController: _costPriceController,
+      selectedBaseUnitId: _selectedBaseUnitId,
+      selectedPurchaseUnitId: _selectedPurchaseUnitId,
+      saleUnitSource: _saleUnitSource,
+      hasMultiUnits: _hasMultiUnits,
+      purchaseUnitFactor: _purchaseUnitFactor,
+      unitConversions: _unitConversions,
+      units: _units,
+      unitNameById: _unitNameById,
+      onBaseUnitChanged: (v) {
+        setState(() {
+          _selectedBaseUnitId = v;
+          if (_selectedBaseUnitId == _selectedPurchaseUnitId) {
+            _unitConversions.clear();
+          }
+        });
+      },
+      onPurchaseUnitChanged: (v) {
+        setState(() {
+          _selectedPurchaseUnitId = v;
+          if (_selectedPurchaseUnitId == _selectedBaseUnitId) {
+            _unitConversions.clear();
+          } else {
+            _autoPopulateConversions();
+          }
+        });
+      },
+      onShowAddUnitDialog: _showAddUnitDialog,
+      onSaleUnitSourceChanged: (v) => setState(() => _saleUnitSource = v),
+      onAddConversionRow: _addConversionRow,
+      onRemoveConversionRow: (index) => setState(() => _unitConversions.removeAt(index)),
+      onConversionChanged: (row, index) {
+        // Recalculate inventory if this is the purchase unit
+        if (row.unitId == _selectedPurchaseUnitId) {
+          _autoCalculateOpeningStock();
         }
-      }
-    }
-
-    // Update the row's costPrice with auto-calculated value
-    if (autoCost > 0) {
-      row.costPrice = autoCost;
-    }
-
-    return TextFormField(
-      initialValue: autoCost > 0 ? autoCost.toStringAsFixed(2) : (row.costPrice > 0 ? row.costPrice.toStringAsFixed(2) : ''),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-      ],
-      decoration: InputDecoration(
-        isDense: true,
-        labelText: row.unitId == _selectedPurchaseUnitId && _hasMultiUnits
-            ? 'تكلفة $baseUnitName'
-            : 'سعر التكلفة',
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        suffixIcon: autoCost > 0
-            ? Tooltip(
-                message: 'محسوب تلقائياً من سعر تكلفة وحدة الشراء',
-                child: Icon(Icons.auto_fix_high, size: 16, color: AppColors.success.withOpacity(0.7)),
-              )
-            : null,
-      ),
-      onChanged: (v) => row.costPrice = double.tryParse(v) ?? 0.0,
+      },
+      onStateChanged: () => setState(() {}),
     );
   }
-
-  void _addConversionRow() {
-    setState(() {
-      _unitConversions.add(_UnitConversionRow());
-    });
-  }
-
-  /// Auto-calculate opening stock from purchase unit quantity
-  void _autoCalculateOpeningStock() {
-    if (!_hasMultiUnits) return;
-    final purchaseQty = double.tryParse(_purchaseUnitQtyController.text);
-    if (purchaseQty == null || purchaseQty <= 0) return;
-    final factor = _purchaseUnitFactor;
-    if (factor <= 0) return;
-    final totalBaseQty = purchaseQty * factor;
-    _openingStockController.text = totalBaseQty.toStringAsFixed(0);
-  }
-
-  /// Display string for auto-calculated opening stock
-  String _calculateOpeningStockDisplay() {
-    final purchaseQty = double.tryParse(_purchaseUnitQtyController.text);
-    if (purchaseQty == null || purchaseQty <= 0) return '...';
-    final factor = _purchaseUnitFactor;
-    if (factor <= 0) return '...';
-    final totalBaseQty = purchaseQty * factor;
-    return totalBaseQty.toStringAsFixed(0);
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  STEP 3 – الأسعار (ISSUE 5)
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildPricesStep() {
-    // Check if we have multi-unit setup
-    final hasMulti = _hasMultiUnits;
-    final purchaseUnitName = _unitNameById(_selectedPurchaseUnitId);
-    final baseUnitName = _unitNameById(_selectedBaseUnitId);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _stepTitle(_steps[2].title, _steps[2].icon),
-
-        // سعر التكلفة + سعر البيع
-        Row(
-          children: [
-            Expanded(
-              child: _priceField(
-                controller: _costPriceController,
-                label: hasMulti
-                    ? 'سعر تكلفة الـ $purchaseUnitName *'
-                    : 'سعر التكلفة *',
-                onChanged: hasMulti ? (_) => setState(() {}) : null,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _priceField(
-                controller: _sellPriceController,
-                label: hasMulti
-                    ? 'سعر بيع الـ ${_unitNameById(_effectiveSaleUnitId)} *'
-                    : 'سعر بيع الـ $baseUnitName *',
-                onChanged: hasMulti ? (_) => setState(() {}) : null,
-              ),
-            ),
-          ],
-        ),
-
-        // Auto-calculated base unit cost display
-        if (hasMulti && _costPriceController.text.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              '↪ سعر تكلفة الـ $baseUnitName = ${_calculateBaseCostFromCostField()}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.success,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-        ],
-        // Auto-calculated base unit sell price display
-        if (hasMulti && _saleUnitSource == 1 && _sellPriceController.text.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              '↪ سعر بيع الـ $baseUnitName = ${_calculateBaseSellPrice()}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.info,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-        ],
-        const SizedBox(height: 14),
-
-        // أقل سعر بيع (سعر الجملة الخاصة)
-        _priceField(
-          controller: _specialWholesalePriceController,
-          label: hasMulti
-              ? 'سعر الجملة الخاصة للـ ${_unitNameById(_effectiveSaleUnitId)}'
-              : 'سعر الجملة الخاصة',
-        ),
-        const SizedBox(height: 14),
-
-        // سعر البيع الأدنى
-        _priceField(
-          controller: _minimumSalePriceController,
-          label: hasMulti
-              ? 'سعر البيع الأدنى للـ ${_unitNameById(_effectiveSaleUnitId)}'
-              : 'سعر البيع الأدنى',
-        ),
-        const SizedBox(height: 14),
-
-        // الضريبة
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _taxRateController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                ],
-                decoration: const InputDecoration(
-                  isDense: true,
-                  labelText: 'الضريبة %',
-                  suffixText: '%',
-                  prefixIcon: Icon(Icons.receipt),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _switchTile(
-                title: 'شامل الضريبة',
-                subtitle: _taxInclusive ? 'نعم' : 'لا',
-                value: _taxInclusive,
-                onChanged: (v) => setState(() => _taxInclusive = v),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 40),
-      ],
+    return ProductPricingStep(
+      costPriceController: _costPriceController,
+      sellPriceController: _sellPriceController,
+      specialWholesalePriceController: _specialWholesalePriceController,
+      minimumSalePriceController: _minimumSalePriceController,
+      taxRateController: _taxRateController,
+      hasMultiUnits: _hasMultiUnits,
+      saleUnitSource: _saleUnitSource,
+      purchaseUnitFactor: _purchaseUnitFactor,
+      selectedPurchaseUnitId: _selectedPurchaseUnitId,
+      selectedBaseUnitId: _selectedBaseUnitId,
+      effectiveSaleUnitId: _effectiveSaleUnitId,
+      taxInclusive: _taxInclusive,
+      unitNameById: _unitNameById,
+      onStateChanged: () => setState(() {}),
+      onTaxInclusiveChanged: (v) => setState(() => _taxInclusive = v),
     );
   }
-
-  /// Display string for auto-calculated base unit cost from the cost price field
-  /// When multi-unit: costPrice field shows purchase unit cost, so we divide by factor
-  String _calculateBaseCostFromCostField() {
-    final costPrice = double.tryParse(_costPriceController.text);
-    if (costPrice == null || costPrice <= 0) return '...';
-    final factor = _purchaseUnitFactor;
-    if (factor <= 1) return '${costPrice.toStringAsFixed(2)} ${AppConstants.currency}';
-    final baseCost = costPrice / factor;
-    return '${baseCost.toStringAsFixed(2)} ${AppConstants.currency}';
-  }
-
-  /// Display string for auto-calculated base unit sell price
-  /// When sale unit is the purchase unit, convert to base unit
-  String _calculateBaseSellPrice() {
-    final sellPrice = double.tryParse(_sellPriceController.text);
-    if (sellPrice == null || sellPrice <= 0) return '...';
-    final factor = _purchaseUnitFactor;
-    if (factor <= 1) return '${sellPrice.toStringAsFixed(2)} ${AppConstants.currency}';
-    final baseSell = sellPrice / factor;
-    return '${baseSell.toStringAsFixed(2)} ${AppConstants.currency}';
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  STEP 4 – المخزون (ISSUE 6)
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildInventoryStep() {
-    final hasMulti = _hasMultiUnits;
-    final purchaseUnitName = _unitNameById(_selectedPurchaseUnitId);
-    final baseUnitName = _unitNameById(_selectedBaseUnitId);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _stepTitle(_steps[3].title, _steps[3].icon),
-
-        // تتبع المخزون
-        _switchTile(
-          title: 'تتبع المخزون',
-          subtitle: _trackStock ? 'مفعّل' : 'معطّل',
-          value: _trackStock,
-          onChanged: (v) => setState(() => _trackStock = v),
-        ),
-        const SizedBox(height: 14),
-
-        // كمية افتتاحية (new products only)
-        if (!_isEditMode) ...[
-          // ── Multi-unit: purchase unit quantity → auto-calculate base unit qty ──
-          if (hasMulti) ...[
-            TextFormField(
-              controller: _purchaseUnitQtyController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              textInputAction: TextInputAction.next,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
-              ],
-              decoration: InputDecoration(
-                isDense: true,
-                labelText: 'عدد $purchaseUnitName المشتراة',
-                prefixIcon: const Icon(Icons.add_shopping_cart),
-                suffixText: purchaseUnitName,
-              ),
-              onChanged: (v) {
-                _autoCalculateOpeningStock();
-                setState(() {}); // Rebuild to update calculation display
-              },
-            ),
-            const SizedBox(height: 8),
-
-            // Simple auto-calculation display
-            if (_purchaseUnitQtyController.text.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text(
-                  '↪ الكمية = ${_calculateOpeningStockDisplay()} $baseUnitName',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.success,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-          ],
-
-          TextFormField(
-            controller: _openingStockController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textInputAction: TextInputAction.next,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
-            ],
-            decoration: InputDecoration(
-              isDense: true,
-              labelText: hasMulti
-                  ? 'إجمالي الكمية ($baseUnitName)'
-                  : 'الكمية الافتتاحية',
-              prefixIcon: const Icon(Icons.inventory),
-              suffixText: baseUnitName,
-            ),
-          ),
-          const SizedBox(height: 14),
-        ] else ...[
-          // Show current stock (locked)
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 14),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.lock, size: 18, color: AppColors.textTertiary),
-                const SizedBox(width: 8),
-                Text(
-                  'الرصيد الحالي: ${widget.existing?.currentStock.toStringAsFixed(0) ?? '0'} ${_unitNameById(_selectedBaseUnitId)}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-
-        // مستودع افتراضي (Searchable + "+" with empty state)
-        _buildSearchableDropdownWithAdd(
-          label: 'مستودع افتراضي',
-          icon: Icons.warehouse,
-          items: _warehouses,
-          idKey: 'id',
-          nameKey: 'name',
-          selectedId: _selectedWarehouseId,
-          onChanged: _isEditMode ? null : (v) => setState(() => _selectedWarehouseId = v),
-          onAdd: () => _showAddWarehouseDialog(),
-          emptyMessage: 'أضف مستودع من الإعدادات أولاً',
-        ),
-        const SizedBox(height: 14),
-
-        // الحد الأدنى + الحد الأعلى
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _minStockController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
-                ],
-                decoration: InputDecoration(
-                  isDense: true,
-                  labelText: 'الحد الأدنى',
-                  prefixIcon: const Icon(Icons.vertical_align_bottom),
-                  suffixText: _unitNameById(_selectedBaseUnitId),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: _maxStockController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
-                ],
-                decoration: InputDecoration(
-                  isDense: true,
-                  labelText: 'الحد الأعلى',
-                  prefixIcon: const Icon(Icons.vertical_align_top),
-                  suffixText: _unitNameById(_selectedBaseUnitId),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        // تتبع الصلاحية
-        _switchTile(
-          title: 'تتبع الصلاحية',
-          subtitle: _expiryTracking ? 'مفعّل' : 'معطّل',
-          value: _expiryTracking,
-          onChanged: (v) => setState(() => _expiryTracking = v),
-        ),
-        if (_expiryTracking) ...[
-          const SizedBox(height: 10),
-          ListTile(
-            dense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-            leading: const Icon(Icons.calendar_today, size: 20),
-            title: Text(
-              _expiryDate != null
-                  ? 'تاريخ الانتهاء: ${_expiryDate!.day}/${_expiryDate!.month}/${_expiryDate!.year}'
-                  : 'تحديد تاريخ الانتهاء',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            trailing: const Icon(Icons.chevron_left),
-            onTap: _pickExpiryDate,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(color: AppColors.border),
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ],
-        const SizedBox(height: 40),
-      ],
+    return ProductInventoryStep(
+      openingStockController: _openingStockController,
+      purchaseUnitQtyController: _purchaseUnitQtyController,
+      minStockController: _minStockController,
+      maxStockController: _maxStockController,
+      hasMultiUnits: _hasMultiUnits,
+      purchaseUnitFactor: _purchaseUnitFactor,
+      trackStock: _trackStock,
+      expiryTracking: _expiryTracking,
+      expiryDate: _expiryDate,
+      selectedWarehouseId: _selectedWarehouseId,
+      selectedBaseUnitId: _selectedBaseUnitId,
+      selectedPurchaseUnitId: _selectedPurchaseUnitId,
+      isEditMode: _isEditMode,
+      existingProduct: widget.existing,
+      warehouses: _warehouses,
+      unitNameById: _unitNameById,
+      onTrackStockChanged: (v) => setState(() => _trackStock = v),
+      onExpiryTrackingChanged: (v) => setState(() => _expiryTracking = v),
+      onPickExpiryDate: _pickExpiryDate,
+      onWarehouseChanged: (v) => setState(() => _selectedWarehouseId = v),
+      onShowAddWarehouseDialog: _showAddWarehouseDialog,
+      onAutoCalculateOpeningStock: _autoCalculateOpeningStock,
+      onStateChanged: () => setState(() {}),
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  STEP 5 – الموردين (ISSUE 7)
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildSuppliersStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _stepTitle(_steps[4].title, _steps[4].icon),
-
-        // المورد الافتراضي (Searchable + "+" with empty state)
-        _buildSearchableDropdownWithAdd(
-          label: 'المورد الافتراضي',
-          icon: Icons.local_shipping,
-          items: _suppliers,
-          idKey: 'id',
-          nameKey: 'name',
-          selectedId: _selectedSupplierId,
-          onChanged: (v) => setState(() => _selectedSupplierId = v),
-          onAdd: () => _showAddSupplierDialog(),
-          emptyMessage: 'أضف مورد من الإعدادات أولاً',
-        ),
-        const SizedBox(height: 14),
-
-        // كود المورد للصنف
-        TextFormField(
-          controller: _supplierCodeController,
-          textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
-            isDense: true,
-            labelText: 'كود المورد للصنف',
-            prefixIcon: Icon(Icons.code),
-          ),
-        ),
-        const SizedBox(height: 40),
-      ],
+    return ProductSuppliersStep(
+      supplierCodeController: _supplierCodeController,
+      selectedSupplierId: _selectedSupplierId,
+      suppliers: _suppliers,
+      onSupplierChanged: (v) => setState(() => _selectedSupplierId = v),
+      onShowAddSupplierDialog: _showAddSupplierDialog,
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  STEP 6 – الباركود (ISSUE 8)
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildBarcodesStep() {
-    // Build barcode list from conversions + purchase unit (NOT base unit)
-    final List<_BarcodeEntry> barcodes = [];
-
-    // Add conversion units
-    for (final uc in _unitConversions) {
-      barcodes.add(_BarcodeEntry(
-        unitName: _unitNameById(uc.unitId),
-        barcode: uc.barcode,
-        conversionRow: uc,
-      ));
-    }
-
-    // Add purchase unit if not already in conversions
-    if (_selectedPurchaseUnitId != null &&
-        _selectedPurchaseUnitId != _selectedBaseUnitId &&
-        !_unitConversions.any((uc) => uc.unitId == _selectedPurchaseUnitId)) {
-      barcodes.add(_BarcodeEntry(
-        unitName: _unitNameById(_selectedPurchaseUnitId),
-        barcode: '',
-        isPurchaseUnit: true,
-      ));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _stepTitle(_steps[5].title, _steps[5].icon),
-
-        // Info: base unit barcode is in step 1
-        Container(
-          padding: const EdgeInsets.all(10),
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: AppColors.infoLight.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.info.withOpacity(0.2)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline, size: 18, color: AppColors.info),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'باركود ${_unitNameById(_selectedBaseUnitId)} أُدخل في الخطوة الأولى',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.info,
-                      ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        if (barcodes.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(Icons.qr_code,
-                      size: 40, color: AppColors.textTertiary.withOpacity(0.4)),
-                  const SizedBox(height: 8),
-                  Text('لا توجد وحدات أخرى',
-                      style: TextStyle(
-                          color: AppColors.textTertiary.withOpacity(0.6))),
-                  const SizedBox(height: 4),
-                  Text('أضف وحدات أكبر في خطوة الوحدات أولاً',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textTertiary,
-                          )),
-                ],
-              ),
-            ),
-          )
-        else ...[
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Row(
-              children: [
-                Expanded(flex: 2, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
-                Expanded(flex: 3, child: Text('باركود', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          ...List.generate(barcodes.length, (i) {
-            final entry = barcodes[i];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  // Unit name
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      entry.unitName,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Barcode field with scan button
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      initialValue: entry.barcode,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: 'أدخل الباركود',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.camera_alt, size: 16),
-                          onPressed: () async {
-                            final result = await Navigator.push<String>(
-                              context,
-                              MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
-                            );
-                            if (result != null && result.isNotEmpty) {
-                              setState(() {
-                                if (entry.conversionRow != null) {
-                                  entry.conversionRow!.barcode = result;
-                                }
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                      onChanged: (v) {
-                        if (entry.conversionRow != null) {
-                          entry.conversionRow!.barcode = v;
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-        const SizedBox(height: 40),
-      ],
+    return ProductBarcodesStep(
+      selectedBaseUnitId: _selectedBaseUnitId,
+      selectedPurchaseUnitId: _selectedPurchaseUnitId,
+      unitConversions: _unitConversions,
+      unitNameById: _unitNameById,
+      onStateChanged: () => setState(() {}),
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  STEP 7 – إعدادات البيع
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildSalesSettingsStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _stepTitle(_steps[6].title, _steps[6].icon),
-
-        _switchTile(
-          title: 'يباع؟',
-          subtitle: _isSellable ? 'نعم' : 'لا',
-          value: _isSellable,
-          onChanged: (v) => setState(() => _isSellable = v),
-        ),
-        const Divider(height: 1),
-
-        _switchTile(
-          title: 'يشترى؟',
-          subtitle: _isPurchasable ? 'نعم' : 'لا',
-          value: _isPurchasable,
-          onChanged: (v) => setState(() => _isPurchasable = v),
-        ),
-        const Divider(height: 1),
-
-        _switchTile(
-          title: 'يسمح بالسالب؟',
-          subtitle: _allowNegative ? 'نعم' : 'لا',
-          value: _allowNegative,
-          onChanged: (v) => setState(() => _allowNegative = v),
-        ),
-        const Divider(height: 1),
-
-        _switchTile(
-          title: 'يباع بالتجزئة؟',
-          subtitle: _sellRetail ? 'نعم' : 'لا',
-          value: _sellRetail,
-          onChanged: (v) => setState(() => _sellRetail = v),
-        ),
-        const Divider(height: 1),
-
-        _switchTile(
-          title: 'يظهر في الكاشير؟',
-          subtitle: _showInPos ? 'نعم' : 'لا',
-          value: _showInPos,
-          onChanged: (v) => setState(() => _showInPos = v),
-        ),
-        const SizedBox(height: 40),
-      ],
+    return ProductSalesSettingsStep(
+      isSellable: _isSellable,
+      isPurchasable: _isPurchasable,
+      allowNegative: _allowNegative,
+      sellRetail: _sellRetail,
+      showInPos: _showInPos,
+      onSellableChanged: (v) => setState(() => _isSellable = v),
+      onPurchasableChanged: (v) => setState(() => _isPurchasable = v),
+      onAllowNegativeChanged: (v) => setState(() => _allowNegative = v),
+      onSellRetailChanged: (v) => setState(() => _sellRetail = v),
+      onShowInPosChanged: (v) => setState(() => _showInPos = v),
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  STEP 8 – المحاسبة (ISSUE 9)
-  // ═══════════════════════════════════════════════════════════════
 
   Widget _buildAccountingStep() {
-    final isLocked = false; // Allow editing accounts in edit mode - users need to fix incorrect assignments
-    final taxRate = double.tryParse(_taxRateController.text) ?? 0.0;
-    final showVatAccount = taxRate > 0;
-
-    // Ensure selected IDs exist in their respective lists to avoid DropdownButton errors
-    final validSalesAccountId = _revenueAccounts.any((a) => a['id'] == _selectedSalesAccountId)
-        ? _selectedSalesAccountId : null;
-    final validPurchaseAccountId = _costAccounts.any((a) => a['id'] == _selectedPurchaseAccountId)
-        ? _selectedPurchaseAccountId : null;
-    final validInventoryAccountId = _assetAccounts.any((a) => a['id'] == _selectedInventoryAccountId)
-        ? _selectedInventoryAccountId : null;
-    final validCogsAccountId = _costAccounts.any((a) => a['id'] == _selectedCogsAccountId)
-        ? _selectedCogsAccountId : null;
-    final validVatAccountId = _liabilityAccounts.any((a) => a['id'] == _selectedVatAccountId)
-        ? _selectedVatAccountId : null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _stepTitle(_steps[7].title, _steps[7].icon),
-
-        if (_isEditMode)
-          Container(
-            padding: const EdgeInsets.all(10),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: AppColors.infoLight.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.edit, size: 18, color: AppColors.info),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'يمكنك تعديل الحسابات المحاسبية إذا كانت غير صحيحة',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.info,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // حساب المبيعات
-        DropdownButtonFormField<int>(
-          value: validSalesAccountId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'حساب المبيعات',
-            prefixIcon: Icon(Icons.trending_up),
-          ),
-          items: _revenueAccounts
-              .map((a) => DropdownMenuItem<int>(
-                    value: a['id'] as int,
-                    child: Text(
-                      '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
-              .toList(),
-          onChanged: isLocked ? null : (v) => setState(() => _selectedSalesAccountId = v),
-        ),
-        const SizedBox(height: 14),
-
-        // حساب المشتريات
-        DropdownButtonFormField<int>(
-          value: validPurchaseAccountId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'حساب المشتريات',
-            prefixIcon: Icon(Icons.trending_down),
-          ),
-          items: _costAccounts
-              .map((a) => DropdownMenuItem<int>(
-                    value: a['id'] as int,
-                    child: Text(
-                      '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
-              .toList(),
-          onChanged: isLocked ? null : (v) => setState(() => _selectedPurchaseAccountId = v),
-        ),
-        const SizedBox(height: 14),
-
-        // حساب المخزون
-        DropdownButtonFormField<int>(
-          value: validInventoryAccountId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'حساب المخزون',
-            prefixIcon: Icon(Icons.warehouse),
-          ),
-          items: _assetAccounts
-              .map((a) => DropdownMenuItem<int>(
-                    value: a['id'] as int,
-                    child: Text(
-                      '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
-              .toList(),
-          onChanged: isLocked ? null : (v) => setState(() => _selectedInventoryAccountId = v),
-        ),
-        const SizedBox(height: 14),
-
-        // حساب تكلفة البضاعة المباعة (COGS)
-        DropdownButtonFormField<int>(
-          value: validCogsAccountId,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'حساب تكلفة البضاعة المباعة',
-            prefixIcon: Icon(Icons.account_balance_wallet),
-          ),
-          items: _costAccounts
-              .map((a) => DropdownMenuItem<int>(
-                    value: a['id'] as int,
-                    child: Text(
-                      '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
-              .toList(),
-          onChanged: isLocked ? null : (v) => setState(() => _selectedCogsAccountId = v),
-        ),
-        const SizedBox(height: 14),
-
-        // طريقة احتساب التكلفة (W-07)
-        DropdownButtonFormField<String>(
-          value: _costingMethod.value,
-          isDense: true,
-          decoration: const InputDecoration(
-            labelText: 'طريقة احتساب التكلفة',
-            prefixIcon: Icon(Icons.calculate),
-          ),
-          items: CostingMethod.values
-              .map((m) => DropdownMenuItem<String>(
-                    value: m.value,
-                    child: Text(m.nameAr),
-                  ))
-              .toList(),
-          onChanged: (v) {
-            if (v == null) return;
-            final method = CostingMethodExt.fromValue(v);
-            if (method == CostingMethod.lifo) {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  icon: const Icon(Icons.warning, color: AppColors.warning, size: 40),
-                  title: const Text('تنبيه'),
-                  content: const Text(
-                    'تنبيه: طريقة LIFO محظورة بموجب معايير IFRS (IAS 2). هذه الطريقة مسموحة فقط ضمن US GAAP. استخدامها قد يؤدي لقوائم مالية غير متوافقة مع المعايير الدولية.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        setState(() => _costingMethod = method);
-                      },
-                      child: const Text('فهمت، استمر'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('إلغاء'),
-                    ),
-                  ],
-                ),
-              );
-            } else {
-              setState(() => _costingMethod = method);
-            }
-          },
-        ),
-        const SizedBox(height: 14),
-
-        // حساب ضريبة القيمة المضافة (only show if tax > 0)
-        if (showVatAccount) ...[
-          DropdownButtonFormField<int>(
-            value: validVatAccountId,
-            isDense: true,
-            decoration: const InputDecoration(
-              labelText: 'حساب ضريبة القيمة المضافة',
-              prefixIcon: Icon(Icons.receipt_long),
-            ),
-            items: _liabilityAccounts
-                .map((a) => DropdownMenuItem<int>(
-                      value: a['id'] as int,
-                      child: Text(
-                        '${a['name_ar'] ?? ''} (${a['account_code'] ?? ''})',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ))
-                .toList(),
-            onChanged: isLocked ? null : (v) => setState(() => _selectedVatAccountId = v),
-          ),
-          const SizedBox(height: 14),
-
-          // VAT accounting info card
-          Container(
-            padding: const EdgeInsets.all(10),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: AppColors.infoLight.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.info_outline, size: 18, color: AppColors.info),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'محاسبة الضريبة',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.info,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'البيع: مدين (العميل) ← دائن (المبيعات + الضريبة)',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.info,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'الشراء: مدين (المشتريات + الضريبة) ← دائن (المورد)',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.info,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-
-        const SizedBox(height: 40),
-      ],
+    return ProductAccountingStep(
+      taxRateController: _taxRateController,
+      selectedSalesAccountId: _selectedSalesAccountId,
+      selectedPurchaseAccountId: _selectedPurchaseAccountId,
+      selectedInventoryAccountId: _selectedInventoryAccountId,
+      selectedCogsAccountId: _selectedCogsAccountId,
+      selectedVatAccountId: _selectedVatAccountId,
+      costingMethod: _costingMethod,
+      isEditMode: _isEditMode,
+      revenueAccounts: _revenueAccounts,
+      costAccounts: _costAccounts,
+      assetAccounts: _assetAccounts,
+      liabilityAccounts: _liabilityAccounts,
+      onSalesAccountChanged: (v) => setState(() => _selectedSalesAccountId = v),
+      onPurchaseAccountChanged: (v) => setState(() => _selectedPurchaseAccountId = v),
+      onInventoryAccountChanged: (v) => setState(() => _selectedInventoryAccountId = v),
+      onCogsAccountChanged: (v) => setState(() => _selectedCogsAccountId = v),
+      onVatAccountChanged: (v) => setState(() => _selectedVatAccountId = v),
+      onCostingMethodChanged: (v) => setState(() => _costingMethod = v),
     );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  Shared widgets
-  // ═══════════════════════════════════════════════════════════════
-
-  Widget _stepTitle(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Icon(icon, size: 22, color: AppColors.primary),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _priceField({
-    required TextEditingController controller,
-    required String label,
-    TextInputAction textInputAction = TextInputAction.next,
-    ValueChanged<String>? onChanged,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      textInputAction: textInputAction,
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-      ],
-      decoration: InputDecoration(
-        isDense: true,
-        labelText: label,
-        suffixText: AppConstants.currency,
-      ),
-      onChanged: onChanged,
-    );
-  }
-
-  Widget _switchTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return ListTile(
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle,
-          style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeColor: AppColors.primary,
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  Searchable dropdown with "+" add button (ISSUE 3, 4, 6, 7)
-  // ═══════════════════════════════════════════════════════════════
-
-  Widget _buildSearchableDropdownWithAdd({
-    required String label,
-    required IconData icon,
-    required List<Map<String, dynamic>> items,
-    required String idKey,
-    required String nameKey,
-    required int? selectedId,
-    required ValueChanged<int?>? onChanged,
-    required VoidCallback? onAdd,
-    String? emptyMessage,
-  }) {
-    return TextFormField(
-      readOnly: true,
-      controller: TextEditingController(
-        text: selectedId != null
-            ? (items.where((i) => i[idKey] == selectedId).isNotEmpty
-                ? items.firstWhere((i) => i[idKey] == selectedId)[nameKey] as String
-                : '')
-            : '',
-      ),
-      decoration: InputDecoration(
-        isDense: true,
-        labelText: label,
-        prefixIcon: Icon(icon),
-        suffixIcon: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (onAdd != null)
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline, size: 20),
-                tooltip: 'إضافة جديد',
-                onPressed: onAdd,
-              ),
-            if (selectedId != null && onChanged != null)
-              IconButton(
-                icon: const Icon(Icons.close, size: 16),
-                onPressed: () => onChanged(null),
-              ),
-          ],
-        ),
-      ),
-      onTap: () {
-        if (items.isEmpty && emptyMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(emptyMessage),
-              backgroundColor: AppColors.warning,
-            ),
-          );
-          onAdd?.call();
-          return;
-        }
-        _showSearchDialog(
-          label: label,
-          items: items,
-          idKey: idKey,
-          nameKey: nameKey,
-          selectedId: selectedId,
-          onSelected: onChanged ?? (_) {},
-        );
-      },
-    );
-  }
-
-  void _showSearchDialog({
-    required String label,
-    required List<Map<String, dynamic>> items,
-    required String idKey,
-    required String nameKey,
-    required int? selectedId,
-    required ValueChanged<int?> onSelected,
-  }) {
-    final searchController = TextEditingController();
-    List<Map<String, dynamic>> filteredItems = List.from(items);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Directionality(
-              textDirection: TextDirection.rtl,
-              child: AlertDialog(
-                title: Text(label),
-                content: SizedBox(
-                  width: double.maxFinite,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: searchController,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: 'بحث...',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onChanged: (v) {
-                          setDialogState(() {
-                            filteredItems = items
-                                .where((i) => (i[nameKey] as String)
-                                    .toLowerCase()
-                                    .contains(v.toLowerCase()))
-                                .toList();
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 300,
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: filteredItems.length,
-                          itemBuilder: (context, index) {
-                            final item = filteredItems[index];
-                            final id = item[idKey] as int;
-                            final name = item[nameKey] as String;
-                            final isSelected = id == selectedId;
-                            return ListTile(
-                              dense: true,
-                              title: Text(name),
-                              trailing: isSelected
-                                  ? const Icon(Icons.check, color: AppColors.primary)
-                                  : null,
-                              selected: isSelected,
-                              selectedTileColor: AppColors.primary.withOpacity(0.05),
-                              onTap: () {
-                                onSelected(id);
-                                Navigator.of(dialogContext).pop();
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    ).then((_) {
-      searchController.dispose();
-    });
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -3414,22 +1930,4 @@ class _AddProductSheetState extends State<AddProductSheet> {
     debtCeilingController.dispose();
     notesController.dispose();
   }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  Barcode entry helper for step 6
-// ═══════════════════════════════════════════════════════════════════
-
-class _BarcodeEntry {
-  final String unitName;
-  String barcode;
-  final _UnitConversionRow? conversionRow;
-  final bool isPurchaseUnit;
-
-  _BarcodeEntry({
-    required this.unitName,
-    required this.barcode,
-    this.conversionRow,
-    this.isPurchaseUnit = false,
-  });
 }
