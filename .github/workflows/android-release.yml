@@ -40,6 +40,31 @@ jobs:
       - name: Analyze code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
 
+      # ── Release Signing ────────────────────────────────────────────
+      # If SIGNING_KEYSTORE_BASE64 secret is set, write the keystore and
+      # key.properties so the release build is signed with the production key.
+      # Otherwise, the build falls back to debug signing (for CI testing).
+      - name: Decode release keystore
+        if: ${{ env.SIGNING_KEYSTORE_BASE64 != '' }}
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > android/app/firstpro-release.jks
+
+      - name: Create key.properties
+        if: ${{ env.SIGNING_KEYSTORE_BASE64 != '' }}
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=firstpro
+          storeFile=app/firstpro-release.jks
+          EOF
+
       - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons
 

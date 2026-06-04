@@ -51,6 +51,11 @@ Thumbs.db
 .env*
 local-*
 
+# Android Signing (never commit these)
+*.jks
+*.keystore
+key.properties
+
 # AI/Agent tools (not part of the project)
 .claude
 .z-ai-config

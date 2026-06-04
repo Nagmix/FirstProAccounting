@@ -1,4 +1,4 @@
-package com.firstpro.firstpro
+package com.digitalplanetx.firstpro
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

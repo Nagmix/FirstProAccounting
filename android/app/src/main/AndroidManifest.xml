@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <application
-        android:label="الأول برو"
+        android:label="الاول برو المحاسبي"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
