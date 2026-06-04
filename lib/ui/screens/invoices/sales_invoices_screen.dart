@@ -6,8 +6,8 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../../core/di/service_locator.dart';
-import '../../../../data/datasources/repositories/invoice_repository.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
 
