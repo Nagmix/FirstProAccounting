@@ -166,7 +166,7 @@ class ProductSearchableDropdown extends StatelessWidget {
             if (selectedId != null && onChanged != null)
               IconButton(
                 icon: const Icon(Icons.close, size: 16),
-                onPressed: () => onChanged(null),
+                onPressed: () => onChanged!(null),
               ),
           ],
         ),
@@ -175,7 +175,7 @@ class ProductSearchableDropdown extends StatelessWidget {
         if (items.isEmpty && emptyMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(emptyMessage),
+              content: Text(emptyMessage!),
               backgroundColor: AppColors.warning,
             ),
           );
