@@ -158,4 +158,7 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
       ),
     ),
   );
+
+  amountController.dispose();
+  reasonController.dispose();
 }

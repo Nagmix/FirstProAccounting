@@ -212,6 +212,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                               context,
                               MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
                             );
+                            if (!mounted) return;
                             if (result != null && result.isNotEmpty) {
                               _searchController.text = result;
                               _searchProducts(result);

@@ -354,4 +354,7 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
       ),
     ),
   );
+
+  closingAmountController.dispose();
+  notesController.dispose();
 }

@@ -230,4 +230,8 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
       ),
     ),
   );
+
+  amountController.dispose();
+  cashierNameController.dispose();
+  notesController.dispose();
 }

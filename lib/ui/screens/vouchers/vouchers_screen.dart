@@ -166,6 +166,7 @@ class _VouchersScreenState extends State<VouchersScreen>
       message: 'هل أنت متأكد من حذف هذا السند؟ سيتم عكس القيود المحاسبية.',
       confirmColor: AppColors.error,
     );
+    if (!mounted) return;
     if (!confirmed) return;
 
     await locator<CashBoxService>().deleteVoucher(voucherId);
@@ -392,6 +393,7 @@ class _VouchersScreenState extends State<VouchersScreen>
         builder: (_) => CreateVoucherScreen(initialType: initialType),
       ),
     );
+    if (!mounted) return;
     if (result == true) _loadData();
   }
 

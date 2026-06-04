@@ -220,6 +220,10 @@ class _BankReconciliationDetailScreenState
         ),
       ),
     );
+    dateController.dispose();
+    amountController.dispose();
+    descController.dispose();
+    refController.dispose();
   }
 
   Future<void> _calculateBalances() async {

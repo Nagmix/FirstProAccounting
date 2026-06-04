@@ -45,8 +45,10 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
         ],
       ),
     );
+    if (!mounted) return;
     if (confirmed == true) {
       await locator<StockService>().deleteInventoryVoucher(id);
+      if (!mounted) return;
       _loadVouchers();
     }
   }
@@ -67,13 +69,13 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
         ],
       ),
     );
+    if (!mounted) return;
     if (confirmed == true) {
       await locator<StockService>().confirmInventoryVoucher(id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تأكيد سند الجرد وتعديل المخزون'), backgroundColor: AppColors.success),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم تأكيد سند الجرد وتعديل المخزون'), backgroundColor: AppColors.success),
+      );
       _loadVouchers();
     }
   }
@@ -240,7 +242,9 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
 
   Future<void> _showCreateVoucherDialog() async {
     final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+    if (!mounted) return;
     final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
+    if (!mounted) return;
     int? selectedWarehouseId;
     DateTime selectedDate = DateTime.now();
     String selectedCurrency = 'YER';
@@ -425,12 +429,11 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                         'description': notes,
                       }, items);
 
-                      if (mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('تم إنشاء سند الجرد بنجاح'), backgroundColor: AppColors.success),
-                        );
-                      }
+                      if (!mounted) return;
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('تم إنشاء سند الجرد بنجاح'), backgroundColor: AppColors.success),
+                      );
                       _loadVouchers();
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),

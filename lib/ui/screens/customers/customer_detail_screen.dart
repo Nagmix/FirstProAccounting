@@ -649,6 +649,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         );
       },
     );
+    amountController.dispose();
+    descriptionController.dispose();
   }
 
   // ── Print / Export ─────────────────────────────────────────────

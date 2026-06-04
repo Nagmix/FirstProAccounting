@@ -289,6 +289,12 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
         );
       }
     }
+
+    nameArController.dispose();
+    nameEnController.dispose();
+    abbrController.dispose();
+    descController.dispose();
+    orderController.dispose();
   }
 
   Future<void> _deleteUnit(Unit unit) async {

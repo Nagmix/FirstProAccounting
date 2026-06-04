@@ -126,4 +126,6 @@ Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) a
       ),
     ),
   );
+
+  searchController.dispose();
 }

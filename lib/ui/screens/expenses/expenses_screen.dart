@@ -453,6 +453,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         builder: (_) => ExpenseAccountDetailScreen(account: account),
       ),
     );
+    if (!mounted) return;
     if (result == true) _loadData();
   }
 
@@ -723,5 +724,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         );
       },
     );
+    nameController.dispose();
+    debtCeilingController.dispose();
+    openingBalanceController.dispose();
+    notesController.dispose();
   }
 }

@@ -214,6 +214,11 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
         ),
       ),
     );
+    codeController.dispose();
+    nameArController.dispose();
+    nameEnController.dispose();
+    symbolController.dispose();
+    rateController.dispose();
     _loadCurrencies();
   }
 

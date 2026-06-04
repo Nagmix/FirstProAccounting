@@ -929,6 +929,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         );
       },
     );
+    amountController.dispose();
   }
 
   // ── Cancel Invoice ───────────────────────────────────────────────

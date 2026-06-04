@@ -1424,6 +1424,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
     );
+    if (!mounted) return;
     if (result != null && result.isNotEmpty) {
       final matchResult = await _vm.tryBarcodeMatch(result);
       if (matchResult != null) {

@@ -384,6 +384,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
       context,
       MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
     );
+    if (!mounted) return;
     if (result != null && result.isNotEmpty) {
       _barcodeController.text = result;
     }

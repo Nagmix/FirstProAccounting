@@ -156,6 +156,7 @@ class _ProductsScreenState extends State<ProductsScreen>
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const AddProductSheet()),
     );
+    if (!mounted) return;
     // Refresh list if a product was added
     if (result == true) {
       _loadData();
@@ -283,7 +284,6 @@ class _ProductsScreenState extends State<ProductsScreen>
           actions: [
             TextButton(
               onPressed: () {
-                nameController.dispose();
                 Navigator.pop(ctx);
               },
               child: const Text('إغلاق'),
@@ -292,6 +292,7 @@ class _ProductsScreenState extends State<ProductsScreen>
         ),
       ),
     );
+    nameController.dispose();
   }
 
   @override
@@ -430,6 +431,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                                     builder: (_) => AddProductSheet(existing: filtered[index]),
                                   ),
                                 );
+                                if (!mounted) return;
                                 if (result == true) {
                                   _loadData();
                                 }

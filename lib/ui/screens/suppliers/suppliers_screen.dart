@@ -91,6 +91,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       useSafeArea: true,
       builder: (context) => AddSupplierSheet(supplier: supplier),
     );
+    if (!mounted) return;
     _loadSuppliers();
   }
 
@@ -102,6 +103,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         builder: (_) => SupplierDetailScreen(supplier: supplier),
       ),
     );
+    if (!mounted) return;
     _loadSuppliers();
   }
 

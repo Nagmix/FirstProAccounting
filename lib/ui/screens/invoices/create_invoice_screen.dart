@@ -607,6 +607,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       );
     }
 
+    if (!mounted) return;
+
     // Reload entities after adding
     await _vm.reloadEntities();
   }

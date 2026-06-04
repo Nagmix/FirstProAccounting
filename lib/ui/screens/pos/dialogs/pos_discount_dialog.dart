@@ -93,4 +93,6 @@ void showDiscountDialog(BuildContext context, PosViewModel vm) {
       ),
     ),
   );
+
+  controller.dispose();
 }

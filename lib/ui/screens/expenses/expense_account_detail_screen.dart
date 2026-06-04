@@ -621,6 +621,7 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
         builder: (_) => AddExpenseScreen(expenseAccountId: _accountId),
       ),
     );
+    if (!mounted) return;
     if (result == true) _loadData();
   }
 }

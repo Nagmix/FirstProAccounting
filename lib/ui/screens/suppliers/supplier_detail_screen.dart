@@ -624,6 +624,8 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
         );
       },
     );
+    amountController.dispose();
+    descriptionController.dispose();
   }
 
   // ── Print / Export ────────────────────────────────────────────

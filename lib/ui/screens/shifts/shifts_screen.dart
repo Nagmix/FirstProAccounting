@@ -1329,6 +1329,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
         ),
       ),
     );
+    closingAmountController.dispose();
+    notesController.dispose();
   }
 
   void _showCloseResultDialog(

@@ -61,4 +61,6 @@ Future<void> showAddPartialPaymentDialog(BuildContext context, PosViewModel vm) 
       ),
     ),
   );
+
+  amountController.dispose();
 }
