@@ -14,7 +14,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/viewmodels/invoice_viewmodel.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
