@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../widgets/barcode_scanner_screen.dart';
-import '../add_product_sheet.dart' show UnitConversionRow;
+import '../product_models.dart';
 import 'product_form_helpers.dart';
 
 // ═══════════════════════════════════════════════════════════════════

@@ -16,6 +16,7 @@ import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/models/product_model.dart';
 import '../../../data/models/unit_model.dart';
 import '../../widgets/barcode_scanner_screen.dart';
+import 'product_models.dart';
 import 'widgets/product_basic_data_step.dart';
 import 'widgets/product_units_step.dart';
 import 'widgets/product_pricing_step.dart';
@@ -26,48 +27,23 @@ import 'widgets/product_sales_settings_step.dart';
 import 'widgets/product_accounting_step.dart';
 
 // ═══════════════════════════════════════════════════════════════════
-//  Step definitions
+//  Step definitions (uses StepDef from product_models.dart)
 // ═══════════════════════════════════════════════════════════════════
 
-class _StepDef {
-  final String title;
-  final IconData icon;
-  const _StepDef(this.title, this.icon);
-}
-
 const _steps = [
-  _StepDef('البيانات الأساسية', Icons.article),
-  _StepDef('الوحدات', Icons.straighten),
-  _StepDef('الأسعار', Icons.label),
-  _StepDef('المخزون', Icons.inventory),
-  _StepDef('الموردين', Icons.local_shipping),
-  _StepDef('الباركود', Icons.qr_code),
-  _StepDef('إعدادات البيع', Icons.storefront),
-  _StepDef('المحاسبة', Icons.account_balance),
+  StepDef('البيانات الأساسية', Icons.article),
+  StepDef('الوحدات', Icons.straighten),
+  StepDef('الأسعار', Icons.label),
+  StepDef('المخزون', Icons.inventory),
+  StepDef('الموردين', Icons.local_shipping),
+  StepDef('الباركود', Icons.qr_code),
+  StepDef('إعدادات البيع', Icons.storefront),
+  StepDef('المحاسبة', Icons.account_balance),
 ];
 
 // ═══════════════════════════════════════════════════════════════════
-//  Unit conversion row model (public — shared with step widgets)
-// ═══════════════════════════════════════════════════════════════════
-
-class UnitConversionRow {
-  int? unitId;
-  double factor;
-  String barcode;
-  double sellPrice;
-  double costPrice;
-
-  UnitConversionRow({
-    this.unitId,
-    this.factor = 1.0,
-    this.barcode = '',
-    this.sellPrice = 0.0,
-    this.costPrice = 0.0,
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════
 //  AddProductSheet – multi-step wizard
+//  (UnitConversionRow is in product_models.dart)
 // ═══════════════════════════════════════════════════════════════════
 
 class AddProductSheet extends StatefulWidget {
