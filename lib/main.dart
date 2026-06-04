@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/generated/app_localizations.dart';
@@ -10,6 +11,7 @@ import 'data/datasources/database_helper.dart';
 import 'ui/navigation/app_router.dart';
 import 'ui/navigation/main_scaffold.dart';
 import 'ui/screens/app_lock/app_lock_screen.dart';
+import 'ui/screens/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,17 +25,13 @@ void main() async {
   // 3. Support multiple user roles (admin, cashier, etc.) with different permissions.
   // 4. Store credentials securely (hash + salt) in the database or flutter_secure_storage.
 
-  // Set preferred orientations for a typical accounting app (portrait-first).
-  // SystemChrome.setPreferredOrientations can be added here if needed.
-
   runApp(const FirstProApp());
 }
 
 /// Root widget for the FirstPro accounting application.
 ///
-/// Checks if PIN lock is enabled at startup:
-/// - If PIN is enabled ('pin_enabled' = '1'), shows [AppLockScreen] first.
-/// - If PIN is not enabled, goes directly to [MainScaffold].
+/// Shows a modern animated splash screen for 3 seconds while initializing,
+/// then transitions to either the PIN lock screen or the main scaffold.
 class FirstProApp extends StatefulWidget {
   const FirstProApp({super.key});
 
@@ -42,57 +40,116 @@ class FirstProApp extends StatefulWidget {
 }
 
 class _FirstProAppState extends State<FirstProApp> {
-  /// null = still loading, true = PIN enabled, false = PIN disabled
+  /// null = still on splash, true = PIN enabled, false = PIN disabled
   bool? _pinEnabled;
 
   /// Theme mode loaded from settings: 0=light, 1=dark, 2=system
   int _themeModeIndex = 2; // Default to system
+
+  /// Whether initialization is complete (splash can transition)
+  bool _initComplete = false;
+
+  /// Whether splash timer has elapsed (3 seconds)
+  bool _splashTimerDone = false;
 
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
-    _initApp();
+    _startInit();
+    _startSplashTimer();
   }
 
-  Future<void> _initApp() async {
-    // Use locator to access DatabaseHelper — consistent with DI architecture
+  /// Start the 3-second splash timer.
+  void _startSplashTimer() {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() => _splashTimerDone = true);
+      }
+    });
+  }
+
+  /// Initialize app data in parallel with splash screen.
+  Future<void> _startInit() async {
+    bool? pinEnabled;
+    int themeMode = 2;
+
+    try {
+      // Run init with a 5-second timeout to prevent getting stuck
+      final result = await _loadAppSettings().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => (null, 2), // Fallback on timeout
+      );
+      pinEnabled = result.$1;
+      themeMode = result.$2;
+    } catch (e) {
+      // If anything fails, use safe defaults and continue
+      if (kDebugMode) {
+        debugPrint('FirstProApp._startInit: $e');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _pinEnabled = pinEnabled;
+        _themeModeIndex = themeMode;
+        _initComplete = true;
+      });
+    }
+  }
+
+  /// Load PIN state and theme from secure storage and database.
+  /// Returns (pinEnabled, themeModeIndex).
+  Future<(bool?, int)> _loadAppSettings() async {
     final db = locator<DatabaseHelper>();
 
-    // Load PIN enabled state from secure storage with DB fallback for migration
+    // Load PIN enabled state from secure storage with DB fallback
     String? pinEnabled;
     try {
       pinEnabled = await _secureStorage.read(key: 'pin_enabled');
     } catch (e) {
       // Secure storage read failed — try DB fallback
-      debugPrint('FirstProApp._initApp: secure storage read failed: $e');
+      if (kDebugMode) {
+        debugPrint('FirstProApp: secure storage read failed: $e');
+      }
     }
+
     if (pinEnabled == null) {
-      pinEnabled = await db.getSetting('pin_enabled');
-      if (pinEnabled != null && pinEnabled.isNotEmpty) {
-        // Migrate to secure storage
-        try {
-          await _secureStorage.write(key: 'pin_enabled', value: pinEnabled);
-        } catch (e) {
-          debugPrint('FirstProApp._initApp: secure storage write failed: $e');
+      try {
+        pinEnabled = await db.getSetting('pin_enabled');
+        if (pinEnabled != null && pinEnabled.isNotEmpty) {
+          // Migrate to secure storage
+          try {
+            await _secureStorage.write(key: 'pin_enabled', value: pinEnabled);
+          } catch (_) {}
+          await db.deleteSetting('pin_enabled');
         }
-        await db.deleteSetting('pin_enabled');
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('FirstProApp: DB getSetting failed: $e');
+        }
       }
     }
 
     // Load saved theme mode
-    final themeModeStr = await db.getSetting('theme_mode_index');
-
-    if (mounted) {
-      setState(() {
-        _pinEnabled = pinEnabled == '1';
-        if (themeModeStr != null) {
-          _themeModeIndex = int.tryParse(themeModeStr) ?? 2;
-        }
-      });
+    int themeMode = 2;
+    try {
+      final themeModeStr = await db.getSetting('theme_mode_index');
+      if (themeModeStr != null) {
+        themeMode = int.tryParse(themeModeStr) ?? 2;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('FirstProApp: theme load failed: $e');
+      }
     }
+
+    return (pinEnabled == '1' ? true : (pinEnabled == '0' ? false : null), themeMode);
   }
+
+  /// Whether we can transition away from the splash screen.
+  bool get _canTransition => _initComplete && _splashTimerDone;
 
   ThemeMode _getThemeMode() {
     switch (_themeModeIndex) {
@@ -128,43 +185,23 @@ class _FirstProAppState extends State<FirstProApp> {
       themeMode: _getThemeMode(),
 
       // ── Navigation ──────────────────────────────────────────
-      // Show AppLockScreen if PIN is enabled, otherwise MainScaffold.
-      // While loading, show a splash/loading indicator.
       home: _buildHome(),
       routes: AppRouter.routes,
     );
   }
 
   Widget _buildHome() {
-    // Still checking the pin_enabled setting
-    if (_pinEnabled == null) {
-      return Scaffold(
-        backgroundColor: _getThemeMode() == ThemeMode.dark
-            ? AppTheme.darkTheme.scaffoldBackgroundColor
-            : AppTheme.lightTheme.scaffoldBackgroundColor,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.calculate_outlined,
-                size: 64,
-                color: AppConstants.appName.isNotEmpty
-                    ? const Color(0xFF1A73E8)
-                    : Colors.blue,
-              ),
-              const SizedBox(height: 24),
-              const SizedBox(
-                width: 32,
-                height: 32,
-                child: CircularProgressIndicator(strokeWidth: 3),
-              ),
-            ],
-          ),
-        ),
+    // Still showing splash screen (waiting for init + 3s timer)
+    if (!_canTransition) {
+      return SplashScreen(
+        onComplete: () {
+          // Splash animation finished — but we still wait for _canTransition
+          // This callback is no longer needed since _splashTimerDone handles it
+        },
       );
     }
 
+    // Transition ready — show appropriate screen
     // PIN lock enabled → show lock screen first
     if (_pinEnabled == true) {
       return const AppLockScreen();
