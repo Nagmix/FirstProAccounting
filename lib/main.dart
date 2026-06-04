@@ -64,8 +64,9 @@ class _FirstProAppState extends State<FirstProApp> {
     String? pinEnabled;
     try {
       pinEnabled = await _secureStorage.read(key: 'pin_enabled');
-    } catch (_) {
+    } catch (e) {
       // Secure storage read failed — try DB fallback
+      debugPrint('FirstProApp._initApp: secure storage read failed: $e');
     }
     if (pinEnabled == null) {
       pinEnabled = await db.getSetting('pin_enabled');
@@ -73,7 +74,9 @@ class _FirstProAppState extends State<FirstProApp> {
         // Migrate to secure storage
         try {
           await _secureStorage.write(key: 'pin_enabled', value: pinEnabled);
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('FirstProApp._initApp: secure storage write failed: $e');
+        }
         await db.deleteSetting('pin_enabled');
       }
     }
@@ -136,7 +139,9 @@ class _FirstProAppState extends State<FirstProApp> {
     // Still checking the pin_enabled setting
     if (_pinEnabled == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: _getThemeMode() == ThemeMode.dark
+            ? AppTheme.darkTheme.scaffoldBackgroundColor
+            : AppTheme.lightTheme.scaffoldBackgroundColor,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,

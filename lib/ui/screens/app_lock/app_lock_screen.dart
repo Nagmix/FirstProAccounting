@@ -186,8 +186,8 @@ class _AppLockScreenState extends State<AppLockScreen>
         await _secureStorage.write(key: 'pin_salt', value: salt);
       }
       return salt;
-    } catch (_) {
-      // Fallback salt if secure storage fails
+    } catch (e) {
+      debugPrint('AppLockScreen._getOrCreatePinSalt: WARNING $e');
       return 'F1r5tPr0_Fallback_2024_Salt';
     }
   }
@@ -247,8 +247,8 @@ class _AppLockScreenState extends State<AppLockScreen>
   Future<void> _upgradePinHash(String pin) async {
     try {
       await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
-    } catch (_) {
-      // Non-critical — the old hash still works for this session
+    } catch (e) {
+      debugPrint('AppLockScreen._upgradePinHash: WARNING $e');
     }
   }
 
@@ -256,7 +256,8 @@ class _AppLockScreenState extends State<AppLockScreen>
     // The stored value is a hash (prefixed with 'h' or 'h2'), not the plain PIN.
     try {
       return await _readSecureWithMigration('app_pin');
-    } catch (_) {
+    } catch (e) {
+      debugPrint('AppLockScreen._getStoredPin: WARNING $e');
       return null;
     }
   }
@@ -267,8 +268,8 @@ class _AppLockScreenState extends State<AppLockScreen>
     try {
       final secureValue = await _secureStorage.read(key: key);
       if (secureValue != null) return secureValue;
-    } catch (_) {
-      // Secure storage read failed — try DB fallback
+    } catch (e) {
+      debugPrint('AppLockScreen._readSecureWithMigration (secureStorage): WARNING $e');
     }
 
     // Fallback to DB for users upgrading from older versions
@@ -281,8 +282,8 @@ class _AppLockScreenState extends State<AppLockScreen>
         await locator<ReferenceDataRepository>().deleteSetting(key);
         return dbValue;
       }
-    } catch (_) {
-      // DB fallback also failed
+    } catch (e) {
+      debugPrint('AppLockScreen._readSecureWithMigration (dbFallback): WARNING $e');
     }
     return null;
   }
@@ -294,7 +295,9 @@ class _AppLockScreenState extends State<AppLockScreen>
     try {
       await locator<ReferenceDataRepository>().deleteSetting('app_pin');
       await locator<ReferenceDataRepository>().deleteSetting('pin_enabled');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('AppLockScreen._savePin: WARNING $e');
+    }
   }
 
   // ── Navigation ──────────────────────────────────────────────

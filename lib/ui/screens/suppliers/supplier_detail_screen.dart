@@ -181,7 +181,8 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
         try {
           final date = DateTime.parse(dateStr);
           return !date.isBefore(_startDate!);
-        } catch (_) {
+        } catch (e) {
+          debugPrint('SupplierDetailScreen._applyFilters: $e');
           return true;
         }
       }).toList();
@@ -193,7 +194,8 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
         try {
           final date = DateTime.parse(dateStr);
           return !date.isAfter(_endDate!);
-        } catch (_) {
+        } catch (e) {
+          debugPrint('SupplierDetailScreen._applyFilters: $e');
           return true;
         }
       }).toList();

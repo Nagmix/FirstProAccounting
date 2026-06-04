@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart' as sqflite;
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/excel_exporter.dart';
@@ -145,8 +146,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
       if (mounted) {
         setState(() => _lastBackupDate = now);
       }
-    } catch (_) {
-      // Silent failure for auto-backup
+    } catch (e) {
+      debugPrint('SettingsDataSection._performAutoBackup: $e');
     }
   }
 
@@ -176,8 +177,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
           await backupFiles[i].delete();
         }
       }
-    } catch (_) {
-      // Auto-backup save failure should not block the main backup flow
+    } catch (e) {
+      debugPrint('SettingsDataSection._saveAutoBackup: $e');
     }
   }
 
@@ -361,6 +362,40 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
       );
 
       final dbHelper = locator<DatabaseHelper>();
+
+      // 0. Verify backup file integrity before replacing the database
+      try {
+        final backupDb = await sqflite.openDatabase(
+          backupFilePath!,
+          version: 1,
+          readOnly: true,
+        );
+        final result = await backupDb.rawQuery('PRAGMA integrity_check');
+        await backupDb.close();
+        if (result.isEmpty || result.first.values.first.toString() != 'ok') {
+          if (mounted) {
+            Navigator.pop(context); // dismiss loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('الملف المحدد تالف أو غير صالح. لا يمكن استعادة البيانات.'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          return;
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context); // dismiss loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('فشل التحقق من سلامة الملف: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
 
       // 1. Close the database connection
       await dbHelper.resetInstance();

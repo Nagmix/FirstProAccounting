@@ -66,6 +66,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       locator<CashBoxService>().getAllCashBoxes(),
     ]);
 
+    if (!mounted) return;
     setState(() {
       _currencies = results[0];
       _cashBoxes = results[1];
@@ -75,6 +76,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     // If editing, load existing expense data
     if (_isEditing && widget.expenseId != null) {
       final expense = await locator<ExpenseRepository>().getExpenseById(widget.expenseId!);
+      if (!mounted) return;
       if (expense != null) {
         setState(() {
           _existingExpense = expense;

@@ -261,7 +261,8 @@ class _ProductsScreenState extends State<ProductsScreen>
                                       }
                                       return;
                                     }
-                                  } catch (_) {
+                                  } catch (e) {
+                                    debugPrint('ProductsScreen._deleteCategory: $e');
                                     // If check fails, proceed with delete attempt
                                   }
 

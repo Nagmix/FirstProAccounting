@@ -195,7 +195,8 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
     try {
       final dt = DateTime.parse(isoDate);
       return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
+    } catch (e) {
+      debugPrint('DailyOperationsScreen._formatTime: $e');
       return isoDate;
     }
   }

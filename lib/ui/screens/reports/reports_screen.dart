@@ -255,7 +255,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     try {
       final dt = DateTime.parse(iso);
       return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
-    } catch (_) {
+    } catch (e) {
+      debugPrint('ReportsScreen._fmtDate: $e');
       return iso.length > 10 ? iso.substring(0, 10) : iso;
     }
   }

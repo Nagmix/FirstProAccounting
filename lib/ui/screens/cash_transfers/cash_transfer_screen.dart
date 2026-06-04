@@ -1201,7 +1201,9 @@ class _CashTransferScreenState extends State<CashTransferScreen>
         formattedDate =
             '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('CashTransferScreen._buildTransferHistoryCard: $e');
+    }
 
     return Card(
       elevation: 0,

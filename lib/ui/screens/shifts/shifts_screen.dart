@@ -690,7 +690,9 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     List<Map<String, dynamic>> invoices = [];
     try {
       invoices = await locator<ShiftService>().getShiftInvoices(shiftId);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('ShiftsScreen._showShiftDetails: $e');
+    }
 
     if (!mounted) return;
 

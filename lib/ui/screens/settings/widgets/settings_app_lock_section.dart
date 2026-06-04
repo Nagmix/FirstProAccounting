@@ -81,7 +81,8 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
         await storage.write(key: 'pin_salt', value: salt);
       }
       return salt;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SettingsAppLockSection._getOrCreatePinSalt: WARNING $e');
       return 'F1r5tPr0_Fallback_2024_Salt';
     }
   }
@@ -301,7 +302,9 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
                   final refRepo = locator<ReferenceDataRepository>();
                   await refRepo.deleteSetting('pin_enabled');
                   await refRepo.deleteSetting('app_pin');
-                } catch (_) {}
+                } catch (e) {
+                  debugPrint('SettingsAppLockSection._togglePin: WARNING $e');
+                }
                 widget.onPinEnabledChanged(true);
               }
             } else {
@@ -326,12 +329,16 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
               // Clean up old DB entry if it exists
               try {
                 await locator<ReferenceDataRepository>().deleteSetting('app_pin');
-              } catch (_) {}
+              } catch (e) {
+                debugPrint('SettingsAppLockSection._setPin: WARNING $e');
+              }
               if (!widget.pinEnabled) {
                 await _secureStorage.write(key: 'pin_enabled', value: '1');
                 try {
                   await locator<ReferenceDataRepository>().deleteSetting('pin_enabled');
-                } catch (_) {}
+                } catch (e) {
+                  debugPrint('SettingsAppLockSection._setPin: WARNING $e');
+                }
                 widget.onPinEnabledChanged(true);
               }
               if (mounted) {

@@ -1486,7 +1486,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
       final dt = DateTime.parse(createdAt);
       dateDisplay =
           '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
+    } catch (e) {
+      debugPrint('CurrencyExchangeScreen._buildExchangeCard: $e');
       dateDisplay = createdAt;
     }
 

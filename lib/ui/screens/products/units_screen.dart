@@ -308,7 +308,8 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
         );
         return;
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('UnitsScreen._deleteUnit: $e');
       // If pre-check fails, let the actual delete handle it
     }
 

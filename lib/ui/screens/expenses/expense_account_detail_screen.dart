@@ -394,10 +394,12 @@ class _ExpenseAccountDetailScreenState extends State<ExpenseAccountDetailScreen>
     DateTime? txDate;
     try {
       txDate = DateTime.parse(dateStr.isNotEmpty ? dateStr : createdAt);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('ExpenseAccountDetailScreen._buildTransactionCard: $e');
       try {
         txDate = DateTime.parse(createdAt);
-      } catch (_) {
+      } catch (e2) {
+        debugPrint('ExpenseAccountDetailScreen._buildTransactionCard: $e2');
         txDate = null;
       }
     }

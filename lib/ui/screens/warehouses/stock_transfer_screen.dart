@@ -47,8 +47,11 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+    if (!mounted) return;
     final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
+    if (!mounted) return;
     final transfers = await locator<StockService>().getAllStockTransfers();
+    if (!mounted) return;
 
     setState(() {
       _warehouses = warehouses;

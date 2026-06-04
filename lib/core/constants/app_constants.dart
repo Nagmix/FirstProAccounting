@@ -6,12 +6,12 @@ class AppConstants {
   static const String appName = 'الأول برو';
   static const String appNameEn = 'FirstPro';
   static const String appFullName = 'الأول برو المحاسبي';
-  static const String appVersion = '2.0.0';
+  static const String appVersion = '2.0.0'; // Must match pubspec.yaml version
   static const String appSlogan = 'حلول محاسبية احترافية';
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 35;
+  static const int dbVersion = 43; // Must match DatabaseHelper._databaseVersion
 
   // ── Locale & currency ─────────────────────────────────────────
   static const String currency = 'ر.ي';

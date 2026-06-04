@@ -316,7 +316,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         try {
           final date = DateTime.parse(dateStr);
           return !date.isBefore(_dateRange!.start) && !date.isAfter(_dateRange!.end.add(const Duration(days: 1)));
-        } catch (_) {
+        } catch (e) {
+          debugPrint('CustomerDetailScreen._applyFilters: $e');
           return true;
         }
       }).toList();
@@ -1228,7 +1229,8 @@ class _MovementCard extends StatelessWidget {
     try {
       final date = DateTime.parse(dateStr);
       formattedDate = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-    } catch (_) {
+    } catch (e) {
+      debugPrint('CustomerDetailScreen._buildMovementCard: $e');
       formattedDate = dateStr;
     }
 

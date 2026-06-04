@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_colors.dart';
@@ -702,22 +703,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ════════════════════════════════════════════════════════════════
 
   void _onRateApp() {
-    // TODO: Launch app store rating
+    // Launch app store rating — uses in_app_review or store redirect
+    try {
+      // Android: open Play Store listing
+      launchUrl(Uri.parse('market://details?id=com.nagmix.firstpro'));
+    } catch (e) {
+      // Fallback: open Play Store in browser
+      launchUrl(Uri.parse('https://play.google.com/store/apps/details?id=com.nagmix.firstpro'));
+    }
   }
 
   void _onContactUs() {
-    // TODO: Open email client to support@firstpro.com
+    // Open email client to support@firstpro.com
+    launchUrl(Uri.parse('mailto:support@firstpro.com?subject=دعم%20فني%20-%20الأول%20برو'));
   }
 
   void _onCallUs() {
-    // TODO: Launch phone dialer with +967777777777
+    // Launch phone dialer
+    launchUrl(Uri.parse('tel:+967777777777'));
   }
 
   void _onWhatsApp() {
-    // TODO: Open WhatsApp with +967777777777
+    // Open WhatsApp chat with the support number
+    launchUrl(Uri.parse('https://wa.me/967777777777?text=مرحباً،%20أحتاج%20مساعدة%20في%20تطبيق%20الأول%20برو'));
   }
 
   void _onPrivacyPolicy() {
-    // TODO: Navigate to privacy policy page
+    // Navigate to privacy policy page (or open in browser)
+    launchUrl(Uri.parse('https://nagmix.net/privacy-policy'));
   }
 }

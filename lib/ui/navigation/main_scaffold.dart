@@ -483,7 +483,7 @@ class _MoreTab extends StatelessWidget {
         title: const Text('المزيد'),
       ),
       body: ListView(
-        padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 120 + bottomPadding),
+        padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: kBottomNavigationBarHeight + bottomPadding),
         children: [
           // ── Section: المبيعات والشراء ────────────────────────────
           _buildSectionHeader(context, 'المبيعات والشراء'),

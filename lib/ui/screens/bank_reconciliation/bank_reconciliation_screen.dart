@@ -356,7 +356,8 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
     try {
       final date = DateTime.parse(dateStr);
       return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-    } catch (_) {
+    } catch (e) {
+      debugPrint('BankReconciliationScreen._formatDate: $e');
       return dateStr;
     }
   }

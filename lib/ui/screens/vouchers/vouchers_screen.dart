@@ -205,7 +205,9 @@ class _VouchersScreenState extends State<VouchersScreen>
     List<Map<String, dynamic>> items = [];
     try {
       items = await locator<CashBoxService>().getVoucherItems(voucherId);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VouchersScreen._showVoucherDetails: $e');
+    }
 
     if (!mounted) return;
 
@@ -221,7 +223,9 @@ class _VouchersScreenState extends State<VouchersScreen>
           if (acct != null) {
             accountName = acct['name_ar'] as String? ?? accountName;
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('VouchersScreen._showVoucherDetails.getAccountName: $e');
+        }
       }
       enrichedItems.add({...item, 'account_name': accountName});
     }
