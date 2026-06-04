@@ -66,25 +66,20 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     super.initState();
     _vm.setInvoiceType(widget.invoiceType);
     _vm.loadData();
-    _vm.addListener(_onVmChanged);
     _paidController.text = '0.00';
-  }
-
-  void _onVmChanged() {
-    if (mounted) setState(() {});
   }
 
 
 
   @override
   void dispose() {
-    _vm.removeListener(_onVmChanged);
     _notesController.dispose();
     _discountController.dispose();
     _paidController.dispose();
     _transportChargesController.dispose();
     _transferNumberController.dispose();
     _entitySearchController.dispose();
+    // ViewModel is factory — it will be GC'd with the State.
     super.dispose();
   }
 
@@ -169,7 +164,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDarkMode;
-    return Scaffold(
+    return ListenableBuilder(
+      listenable: _vm,
+      builder: (context, _) => Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
       appBar: _buildAppBar(isDark),
       body: _vm.isLoading
@@ -301,6 +298,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   ),
                 ),
               ),
+      ),
     );
   }
 

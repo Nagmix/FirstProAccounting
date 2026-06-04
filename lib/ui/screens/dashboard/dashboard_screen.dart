@@ -48,6 +48,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    // Listen only for chart animation side effect — UI rebuild is via ListenableBuilder.
     _viewModel.addListener(_onViewModelChanged);
     _viewModel.refresh();
     WidgetsBinding.instance.addObserver(this);
@@ -72,13 +73,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     _chartDrawController.dispose();
     _actionPageController.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    // ViewModel is factory — it will be GC'd with the State.
     super.dispose();
   }
 
   /// Called when the ViewModel notifies listeners of state changes.
+  /// Uses ListenableBuilder in build() for automatic subscription —
+  /// this callback only handles the chart animation trigger.
   void _onViewModelChanged() {
     if (!mounted) return;
-    setState(() {});
     if (!_viewModel.isLoading && !_chartDrawController.isCompleted) {
       _chartDrawController.forward();
     }
@@ -140,7 +143,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     final isDark = theme.brightness == Brightness.dark;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return Scaffold(
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) => Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
       extendBodyBehindAppBar: true,
       body: RefreshIndicator(
@@ -188,6 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }

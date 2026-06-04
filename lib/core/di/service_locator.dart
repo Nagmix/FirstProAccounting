@@ -89,10 +89,10 @@ Future<void> setupLocator() async {
     () => BankReconciliationService(locator<DatabaseHelper>()),
   );
 
-  // ── ViewModels ──
-  locator.registerLazySingleton<DashboardViewModel>(() => DashboardViewModel());
-  locator.registerLazySingleton<PosViewModel>(() => PosViewModel());
-  locator.registerLazySingleton<InvoiceViewModel>(() => InvoiceViewModel());
+  // ── ViewModels (factory — fresh instance per screen, no stale state) ──
+  locator.registerFactory<DashboardViewModel>(() => DashboardViewModel());
+  locator.registerFactory<PosViewModel>(() => PosViewModel());
+  locator.registerFactory<InvoiceViewModel>(() => InvoiceViewModel());
 
   // ── Mark locator as ready so DatabaseHelper resolves via locator ──
   // This ensures all sub-service getters in DatabaseHelper return the same

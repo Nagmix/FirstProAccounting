@@ -69,19 +69,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // Safety reset: ensure VM is not stuck in a non-idle phase
-    // from a previous screen visit (singleton persists across navigations)
-    if (_vm.checkoutPhase != CheckoutPhase.idle) {
-      _vm.setCheckoutPhase(CheckoutPhase.idle);
-    }
+    // ViewModel is factory-registered — no stale state from previous visits.
     _ticker = createTicker(_onTick);
     _searchController.addListener(_onSearchChanged);
-    _vm.addListener(_onVmChanged);
     _vm.loadData();
-  }
-
-  void _onVmChanged() {
-    if (mounted) setState(() {});
   }
 
   void _onTick(Duration elapsed) {
@@ -121,12 +112,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _vm.removeListener(_onVmChanged);
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
     _sheetController.dispose();
     _ticker.dispose();
+    // ViewModel is factory — it will be GC'd with the State.
     super.dispose();
   }
 
@@ -135,49 +126,51 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(),
-      body: _vm.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Stack(
-                children: [
-                  // Main content: product grid
-                  // AbsorbPointer prevents taps from leaking through
-                  // to main content when a checkout overlay is active.
-                  AbsorbPointer(
-                    absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
-                    child: Column(
-                      children: [
-                        if (_vm.activeShift != null) _buildShiftInfoBar(),
-                        _buildSearchBar(),
-                        _buildCategoryChips(),
-                        if (_vm.topSellers.isNotEmpty) _buildTopSellers(),
-                        Expanded(child: _buildProductGrid()),
-                      ],
-                    ),
-                  ),
-                  // Draggable cart sheet at bottom
-                  // DraggableScrollableSheet must be a direct child of Stack
-                  // (not wrapped in Positioned) for correct gesture handling.
-                  if (_vm.activeShift != null)
+    return ListenableBuilder(
+      listenable: _vm,
+      builder: (context, _) => Scaffold(
+        appBar: _buildAppBar(),
+        body: _vm.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+                  children: [
+                    // Main content: product grid
+                    // AbsorbPointer prevents taps from leaking through
+                    // to main content when a checkout overlay is active.
                     AbsorbPointer(
                       absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
-                      child: _buildDraggableCartSheet(),
+                      child: Column(
+                        children: [
+                          if (_vm.activeShift != null) _buildShiftInfoBar(),
+                          _buildSearchBar(),
+                          _buildCategoryChips(),
+                          if (_vm.topSellers.isNotEmpty) _buildTopSellers(),
+                          Expanded(child: _buildProductGrid()),
+                        ],
+                      ),
                     ),
-                  // Shift overlay when no active shift
-                  if (_vm.activeShift == null) _buildShiftOverlay(),
-                  // ── Checkout overlays (replaces showDialog) ────────
-                  // State-based overlays eliminate dialog stacking bug.
-                  // Each overlay uses GestureDetector to absorb ALL taps
-                  // (including on the transparent background), preventing
-                  // any tap-through to widgets below.
-                  if (_vm.checkoutPhase == CheckoutPhase.confirming ||
-                      _vm.checkoutPhase == CheckoutPhase.saving)
-                    _buildCheckoutConfirmationOverlay(),
-                  if (_vm.checkoutPhase == CheckoutPhase.completed)
-                    _buildCheckoutCompletedOverlay(),
-                ],
-              ),
+                    // Draggable cart sheet at bottom
+                    // DraggableScrollableSheet must be a direct child of Stack
+                    // (not wrapped in Positioned) for correct gesture handling.
+                    if (_vm.activeShift != null)
+                      AbsorbPointer(
+                        absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
+                        child: _buildDraggableCartSheet(),
+                      ),
+                    // Shift overlay when no active shift
+                    if (_vm.activeShift == null) _buildShiftOverlay(),
+                    // ── Checkout overlays (replaces showDialog) ────────
+                    // State-based overlays eliminate dialog stacking bug.
+                    // Each overlay uses GestureDetector to absorb ALL taps
+                    // (including on the transparent background), preventing
+                    // any tap-through to widgets below.
+                    if (_vm.checkoutPhase == CheckoutPhase.confirming ||
+                        _vm.checkoutPhase == CheckoutPhase.saving)
+                      _buildCheckoutConfirmationOverlay(),
+                    if (_vm.checkoutPhase == CheckoutPhase.completed)
+                      _buildCheckoutCompletedOverlay(),
+                  ],
+                ),
         floatingActionButton: _vm.activeShift != null
             ? FloatingActionButton(
                 onPressed: _vm.checkoutPhase != CheckoutPhase.idle ? null : _scanBarcode,
@@ -187,6 +180,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 child: const Icon(Icons.qr_code),
               )
             : null,
+      ),
     );
   }
 
