@@ -165,10 +165,8 @@ class _ProductsScreenState extends State<ProductsScreen>
 
   // ── Get category name for product ─────────────────────────────
   String _getCategoryName(Product p) {
-    if (p.categoryId != null && _categoryNames.containsKey(p.categoryId)) {
-      return _categoryNames[p.categoryId]!;
-    }
-    return 'غير مصنف';
+    if (p.categoryId == null) return 'غير محدد';
+    return _categoryNames[p.categoryId] ?? 'غير محدد';
   }
 
   // ── Category chip labels ──────────────────────────────────────
@@ -263,7 +261,9 @@ class _ProductsScreenState extends State<ProductsScreen>
                                       return;
                                     }
                                   } catch (e) {
+                                    if (kDebugMode) {
                                     debugPrint('ProductsScreen._deleteCategory: $e');
+                                  }
                                     // If check fails, proceed with delete attempt
                                   }
 

@@ -86,17 +86,26 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
 
     // Create nodes for all accounts
     for (final account in filtered) {
-      if (account.id != null) {
-        byId[account.id!] = _AccountNode(account: account);
+      final id = account.id;
+      if (id != null) {
+        byId[id] = _AccountNode(account: account);
       }
     }
 
     // Link children to parents
     for (final account in filtered) {
-      if (account.id == null) continue;
-      final node = byId[account.id!]!;
-      if (account.parentId != null && byId.containsKey(account.parentId)) {
-        byId[account.parentId]!.children.add(node);
+      final id = account.id;
+      if (id == null) continue;
+      final node = byId[id];
+      if (node == null) continue;
+      final parentId = account.parentId;
+      if (parentId != null) {
+        final parentNode = byId[parentId];
+        if (parentNode != null) {
+          parentNode.children.add(node);
+        } else {
+          roots.add(node);
+        }
       } else {
         roots.add(node);
       }

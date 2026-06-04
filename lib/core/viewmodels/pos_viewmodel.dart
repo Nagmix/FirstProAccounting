@@ -452,7 +452,9 @@ class PosViewModel extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       _errorMessage = 'حدث خطأ أثناء تحميل البيانات';
-      debugPrint('PosViewModel loadData error: $e');
+      if (kDebugMode) {
+        debugPrint('PosViewModel loadData error: $e');
+      }
       notifyListeners();
     }
   }
@@ -512,7 +514,9 @@ class PosViewModel extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      debugPrint('Warning: Could not load held orders from DB: $e');
+      if (kDebugMode) {
+        debugPrint('Warning: Could not load held orders from DB: $e');
+      }
     }
   }
 
@@ -523,7 +527,9 @@ class PosViewModel extends ChangeNotifier {
       _topSellers = await _reportService.getTopSellersToday(todayStr);
       notifyListeners();
     } catch (e) {
-      debugPrint('Warning: Could not load top sellers: $e');
+      if (kDebugMode) {
+        debugPrint('Warning: Could not load top sellers: $e');
+      }
     }
   }
 
@@ -536,7 +542,9 @@ class PosViewModel extends ChangeNotifier {
           .toList();
       notifyListeners();
     } catch (e) {
-      debugPrint('Warning: Could not refresh products: $e');
+      if (kDebugMode) {
+        debugPrint('Warning: Could not refresh products: $e');
+      }
     }
   }
 

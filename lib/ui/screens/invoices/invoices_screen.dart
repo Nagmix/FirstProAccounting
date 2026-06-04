@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
@@ -30,6 +31,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   DateTimeRange? _dateRange;
 
   final _searchController = TextEditingController();
+  Timer? _searchDebounce;
   bool _isSearching = false;
 
   List<Map<String, dynamic>> _invoices = [];
@@ -47,6 +49,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -303,7 +306,12 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                 hintStyle: TextStyle(color: Colors.white60),
                 border: InputBorder.none,
               ),
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) {
+                _searchDebounce?.cancel();
+                _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                  if (mounted) setState(() {});
+                });
+              },
             )
           : const Text('الفواتير'),
       actions: [

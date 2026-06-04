@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -20,11 +21,18 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   List<Map<String, dynamic>> _filteredEmployees = [];
   bool _isLoading = true;
   String _searchQuery = ''; // Used in filter
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _loadEmployees();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadEmployees() async {
@@ -48,19 +56,23 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   }
 
   void _filterEmployees(String query) {
-    setState(() {
-      _searchQuery = query;
-      if (query.isEmpty) {
-        _filteredEmployees = _employees;
-      } else {
-        _filteredEmployees = _employees.where((e) {
-          final name = (e['name'] as String? ?? '').toLowerCase();
-          final phone = (e['phone'] as String? ?? '').toLowerCase();
-          final jobTitle = (e['job_title'] as String? ?? '').toLowerCase();
-          final q = query.toLowerCase();
-          return name.contains(q) || phone.contains(q) || jobTitle.contains(q);
-        }).toList();
-      }
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() {
+        _searchQuery = query;
+        if (query.isEmpty) {
+          _filteredEmployees = _employees;
+        } else {
+          _filteredEmployees = _employees.where((e) {
+            final name = (e['name'] as String? ?? '').toLowerCase();
+            final phone = (e['phone'] as String? ?? '').toLowerCase();
+            final jobTitle = (e['job_title'] as String? ?? '').toLowerCase();
+            final q = query.toLowerCase();
+            return name.contains(q) || phone.contains(q) || jobTitle.contains(q);
+          }).toList();
+        }
+      });
     });
   }
 

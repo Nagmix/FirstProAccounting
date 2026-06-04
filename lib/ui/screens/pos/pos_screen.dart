@@ -1,4 +1,5 @@
 import "package:flutter/scheduler.dart";
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -890,7 +891,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // Guard: product must have an ID
     if (product.id == null) {
-      debugPrint('POS: Cannot add product with null ID: ${product.nameAr}');
       if (mounted) {
         context.showErrorSnackBar('خطأ: المنتج غير صالح');
       }
@@ -907,12 +907,16 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     try {
       availableUnits = await _vm.getAvailableUnitsForProduct(product.id!) ?? [];
     } catch (e) {
-      debugPrint('Error loading units for product: $e');
+      if (kDebugMode) {
+        debugPrint('Error loading units for product: $e');
+      }
       // Fallback: add directly with base unit
       try {
         _addToCartDirect(product, null);
       } catch (e2) {
-        debugPrint('POS: Fallback add-to-cart error: $e2');
+        if (kDebugMode) {
+          debugPrint('POS: Fallback add-to-cart error: $e2');
+        }
         if (mounted) {
           context.showErrorSnackBar('خطأ في إضافة المنتج');
         }
@@ -925,7 +929,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       try {
         _addToCartDirect(product, availableUnits.isNotEmpty ? availableUnits.first : null);
       } catch (e) {
-        debugPrint('POS: Add-to-cart error: $e');
+        if (kDebugMode) {
+          debugPrint('POS: Add-to-cart error: $e');
+        }
         if (mounted) {
           context.showErrorSnackBar('خطأ في إضافة المنتج');
         }
@@ -1002,7 +1008,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // Guard: product must have an ID
     if (product.id == null) {
-      debugPrint('POS: Cannot add product with null ID');
       if (mounted) {
         context.showErrorSnackBar('خطأ: المنتج غير صالح');
       }
@@ -1031,7 +1036,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           );
         }
       } else {
-        debugPrint('Product ${product.nameAr} allowNegative=true, adding despite zero/negative stock');
+        // allowNegative=true, adding despite zero/negative stock
       }
     }
 
@@ -1043,7 +1048,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         _sheetController.animateTo(0.5,
             duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
       } catch (e) {
-        debugPrint('Sheet animation error (non-critical): $e');
+        if (kDebugMode) {
+          debugPrint('Sheet animation error (non-critical): $e');
+        }
       }
     }
   }

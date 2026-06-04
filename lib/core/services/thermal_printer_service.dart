@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../di/service_locator.dart';
@@ -46,7 +47,9 @@ class ThermalPrinterService {
       await FlutterBluePlus.stopScan();
       return devices;
     } catch (e) {
-      debugPrint('Error getting Bluetooth devices: $e');
+      if (kDebugMode) {
+        debugPrint('Error getting Bluetooth devices: $e');
+      }
       return [];
     }
   }
@@ -80,7 +83,9 @@ class ThermalPrinterService {
       _isConnected = false;
       return false;
     } catch (e) {
-      debugPrint('Error connecting to printer: $e');
+      if (kDebugMode) {
+        debugPrint('Error connecting to printer: $e');
+      }
       _isConnected = false;
       return false;
     }
@@ -96,7 +101,9 @@ class ThermalPrinterService {
       _connectedDevice = null;
       _writeCharacteristic = null;
     } catch (e) {
-      debugPrint('Error disconnecting from printer: $e');
+      if (kDebugMode) {
+        debugPrint('Error disconnecting from printer: $e');
+      }
     }
   }
 
@@ -109,7 +116,9 @@ class ThermalPrinterService {
       }
       return false;
     } catch (e) {
-      debugPrint('Error auto-connecting: $e');
+      if (kDebugMode) {
+        debugPrint('Error auto-connecting: $e');
+      }
       return false;
     }
   }
@@ -121,7 +130,9 @@ class ThermalPrinterService {
       await _writeCharacteristic!.write(bytes, withoutResponse: true);
       return true;
     } catch (e) {
-      debugPrint('Error writing to printer: $e');
+      if (kDebugMode) {
+        debugPrint('Error writing to printer: $e');
+      }
       return false;
     }
   }
@@ -239,7 +250,9 @@ class ThermalPrinterService {
 
       return await _writeBytes(bytes);
     } catch (e) {
-      debugPrint('Error printing receipt: $e');
+      if (kDebugMode) {
+        debugPrint('Error printing receipt: $e');
+      }
       return false;
     }
   }
@@ -301,7 +314,9 @@ class ThermalPrinterService {
 
       return await _writeBytes(bytes);
     } catch (e) {
-      debugPrint('Error printing inventory voucher: $e');
+      if (kDebugMode) {
+        debugPrint('Error printing inventory voucher: $e');
+      }
       return false;
     }
   }

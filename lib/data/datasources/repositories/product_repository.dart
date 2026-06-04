@@ -454,7 +454,10 @@ class ProductRepository {
       }
     });
 
-    return savedProductId!;
+    if (savedProductId == null) {
+      throw StateError('Failed to save product: database insert returned null');
+    }
+    return savedProductId;
   }
 
   /// Update an existing product with unit conversions.

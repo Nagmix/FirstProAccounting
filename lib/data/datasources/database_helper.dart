@@ -121,6 +121,10 @@ class DatabaseHelper {
       onConfigure: (db) async {
         // C-06: Enable foreign key enforcement early (before onCreate/onUpgrade)
         await db.execute('PRAGMA foreign_keys = ON');
+        // Enable WAL mode for better concurrent read/write performance
+        await db.execute('PRAGMA journal_mode = WAL');
+        // Reduce sync frequency (safe with WAL; much faster writes)
+        await db.execute('PRAGMA synchronous = NORMAL');
       },
       onOpen: (db) async {
         // Enable foreign key enforcement (M-06)

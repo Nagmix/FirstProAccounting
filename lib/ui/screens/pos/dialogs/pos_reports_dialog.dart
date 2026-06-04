@@ -31,9 +31,13 @@ Widget reportRow(BuildContext context, String label, String value, {Color? value
 
 /// Shows the X-Report (mid-shift report) bottom sheet.
 Future<void> showXReport(BuildContext context, PosViewModel vm) async {
-  if (vm.activeShift == null) return;
-
-  final shift = vm.activeShift!;
+  final shift = vm.activeShift;
+  if (shift == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('لا توجد وردية نشطة'), backgroundColor: AppColors.warning),
+    );
+    return;
+  }
   final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
   final totalSales = MoneyHelper.readMoney(shift['total_sales']);
   final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
@@ -136,9 +140,13 @@ Future<void> showXReport(BuildContext context, PosViewModel vm) async {
 
 /// Shows the Z-Report / Close Shift bottom sheet.
 Future<void> showZReport(BuildContext context, PosViewModel vm) async {
-  if (vm.activeShift == null) return;
-
-  final shift = vm.activeShift!;
+  final shift = vm.activeShift;
+  if (shift == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('لا توجد وردية نشطة'), backgroundColor: AppColors.warning),
+    );
+    return;
+  }
   final shiftId = shift['id'] as int;
   final openingAmount = MoneyHelper.readMoney(shift['opening_amount']);
   final totalSales = MoneyHelper.readMoney(shift['total_sales']);

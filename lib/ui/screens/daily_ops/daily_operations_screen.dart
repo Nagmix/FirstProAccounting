@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -196,7 +197,9 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
       final dt = DateTime.parse(isoDate);
       return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     } catch (e) {
-      debugPrint('DailyOperationsScreen._formatTime: $e');
+      if (kDebugMode) {
+        debugPrint('DailyOperationsScreen._formatTime: $e');
+      }
       return isoDate;
     }
   }

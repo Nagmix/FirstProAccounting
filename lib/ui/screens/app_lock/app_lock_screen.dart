@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -187,7 +188,9 @@ class _AppLockScreenState extends State<AppLockScreen>
       }
       return salt;
     } catch (e) {
-      debugPrint('AppLockScreen._getOrCreatePinSalt: WARNING $e');
+      if (kDebugMode) {
+        debugPrint('AppLockScreen._getOrCreatePinSalt: WARNING $e');
+      }
       return 'F1r5tPr0_Fallback_2024_Salt';
     }
   }
@@ -248,7 +251,9 @@ class _AppLockScreenState extends State<AppLockScreen>
     try {
       await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
     } catch (e) {
-      debugPrint('AppLockScreen._upgradePinHash: WARNING $e');
+      if (kDebugMode) {
+        debugPrint('AppLockScreen._upgradePinHash: WARNING $e');
+      }
     }
   }
 
@@ -257,7 +262,9 @@ class _AppLockScreenState extends State<AppLockScreen>
     try {
       return await _readSecureWithMigration('app_pin');
     } catch (e) {
-      debugPrint('AppLockScreen._getStoredPin: WARNING $e');
+      if (kDebugMode) {
+        debugPrint('AppLockScreen._getStoredPin: WARNING $e');
+      }
       return null;
     }
   }
@@ -269,7 +276,9 @@ class _AppLockScreenState extends State<AppLockScreen>
       final secureValue = await _secureStorage.read(key: key);
       if (secureValue != null) return secureValue;
     } catch (e) {
-      debugPrint('AppLockScreen._readSecureWithMigration (secureStorage): WARNING $e');
+      if (kDebugMode) {
+        debugPrint('AppLockScreen._readSecureWithMigration (secureStorage): WARNING $e');
+      }
     }
 
     // Fallback to DB for users upgrading from older versions
@@ -283,7 +292,9 @@ class _AppLockScreenState extends State<AppLockScreen>
         return dbValue;
       }
     } catch (e) {
-      debugPrint('AppLockScreen._readSecureWithMigration (dbFallback): WARNING $e');
+      if (kDebugMode) {
+        debugPrint('AppLockScreen._readSecureWithMigration (dbFallback): WARNING $e');
+      }
     }
     return null;
   }
@@ -296,7 +307,9 @@ class _AppLockScreenState extends State<AppLockScreen>
       await locator<ReferenceDataRepository>().deleteSetting('app_pin');
       await locator<ReferenceDataRepository>().deleteSetting('pin_enabled');
     } catch (e) {
-      debugPrint('AppLockScreen._savePin: WARNING $e');
+      if (kDebugMode) {
+        debugPrint('AppLockScreen._savePin: WARNING $e');
+      }
     }
   }
 
