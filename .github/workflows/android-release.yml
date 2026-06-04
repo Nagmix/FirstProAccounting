@@ -8,10 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  FLUTTER_VERSION: '3.29.3'
   JAVA_VERSION: '17'
-  # The keystore file path relative to the android/ directory
-  KEYSTORE_PATH: app/release.jks
 
 jobs:
   build:
@@ -32,13 +29,17 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: 'gradle'
 
-      # ── 3. Setup Flutter ───────────────────────────────────────────
-      - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
+      # ── 3. Setup Flutter (latest stable for Dart 3.8+ compatibility) ──
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
+
+      - name: Verify Flutter & Dart versions
+        run: |
+          flutter --version
+          dart --version
 
       # ── 4. Restore Release Keystore from Secrets ───────────────────
       - name: Decode keystore from KEYSTORE_BASE64
@@ -60,12 +61,11 @@ jobs:
           keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=app/release.jks
           EOF
+          # Remove leading whitespace added by YAML indentation
+          sed -i 's/^[[:space:]]*//' android/key.properties
           echo "key.properties generated successfully"
-          # Verify key.properties was created
-          if [ ! -f android/key.properties ]; then
-            echo "ERROR: key.properties was not created!"
-            exit 1
-          fi
+          echo "--- key.properties contents (passwords redacted) ---"
+          sed 's/=.*/=***/' android/key.properties
 
       # ── 6. Install Dependencies ────────────────────────────────────
       - name: Install Flutter dependencies
