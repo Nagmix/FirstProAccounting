@@ -9,8 +9,8 @@ plugins {
 
 // ── Release Signing Configuration ──────────────────────────────────────
 // Reads signing credentials from android/key.properties (not committed to VCS).
-// If key.properties is missing (e.g. CI without secrets), release builds fall
-// back to debug signing so the build doesn't fail.
+// In CI, key.properties is auto-generated from GitHub Secrets.
+// Release builds MUST use the release keystore — no fallback to debug signing.
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
@@ -42,6 +42,9 @@ android {
 
     signingConfigs {
         create("release") {
+            // Signing credentials come exclusively from key.properties.
+            // If the file is missing, the release build will fail with a clear error
+            // rather than silently falling back to debug signing.
             if (keystorePropertiesFile.exists()) {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
@@ -53,13 +56,10 @@ android {
 
     buildTypes {
         release {
-            // Production signing — uses the release keystore when key.properties exists.
-            // Falls back to debug signing only when key.properties is absent (e.g. CI).
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Production signing — uses the release keystore exclusively.
+            // No fallback to debug signing: if key.properties is absent,
+            // the build intentionally fails so the issue is caught early.
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             isShrinkResources = false
         }

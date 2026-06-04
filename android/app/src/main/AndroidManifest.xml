@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Required for Google Sign-In, Drive API, Firebase, Play Integrity in future -->
     <application
         android:label="الاول برو المحاسبي"
         android:name="${applicationName}"

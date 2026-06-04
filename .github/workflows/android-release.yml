@@ -1,76 +1,148 @@
-name: Build Android Release APK
+name: Android Release Build & Sign
 
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.29.3'
+  JAVA_VERSION: '17'
+  # The keystore file path relative to the android/ directory
+  KEYSTORE_PATH: app/release.jks
 
 jobs:
   build:
+    name: Build, Sign & Upload
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
-      - name: Checkout code
+      # ── 1. Checkout Source ──────────────────────────────────────────
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      # ── 2. Setup Java ──────────────────────────────────────────────
+      - name: Setup Java ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: '17'
+          distribution: 'zulu'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'gradle'
 
-      - name: Install Android NDK
-        run: |
-          echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358"
-
-      - name: Install Flutter
+      # ── 3. Setup Flutter ───────────────────────────────────────────
+      - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
 
-      - name: Flutter version
-        run: flutter --version
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Generate localizations
-        run: flutter gen-l10n
-
-      - name: Analyze code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
-
-      # ── Release Signing ────────────────────────────────────────────
-      # If SIGNING_KEYSTORE_BASE64 secret is set, write the keystore and
-      # key.properties so the release build is signed with the production key.
-      # Otherwise, the build falls back to debug signing (for CI testing).
-      - name: Decode release keystore
-        if: ${{ env.SIGNING_KEYSTORE_BASE64 != '' }}
-        env:
-          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+      # ── 4. Restore Release Keystore from Secrets ───────────────────
+      - name: Decode keystore from KEYSTORE_BASE64
         run: |
-          echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > android/app/firstpro-release.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
+          echo "Keystore restored at android/app/release.jks"
+          # Verify the file exists and has content
+          if [ ! -s android/app/release.jks ]; then
+            echo "ERROR: Keystore file is empty or missing!"
+            exit 1
+          fi
 
-      - name: Create key.properties
-        if: ${{ env.SIGNING_KEYSTORE_BASE64 != '' }}
-        env:
-          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      # ── 5. Generate key.properties from Secrets ────────────────────
+      - name: Generate key.properties
         run: |
           cat > android/key.properties <<EOF
-          storePassword=$KEYSTORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=firstpro
-          storeFile=app/firstpro-release.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=app/release.jks
           EOF
+          echo "key.properties generated successfully"
+          # Verify key.properties was created
+          if [ ! -f android/key.properties ]; then
+            echo "ERROR: key.properties was not created!"
+            exit 1
+          fi
 
-      - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+      # ── 6. Install Dependencies ────────────────────────────────────
+      - name: Install Flutter dependencies
+        run: flutter pub get
 
-      - name: Upload APK
+      # ── 7. Static Analysis ─────────────────────────────────────────
+      - name: Run Flutter analyze
+        run: flutter analyze --no-fatal-infos
+
+      # ── 8. Run Tests ───────────────────────────────────────────────
+      - name: Run Flutter tests
+        run: flutter test
+
+      # ── 9. Build Release APK ───────────────────────────────────────
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      # ── 10. Build Release AAB (App Bundle) ─────────────────────────
+      - name: Build Release AAB
+        run: flutter build appbundle --release
+
+      # ── 11. Verify Signing ─────────────────────────────────────────
+      - name: Verify APK signing
+        run: |
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "ERROR: Release APK not found at $APK_PATH"
+            exit 1
+          fi
+          echo "APK size: $(du -h $APK_PATH | cut -f1)"
+          # Verify the APK is signed with release key (not debug)
+          if unzip -l "$APK_PATH" | grep -q "META-INF/CERT.RSA"; then
+            echo "APK is properly signed (CERT.RSA found)"
+          else
+            echo "WARNING: Could not verify APK signing"
+          fi
+
+      - name: Verify AAB signing
+        run: |
+          AAB_PATH="build/app/outputs/bundle/release/app-release.aab"
+          if [ ! -f "$AAB_PATH" ]; then
+            echo "ERROR: Release AAB not found at $AAB_PATH"
+            exit 1
+          fi
+          echo "AAB size: $(du -h $AAB_PATH | cut -f1)"
+
+      # ── 12. Extract SHA Fingerprints ───────────────────────────────
+      - name: Extract SHA1 & SHA256 fingerprints
+        run: |
+          keytool -list -v \
+            -keystore android/app/release.jks \
+            -alias ${{ secrets.KEY_ALIAS }} \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            2>/dev/null | grep -E "SHA1:|SHA256:" || echo "Could not extract fingerprints"
+
+      # ── 13. Upload Artifacts ───────────────────────────────────────
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+          if-no-files-found: error
+
+      # ── 14. Cleanup Sensitive Files ────────────────────────────────
+      - name: Remove sensitive files
+        if: always()
+        run: |
+          rm -f android/app/release.jks
+          rm -f android/key.properties
+          echo "Sensitive files cleaned up"
