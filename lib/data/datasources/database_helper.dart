@@ -86,9 +86,16 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _databaseFuture ??= initDatabase();
-    _database = await _databaseFuture!;
-    return _database!;
+    try {
+      _databaseFuture ??= initDatabase();
+      _database = await _databaseFuture!;
+      return _database!;
+    } catch (e) {
+      // If init failed, clear the cached future so the next call retries.
+      // Without this, a single failed open would permanently break all DB access.
+      _databaseFuture = null;
+      rethrow;
+    }
   }
 
   /// Close the current database connection and reset the singleton instance.
@@ -120,16 +127,25 @@ class DatabaseHelper {
       password: encryptionKey,
       onConfigure: (db) async {
         // C-06: Enable foreign key enforcement early (before onCreate/onUpgrade)
-        await db.execute('PRAGMA foreign_keys = ON');
-        // Enable WAL mode for better concurrent read/write performance
-        await db.execute('PRAGMA journal_mode = WAL');
-        // Reduce sync frequency (safe with WAL; much faster writes)
-        await db.execute('PRAGMA synchronous = NORMAL');
+        try {
+          await db.execute('PRAGMA foreign_keys = ON');
+        } catch (e) {
+          if (kDebugMode) debugPrint('PRAGMA foreign_keys = ON failed: $e');
+        }
+        // NOTE: WAL mode and PRAGMA synchronous = NORMAL were removed because
+        // they can conflict with SQLCipher encryption on some devices/Android
+        // versions, causing ALL database queries to fail after app startup.
+        // WAL mode can be re-enabled after thorough testing with SQLCipher
+        // by using: await db.execute('PRAGMA journal_mode = WAL');
       },
       onOpen: (db) async {
         // Enable foreign key enforcement (M-06)
         // SQLite doesn't enforce FK constraints by default
-        await db.execute('PRAGMA foreign_keys = ON');
+        try {
+          await db.execute('PRAGMA foreign_keys = ON');
+        } catch (e) {
+          if (kDebugMode) debugPrint('PRAGMA foreign_keys = ON (onOpen) failed: $e');
+        }
       },
     );
   }
