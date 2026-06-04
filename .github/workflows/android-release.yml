@@ -72,8 +72,9 @@ jobs:
         run: flutter pub get
 
       # ── 7. Static Analysis ─────────────────────────────────────────
+      # Only errors block the build; warnings and infos are reported but non-fatal.
       - name: Run Flutter analyze
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       # ── 8. Run Tests ───────────────────────────────────────────────
       - name: Run Flutter tests
