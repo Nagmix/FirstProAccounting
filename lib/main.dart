@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/generated/app_localizations.dart';
@@ -193,12 +194,7 @@ class _FirstProAppState extends State<FirstProApp> {
   Widget _buildHome() {
     // Still showing splash screen (waiting for init + 3s timer)
     if (!_canTransition) {
-      return SplashScreen(
-        onComplete: () {
-          // Splash animation finished — but we still wait for _canTransition
-          // This callback is no longer needed since _splashTimerDone handles it
-        },
-      );
+      return const SplashScreen();
     }
 
     // Transition ready — show appropriate screen
