@@ -2,37 +2,31 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'l10n/generated/app_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
 
+import 'l10n/generated/app_localizations.dart';
 import 'core/constants/app_constants.dart';
 import 'core/di/service_locator.dart';
+import 'core/license/license_provider.dart';
+import 'core/license/license_service.dart';
+import 'core/license/license_models.dart';
 import 'core/theme/app_theme.dart';
 import 'data/datasources/database_helper.dart';
 import 'ui/navigation/app_router.dart';
 import 'ui/navigation/main_scaffold.dart';
 import 'ui/screens/app_lock/app_lock_screen.dart';
+import 'ui/screens/license/license_activation_screen.dart';
 import 'ui/screens/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await setupLocator();
 
-  // TODO: Implement user authentication/login system before app launch.
-  // Currently the app has no login screen — any user with the device can access all data.
-  // A proper login flow should:
-  // 1. Show a login screen on first launch to create an admin account.
-  // 2. Require username/password (or biometric) on subsequent launches.
-  // 3. Support multiple user roles (admin, cashier, etc.) with different permissions.
-  // 4. Store credentials securely (hash + salt) in the database or flutter_secure_storage.
-
   runApp(const FirstProApp());
 }
 
 /// Root widget for the FirstPro accounting application.
-///
-/// Shows a modern animated splash screen for 3 seconds while initializing,
-/// then transitions to either the PIN lock screen or the main scaffold.
 class FirstProApp extends StatefulWidget {
   const FirstProApp({super.key});
 
@@ -52,6 +46,9 @@ class _FirstProAppState extends State<FirstProApp> {
 
   /// Whether splash timer has elapsed (3 seconds)
   bool _splashTimerDone = false;
+
+  /// License provider instance
+  final LicenseProvider _licenseProvider = LicenseProvider();
 
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
@@ -77,15 +74,21 @@ class _FirstProAppState extends State<FirstProApp> {
     int themeMode = 2;
 
     try {
-      // Run init with a 5-second timeout to prevent getting stuck
-      final result = await _loadAppSettings().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => (null, 2), // Fallback on timeout
-      );
-      pinEnabled = result.$1;
-      themeMode = result.$2;
+      // Initialize license service alongside other inits
+      final results = await Future.wait([
+        _loadAppSettings().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => (null, 2),
+        ),
+        _licenseProvider.initialize().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () {},
+        ),
+      ]);
+
+      pinEnabled = results.$1.$1;
+      themeMode = results.$1.$2;
     } catch (e) {
-      // If anything fails, use safe defaults and continue
       if (kDebugMode) {
         debugPrint('FirstProApp._startInit: $e');
       }
@@ -101,39 +104,30 @@ class _FirstProAppState extends State<FirstProApp> {
   }
 
   /// Load PIN state and theme from secure storage and database.
-  /// Returns (pinEnabled, themeModeIndex).
   Future<(bool?, int)> _loadAppSettings() async {
     final db = locator<DatabaseHelper>();
 
-    // Load PIN enabled state from secure storage with DB fallback
     String? pinEnabled;
     try {
       pinEnabled = await _secureStorage.read(key: 'pin_enabled');
     } catch (e) {
-      // Secure storage read failed — try DB fallback
-      if (kDebugMode) {
-        debugPrint('FirstProApp: secure storage read failed: $e');
-      }
+      if (kDebugMode) debugPrint('FirstProApp: secure storage read failed: $e');
     }
 
     if (pinEnabled == null) {
       try {
         pinEnabled = await db.getSetting('pin_enabled');
         if (pinEnabled != null && pinEnabled.isNotEmpty) {
-          // Migrate to secure storage
           try {
             await _secureStorage.write(key: 'pin_enabled', value: pinEnabled);
           } catch (_) {}
           await db.deleteSetting('pin_enabled');
         }
       } catch (e) {
-        if (kDebugMode) {
-          debugPrint('FirstProApp: DB getSetting failed: $e');
-        }
+        if (kDebugMode) debugPrint('FirstProApp: DB getSetting failed: $e');
       }
     }
 
-    // Load saved theme mode
     int themeMode = 2;
     try {
       final themeModeStr = await db.getSetting('theme_mode_index');
@@ -141,9 +135,7 @@ class _FirstProAppState extends State<FirstProApp> {
         themeMode = int.tryParse(themeModeStr) ?? 2;
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('FirstProApp: theme load failed: $e');
-      }
+      if (kDebugMode) debugPrint('FirstProApp: theme load failed: $e');
     }
 
     return (pinEnabled == '1' ? true : (pinEnabled == '0' ? false : null), themeMode);
@@ -165,39 +157,43 @@ class _FirstProAppState extends State<FirstProApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      // ── Identity ────────────────────────────────────────────
-      title: AppConstants.appName,
-      debugShowCheckedModeBanner: false,
+    return ChangeNotifierProvider<LicenseProvider>.value(
+      value: _licenseProvider,
+      child: MaterialApp(
+        title: AppConstants.appName,
+        debugShowCheckedModeBanner: false,
 
-      // ── RTL / Arabic locale setup ───────────────────────────
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      locale: const Locale('ar'),
-      supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        locale: const Locale('ar'),
+        supportedLocales: AppLocalizations.supportedLocales,
 
-      // ── Theming ─────────────────────────────────────────────
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: _getThemeMode(),
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: _getThemeMode(),
 
-      // ── Navigation ──────────────────────────────────────────
-      home: _buildHome(),
-      routes: AppRouter.routes,
+        home: _buildHome(),
+        routes: AppRouter.routes,
+      ),
     );
   }
 
   Widget _buildHome() {
-    // Still showing splash screen (waiting for init + 3s timer)
     if (!_canTransition) {
       return const SplashScreen();
     }
 
-    // Transition ready — show appropriate screen
+    // Check if license is expired or revoked — show activation screen
+    final licenseState = _licenseProvider.state;
+    if (licenseState.status == LicenseStatus.expired ||
+        licenseState.status == LicenseStatus.revoked) {
+      return const LicenseActivationScreen();
+    }
+
     // PIN lock enabled → show lock screen first
     if (_pinEnabled == true) {
       return const AppLockScreen();
