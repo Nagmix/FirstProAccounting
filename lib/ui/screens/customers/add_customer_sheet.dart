@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/license/license_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
@@ -48,8 +50,44 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     super.dispose();
   }
 
+  Future<bool> _checkRecordLimit() async {
+    final canAdd = await context.read<LicenseProvider>().canAddRecord();
+    if (!canAdd && mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('تم تجاوز الحد الأقصى'),
+          content: const Text(
+            'لقد وصلت إلى الحد الأقصى للسجلات في النسخة المجانية (500 سجل). '
+            'قم بتفعيل الترخيص لإضافة سجلات غير محدودة.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إغلاق'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(context, '/license-activation');
+              },
+              child: const Text('تفعيل الترخيص'),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Check record limit
+    final canAdd = await _checkRecordLimit();
+    if (!canAdd) return;
+
     setState(() => _isSaving = true);
 
     final customer = Customer(

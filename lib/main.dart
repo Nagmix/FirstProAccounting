@@ -17,6 +17,7 @@ import 'ui/navigation/app_router.dart';
 import 'ui/navigation/main_scaffold.dart';
 import 'ui/screens/app_lock/app_lock_screen.dart';
 import 'ui/screens/license/license_activation_screen.dart';
+import 'ui/screens/license/license_expiry_screen.dart';
 import 'ui/screens/splash/splash_screen.dart';
 
 void main() async {
@@ -185,10 +186,12 @@ class _FirstProAppState extends State<FirstProApp> {
       return const SplashScreen();
     }
 
-    // Check if license is expired or revoked — show activation screen
+    // Check if license is expired or revoked
     final licenseState = _licenseProvider.state;
-    if (licenseState.status == LicenseStatus.expired ||
-        licenseState.status == LicenseStatus.revoked) {
+    if (licenseState.status == LicenseStatus.expired) {
+      return const LicenseExpiryScreen();
+    }
+    if (licenseState.status == LicenseStatus.revoked) {
       return const LicenseActivationScreen();
     }
 

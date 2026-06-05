@@ -50,6 +50,7 @@ import '../screens/bank_reconciliation/bank_reconciliation_detail_screen.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/models/account_model.dart';
 import '../screens/license/license_activation_screen.dart';
+import '../screens/license/license_status_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -106,6 +107,7 @@ class AppRouter {
         AppConstants.financialStatements: (_) => const FinancialStatementsScreen(),
         AppConstants.bankReconciliation: (_) => const BankReconciliationScreen(),
         AppConstants.licenseActivation: (_) => const LicenseActivationScreen(),
+        AppConstants.licenseStatus: (_) => const LicenseStatusScreen(),
       };
 
   static Future<T?> push<T extends Object?>(BuildContext context, String routeName, {Object? arguments}) {

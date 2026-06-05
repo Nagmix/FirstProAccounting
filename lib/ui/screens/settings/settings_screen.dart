@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/license/license_constants.dart';
+import '../../../core/license/license_models.dart';
+import '../../../core/license/license_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../currency_exchange/currency_exchange_screen.dart';
@@ -430,6 +434,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               initialLastBackupDate: _lastBackupDate,
             ),
 
+            // ── License ─────────────────────────────────────────
+            _buildLicenseSection(isDark),
+
             // ── About ──────────────────────────────────────────
             SettingsGroup(
               title: 'حول التطبيق',
@@ -695,6 +702,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  //  LICENSE SECTION
+  // ════════════════════════════════════════════════════════════════
+
+  Widget _buildLicenseSection(bool isDark) {
+    final licenseProvider = context.watch<LicenseProvider>();
+    final licenseState = licenseProvider.state;
+
+    // Build subtitle based on license status
+    String subtitle;
+    if (licenseState.status == LicenseStatus.active) {
+      subtitle = 'نشط - ${licenseState.licenseType.arabicLabel}';
+    } else if (licenseState.status == LicenseStatus.expired) {
+      subtitle = 'منتهي الصلاحية';
+    } else if (licenseState.status == LicenseStatus.revoked) {
+      subtitle = 'ملغى';
+    } else {
+      subtitle = 'مجاني - ${LicenseConstants.freeRecordLimit} سجل';
+    }
+
+    return SettingsGroup(
+      title: 'الترخيص',
+      icon: Icons.vpn_key,
+      isDark: isDark,
+      children: [
+        ActionTile(
+          icon: Icons.verified,
+          title: 'حالة الترخيص',
+          subtitle: subtitle,
+          onTap: () => Navigator.pushNamed(context, AppConstants.licenseStatus),
+          isDark: isDark,
+        ),
+      ],
     );
   }
 

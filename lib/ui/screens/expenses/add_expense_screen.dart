@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
+import '../../../core/license/license_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
@@ -719,8 +721,45 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
+  Future<bool> _checkRecordLimit() async {
+    final canAdd = await context.read<LicenseProvider>().canAddRecord();
+    if (!canAdd && mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('تم تجاوز الحد الأقصى'),
+          content: const Text(
+            'لقد وصلت إلى الحد الأقصى للسجلات في النسخة المجانية (500 سجل). '
+            'قم بتفعيل الترخيص لإضافة سجلات غير محدودة.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إغلاق'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(context, '/license-activation');
+              },
+              child: const Text('تفعيل الترخيص'),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _saveExpense() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Check record limit for new expenses
+    if (!_isEditing) {
+      final canAdd = await _checkRecordLimit();
+      if (!canAdd) return;
+    }
 
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     final exchangeRate = double.tryParse(_exchangeRateController.text) ?? _selectedExchangeRate;

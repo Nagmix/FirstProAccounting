@@ -2,12 +2,14 @@ import 'dart:io';
 import '../../../core/utils/money_helper.dart';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../data/models/inventory_cost_layer_model.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/license/license_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
 import '../../../data/datasources/repositories/product_repository.dart';
@@ -545,10 +547,49 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _openingStockController.text = totalBaseQty.toStringAsFixed(0);
   }
 
+  // ── Record limit check ──────────────────────────────────────────
+
+  Future<bool> _checkRecordLimit() async {
+    final canAdd = await context.read<LicenseProvider>().canAddRecord();
+    if (!canAdd && mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('تم تجاوز الحد الأقصى'),
+          content: const Text(
+            'لقد وصلت إلى الحد الأقصى للسجلات في النسخة المجانية (500 سجل). '
+            'قم بتفعيل الترخيص لإضافة سجلات غير محدودة.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إغلاق'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(context, '/license-activation');
+              },
+              child: const Text('تفعيل الترخيص'),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
   // ── Save ─────────────────────────────────────────────────────
 
   Future<void> _save() async {
     if (!_validateCurrentStep()) return;
+
+    // Check record limit for new products
+    if (!_isEditMode) {
+      final canAdd = await _checkRecordLimit();
+      if (!canAdd) return;
+    }
 
     // Check for duplicate item code
     final itemCode = _itemCodeController.text.trim();
