@@ -75,19 +75,17 @@ class _FirstProAppState extends State<FirstProApp> {
 
     try {
       // Initialize license service alongside other inits
-      final results = await Future.wait([
-        _loadAppSettings().timeout(
-          const Duration(seconds: 5),
-          onTimeout: () => (null, 2),
-        ),
-        _licenseProvider.initialize().timeout(
-          const Duration(seconds: 8),
-          onTimeout: () {},
-        ),
-      ]);
+      final settingsResult = await _loadAppSettings().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => (null, 2),
+      );
+      await _licenseProvider.initialize().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {},
+      );
 
-      pinEnabled = results.$1.$1;
-      themeMode = results.$1.$2;
+      pinEnabled = settingsResult.$1;
+      themeMode = settingsResult.$2;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('FirstProApp._startInit: $e');
