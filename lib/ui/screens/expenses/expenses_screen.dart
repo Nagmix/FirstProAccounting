@@ -1,18 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/expense_sub_account_repository.dart';
+import '../../../ui/widgets/empty_state.dart';
 import 'expense_account_detail_screen.dart';
 import 'add_expense_sub_account_sheet.dart';
 
-/// Expense sub-accounts management screen.
+/// Professional expense sub-accounts management screen.
 ///
-/// Lists all active expense sub-accounts from the `expense_sub_accounts`
-/// table. Each card displays the sub-account name, balance per currency
-/// (computed from the expenses table), and the expense count.
+/// Follows the same design pattern as [CustomersScreen]:
+/// - Search bar for filtering by name.
+/// - Tab bar: الكل / عليه / له.
+/// - Expense sub-account list with avatar, name, and balance.
+/// - FAB for adding a new sub-account via [AddExpenseSubAccountSheet].
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
 
@@ -20,59 +24,45 @@ class ExpensesScreen extends StatefulWidget {
   State<ExpensesScreen> createState() => _ExpensesScreenState();
 }
 
-// ── Sorting enum ─────────────────────────────────────────────────────
-enum _SortOption { name, date, balance }
+class _ExpensesScreenState extends State<ExpensesScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _searchDebounce;
 
-class _ExpensesScreenState extends State<ExpensesScreen> {
-  // ── Data ───────────────────────────────────────────────────────
   List<Map<String, dynamic>> _subAccounts = [];
   final Map<int, Map<String, double>> _balanceCache = {};
   final Map<int, int> _expenseCountCache = {};
   bool _isLoading = true;
 
-  // ── Filters & sorting ──────────────────────────────────────────
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  Timer? _searchDebounce;
-  String _currencyFilter = 'all'; // 'all' | 'YER' | 'SAR' | 'USD'
-  _SortOption _sortOption = _SortOption.name;
-
-  // ── Totals for summary header ──────────────────────────────────
-  final Map<String, double> _totalBalances = {};
-
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
+    _tabController = TabController(length: 3, vsync: this);
+    _searchController.addListener(() {
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+      });
+    });
     _loadData();
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _searchQuery = _searchController.text.trim());
-    });
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  DATA LOADING
-  // ══════════════════════════════════════════════════════════════
-
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-
     try {
       final repo = locator<ExpenseSubAccountRepository>();
       final accounts = await repo.getAllSubAccounts();
 
-      // Load balances & expense counts in parallel
       final balanceFutures = <Future<Map<String, double>>>[];
       final countFutures = <Future<int>>[];
 
@@ -85,8 +75,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       final balances = await Future.wait(balanceFutures);
       final counts = await Future.wait(countFutures);
 
-      // Aggregate totals
-      final totals = <String, double>{};
       final balanceMap = <int, Map<String, double>>{};
       final countMap = <int, int>{};
 
@@ -94,9 +82,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         final id = accounts[i]['id'] as int;
         balanceMap[id] = balances[i];
         countMap[id] = counts[i];
-        for (final entry in balances[i].entries) {
-          totals[entry.key] = (totals[entry.key] ?? 0.0) + entry.value;
-        }
       }
 
       if (mounted) {
@@ -106,8 +91,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           _balanceCache.addAll(balanceMap);
           _expenseCountCache.clear();
           _expenseCountCache.addAll(countMap);
-          _totalBalances.clear();
-          _totalBalances.addAll(totals);
           _isLoading = false;
         });
       }
@@ -124,703 +107,470 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     }
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  FILTERING & SORTING
-  // ══════════════════════════════════════════════════════════════
+  // ── Filter logic ──────────────────────────────────────────────
+  List<Map<String, dynamic>> _filterSubAccounts(int tabIndex) {
+    var filtered = _subAccounts;
 
-  List<Map<String, dynamic>> get _filteredAccounts {
-    var list = List<Map<String, dynamic>>.from(_subAccounts);
-
-    // Search filter
+    // Apply search query
     if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery;
-      list = list.where((a) {
+      final q = _searchQuery.toLowerCase();
+      filtered = filtered.where((a) {
         final name = (a['name'] as String? ?? '').toLowerCase();
         final desc = (a['description'] as String? ?? '').toLowerCase();
-        final phone = (a['phone'] as String? ?? '').toLowerCase();
-        return name.contains(q.toLowerCase()) ||
-            desc.contains(q.toLowerCase()) ||
-            phone.contains(q.toLowerCase());
+        return name.contains(q) || desc.contains(q);
       }).toList();
     }
 
-    // Currency filter: only show sub-accounts that have a balance in that currency
-    if (_currencyFilter != 'all') {
-      list = list.where((a) {
-        final id = a['id'] as int;
-        final balances = _balanceCache[id] ?? {};
-        return balances.containsKey(_currencyFilter);
-      }).toList();
+    // Apply tab filter
+    switch (tabIndex) {
+      case 1: // عليه – sub-accounts with net debit balance
+        filtered = filtered.where((a) {
+          final id = a['id'] as int;
+          final balances = _balanceCache[id] ?? {};
+          final total = balances.values.fold(0.0, (s, v) => s + v);
+          return total > 0; // positive = expense (عليه)
+        }).toList();
+        break;
+      case 2: // له – sub-accounts with net credit balance
+        filtered = filtered.where((a) {
+          final id = a['id'] as int;
+          final balances = _balanceCache[id] ?? {};
+          final total = balances.values.fold(0.0, (s, v) => s + v);
+          return total < 0; // negative = credit (له)
+        }).toList();
+        break;
+      // case 0: الكل – no additional filter
     }
 
-    // Sort
-    switch (_sortOption) {
-      case _SortOption.name:
-        list.sort((a, b) =>
-            (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''));
-      case _SortOption.date:
-        list.sort((a, b) {
-          final da = a['created_at'] as String? ?? '';
-          final db = b['created_at'] as String? ?? '';
-          return db.compareTo(da); // newest first
-        });
-      case _SortOption.balance:
-        list.sort((a, b) {
-          final idA = a['id'] as int;
-          final idB = b['id'] as int;
-          final totalA =
-              (_balanceCache[idA] ?? {}).values.fold(0.0, (s, v) => s + v);
-          final totalB =
-              (_balanceCache[idB] ?? {}).values.fold(0.0, (s, v) => s + v);
-          return totalB.compareTo(totalA); // highest first
-        });
-    }
-
-    return list;
+    return filtered;
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  HELPERS
-  // ══════════════════════════════════════════════════════════════
-
-  String _currencySymbol(String code) {
-    switch (code) {
-      case 'SAR':
-        return 'ر.س';
-      case 'USD':
-        return r'$';
-      default:
-        return 'ر.ي';
-    }
-  }
-
-  Color _currencyColor(String code) {
-    switch (code) {
-      case 'SAR':
-        return AppColors.accentGreen;
-      case 'USD':
-        return AppColors.accentOrange;
-      default:
-        return AppColors.primary;
-    }
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  BUILD
-  // ══════════════════════════════════════════════════════════════
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('حسابات المصروفات'),
-        ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _loadData,
-                child: CustomScrollView(
-                  slivers: [
-                    // ── Summary header ──────────────────────────────
-                    SliverToBoxAdapter(child: _buildSummaryHeader(theme, isDark)),
-
-                    // ── Search bar ─────────────────────────────────
-                    SliverToBoxAdapter(child: _buildSearchBar(theme, isDark)),
-
-                    // ── Filter & sort row ──────────────────────────
-                    SliverToBoxAdapter(child: _buildFilterRow(theme, isDark)),
-
-                    // ── Sub-accounts list ──────────────────────────
-                    _filteredAccounts.isEmpty
-                        ? SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: _buildEmptyState(theme),
-                          )
-                        : SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) => _buildSubAccountCard(
-                                _filteredAccounts[index],
-                                theme,
-                                isDark,
-                              ),
-                              childCount: _filteredAccounts.length,
-                            ),
-                          ),
-
-                    // Bottom padding for FAB
-                    SliverToBoxAdapter(child: SizedBox(height: 100 + bottomPadding)),
-                  ],
-                ),
-              ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showAddSubAccountSheet,
-          backgroundColor: AppColors.primary,
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  WIDGETS
-  // ══════════════════════════════════════════════════════════════
-
-  Widget _buildSummaryHeader(ThemeData theme, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.account_balance_wallet,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'إجمالي المصروفات',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.85),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatTotalBalances(),
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildSummaryChip(
-                icon: Icons.folder_open,
-                label: 'عدد الحسابات',
-                value: _subAccounts.length.toString(),
-              ),
-              const SizedBox(width: 12),
-              _buildSummaryChip(
-                icon: Icons.receipt_long,
-                label: 'عدد العمليات',
-                value: _expenseCountCache.values
-                    .fold(0, (sum, c) => sum + c)
-                    .toString(),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryChip({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: Colors.white.withOpacity(0.9)),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Formats the total balances map into a compact multi-currency display.
-  String _formatTotalBalances() {
-    if (_totalBalances.isEmpty) return CurrencyFormatter.format(0);
-    if (_totalBalances.length == 1) {
-      final entry = _totalBalances.entries.first;
-      return CurrencyFormatter.format(
-        entry.value.abs(),
-        symbol: _currencySymbol(entry.key),
-      );
-    }
-    // Multi-currency: show each on one line — but for the header we show the
-    // first currency and a count.
-    final entries = _totalBalances.entries.toList();
-    final first = entries.first;
-    return '${CurrencyFormatter.format(first.value.abs(), symbol: _currencySymbol(first.key))} +${entries.length - 1}';
-  }
-
-  // ── Search bar ────────────────────────────────────────────────
-
-  Widget _buildSearchBar(ThemeData theme, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: SearchBar(
-        controller: _searchController,
-        hintText: 'بحث عن حساب مصروف...',
-        leading: const Icon(Icons.search),
-        trailing: _searchQuery.isNotEmpty
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                ),
-              ]
-            : null,
-        padding: WidgetStateProperty.all(
-          const EdgeInsets.symmetric(horizontal: 16),
-        ),
-      ),
-    );
-  }
-
-  // ── Filter & sort row ─────────────────────────────────────────
-
-  Widget _buildFilterRow(ThemeData theme, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Row(
-        children: [
-          // Currency filter dropdown
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _currencyFilter,
-                  isExpanded: true,
-                  icon: const Icon(Icons.filter_list, size: 18),
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('كل العملات')),
-                    DropdownMenuItem(value: 'YER', child: Text('ر.ي يمني')),
-                    DropdownMenuItem(value: 'SAR', child: Text('ر.س سعودي')),
-                    DropdownMenuItem(value: 'USD', child: Text('\$ دولار')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _currencyFilter = val);
-                  },
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Sort dropdown
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<_SortOption>(
-                  value: _sortOption,
-                  isExpanded: true,
-                  icon: const Icon(Icons.sort, size: 18),
-                  items: const [
-                    DropdownMenuItem(
-                      value: _SortOption.name,
-                      child: Text('حسب الاسم'),
-                    ),
-                    DropdownMenuItem(
-                      value: _SortOption.date,
-                      child: Text('حسب التاريخ'),
-                    ),
-                    DropdownMenuItem(
-                      value: _SortOption.balance,
-                      child: Text('حسب الرصيد'),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _sortOption = val);
-                  },
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Sub-account card ──────────────────────────────────────────
-
-  Widget _buildSubAccountCard(
-    Map<String, dynamic> account,
-    ThemeData theme,
-    bool isDark,
-  ) {
-    final id = account['id'] as int;
-    final name = account['name'] as String? ?? '';
-    final description = account['description'] as String? ?? '';
-    final debtCeiling = MoneyHelper.readMoney(account['debt_ceiling']);
-    final phone = account['phone'] as String? ?? '';
-    final contactMethod = account['contact_method'] as String? ?? '';
-    final balances = _balanceCache[id] ?? {};
-    final expenseCount = _expenseCountCache[id] ?? 0;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.2)
-                : AppColors.primary.withOpacity(0.04),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _navigateToDetail(account),
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Row 1: Name + expense count ────────────────────
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.folder_open,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (description.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            description,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  // Expense count badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.receipt_long, size: 14, color: AppColors.info),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$expenseCount',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.info,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(Icons.arrow_back_ios, size: 16, color: AppColors.textHint),
-                ],
-              ),
-
-              // ── Row 2: Balances per currency ───────────────────
-              if (balances.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: balances.entries.map((entry) {
-                    final currencyCode = entry.key;
-                    final balance = entry.value;
-                    final color = _currencyColor(currencyCode);
-                    final symbol = _currencySymbol(currencyCode);
-                    final isPositive = balance >= 0;
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: (isPositive ? AppColors.error : AppColors.success)
-                            .withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: (isPositive ? AppColors.error : AppColors.success)
-                              .withOpacity(0.15),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              symbol,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: color,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            CurrencyFormatter.format(balance.abs()),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: isPositive ? AppColors.error : AppColors.success,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: (isPositive ? AppColors.error : AppColors.success)
-                                  .withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              isPositive ? 'عليه' : 'له',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: isPositive ? AppColors.error : AppColors.success,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ] else ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, size: 14, color: AppColors.textHint),
-                      const SizedBox(width: 6),
-                      Text(
-                        'لا توجد عمليات مسجلة',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textHint,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              // ── Row 3: Debt ceiling + phone ────────────────────
-              if (debtCeiling > 0 || phone.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    if (debtCeiling > 0) ...[
-                      Icon(Icons.shield, size: 14, color: AppColors.warning),
-                      const SizedBox(width: 4),
-                      Text(
-                        'سقف: ${CurrencyFormatter.format(debtCeiling)}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.warning,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                    if (debtCeiling > 0 && phone.isNotEmpty)
-                      const SizedBox(width: 16),
-                    if (phone.isNotEmpty) ...[
-                      Icon(Icons.phone, size: 14, color: AppColors.textSecondary),
-                      const SizedBox(width: 4),
-                      Text(
-                        phone,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (contactMethod == 'whatsapp') ...[
-                        const SizedBox(width: 4),
-                        Icon(Icons.chat, size: 14, color: AppColors.accentGreen),
-                      ] else if (contactMethod == 'sms') ...[
-                        const SizedBox(width: 4),
-                        Icon(Icons.sms, size: 14, color: AppColors.info),
-                      ],
-                    ],
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Empty state ───────────────────────────────────────────────
-
-  Widget _buildEmptyState(ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(Icons.account_balance_wallet,
-                  size: 40, color: AppColors.primary),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _searchQuery.isNotEmpty || _currencyFilter != 'all'
-                  ? 'لا توجد نتائج'
-                  : 'لا توجد حسابات مصروفات',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _searchQuery.isNotEmpty || _currencyFilter != 'all'
-                  ? 'جرّب تغيير معايير البحث أو التصفية'
-                  : 'أضف حساب مصروف جديد بالضغط على زر الإضافة',
-              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════
-  //  ACTIONS
-  // ══════════════════════════════════════════════════════════════
-
-  Future<void> _navigateToDetail(Map<String, dynamic> account) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ExpenseAccountDetailScreen(subAccount: account),
-      ),
-    );
-    if (!mounted) return;
-    if (result == true) _loadData();
-  }
-
+  // ── Open add-sub-account bottom sheet ─────────────────────────
   Future<void> _showAddSubAccountSheet() async {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => const AddExpenseSubAccountSheet(),
+      builder: (context) => const AddExpenseSubAccountSheet(),
     );
-    // Refresh data after sheet closes (may have added a sub-account)
-    if (mounted) _loadData();
+    _loadData();
+  }
+
+  // ── Delete sub-account ────────────────────────────────────────
+  Future<void> _deleteSubAccount(Map<String, dynamic> account) async {
+    final name = account['name'] as String? ?? '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
+        title: const Text('حذف حساب المصروف'),
+        content: Text('هل أنت متأكد من حذف حساب المصروف "$name"؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await locator<ExpenseSubAccountRepository>()
+          .deleteSubAccount(account['id'] as int);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم حذف حساب المصروف "$name"'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+      _loadData();
+    }
+  }
+
+  // ── Avatar color based on name ────────────────────────────────
+  static const List<Color> _avatarColors = [
+    Color(0xFF1A237E),
+    Color(0xFF0D47A1),
+    Color(0xFF4A148C),
+    Color(0xFFB71C1C),
+    Color(0xFFE65100),
+    Color(0xFF006064),
+    Color(0xFF1B5E20),
+    Color(0xFF33691E),
+  ];
+
+  Color _avatarColor(String name) {
+    final hash = name.codeUnits.fold<int>(0, (prev, e) => prev + e);
+    return _avatarColors[hash % _avatarColors.length];
+  }
+
+  String _currencySymbol(String code) {
+    switch (code) {
+      case 'SAR': return 'ر.س';
+      case 'USD': return r'$';
+      default: return 'ر.ي';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('حسابات المصروفات'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'بحث',
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'تصفية',
+            onPressed: () {
+              // TODO: Implement advanced filter dialog
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            tooltip: 'إضافة حساب',
+            onPressed: _showAddSubAccountSheet,
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'الكل'),
+            Tab(text: 'عليه'),
+            Tab(text: 'له'),
+          ],
+        ),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // ── Search bar ────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: SearchBar(
+                    controller: _searchController,
+                    hintText: 'بحث عن حساب مصروف...',
+                    leading: const Icon(Icons.search),
+                    padding: WidgetStateProperty.all(
+                      const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                  ),
+                ),
+
+                // ── Sub-accounts list ──────────────────────────────────
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: List.generate(3, (tabIndex) {
+                      final filtered = _filterSubAccounts(tabIndex);
+
+                      if (filtered.isEmpty) {
+                        return EmptyState(
+                          icon: tabIndex == 0
+                              ? Icons.account_balance_wallet
+                              : tabIndex == 1
+                                  ? Icons.trending_up
+                                  : Icons.trending_down,
+                          title: tabIndex == 0
+                              ? 'لا يوجد حسابات مصروفات'
+                              : tabIndex == 1
+                                  ? 'لا يوجد حسابات عليه'
+                                  : 'لا يوجد حسابات له',
+                          subtitle: tabIndex == 0
+                              ? 'قم بإضافة حسابات مصروفات جديدة لبدء إدارة مصاريفك'
+                              : 'لم يتم العثور على نتائج مطابقة',
+                          actionLabel: tabIndex == 0 ? 'إضافة حساب' : null,
+                          onAction: tabIndex == 0 ? _showAddSubAccountSheet : null,
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final account = filtered[index];
+                          return _ExpenseCard(
+                            account: account,
+                            balanceCache: _balanceCache,
+                            expenseCountCache: _expenseCountCache,
+                            avatarColor: _avatarColor(
+                                account['name'] as String? ?? ''),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ExpenseAccountDetailScreen(
+                                      subAccount: account),
+                                ),
+                              ).then((_) => _loadData());
+                            },
+                            onDelete: () => _deleteSubAccount(account),
+                          );
+                        },
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddSubAccountSheet,
+        tooltip: 'إضافة حساب مصروف',
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  EXPENSE SUB-ACCOUNT CARD – matches _CustomerCard pattern
+// ═══════════════════════════════════════════════════════════════════
+class _ExpenseCard extends StatelessWidget {
+  const _ExpenseCard({
+    required this.account,
+    required this.balanceCache,
+    required this.expenseCountCache,
+    required this.avatarColor,
+    this.onTap,
+    this.onDelete,
+  });
+
+  final Map<String, dynamic> account;
+  final Map<int, Map<String, double>> balanceCache;
+  final Map<int, int> expenseCountCache;
+  final Color avatarColor;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
+
+  String _currencySymbol(String code) {
+    switch (code) {
+      case 'SAR': return 'ر.س';
+      case 'USD': return r'$';
+      default: return 'ر.ي';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final id = account['id'] as int;
+    final name = account['name'] as String? ?? '';
+    final description = account['description'] as String? ?? '';
+    final phone = account['phone'] as String? ?? '';
+    final balances = balanceCache[id] ?? {};
+    final expenseCount = expenseCountCache[id] ?? 0;
+
+    // Compute total balance across all currencies
+    final totalBalance = balances.values.fold(0.0, (s, v) => s + v);
+    final isDebit = totalBalance > 0;
+    final isCredit = totalBalance < 0;
+
+    // Get primary currency and balance for display
+    String primaryCurrency = 'YER';
+    double primaryBalance = 0.0;
+    if (balances.isNotEmpty) {
+      primaryCurrency = balances.keys.first;
+      primaryBalance = balances[primaryCurrency] ?? 0.0;
+    }
+
+    final balanceColor = isDebit
+        ? AppColors.error
+        : isCredit
+            ? AppColors.success
+            : isLight
+                ? AppColors.textSecondary
+                : AppColors.darkTextSecondary;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        onLongPress: onDelete,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // ── Avatar ───────────────────────────────────────
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: avatarColor.withOpacity(0.15),
+                child: Text(
+                  name.isNotEmpty ? name[0] : '?',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: avatarColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // ── Name, description, phone ─────────────────────
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (description.isNotEmpty) ...[
+                          Icon(
+                            Icons.description,
+                            size: 14,
+                            color: isLight
+                                ? AppColors.textHint
+                                : AppColors.darkTextSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              description,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isLight
+                                    ? AppColors.textSecondary
+                                    : AppColors.darkTextSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ] else if (phone.isNotEmpty) ...[
+                          Icon(
+                            Icons.phone,
+                            size: 14,
+                            color: isLight
+                                ? AppColors.textHint
+                                : AppColors.darkTextSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            phone,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isLight
+                                  ? AppColors.textSecondary
+                                  : AppColors.darkTextSecondary,
+                            ),
+                          ),
+                        ] else ...[
+                          Icon(
+                            Icons.receipt_long,
+                            size: 14,
+                            color: isLight
+                                ? AppColors.textHint
+                                : AppColors.darkTextSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$expenseCount عملية',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isLight
+                                  ? AppColors.textSecondary
+                                  : AppColors.darkTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Balance ──────────────────────────────────────
+              if (balances.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${CurrencyFormatter.format(primaryBalance.abs())} ${_currencySymbol(primaryCurrency)}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: balanceColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isDebit
+                          ? 'عليه'
+                          : isCredit
+                              ? 'له'
+                              : 'متساوي',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: balanceColor,
+                      ),
+                    ),
+                    if (balances.length > 1) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '+${balances.length - 1} عملة',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: isLight
+                              ? AppColors.textHint
+                              : AppColors.darkTextSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ],
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '0.00 ${AppConstants.currency}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: isLight
+                            ? AppColors.textSecondary
+                            : AppColors.darkTextSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'لا عمليات',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isLight
+                            ? AppColors.textHint
+                            : AppColors.darkTextSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(width: 4),
+
+              // ── Arrow icon ───────────────────────────────────
+              Icon(
+                Icons.arrow_back_ios,
+                size: 16,
+                color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
