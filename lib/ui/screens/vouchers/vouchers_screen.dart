@@ -4,11 +4,12 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/voucher_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
-import 'create_voucher_screen.dart';
+import 'create_receipt_payment_voucher_screen.dart';
+import 'create_general_entry_screen.dart';
+import 'create_settlement_voucher_screen.dart';
 
 class VouchersScreen extends StatefulWidget {
   const VouchersScreen({super.key});
@@ -30,6 +31,7 @@ class _VouchersScreenState extends State<VouchersScreen>
     Tab(text: 'الكل'),
     Tab(text: 'سندات القبض'),
     Tab(text: 'سندات الصرف'),
+    Tab(text: 'قيود عامة'),
     Tab(text: 'سندات التسوية'),
     Tab(text: 'السندات المزدوجة'),
   ];
@@ -38,6 +40,7 @@ class _VouchersScreenState extends State<VouchersScreen>
     null,
     'receipt',
     'payment',
+    'settlement', // القيود العامة تُحفظ كنوع settlement
     'settlement',
     'compound',
   ];
@@ -85,11 +88,21 @@ class _VouchersScreenState extends State<VouchersScreen>
   }
 
   void _filterVouchers() {
-    final typeFilter = _tabTypes[_tabController.index];
+    final tabIndex = _tabController.index;
+    final typeFilter = _tabTypes[tabIndex];
     List<Map<String, dynamic>> result = _allVouchers;
 
     if (typeFilter != null) {
-      result = result.where((v) => v['voucher_type'] == typeFilter).toList();
+      if (tabIndex == 3) {
+        // القيود العامة: settlement vouchers without cash_box_id
+        result = result.where((v) =>
+          v['voucher_type'] == 'settlement' && v['cash_box_id'] == null).toList();
+      } else if (tabIndex == 4) {
+        // سندات التسوية: settlement vouchers with cash_box_id or all settlements
+        result = result.where((v) => v['voucher_type'] == 'settlement').toList();
+      } else {
+        result = result.where((v) => v['voucher_type'] == typeFilter).toList();
+      }
     }
 
     if (_searchQuery.isNotEmpty) {
@@ -245,13 +258,11 @@ class _VouchersScreenState extends State<VouchersScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle bar
               Container(
                 width: 40, height: 4,
                 decoration: BoxDecoration(color: AppColors.textHint, borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 16),
-              // Header
               Row(
                 children: [
                   Container(
@@ -285,7 +296,6 @@ class _VouchersScreenState extends State<VouchersScreen>
                 ],
               ),
               const SizedBox(height: 16),
-              // Details
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
@@ -302,7 +312,6 @@ class _VouchersScreenState extends State<VouchersScreen>
                   ],
                 ),
               ),
-              // Items
               if (enrichedItems.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Row(
@@ -358,7 +367,6 @@ class _VouchersScreenState extends State<VouchersScreen>
                 ),
               ],
               const SizedBox(height: 16),
-              // Close button
               SizedBox(
                 width: double.infinity,
                 child: TextButton(
@@ -386,11 +394,181 @@ class _VouchersScreenState extends State<VouchersScreen>
     );
   }
 
-  Future<void> _navigateToCreateVoucher({String? initialType}) async {
+  /// عرض قائمة الإضافة المنسدلة
+  void _showCreateMenu() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: AppColors.textHint, borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(height: 16),
+              Text('إنشاء سند جديد', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 20),
+              // سند قبض
+              _buildCreateOption(
+                theme: theme,
+                isDark: isDark,
+                icon: Icons.arrow_downward,
+                color: AppColors.success,
+                title: 'سند قبض',
+                subtitle: 'استلام نقدية من عميل/مورد/موظف',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToCreateReceiptPayment(isReceipt: true);
+                },
+              ),
+              const SizedBox(height: 8),
+              // سند صرف
+              _buildCreateOption(
+                theme: theme,
+                isDark: isDark,
+                icon: Icons.arrow_upward,
+                color: AppColors.error,
+                title: 'سند صرف',
+                subtitle: 'دفع نقدية لعميل/مورد/موظف',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToCreateReceiptPayment(isReceipt: false);
+                },
+              ),
+              const SizedBox(height: 8),
+              // قيد عام
+              _buildCreateOption(
+                theme: theme,
+                isDark: isDark,
+                icon: Icons.swap_horiz,
+                color: AppColors.accentPurple,
+                title: 'قيد عام',
+                subtitle: 'تحويل بين حسابات (من حساب إلى حساب)',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToCreateGeneralEntry();
+                },
+              ),
+              const SizedBox(height: 8),
+              // سند تسوية
+              _buildCreateOption(
+                theme: theme,
+                isDark: isDark,
+                icon: Icons.balance,
+                color: AppColors.info,
+                title: 'سند تسوية',
+                subtitle: 'تسوية بين حسابات شجرة المحاسبة',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToCreateSettlement(isCompound: false);
+                },
+              ),
+              const SizedBox(height: 8),
+              // سند تسوية مزدوج
+              _buildCreateOption(
+                theme: theme,
+                isDark: isDark,
+                icon: Icons.compare_arrows,
+                color: AppColors.accentOrange,
+                title: 'سند تسوية مزدوج',
+                subtitle: 'قيد متعدد البنود بين حسابات شجرة المحاسبة',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToCreateSettlement(isCompound: true);
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateOption({
+    required ThemeData theme,
+    required bool isDark,
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.15)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: color)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_back_ios, size: 16, color: color.withOpacity(0.5)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _navigateToCreateReceiptPayment({required bool isReceipt}) async {
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (_) => CreateVoucherScreen(initialType: initialType),
+        builder: (_) => CreateReceiptPaymentVoucherScreen(isReceipt: isReceipt),
+      ),
+    );
+    if (!mounted) return;
+    if (result == true) _loadData();
+  }
+
+  Future<void> _navigateToCreateGeneralEntry() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CreateGeneralEntryScreen(),
+      ),
+    );
+    if (!mounted) return;
+    if (result == true) _loadData();
+  }
+
+  Future<void> _navigateToCreateSettlement({required bool isCompound}) async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateSettlementVoucherScreen(isCompound: isCompound),
       ),
     );
     if (!mounted) return;
@@ -407,7 +585,7 @@ class _VouchersScreenState extends State<VouchersScreen>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('السندات'),
+          title: const Text('السندات والقيود'),
           bottom: TabBar(
             controller: _tabController,
             tabs: _tabs,
@@ -422,9 +600,7 @@ class _VouchersScreenState extends State<VouchersScreen>
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  // شريط البحث
                   _buildSearchBar(theme, isDark),
-                  // قائمة السندات
                   Expanded(
                     child: _filteredVouchers.isEmpty
                         ? _buildEmptyState(theme)
@@ -441,7 +617,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                 ],
               ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () => _navigateToCreateVoucher(),
+          onPressed: _showCreateMenu,
           backgroundColor: AppColors.primary,
           child: const Icon(Icons.add, color: Colors.white),
         ),
@@ -465,7 +641,7 @@ class _VouchersScreenState extends State<VouchersScreen>
           });
         },
         decoration: InputDecoration(
-          hintText: 'بحث في السندات...',
+          hintText: 'بحث في السندات والقيود...',
           prefixIcon: const Icon(Icons.search, size: 20),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
@@ -494,8 +670,7 @@ class _VouchersScreenState extends State<VouchersScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 80, height: 80,
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(24),
@@ -565,8 +740,7 @@ class _VouchersScreenState extends State<VouchersScreen>
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 44, height: 44,
                 decoration: BoxDecoration(
                   color: typeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -580,13 +754,8 @@ class _VouchersScreenState extends State<VouchersScreen>
                   children: [
                     Row(
                       children: [
-                        Text(
-                          number,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        Text(number, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis),
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -594,13 +763,9 @@ class _VouchersScreenState extends State<VouchersScreen>
                             color: typeColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(
-                            typeAr,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: typeColor,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          child: Text(typeAr, style: theme.textTheme.labelSmall?.copyWith(
+                            color: typeColor, fontWeight: FontWeight.w700,
+                          )),
                         ),
                       ],
                     ),
@@ -609,23 +774,13 @@ class _VouchersScreenState extends State<VouchersScreen>
                       children: [
                         Icon(Icons.calendar_today, size: 12, color: AppColors.textHint),
                         const SizedBox(width: 4),
-                        Text(
-                          date,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
+                        Text(date, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
                         if (description.isNotEmpty) ...[
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              description,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textTertiary,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
+                            child: Text(description,
+                              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
+                              overflow: TextOverflow.ellipsis, maxLines: 1),
                           ),
                         ],
                       ],

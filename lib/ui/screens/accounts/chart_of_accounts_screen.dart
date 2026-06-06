@@ -600,22 +600,90 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     );
   }
 
+  /// حساب رصيد الحساب الأب مع تحويل العملات حسب IAS 21
+  /// عند تجميع أرصدة الأبناء، نقوم بتحويل كل رصيد إلى العملة الوظيفية (YER)
+  /// ثم نعرض الرصيد المجمع بالعملة الوظيفية، مع عرض تفصيلي لكل عملة
+  Map<String, double> _calculateChildBalancesByCurrency(_AccountNode node) {
+    final balancesByCurrency = <String, double>{};
+
+    void addBalance(_AccountNode n) {
+      final acc = n.account;
+      final curr = acc.currency;
+      balancesByCurrency[curr] = (balancesByCurrency[curr] ?? 0.0) + acc.balance;
+      for (final child in n.children) {
+        addBalance(child);
+      }
+    }
+
+    // Include the parent's own balance
+    balancesByCurrency[node.account.currency] =
+        (balancesByCurrency[node.account.currency] ?? 0.0) + node.account.balance;
+
+    // Add children balances
+    for (final child in node.children) {
+      addBalance(child);
+    }
+
+    return balancesByCurrency;
+  }
+
+  /// حساب الرصيد الإجمالي بالعملة الوظيفية (YER) حسب IAS 21
+  double _calculateTotalBalanceInFunctionalCurrency(_AccountNode node) {
+    final balancesByCurrency = _calculateChildBalancesByCurrency(node);
+    double totalInYER = 0.0;
+    for (final entry in balancesByCurrency.entries) {
+      totalInYER += _convertToFunctionalCurrency(entry.value, entry.key);
+    }
+    return totalInYER;
+  }
+
+  /// بناء نص الأرصدة المتعددة العملات للعرض
+  String _buildMultiCurrencyBalanceText(Map<String, double> balancesByCurrency) {
+    if (balancesByCurrency.length <= 1) {
+      // عملة واحدة فقط
+      final entry = balancesByCurrency.entries.first;
+      return CurrencyFormatter.format(entry.value.abs(), symbol: _getCurrencySymbol(entry.key));
+    }
+    // عدة عملات: عرض كل عملة بشكل منفصل
+    final parts = <String>[];
+    final sortedCurrencies = balancesByCurrency.keys.toList()
+      ..sort((a, b) {
+        if (a == 'YER') return -1;
+        if (b == 'YER') return 1;
+        return a.compareTo(b);
+      });
+    for (final curr in sortedCurrencies) {
+      final balance = balancesByCurrency[curr]!;
+      if (balance.abs() > 0.001) {
+        parts.add('${CurrencyFormatter.formatValue(balance.abs())} ${_getCurrencySymbol(curr)}');
+      }
+    }
+    if (parts.isEmpty) return '0';
+    return parts.join(' | ');
+  }
+
   Widget _buildTreeNode(ThemeData theme, bool isDark, _AccountNode node, int depth) {
     final account = node.account;
     final color = _typeColors[account.accountType] ?? AppColors.primary;
     final hasChildren = node.children.isNotEmpty;
     final currencySymbol = account.currencySymbol;
 
-    // Calculate total balance including children (all in the same currency
-    // since parent-child relationships are per-currency in our architecture)
-    double totalBalance = account.balance;
-    void addChildBalances(_AccountNode n) {
-      for (final child in n.children) {
-        totalBalance += child.account.balance;
-        addChildBalances(child);
-      }
-    }
-    addChildBalances(node);
+    // Calculate total balance including children with IAS 21 currency conversion
+    // If all children are the same currency, show in that currency
+    // If mixed currencies, show total in functional currency (YER) with per-currency breakdown
+    final balancesByCurrency = _calculateChildBalancesByCurrency(node);
+    final totalInYER = _calculateTotalBalanceInFunctionalCurrency(node);
+    final hasMixedCurrencies = balancesByCurrency.length > 1;
+
+    // For display: use per-currency breakdown if mixed, otherwise simple total
+    final balanceDisplayText = hasMixedCurrencies
+        ? _buildMultiCurrencyBalanceText(balancesByCurrency)
+        : CurrencyFormatter.format(balancesByCurrency.values.first.abs(), symbol: currencySymbol);
+
+    // Total in functional currency for the trailing display
+    final functionalTotalDisplay = hasMixedCurrencies
+        ? CurrencyFormatter.format(totalInYER.abs(), symbol: 'ر.ي')
+        : null;
 
     if (hasChildren) {
       return ExpansionTile(
@@ -647,7 +715,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
           ],
         ),
         subtitle: Text(
-          '${node.children.length} حساب فرعي | الرصيد: ${CurrencyFormatter.format(totalBalance.abs(), symbol: currencySymbol)}',
+          '${node.children.length} حساب فرعي | الرصيد: $balanceDisplayText',
           style: theme.textTheme.bodySmall?.copyWith(
             color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
           ),
@@ -655,9 +723,16 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Show own balance with correct currency symbol
-            Text(CurrencyFormatter.format(account.balance, symbol: currencySymbol),
-                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+            // Show own balance or functional currency total if mixed
+            if (functionalTotalDisplay != null)
+              Text(functionalTotalDisplay,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  )),
+            if (functionalTotalDisplay == null)
+              Text(CurrencyFormatter.format(account.balance, symbol: currencySymbol),
+                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
             if (!account.isSystem)
               IconButton(
                 icon: const Icon(Icons.edit, size: 16),

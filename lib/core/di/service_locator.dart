@@ -20,6 +20,7 @@ import '../../data/datasources/services/report_service.dart';
 import '../../data/datasources/services/audit_service.dart';
 import '../../data/datasources/services/costing_engine_service.dart';
 import '../../data/datasources/services/bank_reconciliation_service.dart';
+import '../../data/datasources/services/voucher_auto_mapping_service.dart';
 import '../../core/viewmodels/dashboard_viewmodel.dart';
 import '../../core/viewmodels/pos_viewmodel.dart';
 import '../../core/viewmodels/invoice_viewmodel.dart';
@@ -91,6 +92,9 @@ Future<void> setupLocator() async {
   );
   locator.registerLazySingleton<BankReconciliationService>(
     () => BankReconciliationService(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<VoucherAutoMappingService>(
+    () => VoucherAutoMappingService(locator<DatabaseHelper>()),
   );
 
   // ── ViewModels (factory — fresh instance per screen, no stale state) ──

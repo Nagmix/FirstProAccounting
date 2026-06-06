@@ -38,7 +38,7 @@ import '../screens/debts/debts_screen.dart';
 import '../screens/app_lock/app_lock_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/vouchers/vouchers_screen.dart';
-import '../screens/vouchers/create_voucher_screen.dart';
+import '../screens/vouchers/create_receipt_payment_voucher_screen.dart';
 import '../screens/daily_ops/daily_operations_screen.dart';
 import '../screens/vouchers/inventory_voucher_screen.dart';
 import '../screens/reports/annual_posting_screen.dart';
@@ -98,7 +98,7 @@ class AppRouter {
         AppConstants.appLock: (_) => const AppLockScreen(),
         AppConstants.notifications: (_) => const NotificationsScreen(),
         AppConstants.vouchers: (_) => const VouchersScreen(),
-        AppConstants.newVoucher: (_) => const CreateVoucherScreen(),
+        AppConstants.newVoucher: (_) => const CreateReceiptPaymentVoucherScreen(),
         AppConstants.dailyOperations: (_) => const DailyOperationsScreen(),
         AppConstants.inventoryVoucher: (_) => const InventoryVoucherScreen(),
         '/units': (_) => const UnitsScreen(),
