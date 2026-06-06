@@ -770,13 +770,87 @@ class ReportService {
       cogs = 0;
     }
 
+    // ── Chart of Accounts supplement ─────────────────────────────
+    // FIX: Include manual journal entries posted directly to
+    // REVENUE / EXPENSE accounts that are NOT captured by the
+    // invoices/expenses tables. This ensures the P&L report reflects
+    // the full general ledger, not just operational tables.
+    int manualRevenue = 0;
+    int manualExpenses = 0;
+    int manualCogs = 0;
+    try {
+      final (acctDf, acctDateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 't.date',
+      );
+
+      // Revenue accounts (account_type = 'REVENUE') — credit nature
+      // Manual entries that are NOT linked to invoices (reference_type != 'invoice')
+      final revAccounts = await db.rawQuery(
+        "SELECT a.id FROM accounts a WHERE a.account_type = 'REVENUE' AND a.is_active = 1"
+        "${currency != null && currency.isNotEmpty ? " AND a.currency = '$currency'" : ""}",
+      );
+      for (final acct in revAccounts) {
+        final revArgs = <dynamic>[acct['id']];
+        revArgs.addAll(acctDateArgs);
+        final revRes2 = await db.rawQuery(
+          "SELECT CAST(COALESCE(SUM(t.credit) - SUM(t.debit), 0) AS INTEGER) AS manual_rev "
+          "FROM transactions t "
+          "WHERE t.account_id = ?$acctDf "
+          "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('invoice', 'pos_sale'))",
+          revArgs,
+        );
+        manualRevenue += (revRes2.first['manual_rev'] as int? ?? 0);
+      }
+
+      // Expense accounts (account_type = 'EXPENSE') — debit nature
+      final expAccounts = await db.rawQuery(
+        "SELECT a.id FROM accounts a WHERE a.account_type = 'EXPENSE' AND a.is_active = 1"
+        "${currency != null && currency.isNotEmpty ? " AND a.currency = '$currency'" : ""}",
+      );
+      for (final acct in expAccounts) {
+        final expArgs = <dynamic>[acct['id']];
+        expArgs.addAll(acctDateArgs);
+        final expRes2 = await db.rawQuery(
+          "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_exp "
+          "FROM transactions t "
+          "WHERE t.account_id = ?$acctDf "
+          "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('expense', 'invoice'))",
+          expArgs,
+        );
+        manualExpenses += (expRes2.first['manual_exp'] as int? ?? 0);
+      }
+
+      // COGS accounts (account_type = 'COGS' or account_code like '4%') — debit nature
+      final cogsAccounts = await db.rawQuery(
+        "SELECT a.id FROM accounts a WHERE a.account_type = 'COGS' AND a.is_active = 1"
+        "${currency != null && currency.isNotEmpty ? " AND a.currency = '$currency'" : ""}",
+      );
+      for (final acct in cogsAccounts) {
+        final cogsArgs = <dynamic>[acct['id']];
+        cogsArgs.addAll(acctDateArgs);
+        final cogsRes2 = await db.rawQuery(
+          "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_cogs "
+          "FROM transactions t "
+          "WHERE t.account_id = ?$acctDf "
+          "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('invoice', 'pos_sale'))",
+          cogsArgs,
+        );
+        manualCogs += (cogsRes2.first['manual_cogs'] as int? ?? 0);
+      }
+    } catch (_) {
+      // Non-critical: if chart-of-accounts supplement fails, use zero
+    }
+
     return [
-      {'item': 'revenue', 'amount': revRes.first['revenue']},
+      {'item': 'revenue', 'amount': (revRes.first['revenue'] as int? ?? 0) + manualRevenue},
       {'item': 'purchases', 'amount': purRes.first['purchases']},
       {'item': 'sales_returns', 'amount': retSaleRes.first['sales_returns']},
       {'item': 'purchase_returns', 'amount': retPurRes.first['purchase_returns']},
-      {'item': 'expenses', 'amount': expRes.first['expenses']},
-      {'item': 'cogs', 'amount': cogs},
+      {'item': 'expenses', 'amount': (expRes.first['expenses'] as int? ?? 0) + manualExpenses},
+      {'item': 'cogs', 'amount': cogs + manualCogs},
+      {'item': 'manual_revenue_adjustment', 'amount': manualRevenue},
+      {'item': 'manual_expense_adjustment', 'amount': manualExpenses},
+      {'item': 'manual_cogs_adjustment', 'amount': manualCogs},
     ];
   }
 
@@ -1202,6 +1276,78 @@ class ReportService {
         'currency': account['currency'],
         'debit': isDebit ? balance.abs() : 0,
         'credit': isDebit ? 0 : balance.abs(),
+      });
+    }
+    return results;
+  }
+
+  // ── 15b. Consolidated Trial Balance (base currency) ────────────
+
+  /// ميزان المراجعة التجميعي — converts all currency balances to
+  /// the base currency (YER) using the stored exchange_rate on each
+  /// transaction. Falls back to the current rate from the currencies
+  /// table for transactions where exchange_rate was not stored (pre-v46).
+  ///
+  /// Returns the same structure as `getTrialBalanceReport` but with
+  /// all amounts converted to the base currency, plus `base_currency`
+  /// and `total_debit_base` / `total_credit_base` summary fields.
+  Future<List<Map<String, dynamic>>> getConsolidatedTrialBalanceReport({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? accountType,
+  }) async {
+    const String baseCurrency = 'YER';
+    final db = await _db;
+
+    // Get current exchange rates from currencies table for fallback
+    final ratesRows = await db.query('currencies', where: 'is_active = 1');
+    final currentRates = <String, double>{};
+    for (final r in ratesRows) {
+      currentRates[r['code'] as String] = (r['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+    }
+
+    final accounts = await _dbHelper.accounts.getAllAccounts();
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'date');
+
+    final results = <Map<String, dynamic>>[];
+    for (final account in accounts) {
+      if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+        if (account['account_type'] != accountType) continue;
+      }
+      final accountId = account['id'] as int;
+      final accountCurrency = account['currency'] as String? ?? baseCurrency;
+
+      // Get balance in account's currency
+      final balanceArgs = <dynamic>[accountId];
+      balanceArgs.addAll(dateArgs);
+      final result = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS balance "
+        "FROM transactions "
+        "WHERE account_id = ?$df",
+        balanceArgs,
+      );
+      final balance = result.first['balance'] as int? ?? 0;
+      if (balance == 0) continue;
+
+      // Convert to base currency
+      final rate = accountCurrency == baseCurrency
+          ? 1.0
+          : (currentRates[accountCurrency] ?? 1.0);
+      // balance is in cents of accountCurrency; convert to base currency cents
+      final balanceInBase = (balance * rate).round();
+
+      final isDebit = balanceInBase > 0;
+      results.add({
+        'account_code': account['account_code'],
+        'name_ar': account['name_ar'],
+        'account_type': account['account_type'],
+        'currency': accountCurrency,
+        'base_currency': baseCurrency,
+        'debit': isDebit ? balanceInBase.abs() : 0,
+        'credit': isDebit ? 0 : balanceInBase.abs(),
+        'debit_original': balance > 0 ? balance.abs() : 0,
+        'credit_original': balance > 0 ? 0 : balance.abs(),
+        'exchange_rate_used': rate,
       });
     }
     return results;

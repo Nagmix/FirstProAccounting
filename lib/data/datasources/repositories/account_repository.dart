@@ -216,9 +216,24 @@ class AccountRepository {
             await _updateAccountBalanceWithJournal(txn, obAccountId, 0.0, openingBalance, now);
           }
         } else {
-          // Fallback: if no Opening Balance Equity account found, create single-sided entry
-          // but log a warning since this means the double-entry is incomplete
-          debugPrint('WARNING: No Opening Balance Equity account found for currency $currency. Creating single-sided entry for $nameAr.');
+          // FIX: Auto-create Opening Balance Equity account instead of
+          // creating a single-sided entry that breaks the trial balance.
+          // This ensures double-entry integrity is always maintained.
+          final currencySymbol = currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
+          final obAccountId = await txn.insert('accounts', MoneyHelper.toCentsMap({
+            'name_ar': 'رصيد افتتاحي ($currencySymbol)',
+            'name_en': 'Opening Balance Equity ($currency)',
+            'account_code': obCode,
+            'account_type': 'EQUITY',
+            'balance': 0,
+            'currency': currency,
+            'is_active': 1,
+            'is_system': 1,
+            'balance_type': 'credit',
+            'created_at': now,
+            'updated_at': now,
+          }, MoneyHelper.accountMoneyFields));
+
           if (balanceType == 'credit') {
             await txn.insert('transactions', {
               'account_id': accountId,
@@ -228,7 +243,24 @@ class AccountRepository {
               'description': 'رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': 1.0,
+              'reference_type': 'opening_balance',
             });
+            await txn.insert('transactions', {
+              'account_id': obAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(openingBalance),
+              'credit': 0,
+              'description': 'مقابل رصيد افتتاحي - $nameAr',
+              'date': now,
+              'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': 1.0,
+              'reference_type': 'opening_balance',
+            });
+            await _updateAccountBalanceWithJournal(txn, accountId, 0.0, openingBalance, now);
+            await _updateAccountBalanceWithJournal(txn, obAccountId, openingBalance, 0.0, now);
           } else {
             await txn.insert('transactions', {
               'account_id': accountId,
@@ -238,11 +270,25 @@ class AccountRepository {
               'description': 'رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': 1.0,
+              'reference_type': 'opening_balance',
             });
+            await txn.insert('transactions', {
+              'account_id': obAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(openingBalance),
+              'description': 'مقابل رصيد افتتاحي - $nameAr',
+              'date': now,
+              'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': 1.0,
+              'reference_type': 'opening_balance',
+            });
+            await _updateAccountBalanceWithJournal(txn, accountId, openingBalance, 0.0, now);
+            await _updateAccountBalanceWithJournal(txn, obAccountId, 0.0, openingBalance, now);
           }
-          await _updateAccountBalanceWithJournal(txn, accountId,
-            balanceType == 'debit' ? openingBalance : 0.0,
-            balanceType == 'credit' ? openingBalance : 0.0, now);
         }
       }
 

@@ -23,6 +23,13 @@ class EmployeeDetailScreen extends StatefulWidget {
   State<EmployeeDetailScreen> createState() => _EmployeeDetailScreenState();
 }
 
+/// Simple data class for filter tab definitions.
+class _FilterTab {
+  final String key;
+  final String label;
+  const _FilterTab({required this.key, required this.label});
+}
+
 class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _allMovements = [];

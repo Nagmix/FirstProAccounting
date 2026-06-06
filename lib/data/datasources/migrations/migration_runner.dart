@@ -5,6 +5,7 @@ import 'migration_v21_to_v30.dart';
 import 'migration_v31_to_v43.dart';
 import 'migration_v44_to_v44.dart';
 import 'migration_v44_to_v45.dart';
+import 'migration_v46.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -65,5 +66,8 @@ class MigrationRunner {
 
     // v45 — Expense sub-accounts
     if (oldVersion < 45) await MigrationV45.migrate(db);
+
+    // v46 — Accounting integrity columns for transactions table
+    if (oldVersion < 46) await MigrationV46.migrate(db);
   }
 }

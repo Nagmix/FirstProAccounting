@@ -554,9 +554,28 @@ class InvoiceRepository {
 
           final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
           if (productRow.isEmpty) continue;
-          final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-          final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
-          final itemCogs = effectiveCost * baseQuantity;
+
+          // FIX: Use CostingEngineService to properly consume FIFO/LIFO
+          // cost layers instead of always using weighted average cost.
+          final costingMethodStr = productRow.first['costing_method'] as String? ?? 'weighted_average';
+          final costingMethod = CostingMethodExt.fromValue(costingMethodStr);
+
+          double itemCogs;
+          if (costingMethod != CostingMethod.weightedAverage) {
+            // FIFO/LIFO: consume cost layers via costing engine
+            itemCogs = await _dbHelper.costingEngine.calculateCOGSInTransaction(
+              txn,
+              productId: productId,
+              baseQuantity: baseQuantity,
+              invoiceId: invoiceMap['id'] as String,
+              codeOffset: codeOffset,
+            );
+          } else {
+            // Weighted average: use average_cost / cost_price directly
+            final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+            final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+            itemCogs = effectiveCost * baseQuantity;
+          }
           if (itemCogs.abs() < 0.005) continue;
 
           // P-01: Use product-specific accounts when set, otherwise default

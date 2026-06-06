@@ -83,7 +83,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 45;
+  static const int _databaseVersion = 46;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {

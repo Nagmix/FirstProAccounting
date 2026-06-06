@@ -201,6 +201,10 @@ class DatabaseSchema {
         date TEXT NOT NULL,
         created_at TEXT NOT NULL,
         balance_type TEXT,
+        currency_code TEXT,
+        exchange_rate REAL NOT NULL DEFAULT 1.0,
+        reference_type TEXT,
+        reference_id TEXT,
         FOREIGN KEY (account_id) REFERENCES accounts (id)
       )
     ''');
@@ -602,6 +606,8 @@ class DatabaseSchema {
     await db.execute('CREATE INDEX idx_transactions_account_id ON transactions (account_id)');
     await db.execute('CREATE INDEX idx_transactions_journal_id ON transactions (journal_id)');
     await db.execute('CREATE INDEX idx_transactions_date ON transactions (date)');
+    await db.execute('CREATE INDEX idx_transactions_currency ON transactions (currency_code)');
+    await db.execute('CREATE INDEX idx_transactions_reference ON transactions (reference_type, reference_id)');
     await db.execute('CREATE INDEX idx_accounts_account_code ON accounts (account_code)');
     await db.execute('CREATE INDEX idx_accounts_account_type ON accounts (account_type)');
     await db.execute('CREATE INDEX idx_products_category_id ON products (category_id)');
