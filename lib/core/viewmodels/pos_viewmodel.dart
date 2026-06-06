@@ -109,6 +109,7 @@ class PosViewModel extends ChangeNotifier {
 
   double _capturedTotal = 0;
   double get capturedTotal => _capturedTotal;
+  // ignore: unused_field
   String _capturedCustomerName = '';
   double get capturedCustomerNameVal => 0; // unused but kept for compat
   String get capturedPaymentLabel => _capturedPaymentLabel;
@@ -424,8 +425,8 @@ class PosViewModel extends ChangeNotifier {
         _productRepo.getAllProducts(activeOnly: true),
       ]);
 
-      _categories = results[0] as List<Map<String, dynamic>>;
-      final prodMaps = results[1] as List<Map<String, dynamic>>;
+      _categories = results[0];
+      final prodMaps = results[1];
 
       _products = prodMaps
           .map((m) => Product.fromMap(m))
@@ -533,6 +534,7 @@ class PosViewModel extends ChangeNotifier {
     }
   }
 
+  // ignore: unused_element
   Future<void> _refreshProducts() async {
     try {
       final prodMaps = await _productRepo.getAllProducts(activeOnly: true);

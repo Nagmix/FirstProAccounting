@@ -3,7 +3,6 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/datasources/repositories/voucher_repository.dart';
@@ -39,6 +38,7 @@ class _CreateSettlementVoucherScreenState
   List<Map<String, dynamic>> _currencies = [];
   List<_SettlementLineItem> _lineItems = [_SettlementLineItem()];
   bool _isSaving = false;
+  // ignore: unused_field
   bool _isSearching = false;
   bool _isLoading = true;
 
@@ -83,10 +83,10 @@ class _CreateSettlementVoucherScreenState
       ]);
       if (mounted) {
         setState(() {
-          _accounts = (results[0] as List<Map<String, dynamic>>)
+          _accounts = (results[0])
               .where((a) => (a['is_active'] as int?) == 1)
               .toList();
-          _currencies = results[1] as List<Map<String, dynamic>>;
+          _currencies = results[1];
           _isLoading = false;
           _filterAccounts();
         });

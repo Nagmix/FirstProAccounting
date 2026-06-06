@@ -122,7 +122,7 @@ class LicenseStateModel {
     if (!isOfflineGrace) return true;
     if (offlineSince == null) return true;
     final graceEnd = offlineSince!.add(
-      Duration(days: LicenseConstants.offlineGraceDays),
+      const Duration(days: LicenseConstants.offlineGraceDays),
     );
     return DateTime.now().isBefore(graceEnd);
   }

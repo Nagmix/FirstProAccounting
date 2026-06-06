@@ -32,7 +32,9 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
   bool _isLoading = true;
 
   // ── Tooltip state ──────────────────────────────────────────────
+  // ignore: unused_field
   String? _tooltipText;
+  // ignore: unused_field
   Offset? _tooltipPosition;
 
   @override
@@ -358,6 +360,7 @@ class MonthlyBarChart extends StatelessWidget {
 
   const MonthlyBarChart({super.key, required this.data, required this.isDark, this.onTooltip});
 
+  // ignore: unused_field
   static const _monthNames = [
     'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
     'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
@@ -544,6 +547,7 @@ class DonutChart extends StatelessWidget {
         final d = entry.value;
         final cat = d['category'] as String? ?? '';
         final total = MoneyHelper.readMoney(d['total']);
+        // ignore: unused_local_variable
         final type = d['type'] as String? ?? '';
         final color = colors[i % colors.length];
         final totalAll = data.fold(0.0, (sum, d) => sum + (MoneyHelper.readMoney(d['total'])));

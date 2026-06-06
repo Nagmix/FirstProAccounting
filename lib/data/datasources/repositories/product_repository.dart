@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../models/product_model.dart';
-import '../../models/inventory_cost_layer_model.dart';
 import '../database_helper.dart';
 
 class ProductRepository {

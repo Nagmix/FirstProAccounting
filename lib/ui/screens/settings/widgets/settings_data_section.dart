@@ -298,7 +298,7 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
         } else {
           return; // User cancelled
         }
-      } on PlatformException catch (e) {
+      } on PlatformException catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('حدث خطأ أثناء فتح الملف')),
@@ -366,7 +366,7 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
       // 0. Verify backup file integrity before replacing the database
       try {
         final backupDb = await sqflite.openDatabase(
-          backupFilePath!,
+          backupFilePath,
           version: 1,
           readOnly: true,
         );
@@ -402,7 +402,7 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
 
       // 2. Replace the current DB file with the backup
       final dbPath = await dbHelper.getDatabasePath();
-      final backupFile = File(backupFilePath!);
+      final backupFile = File(backupFilePath);
       await backupFile.copy(dbPath);
 
       // 3. Reopen the database (will happen automatically on next access)

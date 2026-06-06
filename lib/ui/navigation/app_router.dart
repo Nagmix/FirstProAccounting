@@ -7,7 +7,6 @@ import '../screens/products/products_screen.dart';
 import '../screens/products/add_product_sheet.dart';
 import '../screens/products/units_screen.dart';
 import '../screens/invoices/invoices_screen.dart';
-import '../screens/invoices/create_invoice_screen.dart';
 import '../screens/invoices/sales_invoices_screen.dart';
 import '../screens/invoices/purchase_invoices_screen.dart';
 import '../screens/invoices/invoice_detail_screen.dart';

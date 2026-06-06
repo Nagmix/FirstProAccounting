@@ -217,6 +217,7 @@ class _CustomDateRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unused_local_variable
     final theme = Theme.of(context);
     return Row(
       children: [
@@ -297,6 +298,7 @@ class _EntityFiltersRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unused_local_variable
     final theme = Theme.of(context);
     return Wrap(
       spacing: 8,
@@ -430,6 +432,7 @@ class _AccountDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unused_local_variable
     final theme = Theme.of(context);
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: locator<AccountRepository>().getAllAccounts(),

@@ -145,6 +145,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   }
 
   /// Convert an amount from one currency to another via the functional currency.
+  // ignore: unused_element
   double _convertCurrency(double amount, String fromCurrency, String toCurrency) {
     if (fromCurrency == toCurrency) return amount;
     final amountInYER = _convertToFunctionalCurrency(amount, fromCurrency);

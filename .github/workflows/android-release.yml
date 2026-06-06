@@ -77,11 +77,9 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       # ── 8. Run Tests ───────────────────────────────────────────────
-      # Note: Existing widget test requires DI setup (GetIt) which is not
-      # initialised in the test harness. Marked continue-on-error so CI
-      # is not blocked by a pre-existing test infrastructure issue.
+      # Widget tests use mock DI setup (GetIt) so they work without
+      # platform channels (sqflite_sqlcipher, secure storage, etc.)
       - name: Run Flutter tests
-        continue-on-error: true
         run: flutter test
 
       # ── 9. Build Release APK ───────────────────────────────────────

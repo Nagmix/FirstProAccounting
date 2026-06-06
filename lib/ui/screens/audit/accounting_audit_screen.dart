@@ -18,6 +18,7 @@ class AccountingAuditScreen extends StatefulWidget {
 
 class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
   bool _isLoading = true;
+  // ignore: unused_field
   bool _hasRunAudit = false;
 
   // Audit results

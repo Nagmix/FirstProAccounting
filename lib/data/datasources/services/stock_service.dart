@@ -388,6 +388,7 @@ class StockService {
         final productId = item['product_id'] as int;
         final systemQuantity = (item['system_quantity'] as num?)?.toDouble() ?? 0.0;
         final actualQuantity = (item['actual_quantity'] as num).toDouble();
+        // ignore: unused_local_variable
         final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
 
         // حساب الفرق (variance) بين الكمية بالنظام والكمية الفعلية

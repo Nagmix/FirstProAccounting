@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/repositories/employee_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';

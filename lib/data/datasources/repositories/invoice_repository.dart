@@ -1436,6 +1436,7 @@ class InvoiceRepository {
     final isReturn = (invoice['is_return'] as int?) == 1;
     final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
     final cashBoxId = invoice['cash_box_id'] as int?;
+    // ignore: unused_local_variable
     final transportCharges = MoneyHelper.readMoney(invoice['transport_charges']);
 
     // Fetch items for stock reversal

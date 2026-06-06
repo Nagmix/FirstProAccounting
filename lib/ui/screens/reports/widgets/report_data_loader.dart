@@ -167,6 +167,7 @@ class ReportDataLoader {
     final cogs = MoneyHelper.readCalculatedMoney(dataMap['cogs']);
 
     final netSales = revenue - salesReturns;
+    // ignore: unused_local_variable
     final netPurchases = purchases - purchaseReturns;
 
     final grossProfit = netSales - cogs;

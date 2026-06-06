@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
@@ -832,6 +831,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     final customer = _freshCustomer ?? widget.customer;
     final isDebit = customer.balanceType == 'debit';
     final balanceDisplay = customer.balance.abs().toStringAsFixed(2);
+    // ignore: unused_local_variable
     final balanceColor = isDebit ? AppColors.error : (customer.balance > 0 ? AppColors.success : AppColors.textSecondary);
 
     return Scaffold(

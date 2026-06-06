@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'money_helper.dart';
 
 /// ESC/POS command generator for 80mm/58mm thermal printers.
@@ -12,8 +11,10 @@ class EscPosCommands {
   // ── ESC/POS Command Bytes ──────────────────────────────────────
   static const int _esc = 0x1B;
   static const int _gs = 0x1D;
+  // ignore: unused_field
   static const int _fs = 0x1C;
   static const int _lf = 0x0A;
+  // ignore: unused_field
   static const int _cr = 0x0D;
 
   /// Initialize printer (reset to defaults).

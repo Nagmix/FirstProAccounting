@@ -134,9 +134,9 @@ class _CreateReceiptPaymentVoucherScreenState
       if (!mounted) return;
 
       setState(() {
-        _allEntities = results[0] as List<Map<String, dynamic>>;
-        _cashBoxes = results[1] as List<Map<String, dynamic>>;
-        _currencies = results[2] as List<Map<String, dynamic>>;
+        _allEntities = results[0];
+        _cashBoxes = results[1];
+        _currencies = results[2];
         _isLoading = false;
         _applyEntityFilter();
       });

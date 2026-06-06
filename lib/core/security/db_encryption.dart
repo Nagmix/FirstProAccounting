@@ -41,7 +41,7 @@ class DbEncryption {
       // Do NOT fall back to a hardcoded key — that would expose all user data
       // to anyone who reads the source code. Instead, surface the failure.
       debugPrint('DbEncryption: secure storage unavailable: $e');
-      throw SecurityException(
+      throw const SecurityException(
         'فشل الوصول إلى مخزن المفاتيح الآمن. لا يمكن فتح قاعدة البيانات المشفرة.',
       );
     }

@@ -142,7 +142,7 @@ class BluetoothPrinterService {
       _isConnected = false;
       throw PrinterException('فشل الاتصال بالطابعة: ${e.message ?? e.toString()}');
     } on MissingPluginException catch (_) {
-      throw PrinterException('خدمة البلوتوث غير متاحة على هذا الجهاز');
+      throw const PrinterException('خدمة البلوتوث غير متاحة على هذا الجهاز');
     } catch (e) {
       _isConnected = false;
       throw PrinterException('خطأ في الاتصال: $e');
@@ -169,7 +169,7 @@ class BluetoothPrinterService {
   /// Send raw bytes to the connected printer.
   Future<void> _sendData(List<int> data) async {
     if (!_isConnected) {
-      throw PrinterException('الطابعة غير متصلة');
+      throw const PrinterException('الطابعة غير متصلة');
     }
 
     try {
@@ -179,7 +179,7 @@ class BluetoothPrinterService {
     } on PlatformException catch (e) {
       throw PrinterException('فشل إرسال البيانات: ${e.message ?? e.toString()}');
     } on MissingPluginException catch (_) {
-      throw PrinterException('حزمة البلوتوث غير متاحة');
+      throw const PrinterException('حزمة البلوتوث غير متاحة');
     } catch (e) {
       throw PrinterException('خطأ في الإرسال: $e');
     }
@@ -222,7 +222,7 @@ class BluetoothPrinterService {
     final invoice = invoices.where((i) => i['id'] == invoiceId).firstOrNull;
 
     if (invoice == null) {
-      throw PrinterException('الفاتورة غير موجودة');
+      throw const PrinterException('الفاتورة غير موجودة');
     }
 
     final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو';
@@ -361,7 +361,7 @@ class BluetoothPrinterService {
 
     // Check if we're on Android (only platform supporting BT serial)
     if (!Platform.isAndroid) {
-      throw PrinterException('البلوتوث مدعوم فقط على أندرويد');
+      throw const PrinterException('البلوتوث مدعوم فقط على أندرويد');
     }
 
     return await channel.invokeMethod(method, arguments);

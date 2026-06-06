@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
@@ -55,6 +54,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   };
 
   // ── Account code offsets per currency ─────────────────────────────
+  // ignore: unused_field
   static const Map<String, int> _codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2};
 
   @override

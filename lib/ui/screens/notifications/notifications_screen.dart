@@ -135,6 +135,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       final type = notif['type'] as String? ?? 'general';
                       final title = notif['title'] as String? ?? '';
                       final body = notif['body'] as String? ?? '';
+                      // ignore: unused_local_variable
                       final createdAt = notif['created_at'] as String? ?? '';
 
                       return ListTile(

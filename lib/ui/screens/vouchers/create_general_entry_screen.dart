@@ -3,7 +3,6 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 
@@ -79,8 +78,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
       ]);
       if (mounted) {
         setState(() {
-          _allEntities = results[0] as List<Map<String, dynamic>>;
-          _currencies = results[1] as List<Map<String, dynamic>>;
+          _allEntities = results[0];
+          _currencies = results[1];
           _isLoading = false;
         });
       }
@@ -908,7 +907,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
         child: Row(
           children: [
             if (hasEntity) ...[
-              _buildEntityTypeIcon(entity!['type'] as String? ?? '', accentColor),
+              _buildEntityTypeIcon(entity['type'] as String? ?? '', accentColor),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -916,7 +915,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      entity!['name'] as String? ?? '',
+                      entity['name'] as String? ?? '',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -926,19 +925,19 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                     Row(
                       children: [
                         Text(
-                          _getEntityTypeLabel(entity!['type'] as String? ?? ''),
+                          _getEntityTypeLabel(entity['type'] as String? ?? ''),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: AppColors.textSecondary,
                             fontSize: 11,
                           ),
                         ),
                         // Show balance for non-expense entities
-                        if (entity!['type'] != VoucherAutoMappingService.entityExpense) ...[
+                        if (entity['type'] != VoucherAutoMappingService.entityExpense) ...[
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: (entity!['balance_type'] == 'debit'
+                              color: (entity['balance_type'] == 'debit'
                                       ? AppColors.error
                                       : AppColors.success)
                                   .withOpacity(0.08),
@@ -946,14 +945,14 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                             ),
                             child: Text(
                               _formatBalance(
-                                (entity!['balance'] as num?)?.toDouble() ?? 0.0,
-                                entity!['balance_type'] as String? ?? 'debit',
-                                entity!['currency'] as String? ?? 'YER',
+                                (entity['balance'] as num?)?.toDouble() ?? 0.0,
+                                entity['balance_type'] as String? ?? 'debit',
+                                entity['currency'] as String? ?? 'YER',
                               ),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: entity!['balance_type'] == 'debit'
+                                color: entity['balance_type'] == 'debit'
                                     ? AppColors.error
                                     : AppColors.success,
                               ),

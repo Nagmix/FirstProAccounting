@@ -17,6 +17,7 @@ import '../utils/money_helper.dart';
 class InvoiceViewModel extends ChangeNotifier {
   final CustomerRepository _customerRepo = locator<CustomerRepository>();
   final SupplierRepository _supplierRepo = locator<SupplierRepository>();
+  // ignore: unused_field
   final ProductRepository _productRepo = locator<ProductRepository>();
   final ReferenceDataRepository _referenceDataRepo = locator<ReferenceDataRepository>();
   final CashBoxService _cashBoxService = locator<CashBoxService>();

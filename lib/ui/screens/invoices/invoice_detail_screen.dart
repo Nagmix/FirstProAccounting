@@ -32,6 +32,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   List<Map<String, dynamic>> _items = [];
   String _entityName = '—';
   double _entityBalance = 0.0;
+  // ignore: unused_field
   String _entityBalanceType = 'credit';
   String _cashBoxName = '—';
   bool _isLoading = true;
@@ -185,6 +186,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   // ── Header section ───────────────────────────────────────────────
   Widget _buildHeaderSection() {
+    // ignore: unused_local_variable
     final type = _invoice?['type'] as String? ?? '';
     final isReturn = (_invoice?['is_return'] as int?) == 1;
     final status = _invoice?['status'] as String? ?? 'pending';

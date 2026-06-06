@@ -345,6 +345,7 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                             final p = products[idx];
                             final pid = p['id'] as int;
                             final systemQty = (p['current_stock'] as num?)?.toDouble() ?? 0.0;
+                            // ignore: unused_local_variable
                             final costPrice = MoneyHelper.readMoney(p['cost_price']);
 
                             return Padding(
@@ -396,9 +397,11 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                   ElevatedButton(
                     onPressed: () async {
                       // Create voucher
+                      // ignore: unused_local_variable
                       final now = DateTime.now().toIso8601String();
                       final voucherNumber = 'IV-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
 
+                      // ignore: unused_local_variable
                       double totalDiffValue = 0.0;
                       final List<Map<String, dynamic>> items = [];
 

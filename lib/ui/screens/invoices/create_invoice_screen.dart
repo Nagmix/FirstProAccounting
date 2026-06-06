@@ -8,7 +8,6 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/license/license_provider.dart';
 import '../../../core/theme/app_colors.dart';
@@ -18,10 +17,6 @@ import '../../../core/utils/invoice_pdf_generator.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/viewmodels/invoice_viewmodel.dart';
-import '../../../data/datasources/repositories/customer_repository.dart';
-import '../../../data/datasources/repositories/supplier_repository.dart';
-import '../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/repositories/invoice_repository.dart';
 import '../../../data/datasources/services/shift_service.dart';
 import '../../../core/services/bluetooth_printer_service.dart';

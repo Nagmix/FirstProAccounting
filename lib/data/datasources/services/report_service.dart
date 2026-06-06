@@ -395,6 +395,7 @@ class ReportService {
     final db = await _db;
     final yearStr = year.toString();
     List<dynamic> args = [yearStr];
+    // ignore: unused_local_variable
     String currencyFilter = '';
     if (currency != null && currency.isNotEmpty) {
       currencyFilter = ' AND i.currency = ?';

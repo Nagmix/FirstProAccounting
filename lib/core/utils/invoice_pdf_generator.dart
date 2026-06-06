@@ -40,7 +40,7 @@ class InvoicePdfGenerator {
     final hasCustomBusiness = businessName != null && businessName.trim().isNotEmpty;
 
     // Default app branding when user hasn't configured
-    final String headerName = hasCustomBusiness ? businessName! : 'الأول برو المحاسبي';
+    final String headerName = hasCustomBusiness ? businessName : 'الأول برو المحاسبي';
     final String headerPhone = (businessPhone != null && businessPhone.trim().isNotEmpty) ? businessPhone : '';
     final String headerEmail = (businessEmail != null && businessEmail.trim().isNotEmpty) ? businessEmail : '';
     final String headerAddress = (businessAddress != null && businessAddress.trim().isNotEmpty) ? businessAddress : '';

@@ -4,7 +4,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/repositories/expense_sub_account_repository.dart';
 import '../../../ui/widgets/empty_state.dart';
 import 'expense_account_detail_screen.dart';
@@ -210,6 +209,7 @@ class _ExpensesScreenState extends State<ExpensesScreen>
     return _avatarColors[hash % _avatarColors.length];
   }
 
+  // ignore: unused_element
   String _currencySymbol(String code) {
     switch (code) {
       case 'SAR': return 'ر.س';

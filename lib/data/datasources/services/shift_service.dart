@@ -482,6 +482,7 @@ class ShiftService {
           for (final item in invoiceItems) {
             final productId = (item['product_id'] as num?)?.toInt();
             final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            // ignore: unused_local_variable
             final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
             if (productId == null) continue;
 
@@ -594,6 +595,7 @@ class ShiftService {
           for (final item in invoiceItems) {
             final productId = (item['product_id'] as num?)?.toInt();
             final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+            // ignore: unused_local_variable
             final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
             if (productId == null) continue;
 

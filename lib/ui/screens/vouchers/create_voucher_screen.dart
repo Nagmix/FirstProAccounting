@@ -3,8 +3,6 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
 import '../../../data/datasources/repositories/voucher_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
@@ -32,7 +30,9 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
   List<Map<String, dynamic>> _cashBoxes = [];
   List<_VoucherLineItem> _lineItems = [_VoucherLineItem()];
   bool _isSaving = false;
+  // ignore: unused_field
   List<Map<String, dynamic>> _filteredAccounts = [];
+  // ignore: unused_field
   bool _isSearching = false;
 
   static const _voucherTypes = [

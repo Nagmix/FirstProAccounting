@@ -378,6 +378,7 @@ class MigrationV31ToV43 {
         // B-01: Create Bank Charges Expense account (5250) for each currency
         // This separates bank charges from transport charges (5200)
         final currencies = ['YER', 'SAR', 'USD'];
+        // ignore: unused_local_variable
         final currencySymbols = {'YER': 'ر.ي', 'SAR': 'ر.س', 'USD': r'$'};
         for (int i = 0; i < currencies.length; i++) {
           final currency = currencies[i];
@@ -645,6 +646,7 @@ class MigrationV31ToV43 {
   static Future<void> migrateV34RealToInteger(Database db) async {
     // Helper: money columns use CAST(ROUND(col*100) AS INTEGER)
     // Non-money REAL columns (quantities, rates) copy as-is.
+    // ignore: unused_local_variable
     const m = 'CAST(ROUND(col*100) AS INTEGER)'; // just a comment reminder
 
     await db.transaction((txn) async {

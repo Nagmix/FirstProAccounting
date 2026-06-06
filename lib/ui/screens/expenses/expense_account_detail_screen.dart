@@ -301,6 +301,7 @@ class _ExpenseAccountDetailScreenState
   // ── Header Card ─────────────────────────────────────────────────
 
   Widget _buildHeaderCard(ThemeData theme, bool isLight) {
+    // ignore: unused_local_variable
     final subAccount = _freshSubAccount ?? widget.subAccount;
 
     return Container(

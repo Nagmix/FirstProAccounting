@@ -161,6 +161,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   String _currencySymbol(String code) =>
       _currencyInfo[code]?['symbol'] ?? code;
 
+  // ignore: unused_element
   String _formatWithSymbol(double amount, String currency) {
     final symbol = _currencySymbol(currency);
     return '${CurrencyFormatter.formatValue(amount)} $symbol';

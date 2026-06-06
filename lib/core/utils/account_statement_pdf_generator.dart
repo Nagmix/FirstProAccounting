@@ -59,7 +59,7 @@ class AccountStatementPdfGenerator {
     final logoPath = await locator<ReferenceDataRepository>().getSetting('business_logo_path');
 
     final hasCustomBusiness = businessName != null && businessName.trim().isNotEmpty;
-    final String headerName = hasCustomBusiness ? businessName! : 'الأول برو المحاسبي';
+    final String headerName = hasCustomBusiness ? businessName : 'الأول برو المحاسبي';
     final String headerPhone = (businessPhone != null && businessPhone.trim().isNotEmpty) ? businessPhone : '';
     final String headerAddress = (businessAddress != null && businessAddress.trim().isNotEmpty) ? businessAddress : '';
 

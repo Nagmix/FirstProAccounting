@@ -56,6 +56,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
     }
   }
 
+  // ignore: unused_element
   String _accountTypeAr(String type) {
     switch (type) {
       case 'ASSET': return 'أصول';
@@ -113,6 +114,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
         final totalCreditRaw = MoneyHelper.readCalculatedMoney(row['total_credit']);
         final netBalance = totalDebitRaw - totalCreditRaw;
         final accountType = row['account_type'] as String? ?? '';
+        // ignore: unused_local_variable
         final balanceType = row['balance_type'] as String? ?? 'credit';
 
         if (MoneyHelper.isZero(netBalance)) continue;

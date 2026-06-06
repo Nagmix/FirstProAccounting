@@ -124,7 +124,6 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 

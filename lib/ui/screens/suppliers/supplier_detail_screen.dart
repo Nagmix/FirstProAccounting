@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -375,7 +374,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
     final amountController = TextEditingController();
     final descriptionController = TextEditingController();
     int? selectedCashBoxId;
-    String selectedCurrency = supplier.currency ?? 'YER';
+    String selectedCurrency = supplier.currency;
     bool isSaving = false;
 
     await showDialog(
@@ -748,7 +747,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
         netBalance: _computeNetPosition(),
         balanceLabel: Supplier.getDynamicBalanceLabel(_computeNetPosition(), supplier.balanceType),
         phone: supplier.phone,
-        currency: supplier.currency ?? 'YER',
+        currency: supplier.currency,
       );
     } catch (e) {
       if (mounted) {
@@ -794,7 +793,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
         'name': supplier.name,
         'balance': _computeNetPosition().abs(),
         'balance_type': _computeNetPosition() >= 0 ? 'credit' : 'debit',
-        'currency': supplier.currency ?? 'YER',
+        'currency': supplier.currency,
       });
 
       if (mounted) {
@@ -906,6 +905,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    // ignore: unused_local_variable
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final netPosition = _computeNetPosition();
     final balanceLabel = Supplier.getDynamicBalanceLabel(
@@ -1912,6 +1912,7 @@ class _BottomStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unused_local_variable
     final theme = Theme.of(context);
 
     return Container(

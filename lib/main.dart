@@ -9,7 +9,6 @@ import 'l10n/generated/app_localizations.dart';
 import 'core/constants/app_constants.dart';
 import 'core/di/service_locator.dart';
 import 'core/license/license_provider.dart';
-import 'core/license/license_service.dart';
 import 'core/license/license_models.dart';
 import 'core/theme/app_theme.dart';
 import 'data/datasources/database_helper.dart';
