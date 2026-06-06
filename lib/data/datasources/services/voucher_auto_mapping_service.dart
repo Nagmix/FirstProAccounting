@@ -47,68 +47,86 @@ class VoucherAutoMappingService {
   // ══════════════════════════════════════════════════════════════
 
   /// جلب جميع الكيانات النشطة من جميع الأنواع
+  /// كل جدول يتم جلبه بشكل مستقل مع معالجة الأخطاء
+  /// بحيث لا يفشل التحميل بالكامل إذا لم يكن جدول موجوداً
   Future<List<Map<String, dynamic>>> getAllEntities() async {
     final db = await _db;
     final entities = <Map<String, dynamic>>[];
 
     // العملاء
-    final customers = await db.query('customers',
-        where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-    for (final c in customers) {
-      entities.add({
-        'id': c['id'],
-        'name': c['name'] ?? '',
-        'type': entityCustomer,
-        'currency': c['currency'] ?? 'YER',
-        'balance': MoneyHelper.readMoney(c['balance']),
-        'balance_type': c['balance_type'] ?? 'debit',
-        'account_id': c['account_id'],
-      });
+    try {
+      final customers = await db.query('customers',
+          where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+      for (final c in customers) {
+        entities.add({
+          'id': c['id'],
+          'name': c['name'] ?? '',
+          'type': entityCustomer,
+          'currency': c['currency'] ?? 'YER',
+          'balance': MoneyHelper.readMoney(c['balance']),
+          'balance_type': c['balance_type'] ?? 'debit',
+          'account_id': c['account_id'],
+        });
+      }
+    } catch (_) {
+      // جدول العملاء غير موجود أو هيكل مختلف
     }
 
     // الموردين
-    final suppliers = await db.query('suppliers',
-        where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-    for (final s in suppliers) {
-      entities.add({
-        'id': s['id'],
-        'name': s['name'] ?? '',
-        'type': entitySupplier,
-        'currency': s['currency'] ?? 'YER',
-        'balance': MoneyHelper.readMoney(s['balance']),
-        'balance_type': s['balance_type'] ?? 'credit',
-        'account_id': s['account_id'],
-      });
+    try {
+      final suppliers = await db.query('suppliers',
+          where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+      for (final s in suppliers) {
+        entities.add({
+          'id': s['id'],
+          'name': s['name'] ?? '',
+          'type': entitySupplier,
+          'currency': s['currency'] ?? 'YER',
+          'balance': MoneyHelper.readMoney(s['balance']),
+          'balance_type': s['balance_type'] ?? 'credit',
+          'account_id': s['account_id'],
+        });
+      }
+    } catch (_) {
+      // جدول الموردين غير موجود أو هيكل مختلف
     }
 
     // الموظفين
-    final employees = await db.query('employees',
-        where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-    for (final e in employees) {
-      entities.add({
-        'id': e['id'],
-        'name': e['name'] ?? '',
-        'type': entityEmployee,
-        'currency': e['currency'] ?? 'YER',
-        'balance': MoneyHelper.readMoney(e['balance']),
-        'balance_type': e['balance_type'] ?? 'credit',
-        'account_id': e['account_id'],
-      });
+    try {
+      final employees = await db.query('employees',
+          where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+      for (final e in employees) {
+        entities.add({
+          'id': e['id'],
+          'name': e['name'] ?? '',
+          'type': entityEmployee,
+          'currency': e['currency'] ?? 'YER',
+          'balance': MoneyHelper.readMoney(e['balance']),
+          'balance_type': e['balance_type'] ?? 'credit',
+          'account_id': e['account_id'],
+        });
+      }
+    } catch (_) {
+      // جدول الموظفين غير موجود أو هيكل مختلف
     }
 
     // حسابات المصروفات الفرعية
-    final expenseSubAccounts = await db.query('expense_sub_accounts',
-        where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-    for (final e in expenseSubAccounts) {
-      entities.add({
-        'id': e['id'],
-        'name': e['name'] ?? '',
-        'type': entityExpense,
-        'currency': '', // المصروفات ليس لها عملة محددة - تحدد عند المعاملة
-        'balance': 0.0,
-        'balance_type': 'debit',
-        'account_id': null, // سيتم الربط بالعملة
-      });
+    try {
+      final expenseSubAccounts = await db.query('expense_sub_accounts',
+          where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+      for (final e in expenseSubAccounts) {
+        entities.add({
+          'id': e['id'],
+          'name': e['name'] ?? '',
+          'type': entityExpense,
+          'currency': '',
+          'balance': 0.0,
+          'balance_type': 'debit',
+          'account_id': null,
+        });
+      }
+    } catch (_) {
+      // جدول المصروفات الفرعية غير موجود أو هيكل مختلف
     }
 
     return entities;
@@ -119,70 +137,74 @@ class VoucherAutoMappingService {
     final db = await _db;
     final entities = <Map<String, dynamic>>[];
 
-    switch (type) {
-      case entityCustomer:
-        final rows = await db.query('customers',
-            where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-        for (final c in rows) {
-          entities.add({
-            'id': c['id'],
-            'name': c['name'] ?? '',
-            'type': entityCustomer,
-            'currency': c['currency'] ?? 'YER',
-            'balance': MoneyHelper.readMoney(c['balance']),
-            'balance_type': c['balance_type'] ?? 'debit',
-            'account_id': c['account_id'],
-          });
-        }
-        break;
+    try {
+      switch (type) {
+        case entityCustomer:
+          final rows = await db.query('customers',
+              where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+          for (final c in rows) {
+            entities.add({
+              'id': c['id'],
+              'name': c['name'] ?? '',
+              'type': entityCustomer,
+              'currency': c['currency'] ?? 'YER',
+              'balance': MoneyHelper.readMoney(c['balance']),
+              'balance_type': c['balance_type'] ?? 'debit',
+              'account_id': c['account_id'],
+            });
+          }
+          break;
 
-      case entitySupplier:
-        final rows = await db.query('suppliers',
-            where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-        for (final s in rows) {
-          entities.add({
-            'id': s['id'],
-            'name': s['name'] ?? '',
-            'type': entitySupplier,
-            'currency': s['currency'] ?? 'YER',
-            'balance': MoneyHelper.readMoney(s['balance']),
-            'balance_type': s['balance_type'] ?? 'credit',
-            'account_id': s['account_id'],
-          });
-        }
-        break;
+        case entitySupplier:
+          final rows = await db.query('suppliers',
+              where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+          for (final s in rows) {
+            entities.add({
+              'id': s['id'],
+              'name': s['name'] ?? '',
+              'type': entitySupplier,
+              'currency': s['currency'] ?? 'YER',
+              'balance': MoneyHelper.readMoney(s['balance']),
+              'balance_type': s['balance_type'] ?? 'credit',
+              'account_id': s['account_id'],
+            });
+          }
+          break;
 
-      case entityEmployee:
-        final rows = await db.query('employees',
-            where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-        for (final e in rows) {
-          entities.add({
-            'id': e['id'],
-            'name': e['name'] ?? '',
-            'type': entityEmployee,
-            'currency': e['currency'] ?? 'YER',
-            'balance': MoneyHelper.readMoney(e['balance']),
-            'balance_type': e['balance_type'] ?? 'credit',
-            'account_id': e['account_id'],
-          });
-        }
-        break;
+        case entityEmployee:
+          final rows = await db.query('employees',
+              where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+          for (final e in rows) {
+            entities.add({
+              'id': e['id'],
+              'name': e['name'] ?? '',
+              'type': entityEmployee,
+              'currency': e['currency'] ?? 'YER',
+              'balance': MoneyHelper.readMoney(e['balance']),
+              'balance_type': e['balance_type'] ?? 'credit',
+              'account_id': e['account_id'],
+            });
+          }
+          break;
 
-      case entityExpense:
-        final rows = await db.query('expense_sub_accounts',
-            where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
-        for (final e in rows) {
-          entities.add({
-            'id': e['id'],
-            'name': e['name'] ?? '',
-            'type': entityExpense,
-            'currency': '',
-            'balance': 0.0,
-            'balance_type': 'debit',
-            'account_id': null,
-          });
-        }
-        break;
+        case entityExpense:
+          final rows = await db.query('expense_sub_accounts',
+              where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+          for (final e in rows) {
+            entities.add({
+              'id': e['id'],
+              'name': e['name'] ?? '',
+              'type': entityExpense,
+              'currency': '',
+              'balance': 0.0,
+              'balance_type': 'debit',
+              'account_id': null,
+            });
+          }
+          break;
+      }
+    } catch (_) {
+      // الجدول غير موجود أو هيكل مختلف
     }
 
     return entities;

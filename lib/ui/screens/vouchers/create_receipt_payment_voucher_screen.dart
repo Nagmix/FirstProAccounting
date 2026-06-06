@@ -4,6 +4,7 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 
@@ -62,12 +63,17 @@ class _CreateReceiptPaymentVoucherScreenState
     {'key': VoucherAutoMappingService.entityExpense, 'label': 'مصروفات'},
   ];
 
-  // ── Currency map ─────────────────────────────────────────────────
-  static const _currencySymbols = {
-    'YER': 'ر.ي',
-    'SAR': 'ر.س',
-    'USD': '\$',
-  };
+  // ── Currency data (loaded from DB) ───────────────────────────────
+  List<Map<String, dynamic>> _currencies = [];
+
+  /// جلب رمز العملة من القائمة الديناميكية
+  String _getCurrencySymbol(String code) {
+    final currency = _currencies.firstWhere(
+      (c) => c['code'] == code,
+      orElse: () => <String, dynamic>{'symbol': code},
+    );
+    return currency['symbol'] as String? ?? code;
+  }
 
   // ════════════════════════════════════════════════════════════════
   //  Lifecycle
@@ -117,15 +123,20 @@ class _CreateReceiptPaymentVoucherScreenState
     try {
       final autoMappingService = locator<VoucherAutoMappingService>();
       final cashBoxService = locator<CashBoxService>();
+      final refRepo = locator<ReferenceDataRepository>();
 
-      final entities = await autoMappingService.getAllEntities();
-      final cashBoxes = await cashBoxService.getAllCashBoxes();
+      final results = await Future.wait([
+        autoMappingService.getAllEntities(),
+        cashBoxService.getAllCashBoxes(),
+        refRepo.getAllCurrencies(),
+      ]);
 
       if (!mounted) return;
 
       setState(() {
-        _allEntities = entities;
-        _cashBoxes = cashBoxes;
+        _allEntities = results[0] as List<Map<String, dynamic>>;
+        _cashBoxes = results[1] as List<Map<String, dynamic>>;
+        _currencies = results[2] as List<Map<String, dynamic>>;
         _isLoading = false;
         _applyEntityFilter();
       });
@@ -342,13 +353,13 @@ class _CreateReceiptPaymentVoucherScreenState
     final amount = MoneyHelper.readMoney(balance);
     if (amount == 0.0) return '';
     final typeLabel = balanceType == 'debit' ? 'عليه' : 'له';
-    final symbol = _currencySymbols[_selectedCurrency] ?? '';
+    final symbol = _getCurrencySymbol(_selectedCurrency);
     return '$typeLabel ${CurrencyFormatter.formatValue(amount)} $symbol';
   }
 
   String _formatCashBoxBalance(Map<String, dynamic> cb) {
     final balance = MoneyHelper.readMoney(cb['balance']);
-    final symbol = _currencySymbols[cb['currency'] as String? ?? 'YER'] ?? '';
+    final symbol = _getCurrencySymbol(cb['currency'] as String? ?? 'YER');
     return '${CurrencyFormatter.formatValue(balance)} $symbol';
   }
 
@@ -977,7 +988,7 @@ class _CreateReceiptPaymentVoucherScreenState
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'لا يوجد صندوق بالعملة المحددة (${_currencySymbols[_selectedCurrency] ?? _selectedCurrency})',
+                'لا يوجد صندوق بالعملة المحددة (${_getCurrencySymbol(_selectedCurrency)})',
                 style: TextStyle(
                   fontSize: 13,
                   color: isDark
@@ -1204,63 +1215,42 @@ class _CreateReceiptPaymentVoucherScreenState
   // ════════════════════════════════════════════════════════════════
 
   Widget _buildCurrencySelector(ThemeData theme, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurfaceVariant
-            : AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          _buildCurrencySegment('YER', 'ر.ي', theme, isDark),
-          _buildCurrencySegment('SAR', 'ر.س', theme, isDark),
-          _buildCurrencySegment('USD', '\$', theme, isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCurrencySegment(
-    String code,
-    String symbol,
-    ThemeData theme,
-    bool isDark,
-  ) {
-    final isSelected = _selectedCurrency == code;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _onCurrencyChanged(code),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? _typeColor.withOpacity(0.15)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: isSelected
-                ? Border.all(color: _typeColor, width: 2)
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              '$code ($symbol)',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? _typeColor
-                    : isDark
-                        ? AppColors.darkTextSecondary
-                        : AppColors.textSecondary,
-              ),
-            ),
-          ),
+    // قائمة منسدلة احترافية مع العملات من قاعدة البيانات
+    return DropdownButtonFormField<String>(
+      value: _currencies.any((c) => c['code'] == _selectedCurrency) ? _selectedCurrency : null,
+      decoration: InputDecoration(
+        labelText: 'العملة',
+        prefixIcon: Icon(Icons.currency_exchange, size: 20, color: _typeColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        isDense: true,
       ),
+      items: _currencies.map((c) {
+        final code = c['code'] as String? ?? '';
+        final symbol = c['symbol'] as String? ?? code;
+        final nameAr = c['name_ar'] as String? ?? code;
+        return DropdownMenuItem<String>(
+          value: code,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(symbol, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(nameAr, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+      onChanged: (val) {
+        if (val != null) _onCurrencyChanged(val);
+      },
+      isExpanded: true,
+      icon: Icon(Icons.arrow_drop_down, color: _typeColor),
     );
   }
 
@@ -1269,7 +1259,7 @@ class _CreateReceiptPaymentVoucherScreenState
   // ════════════════════════════════════════════════════════════════
 
   Widget _buildAmountField(ThemeData theme, bool isDark) {
-    final symbol = _currencySymbols[_selectedCurrency] ?? '';
+    final symbol = _getCurrencySymbol(_selectedCurrency);
 
     return TextFormField(
       controller: _amountController,

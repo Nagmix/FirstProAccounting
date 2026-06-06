@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/datasources/repositories/voucher_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/account_model.dart';
@@ -35,9 +36,11 @@ class _CreateSettlementVoucherScreenState
   String _selectedCurrency = 'YER';
   List<Map<String, dynamic>> _accounts = [];
   List<Map<String, dynamic>> _filteredAccounts = [];
+  List<Map<String, dynamic>> _currencies = [];
   List<_SettlementLineItem> _lineItems = [_SettlementLineItem()];
   bool _isSaving = false;
   bool _isSearching = false;
+  bool _isLoading = true;
 
   // حقول التسوية البسيطة
   int? _debitAccountId;
@@ -50,12 +53,6 @@ class _CreateSettlementVoucherScreenState
   String get _subtitle => widget.isCompound
       ? 'قيد متعدد البنود بين حسابات شجرة المحاسبة'
       : 'قيد تسوية بسيط بين حسابين في شجرة المحاسبة';
-
-  static const _currencyOptions = [
-    {'code': 'YER', 'label': 'ر.ي'},
-    {'code': 'SAR', 'label': 'ر.س'},
-    {'code': 'USD', 'label': '\$'},
-  ];
 
   @override
   void initState() {
@@ -77,12 +74,28 @@ class _CreateSettlementVoucherScreenState
   }
 
   Future<void> _loadData() async {
-    final accounts = await locator<AccountRepository>().getAllAccounts();
-    if (mounted) {
-      setState(() {
-        _accounts = accounts.where((a) => (a['is_active'] as int?) == 1).toList();
-        _filterAccounts();
-      });
+    try {
+      final accountRepo = locator<AccountRepository>();
+      final refRepo = locator<ReferenceDataRepository>();
+      final results = await Future.wait([
+        accountRepo.getAllAccounts(),
+        refRepo.getAllCurrencies(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _accounts = (results[0] as List<Map<String, dynamic>>)
+              .where((a) => (a['is_active'] as int?) == 1)
+              .toList();
+          _currencies = results[1] as List<Map<String, dynamic>>;
+          _isLoading = false;
+          _filterAccounts();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        context.showErrorSnackBar('حدث خطأ أثناء تحميل البيانات');
+      }
     }
   }
 
@@ -136,11 +149,11 @@ class _CreateSettlementVoucherScreenState
   bool get _isBalanced => (_totalDebit - _totalCredit).abs() < 0.01;
 
   String _getCurrencySymbol(String code) {
-    switch (code) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return '\$';
-      default: return 'ر.ي';
-    }
+    final currency = _currencies.firstWhere(
+      (c) => c['code'] == code,
+      orElse: () => <String, dynamic>{'symbol': code},
+    );
+    return currency['symbol'] as String? ?? code;
   }
 
   Future<void> _selectDate() async {
@@ -318,7 +331,9 @@ class _CreateSettlementVoucherScreenState
             ),
           ],
         ),
-        body: Form(
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
           key: _formKey,
           child: ListView(
             padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100 + bottomPadding),
@@ -465,52 +480,45 @@ class _CreateSettlementVoucherScreenState
       children: [
         _buildSectionTitle(theme, 'العملة'),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
+        DropdownButtonFormField<String>(
+          value: _currencies.any((c) => c['code'] == _selectedCurrency) ? _selectedCurrency : null,
+          decoration: InputDecoration(
+            prefixIcon: Icon(Icons.currency_exchange, size: 20, color: _accentColor),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            isDense: true,
           ),
-          child: Row(
-            children: _currencyOptions.map((opt) {
-              final isSelected = _selectedCurrency == opt['code'];
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedCurrency = opt['code']!;
-                      _filterAccounts();
-                      // إعادة تعيين الحسابات المختارة عند تغيير العملة
-                      _debitAccountId = null;
-                      _creditAccountId = null;
-                      for (final item in _lineItems) {
-                        item.accountId = null;
-                      }
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isSelected ? _accentColor.withOpacity(0.15) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      border: isSelected ? Border.all(color: _accentColor, width: 2) : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${opt['code']} (${opt['label']})',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? _accentColor : AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+          items: _currencies.map((c) {
+            final code = c['code'] as String? ?? '';
+            final symbol = c['symbol'] as String? ?? code;
+            final nameAr = c['name_ar'] as String? ?? code;
+            return DropdownMenuItem<String>(
+              value: code,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(symbol, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(width: 6),
+                  Flexible(child: Text(nameAr, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedCurrency = val;
+                _debitAccountId = null;
+                _creditAccountId = null;
+                for (final item in _lineItems) {
+                  item.accountId = null;
+                }
+              });
+              _filterAccounts();
+            }
+          },
+          isExpanded: true,
+          icon: Icon(Icons.arrow_drop_down, color: _accentColor),
         ),
       ],
     );

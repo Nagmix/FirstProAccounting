@@ -4,6 +4,7 @@ import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 
 /// شاشة إنشاء قيد عام (من حساب → إلى حساب)
@@ -35,6 +36,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
   String _toEntityTypeFilter = 'all';
 
   List<Map<String, dynamic>> _allEntities = [];
+  List<Map<String, dynamic>> _currencies = [];
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -45,13 +47,6 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
     {'value': VoucherAutoMappingService.entitySupplier, 'label': 'موردين', 'icon': Icons.local_shipping},
     {'value': VoucherAutoMappingService.entityEmployee, 'label': 'موظفين', 'icon': Icons.badge},
     {'value': VoucherAutoMappingService.entityExpense, 'label': 'مصروفات', 'icon': Icons.receipt_long},
-  ];
-
-  // ── Currency options ────────────────────────────────────────────
-  static const _currencies = [
-    {'code': 'YER', 'symbol': 'ر.ي'},
-    {'code': 'SAR', 'symbol': 'ر.س'},
-    {'code': 'USD', 'symbol': '\$'},
   ];
 
   @override
@@ -77,10 +72,15 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
   Future<void> _loadEntities() async {
     try {
       final autoMappingService = locator<VoucherAutoMappingService>();
-      final entities = await autoMappingService.getAllEntities();
+      final refRepo = locator<ReferenceDataRepository>();
+      final results = await Future.wait([
+        autoMappingService.getAllEntities(),
+        refRepo.getAllCurrencies(),
+      ]);
       if (mounted) {
         setState(() {
-          _allEntities = entities;
+          _allEntities = results[0] as List<Map<String, dynamic>>;
+          _currencies = results[1] as List<Map<String, dynamic>>;
           _isLoading = false;
         });
       }
@@ -428,14 +428,11 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
   }
 
   String _getCurrencySymbol(String code) {
-    switch (code) {
-      case 'SAR':
-        return 'ر.س';
-      case 'USD':
-        return '\$';
-      default:
-        return 'ر.ي';
-    }
+    final currency = _currencies.firstWhere(
+      (c) => c['code'] == code,
+      orElse: () => <String, dynamic>{'symbol': code},
+    );
+    return currency['symbol'] as String? ?? code;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1000,44 +997,42 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
     required Color accentColor,
     required ValueChanged<String> onChanged,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
+    // استخدام قائمة منسدلة احترافية مع العملات من قاعدة البيانات
+    return DropdownButtonFormField<String>(
+      value: _currencies.any((c) => c['code'] == selectedCurrency) ? selectedCurrency : null,
+      decoration: InputDecoration(
+        labelText: 'العملة',
+        prefixIcon: Icon(Icons.currency_exchange, size: 20, color: accentColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        isDense: true,
       ),
-      child: Row(
-        children: _currencies.map((c) {
-          final isSelected = selectedCurrency == c['code'];
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onChanged(c['code'] as String),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? accentColor.withOpacity(0.15) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: isSelected
-                      ? Border.all(color: accentColor, width: 1.5)
-                      : null,
-                ),
-                child: Center(
-                  child: Text(
-                    c['symbol'] as String,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                      color: isSelected ? accentColor : AppColors.textSecondary,
-                    ),
-                  ),
-                ),
+      items: _currencies.map((c) {
+        final code = c['code'] as String? ?? '';
+        final symbol = c['symbol'] as String? ?? code;
+        final nameAr = c['name_ar'] as String? ?? code;
+        return DropdownMenuItem<String>(
+          value: code,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(symbol, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(nameAr, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12)),
               ),
-            ),
-          );
-        }).toList(),
-      ),
+            ],
+          ),
+        );
+      }).toList(),
+      onChanged: (val) {
+        if (val != null) onChanged(val);
+      },
+      isExpanded: true,
+      icon: Icon(Icons.arrow_drop_down, color: accentColor),
     );
   }
 
