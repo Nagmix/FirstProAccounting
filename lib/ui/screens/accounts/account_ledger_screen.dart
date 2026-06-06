@@ -23,6 +23,18 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   DateTime? _fromDate;
   DateTime? _toDate;
 
+  /// Get the correct currency symbol for this account's currency.
+  /// This ensures balances are displayed with the proper symbol
+  /// (e.g., ر.س for SAR accounts, $ for USD) instead of always using
+  /// the default YER symbol.
+  String get _currencySymbol {
+    switch (widget.account.currency) {
+      case 'SAR': return 'ر.س';
+      case 'USD': return r'$';
+      case 'YER': default: return 'ر.ي';
+    }
+  }
+
   final _typeColors = {
     AccountType.ASSET: AppColors.primary,
     AccountType.LIABILITY: AppColors.warning,
@@ -193,6 +205,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                         totalCredit: totalCredit,
                         netBalance: netBalance,
                         isDark: isDark,
+                        currencySymbol: _currencySymbol,
                       ),
                     ),
 
@@ -225,6 +238,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                               runningBalance: running,
                               isDark: isDark,
                               isLast: index == filteredTx.length - 1,
+                              currencySymbol: _currencySymbol,
                             );
                           },
                           childCount: filteredTx.length,
@@ -256,6 +270,9 @@ class _AccountHeader extends StatelessWidget {
     required this.icon,
     required this.isDark,
   });
+
+  /// Get the correct currency symbol for this account.
+  String get _symbol => account.currencySymbol;
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +365,7 @@ class _AccountHeader extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   )),
               Text(
-                CurrencyFormatter.format(account.balance),
+                CurrencyFormatter.format(account.balance, symbol: _symbol),
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: account.balance >= 0 ? color : AppColors.error,
@@ -377,7 +394,10 @@ class _SummaryRow extends StatelessWidget {
     required this.totalCredit,
     required this.netBalance,
     required this.isDark,
+    this.currencySymbol = 'ر.ي',
   });
+
+  final String currencySymbol;
 
   @override
   Widget build(BuildContext context) {
@@ -394,7 +414,7 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: _SummaryItem(
               label: 'مدين',
-              value: CurrencyFormatter.format(totalDebit),
+              value: CurrencyFormatter.format(totalDebit, symbol: currencySymbol),
               color: AppColors.error,
               icon: Icons.north_west,
             ),
@@ -408,7 +428,7 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: _SummaryItem(
               label: 'دائن',
-              value: CurrencyFormatter.format(totalCredit),
+              value: CurrencyFormatter.format(totalCredit, symbol: currencySymbol),
               color: AppColors.success,
               icon: Icons.south_east,
             ),
@@ -422,7 +442,7 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: _SummaryItem(
               label: 'الصافي',
-              value: CurrencyFormatter.format(netBalance),
+              value: CurrencyFormatter.format(netBalance, symbol: currencySymbol),
               color: netBalance >= 0 ? AppColors.primary : AppColors.error,
               icon: Icons.balance,
             ),
@@ -623,12 +643,14 @@ class _TransactionCard extends StatelessWidget {
   final double runningBalance;
   final bool isDark;
   final bool isLast;
+  final String currencySymbol;
 
   const _TransactionCard({
     required this.transaction,
     required this.runningBalance,
     required this.isDark,
     this.isLast = false,
+    this.currencySymbol = 'ر.ي',
   });
 
   @override
@@ -722,7 +744,7 @@ class _TransactionCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  CurrencyFormatter.format(runningBalance),
+                  CurrencyFormatter.format(runningBalance, symbol: currencySymbol),
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: runningBalance >= 0 ? AppColors.primary : AppColors.error,
@@ -778,7 +800,7 @@ class _TransactionCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              CurrencyFormatter.format(debit),
+                              CurrencyFormatter.format(debit, symbol: currencySymbol),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.error,
                                 fontWeight: FontWeight.w700,
@@ -812,7 +834,7 @@ class _TransactionCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              CurrencyFormatter.format(credit),
+                              CurrencyFormatter.format(credit, symbol: currencySymbol),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.success,
                                 fontWeight: FontWeight.w700,

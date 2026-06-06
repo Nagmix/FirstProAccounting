@@ -41,6 +41,19 @@ class Account {
     // ASSET, COST, and EXPENSE accounts have debit nature; others have credit nature
   }
 
+  /// Get the display symbol for this account's currency.
+  /// Maps currency codes to their Arabic display symbols.
+  /// This ensures balances are shown with the correct symbol
+  /// (ر.س for SAR, $ for USD, ر.ي for YER) instead of always
+  /// using the default YER symbol.
+  String get currencySymbol {
+    switch (currency) {
+      case 'SAR': return 'ر.س';
+      case 'USD': return r'$';
+      case 'YER': default: return 'ر.ي';
+    }
+  }
+
   /// Get the effective balance type, deriving from accountType if set to 'auto'
   /// Accounting convention:
   /// - ASSET (أصول): debit nature (increase with debit)

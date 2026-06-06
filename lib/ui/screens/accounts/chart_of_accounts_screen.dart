@@ -3,6 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/models/account_model.dart';
 import 'add_account_sheet.dart';
 import '../../../ui/navigation/app_router.dart';
@@ -19,6 +20,12 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   bool _isLoading = true;
   String _selectedCurrency = 'الكل';
   bool _isHierarchical = false;
+
+  /// Exchange rates loaded from DB: currency code → rate vs YER (functional currency)
+  /// YER rate is always 1.0; SAR and USD rates are loaded from currencies table.
+  final Map<String, double> _exchangeRates = {'YER': 1.0};
+  /// Currency symbols loaded from DB: currency code → symbol
+  final Map<String, String> _currencySymbols = {'YER': 'ر.ي'};
 
   final _currencyOptions = ['الكل', 'YER', 'SAR', 'USD'];
   final _currencyLabels = {'الكل': 'الكل', 'YER': 'ريال يمني (ر.ي)', 'SAR': 'ريال سعودي (ر.س)', 'USD': 'دولار أمريكي (\$)'};
@@ -53,16 +60,95 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadAccounts();
+    _loadData();
   }
 
-  Future<void> _loadAccounts() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final maps = await locator<AccountRepository>().getAllAccounts();
-    setState(() {
-      _accounts = maps.map((m) => Account.fromMap(m)).toList();
-      _isLoading = false;
-    });
+    try {
+      final maps = await locator<AccountRepository>().getAllAccounts();
+      // Load exchange rates from DB for currency conversion
+      await _loadExchangeRates();
+      if (mounted) {
+        setState(() {
+          _accounts = maps.map((m) => Account.fromMap(m)).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Load exchange rates and symbols from the currencies table.
+  /// This is essential for converting foreign currency balances to the
+  /// functional currency (YER) when displaying aggregated totals.
+  Future<void> _loadExchangeRates() async {
+    try {
+      final currencies = await locator<ReferenceDataRepository>().getAllCurrencies();
+      for (final c in currencies) {
+        final code = c['code'] as String? ?? '';
+        final rate = (c['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+        final symbol = c['symbol'] as String? ?? code;
+        if (code.isNotEmpty) {
+          _exchangeRates[code] = rate;
+          _currencySymbols[code] = symbol;
+        }
+      }
+    } catch (_) {
+      // Fallback: use hardcoded rates if DB query fails
+      _exchangeRates['YER'] = 1.0;
+      _exchangeRates['SAR'] = 140.0;
+      _exchangeRates['USD'] = 530.0;
+      _currencySymbols['YER'] = 'ر.ي';
+      _currencySymbols['SAR'] = 'ر.س';
+      _currencySymbols['USD'] = r'$';
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  CURRENCY HELPERS (IAS 21 Compliant)
+  //  According to IAS 21, each entity has a functional currency
+  //  (YER in our case). Foreign currency balances are translated
+  //  to the functional currency using exchange rates for aggregation.
+  //  Individual accounts display in their native currency.
+  // ══════════════════════════════════════════════════════════════
+
+  /// Get the display symbol for a currency code.
+  String _getCurrencySymbol(String currencyCode) {
+    return _currencySymbols[currencyCode] ?? currencyCode;
+  }
+
+  /// Format an amount with the correct currency symbol for the given currency code.
+  String _formatWithCurrency(double amount, String currencyCode) {
+    return CurrencyFormatter.format(amount, symbol: _getCurrencySymbol(currencyCode));
+  }
+
+  /// Convert an amount from its native currency to the functional currency (YER).
+  /// Uses the exchange rates loaded from the currencies table.
+  /// This follows IAS 21: foreign currency balances are translated using
+  /// the closing rate (current exchange rate) for balance sheet items.
+  double _convertToFunctionalCurrency(double amount, String fromCurrency) {
+    if (fromCurrency == 'YER') return amount;
+    final rate = _exchangeRates[fromCurrency] ?? 1.0;
+    return amount * rate;
+  }
+
+  /// Convert an amount from functional currency (YER) to a target currency.
+  double _convertFromFunctionalCurrency(double amountYER, String toCurrency) {
+    if (toCurrency == 'YER') return amountYER;
+    final rate = _exchangeRates[toCurrency] ?? 1.0;
+    if (rate == 0) return amountYER;
+    return amountYER / rate;
+  }
+
+  /// Convert an amount from one currency to another via the functional currency.
+  double _convertCurrency(double amount, String fromCurrency, String toCurrency) {
+    if (fromCurrency == toCurrency) return amount;
+    final amountInYER = _convertToFunctionalCurrency(amount, fromCurrency);
+    return _convertFromFunctionalCurrency(amountInYER, toCurrency);
   }
 
   List<Account> get _filteredAccounts {
@@ -138,7 +224,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         allAccounts: _accounts,
       ),
     );
-    _loadAccounts();
+    _loadData();
   }
 
   Future<void> _deleteAccount(Account account) async {
@@ -185,7 +271,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
           );
         }
       } else {
-        _loadAccounts();
+        _loadData();
       }
     }
   }
@@ -227,7 +313,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: () async => _loadAccounts(),
+              onRefresh: () async => _loadData(),
               child: Column(
                 children: [
                   // View toggle
@@ -332,7 +418,11 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  FLAT VIEW (grouped by type - original behavior)
+  //  FLAT VIEW (grouped by type - with per-currency subtotals)
+  //  IAS 21 Compliance: When "All" currencies are selected, we show
+  //  per-currency subtotals within each account type group. This avoids
+  //  mixing different currencies into a meaningless sum.
+  //  When a specific currency is selected, all balances are in that currency.
   // ══════════════════════════════════════════════════════════════
   Widget _buildFlatView(ThemeData theme, bool isDark) {
     return ListView(
@@ -341,7 +431,12 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         final accounts = _accountsByType(type);
         final color = _typeColors[type]!;
         final icon = _typeIcons[type]!;
-        final typeTotal = accounts.fold<double>(0.0, (sum, a) => sum + a.balance);
+
+        // Group accounts by currency for proper subtotals
+        final byCurrency = <String, List<Account>>{};
+        for (final acc in accounts) {
+          byCurrency.putIfAbsent(acc.currency, () => []).add(acc);
+        }
 
         return ExpansionTile(
           initiallyExpanded: true,
@@ -357,25 +452,132 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
           ),
           title: Text(Account.accountTypeAr(type),
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: color)),
-          subtitle: Text('${accounts.length} حساب | الرصيد: ${CurrencyFormatter.format(typeTotal.abs())}',
-              style: theme.textTheme.bodySmall?.copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-          children: accounts.map((account) {
-            return _AccountTile(
-              account: account,
-              color: color,
-              isDark: isDark,
-              onTap: () => AppRouter.pushAccountLedger(context, account),
-              onEdit: () => _showAddSheet(existing: account),
-              onDelete: account.isSystem ? null : () => _deleteAccount(account),
-            );
-          }).toList(),
+          subtitle: _buildFlatViewSubtitle(theme, accounts, byCurrency),
+          children: _buildFlatViewChildren(theme, isDark, accounts, byCurrency, color),
         );
       }).toList(),
     );
   }
 
+  /// Build the subtitle for a type group in flat view.
+  /// Shows account count and per-currency subtotals (when "All" is selected)
+  /// or a single total (when a specific currency is selected).
+  Widget _buildFlatViewSubtitle(ThemeData theme, List<Account> accounts, Map<String, List<Account>> byCurrency) {
+    if (_selectedCurrency != 'الكل') {
+      // Single currency selected - show simple total in that currency
+      final total = accounts.fold<double>(0.0, (sum, a) => sum + a.balance);
+      return Text('${accounts.length} حساب | الرصيد: ${_formatWithCurrency(total.abs(), _selectedCurrency)}',
+          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary));
+    }
+
+    // "All" currencies - show per-currency subtotals
+    final parts = <String>[];
+    for (final entry in byCurrency.entries) {
+      final total = entry.value.fold<double>(0.0, (sum, a) => sum + a.balance);
+      final symbol = _getCurrencySymbol(entry.key);
+      parts.add('${CurrencyFormatter.formatValue(total.abs())} $symbol');
+    }
+
+    return Text('${accounts.length} حساب | ${parts.join(' | ')}',
+        style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary));
+  }
+
+  /// Build the children (account tiles) for a type group in flat view.
+  /// When "All" currencies is selected, includes currency separator headers.
+  List<Widget> _buildFlatViewChildren(
+    ThemeData theme, bool isDark, List<Account> accounts,
+    Map<String, List<Account>> byCurrency, Color color,
+  ) {
+    if (_selectedCurrency != 'الكل') {
+      // Single currency - simple list
+      return accounts.map((account) {
+        return _AccountTile(
+          account: account,
+          color: color,
+          isDark: isDark,
+          currencySymbol: account.currencySymbol,
+          onTap: () => AppRouter.pushAccountLedger(context, account),
+          onEdit: () => _showAddSheet(existing: account),
+          onDelete: account.isSystem ? null : () => _deleteAccount(account),
+        );
+      }).toList();
+    }
+
+    // "All" currencies - group by currency with headers
+    final children = <Widget>[];
+    final sortedCurrencies = byCurrency.keys.toList()
+      ..sort((a, b) {
+        // YER first, then alphabetical
+        if (a == 'YER') return -1;
+        if (b == 'YER') return 1;
+        return a.compareTo(b);
+      });
+
+    for (final currency in sortedCurrencies) {
+      final currencyAccounts = byCurrency[currency]!;
+      // Currency group header
+      children.add(
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.currency_exchange, size: 14, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                _currencyLabels[currency] ?? currency,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                _formatWithCurrency(
+                  currencyAccounts.fold<double>(0.0, (sum, a) => sum + a.balance).abs(),
+                  currency,
+                ),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Account tiles for this currency
+      for (final account in currencyAccounts) {
+        children.add(
+          _AccountTile(
+            account: account,
+            color: color,
+            isDark: isDark,
+            currencySymbol: account.currencySymbol,
+            onTap: () => AppRouter.pushAccountLedger(context, account),
+            onEdit: () => _showAddSheet(existing: account),
+            onDelete: account.isSystem ? null : () => _deleteAccount(account),
+          ),
+        );
+      }
+    }
+
+    return children;
+  }
+
   // ══════════════════════════════════════════════════════════════
   //  HIERARCHICAL VIEW (tree by parent_id)
+  //  IAS 21 Compliance: Parent accounts display their aggregated
+  //  balance in their own native currency. Since the current
+  //  architecture creates separate parent accounts per currency
+  //  (e.g., Assets-YER, Assets-SAR, Assets-USD), each parent only
+  //  has children of the same currency, so the sum is always
+  //  in a single currency.
   // ══════════════════════════════════════════════════════════════
   Widget _buildHierarchicalView(ThemeData theme, bool isDark) {
     final tree = _buildTree();
@@ -402,8 +604,10 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     final account = node.account;
     final color = _typeColors[account.accountType] ?? AppColors.primary;
     final hasChildren = node.children.isNotEmpty;
+    final currencySymbol = account.currencySymbol;
 
-    // Calculate total balance including children
+    // Calculate total balance including children (all in the same currency
+    // since parent-child relationships are per-currency in our architecture)
     double totalBalance = account.balance;
     void addChildBalances(_AccountNode n) {
       for (final child in n.children) {
@@ -443,7 +647,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
           ],
         ),
         subtitle: Text(
-          '${node.children.length} حساب فرعي | الرصيد: ${CurrencyFormatter.format(totalBalance.abs())}',
+          '${node.children.length} حساب فرعي | الرصيد: ${CurrencyFormatter.format(totalBalance.abs(), symbol: currencySymbol)}',
           style: theme.textTheme.bodySmall?.copyWith(
             color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
           ),
@@ -451,7 +655,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(CurrencyFormatter.format(account.balance),
+            // Show own balance with correct currency symbol
+            Text(CurrencyFormatter.format(account.balance, symbol: currencySymbol),
                 style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
             if (!account.isSystem)
               IconButton(
@@ -487,7 +692,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
                         fontWeight: FontWeight.w600,
                       )),
                   const Spacer(),
-                  Text(CurrencyFormatter.format(account.balance),
+                  Text(CurrencyFormatter.format(account.balance, symbol: currencySymbol),
                       style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -505,6 +710,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
       color: color,
       isDark: isDark,
       depth: depth,
+      currencySymbol: currencySymbol,
       onTap: () => AppRouter.pushAccountLedger(context, account),
       onEdit: () => _showAddSheet(existing: account),
       onDelete: account.isSystem ? null : () => _deleteAccount(account),
@@ -523,6 +729,8 @@ class _AccountNode {
 
 // ═══════════════════════════════════════════════════════════════════
 //  ACCOUNT TILE WIDGET
+//  Updated to display balances with the correct currency symbol
+//  instead of always using the default (YER) symbol.
 // ═══════════════════════════════════════════════════════════════════
 class _AccountTile extends StatelessWidget {
   const _AccountTile({
@@ -530,6 +738,7 @@ class _AccountTile extends StatelessWidget {
     required this.color,
     required this.isDark,
     this.depth = 0,
+    this.currencySymbol = 'ر.ي',
     this.onTap,
     this.onEdit,
     this.onDelete,
@@ -539,6 +748,7 @@ class _AccountTile extends StatelessWidget {
   final Color color;
   final bool isDark;
   final int depth;
+  final String currencySymbol;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -570,7 +780,7 @@ class _AccountTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(CurrencyFormatter.format(account.balance),
+          Text(CurrencyFormatter.format(account.balance, symbol: currencySymbol),
               style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
           if (onEdit != null)
             IconButton(
