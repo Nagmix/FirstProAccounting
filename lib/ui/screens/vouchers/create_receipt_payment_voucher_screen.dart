@@ -802,7 +802,7 @@ class _CreateReceiptPaymentVoucherScreenState
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.all(color: _typeColor, width: 1.5),
+          borderSide: BorderSide(color: _typeColor, width: 1.5),
         ),
       ),
       style: TextStyle(fontSize: 13),
@@ -1189,7 +1189,7 @@ class _CreateReceiptPaymentVoucherScreenState
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.all(color: _typeColor, width: 1.5),
+          borderSide: BorderSide(color: _typeColor, width: 1.5),
         ),
       ),
       style: TextStyle(
@@ -1325,7 +1325,7 @@ class _CreateReceiptPaymentVoucherScreenState
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.all(color: _typeColor, width: 2),
+          borderSide: BorderSide(color: _typeColor, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,

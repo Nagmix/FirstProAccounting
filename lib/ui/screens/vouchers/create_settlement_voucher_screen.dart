@@ -593,7 +593,7 @@ class _CreateSettlementVoucherScreenState
     required ValueChanged<int?> onChanged,
   }) {
     // التأكد من أن القيمة المختارة موجودة في القائمة
-    final validItems = _filteredAccounts.map((acc) => (acc['id'] as num?)?.toInt() as int).toList();
+    final validItems = _filteredAccounts.map((acc) => (acc['id'] as num?)?.toInt() ?? 0).toList();
     final safeValue = (selectedId != null && validItems.contains(selectedId)) ? selectedId : null;
 
     return DropdownButtonFormField<int>(

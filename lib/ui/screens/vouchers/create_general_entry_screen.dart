@@ -138,7 +138,6 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
     required Color accentColor,
   }) async {
     final searchController = isFrom ? _fromSearchController : _toSearchController;
-    final typeFilter = isFrom ? _fromEntityTypeFilter : _toEntityTypeFilter;
     final selectedEntity = isFrom ? _fromEntity : _toEntity;
 
     await showModalBottomSheet(
@@ -488,14 +487,14 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
       final dateStr = _selectedDate.toIso8601String().split('T').first;
 
       await autoMappingService.createGeneralEntry(
-        fromEntityType: _fromEntity!['type'],
-        fromEntityId: _fromEntity!['id'],
-        fromEntityAccountId: _fromEntity!['account_id'],
+        fromEntityType: _fromEntity!['type'] as String,
+        fromEntityId: (_fromEntity!['id'] as num?)?.toInt() ?? 0,
+        fromEntityAccountId: (_fromEntity!['account_id'] as num?)?.toInt(),
         fromAmount: fromAmount,
         fromCurrency: _fromCurrency,
-        toEntityType: _toEntity!['type'],
-        toEntityId: _toEntity!['id'],
-        toEntityAccountId: _toEntity!['account_id'],
+        toEntityType: _toEntity!['type'] as String,
+        toEntityId: (_toEntity!['id'] as num?)?.toInt() ?? 0,
+        toEntityAccountId: (_toEntity!['account_id'] as num?)?.toInt(),
         toAmount: toAmount,
         toCurrency: _toCurrency,
         date: dateStr,
