@@ -227,12 +227,24 @@ class ExpenseRepository {
         }
       }
 
-      // Update cash box balance
+      // Update cash box balance (respecting balance_type)
       if (cashBoxId != null && amountBase > 0) {
+        final cashBoxRow = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+        final cashBalanceType = cashBoxRow.isNotEmpty ? (cashBoxRow.first['balance_type'] as String? ?? 'credit') : 'credit';
         if (isSarf) {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
+          // صرف: النقدية تخرج من الصندوق
+          if (cashBalanceType == 'credit') {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
+          } else {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
+          }
         } else {
-          await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
+          // قبض: النقدية تدخل الصندوق
+          if (cashBalanceType == 'credit') {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
+          } else {
+            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amountBase), now, cashBoxId]);
+          }
         }
       }
     });
@@ -339,14 +351,24 @@ class ExpenseRepository {
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, oldExpenseAccountId, oldAmountBase, 0.0, now);
         }
 
-        // Reverse old cash box balance change
+        // Reverse old cash box balance change (respecting balance_type)
         if (oldCashBoxId != null && oldAmountBase > 0) {
+          final oldCashBoxRow = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [oldCashBoxId], limit: 1);
+          final oldCashBalanceType = oldCashBoxRow.isNotEmpty ? (oldCashBoxRow.first['balance_type'] as String? ?? 'credit') : 'credit';
           if (oldIsSarf) {
-            // Original decreased cash box → reverse: increase
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
+            // Original was صرف (cash out): reverse = cash in
+            if (oldCashBalanceType == 'credit') {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
+            } else {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
+            }
           } else {
-            // Original increased cash box → reverse: decrease
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
+            // Original was قبض (cash in): reverse = cash out
+            if (oldCashBalanceType == 'credit') {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
+            } else {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(oldAmountBase), now, oldCashBoxId]);
+            }
           }
         }
       }
@@ -430,12 +452,24 @@ class ExpenseRepository {
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, newExpenseAccountId, 0.0, newAmountBase, now);
         }
 
-        // Update cash box balance for the new entry
+        // Update cash box balance for the new entry (respecting balance_type)
         if (cashBoxId != null && newAmountBase > 0) {
+          final cashBoxRow = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+          final cashBalanceType = cashBoxRow.isNotEmpty ? (cashBoxRow.first['balance_type'] as String? ?? 'credit') : 'credit';
           if (isSarf) {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
+            // صرف: النقدية تخرج
+            if (cashBalanceType == 'credit') {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
+            } else {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
+            }
           } else {
-            await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
+            // قبض: النقدية تدخل
+            if (cashBalanceType == 'credit') {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
+            } else {
+              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(newAmountBase), now, cashBoxId]);
+            }
           }
         }
       }

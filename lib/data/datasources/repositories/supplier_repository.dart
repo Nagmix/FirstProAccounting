@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
 
@@ -106,6 +107,79 @@ class SupplierRepository {
 
   Future<int> updateSupplier(int id, Map<String, dynamic> supplierMap) async {
     final db = await _db;
+    final now = DateTime.now().toIso8601String();
+
+    // Create journal entry for balance change when updating supplier
+    final oldSupplier = await getSupplierById(id);
+    if (oldSupplier != null && supplierMap.containsKey('balance')) {
+      final oldBalance = MoneyHelper.readMoney(oldSupplier['balance']);
+      final newBalance = MoneyHelper.readMoney(supplierMap['balance']);
+      final balanceDiff = newBalance - oldBalance;
+
+      if (balanceDiff.abs() >= 0.005) {
+        final supplierCurrency = supplierMap['currency'] as String? ?? oldSupplier['currency'] as String? ?? 'YER';
+        final codeOffset = supplierCurrency == 'SAR' ? 1 : (supplierCurrency == 'USD' ? 2 : 0);
+        final journalId = generateUniqueJournalId();
+
+        final suppliersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), supplierCurrency], limit: 1);
+        final openingBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), supplierCurrency], limit: 1);
+
+        final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
+        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
+
+        if (suppliersAccountId != null && openingBalanceAccountId != null) {
+          await db.transaction((txn) async {
+            if (balanceDiff > 0) {
+              // Balance increased: Credit Suppliers, Debit Opening Balance
+              await txn.insert('transactions', {
+                'account_id': suppliersAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(balanceDiff),
+                'description': 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(balanceDiff),
+                'credit': 0,
+                'description': 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, balanceDiff, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, balanceDiff, 0.0, now);
+            } else {
+              // Balance decreased: Debit Suppliers, Credit Opening Balance
+              final absDiff = balanceDiff.abs();
+              await txn.insert('transactions', {
+                'account_id': suppliersAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(absDiff),
+                'credit': 0,
+                'description': 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}',
+                'date': now,
+                'created_at': now,
+              });
+              await txn.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(absDiff),
+                'description': 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}',
+                'date': now,
+                'created_at': now,
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, absDiff, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, absDiff, now);
+            }
+          });
+        }
+      }
+    }
+
     return await db.update('suppliers', MoneyHelper.toCentsMap(supplierMap, MoneyHelper.supplierMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
