@@ -7,8 +7,9 @@ import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/employee_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../../data/datasources/repositories/account_repository.dart';
+import 'employee_detail_screen.dart';
 
-/// شاشة إدارة الموظفين مع رصيد افتتاحي وربط بدليل الحسابات
+/// شاشة إدارة الموظفين مع بحث مدمج وفلترة حسب العملة والحالة
 class EmployeesScreen extends StatefulWidget {
   const EmployeesScreen({super.key});
 
@@ -20,8 +21,13 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _filteredEmployees = [];
   bool _isLoading = true;
-  String _searchQuery = ''; // Used in filter
+  String _searchQuery = '';
   Timer? _searchDebounce;
+  String? _currencyFilter;
+  int _activeFilterIndex = 0; // 0: الكل, 1: نشط, 2: غير نشط
+
+  static const List<String> _currencyOptions = ['الكل', 'YER', 'SAR', 'USD'];
+  static const List<String> _activeOptions = ['الكل', 'نشط', 'غير نشط'];
 
   @override
   void initState() {
@@ -44,6 +50,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           _filteredEmployees = employees;
           _isLoading = false;
         });
+        _applyFilters();
       }
     } catch (e) {
       if (mounted) {
@@ -55,25 +62,49 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     }
   }
 
-  void _filterEmployees(String query) {
+  void _applyFilters() {
+    var filtered = _employees.toList();
+
+    // Search filter
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      filtered = filtered.where((e) {
+        final name = (e['name'] as String? ?? '').toLowerCase();
+        final phone = (e['phone'] as String? ?? '').toLowerCase();
+        final jobTitle = (e['job_title'] as String? ?? '').toLowerCase();
+        return name.contains(q) || phone.contains(q) || jobTitle.contains(q);
+      }).toList();
+    }
+
+    // Currency filter
+    if (_currencyFilter != null && _currencyFilter!.isNotEmpty) {
+      filtered = filtered.where((e) => e['currency'] == _currencyFilter).toList();
+    }
+
+    // Active/Inactive filter
+    if (_activeFilterIndex == 1) {
+      filtered = filtered.where((e) => (e['is_active'] as int?) == 1).toList();
+    } else if (_activeFilterIndex == 2) {
+      filtered = filtered.where((e) => (e['is_active'] as int?) != 1).toList();
+    }
+
+    setState(() => _filteredEmployees = filtered);
+  }
+
+  void _onSearchChanged(String query) {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      setState(() {
-        _searchQuery = query;
-        if (query.isEmpty) {
-          _filteredEmployees = _employees;
-        } else {
-          _filteredEmployees = _employees.where((e) {
-            final name = (e['name'] as String? ?? '').toLowerCase();
-            final phone = (e['phone'] as String? ?? '').toLowerCase();
-            final jobTitle = (e['job_title'] as String? ?? '').toLowerCase();
-            final q = query.toLowerCase();
-            return name.contains(q) || phone.contains(q) || jobTitle.contains(q);
-          }).toList();
-        }
-      });
+      _searchQuery = query;
+      _applyFilters();
     });
+  }
+
+  String _currencySymbol(String? code) {
+    switch (code) {
+      case 'SAR': return 'ر.س';
+      case 'USD': return r'$';
+      case 'YER': default: return 'ر.ي';
+    }
   }
 
   @override
@@ -84,27 +115,137 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('الموظفين'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: _showSearchDialog,
-          ),
-        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _filteredEmployees.isEmpty
-              ? _buildEmptyState(theme, isDark)
-              : RefreshIndicator(
-                  onRefresh: _loadEmployees,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _filteredEmployees.length,
-                    itemBuilder: (context, index) {
-                      return _buildEmployeeCard(_filteredEmployees[index], theme, isDark);
+      body: Column(
+        children: [
+          // ── Search Bar ─────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            color: isDark ? AppColors.darkSurface : AppColors.surface,
+            child: TextField(
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'بحث بالاسم أو الهاتف أو المسمى الوظيفي...',
+                hintStyle: TextStyle(color: AppColors.textHint, fontSize: 14),
+                prefixIcon: const Icon(Icons.search, size: 22),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          _searchQuery = '';
+                          _applyFilters();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                isDense: true,
+              ),
+            ),
+          ),
+
+          // ── Filter Chips Row ───────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            color: isDark ? AppColors.darkSurface : AppColors.surface,
+            child: Row(
+              children: [
+                // Active/Inactive filter
+                Expanded(
+                  child: Row(
+                    children: List.generate(_activeOptions.length, (i) {
+                      final isSelected = _activeFilterIndex == i;
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: ChoiceChip(
+                          label: Text(_activeOptions[i], style: TextStyle(fontSize: 12)),
+                          selected: isSelected,
+                          onSelected: (_) {
+                            setState(() => _activeFilterIndex = i);
+                            _applyFilters();
+                          },
+                          labelStyle: TextStyle(
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
+                          ),
+                          backgroundColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                          selectedColor: AppColors.primary,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Currency filter dropdown
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _currencyFilter ?? 'الكل',
+                    underline: const SizedBox.shrink(),
+                    isDense: true,
+                    iconSize: 18,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                    ),
+                    items: _currencyOptions.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (v) {
+                      setState(() {
+                        _currencyFilter = (v == null || v == 'الكل') ? null : v;
+                      });
+                      _applyFilters();
                     },
                   ),
                 ),
+              ],
+            ),
+          ),
+
+          // ── Employee Count ─────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            color: isDark ? AppColors.darkSurface : AppColors.surface,
+            child: Row(
+              children: [
+                Text(
+                  'عدد الموظفين: ${_filteredEmployees.length}',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1),
+
+          // ── Employee List ──────────────────────────────────────
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredEmployees.isEmpty
+                    ? _buildEmptyState(theme, isDark)
+                    : RefreshIndicator(
+                        onRefresh: _loadEmployees,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _filteredEmployees.length,
+                          itemBuilder: (context, index) {
+                            return _buildEmployeeCard(_filteredEmployees[index], theme, isDark);
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEmployeeSheet(),
         backgroundColor: AppColors.primary,
@@ -136,19 +277,29 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final balanceType = employee['balance_type'] as String? ?? 'credit';
     final currency = employee['currency'] as String? ?? 'YER';
     final isActive = (employee['is_active'] as int?) == 1;
-
     final isCredit = balanceType == 'credit';
-    final currencySymbol = currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
+    final currencySymbol = _currencySymbol(currency);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border: Border.all(
+          color: isActive
+              ? (isDark ? AppColors.darkBorder : AppColors.border)
+              : AppColors.error.withOpacity(0.3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: InkWell(
-        onTap: () => _showEmployeeActions(employee),
+        onTap: () => _navigateToDetail(employee),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -156,16 +307,25 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             children: [
               // Avatar
               Container(
-                width: 48,
-                height: 48,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primaryGradientStart, AppColors.primaryGradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  Icons.person,
-                  color: AppColors.primary,
-                  size: 24,
+                child: Center(
+                  child: Text(
+                    name.isNotEmpty ? name[0] : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -205,38 +365,47 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                    if (balance > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: (isCredit ? AppColors.success : AppColors.error).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  CurrencyFormatter.formatValue(balance),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: isCredit ? AppColors.success : AppColors.error,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${isCredit ? 'له' : 'عليه'} $currencySymbol',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: isCredit ? AppColors.success : AppColors.error,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
 
-              // Balance
-              if (balance > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: (isCredit ? AppColors.success : AppColors.error).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        CurrencyFormatter.format(balance),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: isCredit ? AppColors.success : AppColors.error,
-                        ),
-                      ),
-                      Text(
-                        '${isCredit ? 'له' : 'عليه'} $currencySymbol',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: isCredit ? AppColors.success : AppColors.error,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              // Arrow
+              Icon(Icons.chevron_left, color: AppColors.textHint, size: 24),
             ],
           ),
         ),
@@ -244,98 +413,13 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     );
   }
 
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('بحث عن موظف'),
-        content: TextField(
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'اسم الموظف أو الهاتف...',
-            prefixIcon: Icon(Icons.search),
-          ),
-          onChanged: _filterEmployees,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _filterEmployees('');
-            },
-            child: const Text('إلغاء'),
-          ),
-        ],
+  void _navigateToDetail(Map<String, dynamic> employee) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EmployeeDetailScreen(employee: employee),
       ),
-    );
-  }
-
-  void _showEmployeeActions(Map<String, dynamic> employee) {
-    final isActive = (employee['is_active'] as int?) == 1;
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 16),
-              decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit, color: AppColors.primary),
-              title: const Text('تعديل'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showAddEmployeeSheet(employee: employee);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                isActive ? Icons.block : Icons.check_circle,
-                color: isActive ? AppColors.warning : AppColors.success,
-              ),
-              title: Text(isActive ? 'تعطيل' : 'تفعيل'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                await locator<ReferenceDataRepository>().updateEmployee(employee['id'] as int, {
-                  'is_active': isActive ? 0 : 1,
-                  'updated_at': DateTime.now().toIso8601String(),
-                });
-                _loadEmployees();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: AppColors.error),
-              title: const Text('حذف', style: TextStyle(color: AppColors.error)),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx2) => AlertDialog(
-                    title: const Text('تأكيد الحذف'),
-                    content: Text('هل أنت متأكد من حذف الموظف "${employee['name']}"؟'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx2, false), child: const Text('إلغاء')),
-                      FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-                        onPressed: () => Navigator.pop(ctx2, true),
-                        child: const Text('حذف'),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirmed == true) {
-                  await locator<ReferenceDataRepository>().deleteEmployee(employee['id'] as int);
-                  _loadEmployees();
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+    ).then((_) => _loadEmployees());
   }
 
   void _showAddEmployeeSheet({Map<String, dynamic>? employee}) {
@@ -408,7 +492,6 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     // Get the employee account for this currency
     int? accountId;
     final accounts = await locator<AccountRepository>().getAccountsByCurrency(_currency);
-    // Try to find account code like 5100/5101/5102 based on currency
     int accountCodeSuffix = _currency == 'YER' ? 5100 : (_currency == 'SAR' ? 5101 : 5102);
     final empAccount = accounts.where((a) => a['account_code'] == accountCodeSuffix.toString()).firstOrNull;
     if (empAccount != null) {
@@ -436,33 +519,18 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
 
       // If opening balance > 0, post journal entry
       if (balance > 0 && accountId != null) {
-        // Get cash box account for this currency
         int cashCodeSuffix = _currency == 'YER' ? 1100 : (_currency == 'SAR' ? 1101 : 1102);
         final cashAccount = accounts.where((a) => a['account_code'] == cashCodeSuffix.toString()).firstOrNull;
         final cashAccountId = cashAccount != null ? cashAccount['id'] as int : null;
 
-        if (_balanceType == 'credit') {
-          // له - الموظف له رصيد: مدين = الموظف، دائن = الصندوق
-          if (cashAccountId != null) {
-            await locator<EmployeeRepository>().recordSalaryPayment(
-              accountId: accountId,
-              cashAccountId: cashAccountId,
-              balance: balance,
-              balanceType: 'credit',
-              employeeName: _nameController.text,
-            );
-          }
-        } else {
-          // عليه - الموظف عليه رصيد: مدين = الصندوق، دائن = الموظف
-          if (cashAccountId != null) {
-            await locator<EmployeeRepository>().recordSalaryPayment(
-              accountId: accountId,
-              cashAccountId: cashAccountId,
-              balance: balance,
-              balanceType: 'debit',
-              employeeName: _nameController.text,
-            );
-          }
+        if (cashAccountId != null) {
+          await locator<EmployeeRepository>().recordSalaryPayment(
+            accountId: accountId,
+            cashAccountId: cashAccountId,
+            balance: balance,
+            balanceType: _balanceType,
+            employeeName: _nameController.text,
+          );
         }
       }
     }
@@ -479,11 +547,19 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
     }
   }
 
+  String _currencySymbol() {
+    switch (_currency) {
+      case 'SAR': return 'ر.س';
+      case 'USD': return r'$';
+      default: return 'ر.ي';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isEditing = widget.employee != null;
-    final currencySymbol = _currency == 'SAR' ? 'ر.س' : (_currency == 'USD' ? r'$' : 'ر.ي');
 
     return Scaffold(
       appBar: AppBar(
@@ -506,13 +582,66 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Header card
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primaryGradientStart, AppColors.primaryGradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.person_add, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isEditing ? 'تعديل بيانات الموظف' : 'موظف جديد',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isEditing ? 'قم بتعديل البيانات المطلوبة' : 'أدخل بيانات الموظف الجديد',
+                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // الاسم
               TextFormField(
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'الاسم *',
-                  prefixIcon: Icon(Icons.person),
+                  prefixIcon: const Icon(Icons.person),
+                  filled: true,
+                  fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
               ),
@@ -526,9 +655,15 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'رقم الهاتف',
-                        prefixIcon: Icon(Icons.phone),
+                        prefixIcon: const Icon(Icons.phone),
+                        filled: true,
+                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
@@ -537,9 +672,15 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                     child: TextFormField(
                       controller: _jobTitleController,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'المسمى الوظيفي',
-                        prefixIcon: Icon(Icons.work),
+                        prefixIcon: const Icon(Icons.work),
+                        filled: true,
+                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
@@ -550,9 +691,15 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               // العملة
               DropdownButtonFormField<String>(
                 value: _currency,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'العملة',
-                  prefixIcon: Icon(Icons.monetization_on),
+                  prefixIcon: const Icon(Icons.monetization_on),
+                  filled: true,
+                  fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'YER', child: Text('ريال يمني (ر.ي)')),
@@ -576,7 +723,13 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                       decoration: InputDecoration(
                         labelText: 'الرصيد الافتتاحي',
                         prefixIcon: const Icon(Icons.calculate),
-                        suffixText: currencySymbol,
+                        suffixText: _currencySymbol(),
+                        filled: true,
+                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
@@ -651,10 +804,16 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               TextFormField(
                 controller: _notesController,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'ملاحظات',
-                  prefixIcon: Icon(Icons.edit_note),
+                  prefixIcon: const Icon(Icons.edit_note),
                   alignLabelWithHint: true,
+                  filled: true,
+                  fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -674,6 +833,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
@@ -681,7 +841,10 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       child: const Text('إلغاء'),
                     ),
                   ),

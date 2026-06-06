@@ -62,9 +62,9 @@ class JournalService {
   /// Update an account's balance considering its balance_type within a
   /// database transaction.
   ///
-  /// For credit-balance accounts (LIABILITY, REVENUE, most EXPENSE):
+  /// For credit-balance accounts (LIABILITY, REVENUE, EQUITY):
   ///   balance = balance + credit - debit
-  /// For debit-balance accounts (ASSET, COST):
+  /// For debit-balance accounts (ASSET, EXPENSE, COST):
   ///   balance = balance + debit - credit
   Future<void> updateAccountBalanceWithJournal(
     Transaction txn,
@@ -159,8 +159,8 @@ class JournalService {
     final netDebit = MoneyHelper.readCalculatedMoney(result.first['net_debit']);
     final netCredit = MoneyHelper.readCalculatedMoney(result.first['net_credit']);
 
-    // For debit-balance accounts (ASSET, COST): balance = debit - credit
-    // For credit-balance accounts (LIABILITY, REVENUE, EXPENSE): balance = credit - debit
+    // For debit-balance accounts (ASSET, EXPENSE, COST): balance = debit - credit
+    // For credit-balance accounts (LIABILITY, REVENUE, EQUITY): balance = credit - debit
     final computedBalance = (balanceType == 'debit') ? netDebit : netCredit;
     await db.update(
       'accounts',

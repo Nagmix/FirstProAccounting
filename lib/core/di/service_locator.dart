@@ -11,6 +11,7 @@ import '../../data/datasources/repositories/reference_data_repository.dart';
 import '../../data/datasources/repositories/order_repository.dart';
 import '../../data/datasources/repositories/voucher_repository.dart';
 import '../../data/datasources/repositories/employee_repository.dart';
+import '../../data/datasources/repositories/expense_sub_account_repository.dart';
 import '../../data/datasources/services/cash_box_service.dart';
 import '../../data/datasources/services/journal_service.dart';
 import '../../data/datasources/services/stock_service.dart';
@@ -61,6 +62,9 @@ Future<void> setupLocator() async {
   );
   locator.registerLazySingleton<EmployeeRepository>(
     () => EmployeeRepository(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<ExpenseSubAccountRepository>(
+    () => ExpenseSubAccountRepository(locator<DatabaseHelper>()),
   );
 
   // ── Services ──

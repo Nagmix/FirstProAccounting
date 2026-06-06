@@ -322,6 +322,24 @@ class DatabaseSchema {
       )
     ''');
 
+    // Expense Sub-Accounts (الحسابات الفرعية للمصروفات) - v45
+    // Created before expenses table so the FK reference is valid
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS expense_sub_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        debt_ceiling INTEGER NOT NULL DEFAULT 0,
+        phone TEXT,
+        contact_method TEXT DEFAULT 'whatsapp',
+        notes TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_expense_sub_accounts_name ON expense_sub_accounts (name)');
+
     // Expenses
     await db.execute('''
       CREATE TABLE expenses (
@@ -345,11 +363,13 @@ class DatabaseSchema {
         attachment_path TEXT,
         operation_type TEXT NOT NULL DEFAULT 'صرف',
         expense_account_id INTEGER,
+        expense_sub_account_id INTEGER,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id),
         FOREIGN KEY (account_id) REFERENCES accounts (id),
-        FOREIGN KEY (expense_account_id) REFERENCES accounts (id)
+        FOREIGN KEY (expense_account_id) REFERENCES accounts (id),
+        FOREIGN KEY (expense_sub_account_id) REFERENCES expense_sub_accounts (id)
       )
     ''');
 
@@ -371,7 +391,6 @@ class DatabaseSchema {
         FOREIGN KEY (account_id) REFERENCES accounts (id)
       )
     ''');
-
 
     // Quotations
     await db.execute('''
@@ -594,6 +613,7 @@ class DatabaseSchema {
     await db.execute('CREATE INDEX idx_employees_name ON employees (name)');
     await db.execute('CREATE INDEX idx_employees_is_active ON employees (is_active)');
     await db.execute('CREATE INDEX idx_expenses_expense_account_id ON expenses (expense_account_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_expenses_sub_account ON expenses (expense_sub_account_id)');
     await db.execute('CREATE INDEX idx_quotations_customer_id ON quotations (customer_id)');
     await db.execute('CREATE INDEX idx_quotations_status ON quotations (status)');
     await db.execute('CREATE INDEX idx_quotation_items_quotation_id ON quotation_items (quotation_id)');

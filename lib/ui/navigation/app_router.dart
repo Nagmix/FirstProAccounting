@@ -132,10 +132,10 @@ class AppRouter {
     );
   }
 
-  /// Push the ExpenseAccountDetailScreen directly (requires an account map).
-  static Future<void> pushExpenseAccountDetail(BuildContext context, Map<String, dynamic> account) {
+  /// Push the ExpenseAccountDetailScreen directly (requires a sub-account map).
+  static Future<void> pushExpenseAccountDetail(BuildContext context, Map<String, dynamic> subAccount) {
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ExpenseAccountDetailScreen(account: account)),
+      MaterialPageRoute(builder: (_) => ExpenseAccountDetailScreen(subAccount: subAccount)),
     );
   }
 

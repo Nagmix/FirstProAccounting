@@ -12,6 +12,7 @@ import 'repositories/invoice_repository.dart';
 import 'repositories/product_repository.dart';
 import 'repositories/supplier_repository.dart';
 import 'repositories/expense_repository.dart';
+import 'repositories/expense_sub_account_repository.dart';
 import 'repositories/reference_data_repository.dart';
 import 'services/cash_box_service.dart';
 import 'services/stock_service.dart';
@@ -77,11 +78,12 @@ class DatabaseHelper {
   AuditService get audit => _locatorReady ? locator<AuditService>() : AuditService(this);
   CostingEngineService get costingEngine => _locatorReady ? locator<CostingEngineService>() : CostingEngineService(this);
   BankReconciliationService get bankReconciliation => _locatorReady ? locator<BankReconciliationService>() : BankReconciliationService(this);
+  ExpenseSubAccountRepository get expenseSubAccounts => _locatorReady ? locator<ExpenseSubAccountRepository>() : ExpenseSubAccountRepository(this);
 
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 44;
+  static const int _databaseVersion = 45;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {

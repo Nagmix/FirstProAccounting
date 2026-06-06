@@ -4,6 +4,7 @@ import 'migration_v11_to_v20.dart';
 import 'migration_v21_to_v30.dart';
 import 'migration_v31_to_v43.dart';
 import 'migration_v44_to_v44.dart';
+import 'migration_v44_to_v45.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -61,5 +62,8 @@ class MigrationRunner {
 
     // v44 — License system
     if (oldVersion < 44) await MigrationV44.migrate(db);
+
+    // v45 — Expense sub-accounts
+    if (oldVersion < 45) await MigrationV45.migrate(db);
   }
 }

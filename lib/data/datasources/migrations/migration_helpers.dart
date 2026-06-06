@@ -28,9 +28,9 @@ class MigrationHelpers {
   }
 
   /// Update an account's balance considering its balance_type.
-  /// For credit-balance accounts (LIABILITY, REVENUE, most EXPENSE):
+  /// For credit-balance accounts (LIABILITY, REVENUE, EQUITY):
   ///   balance = balance + credit - debit
-  /// For debit-balance accounts (ASSET, COST):
+  /// For debit-balance accounts (ASSET, EXPENSE, COST):
   ///   balance = balance + debit - credit
   static Future<void> updateAccountBalanceWithJournal(
     Transaction txn,

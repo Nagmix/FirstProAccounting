@@ -1,12 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/account_repository.dart';
+import '../../../data/datasources/repositories/expense_sub_account_repository.dart';
 import 'expense_account_detail_screen.dart';
+import 'add_expense_sub_account_sheet.dart';
 
+/// Expense sub-accounts management screen.
+///
+/// Lists all active expense sub-accounts from the `expense_sub_accounts`
+/// table. Each card displays the sub-account name, balance per currency
+/// (computed from the expenses table), and the expense count.
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
 
@@ -14,60 +20,194 @@ class ExpensesScreen extends StatefulWidget {
   State<ExpensesScreen> createState() => _ExpensesScreenState();
 }
 
+// ── Sorting enum ─────────────────────────────────────────────────────
+enum _SortOption { name, date, balance }
+
 class _ExpensesScreenState extends State<ExpensesScreen> {
-  List<Map<String, dynamic>> _expenseAccounts = [];
+  // ── Data ───────────────────────────────────────────────────────
+  List<Map<String, dynamic>> _subAccounts = [];
+  final Map<int, Map<String, double>> _balanceCache = {};
+  final Map<int, int> _expenseCountCache = {};
   bool _isLoading = true;
-  double _totalExpenseBalance = 0.0;
-  int _totalAccounts = 0;
+
+  // ── Filters & sorting ──────────────────────────────────────────
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _searchDebounce;
+  String _currencyFilter = 'all'; // 'all' | 'YER' | 'SAR' | 'USD'
+  _SortOption _sortOption = _SortOption.name;
+
+  // ── Totals for summary header ──────────────────────────────────
+  final Map<String, double> _totalBalances = {};
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onSearchChanged);
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    final accounts = await locator<AccountRepository>().getExpenseAccounts();
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
 
-    double totalBalance = 0.0;
-    for (final account in accounts) {
-      final balance = MoneyHelper.readMoney(account['balance']);
-      final balanceType = account['balance_type'] as String? ?? 'credit';
-      final accountType = account['account_type'] as String? ?? '';
-      // Use effective balance type: EXPENSE/COST/ASSET are debit-nature
-      final effectiveIsDebit = (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE');
-      if (effectiveIsDebit) {
-        // Debit-nature: positive balance = debit (expense incurred) → add to total
-        totalBalance += balance;
-      } else {
-        // Credit-nature: positive balance = credit → subtract from total
-        totalBalance -= balance;
-      }
-    }
-
-    setState(() {
-      _expenseAccounts = accounts;
-      _totalExpenseBalance = totalBalance;
-      _totalAccounts = accounts.length;
-      _isLoading = false;
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _searchQuery = _searchController.text.trim());
     });
   }
 
-  String _getCurrencySymbol(String? currency) {
-    switch (currency) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return r'$';
-      case 'YER': default: return 'ر.ي';
+  // ══════════════════════════════════════════════════════════════
+  //  DATA LOADING
+  // ══════════════════════════════════════════════════════════════
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final repo = locator<ExpenseSubAccountRepository>();
+      final accounts = await repo.getAllSubAccounts();
+
+      // Load balances & expense counts in parallel
+      final balanceFutures = <Future<Map<String, double>>>[];
+      final countFutures = <Future<int>>[];
+
+      for (final a in accounts) {
+        final id = a['id'] as int;
+        balanceFutures.add(repo.getSubAccountTotalBalance(id));
+        countFutures.add(repo.getSubAccountExpenseCount(id));
+      }
+
+      final balances = await Future.wait(balanceFutures);
+      final counts = await Future.wait(countFutures);
+
+      // Aggregate totals
+      final totals = <String, double>{};
+      final balanceMap = <int, Map<String, double>>{};
+      final countMap = <int, int>{};
+
+      for (int i = 0; i < accounts.length; i++) {
+        final id = accounts[i]['id'] as int;
+        balanceMap[id] = balances[i];
+        countMap[id] = counts[i];
+        for (final entry in balances[i].entries) {
+          totals[entry.key] = (totals[entry.key] ?? 0.0) + entry.value;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _subAccounts = accounts;
+          _balanceCache.clear();
+          _balanceCache.addAll(balanceMap);
+          _expenseCountCache.clear();
+          _expenseCountCache.addAll(countMap);
+          _totalBalances.clear();
+          _totalBalances.addAll(totals);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء تحميل البيانات'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
-  Color _getCurrencyColor(String? currency) {
-    switch (currency) {
-      case 'SAR': return AppColors.accentGreen;
-      case 'USD': return AppColors.accentOrange;
-      case 'YER': default: return AppColors.primary;
+  // ══════════════════════════════════════════════════════════════
+  //  FILTERING & SORTING
+  // ══════════════════════════════════════════════════════════════
+
+  List<Map<String, dynamic>> get _filteredAccounts {
+    var list = List<Map<String, dynamic>>.from(_subAccounts);
+
+    // Search filter
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery;
+      list = list.where((a) {
+        final name = (a['name'] as String? ?? '').toLowerCase();
+        final desc = (a['description'] as String? ?? '').toLowerCase();
+        final phone = (a['phone'] as String? ?? '').toLowerCase();
+        return name.contains(q.toLowerCase()) ||
+            desc.contains(q.toLowerCase()) ||
+            phone.contains(q.toLowerCase());
+      }).toList();
+    }
+
+    // Currency filter: only show sub-accounts that have a balance in that currency
+    if (_currencyFilter != 'all') {
+      list = list.where((a) {
+        final id = a['id'] as int;
+        final balances = _balanceCache[id] ?? {};
+        return balances.containsKey(_currencyFilter);
+      }).toList();
+    }
+
+    // Sort
+    switch (_sortOption) {
+      case _SortOption.name:
+        list.sort((a, b) =>
+            (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''));
+      case _SortOption.date:
+        list.sort((a, b) {
+          final da = a['created_at'] as String? ?? '';
+          final db = b['created_at'] as String? ?? '';
+          return db.compareTo(da); // newest first
+        });
+      case _SortOption.balance:
+        list.sort((a, b) {
+          final idA = a['id'] as int;
+          final idB = b['id'] as int;
+          final totalA =
+              (_balanceCache[idA] ?? {}).values.fold(0.0, (s, v) => s + v);
+          final totalB =
+              (_balanceCache[idB] ?? {}).values.fold(0.0, (s, v) => s + v);
+          return totalB.compareTo(totalA); // highest first
+        });
+    }
+
+    return list;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  HELPERS
+  // ══════════════════════════════════════════════════════════════
+
+  String _currencySymbol(String code) {
+    switch (code) {
+      case 'SAR':
+        return 'ر.س';
+      case 'USD':
+        return r'$';
+      default:
+        return 'ر.ي';
     }
   }
+
+  Color _currencyColor(String code) {
+    switch (code) {
+      case 'SAR':
+        return AppColors.accentGreen;
+      case 'USD':
+        return AppColors.accentOrange;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  BUILD
+  // ══════════════════════════════════════════════════════════════
 
   @override
   Widget build(BuildContext context) {
@@ -87,35 +227,49 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 onRefresh: _loadData,
                 child: CustomScrollView(
                   slivers: [
-                    // Summary header
+                    // ── Summary header ──────────────────────────────
                     SliverToBoxAdapter(child: _buildSummaryHeader(theme, isDark)),
 
-                    // Expense accounts list
-                    _expenseAccounts.isEmpty
+                    // ── Search bar ─────────────────────────────────
+                    SliverToBoxAdapter(child: _buildSearchBar(theme, isDark)),
+
+                    // ── Filter & sort row ──────────────────────────
+                    SliverToBoxAdapter(child: _buildFilterRow(theme, isDark)),
+
+                    // ── Sub-accounts list ──────────────────────────
+                    _filteredAccounts.isEmpty
                         ? SliverFillRemaining(
                             hasScrollBody: false,
                             child: _buildEmptyState(theme),
                           )
                         : SliverList(
                             delegate: SliverChildBuilderDelegate(
-                              (context, index) => _buildExpenseAccountCard(_expenseAccounts[index], theme, isDark),
-                              childCount: _expenseAccounts.length,
+                              (context, index) => _buildSubAccountCard(
+                                _filteredAccounts[index],
+                                theme,
+                                isDark,
+                              ),
+                              childCount: _filteredAccounts.length,
                             ),
                           ),
 
-                    // Bottom padding
+                    // Bottom padding for FAB
                     SliverToBoxAdapter(child: SizedBox(height: 100 + bottomPadding)),
                   ],
                 ),
               ),
         floatingActionButton: FloatingActionButton(
-          onPressed: _showAddExpenseAccountDialog,
+          onPressed: _showAddSubAccountSheet,
           backgroundColor: AppColors.primary,
           child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
     );
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  WIDGETS
+  // ══════════════════════════════════════════════════════════════
 
   Widget _buildSummaryHeader(ThemeData theme, bool isDark) {
     return Container(
@@ -137,7 +291,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 22),
+                child: const Icon(Icons.account_balance_wallet,
+                    color: Colors.white, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -153,7 +308,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      CurrencyFormatter.format(_totalExpenseBalance.abs()),
+                      _formatTotalBalances(),
                       style: theme.textTheme.headlineSmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -168,15 +323,17 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           Row(
             children: [
               _buildSummaryChip(
-                icon: Icons.account_balance,
+                icon: Icons.folder_open,
                 label: 'عدد الحسابات',
-                value: _totalAccounts.toString(),
+                value: _subAccounts.length.toString(),
               ),
               const SizedBox(width: 12),
               _buildSummaryChip(
-                icon: Icons.trending_down,
-                label: 'الحالة',
-                value: _totalExpenseBalance >= 0 ? 'عليه' : 'له',
+                icon: Icons.receipt_long,
+                label: 'عدد العمليات',
+                value: _expenseCountCache.values
+                    .fold(0, (sum, c) => sum + c)
+                    .toString(),
               ),
             ],
           ),
@@ -230,23 +387,138 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  Widget _buildExpenseAccountCard(Map<String, dynamic> account, ThemeData theme, bool isDark) {
-    final name = account['name_ar'] as String? ?? '';
-    final currency = account['currency'] as String? ?? 'YER';
-    final debtCeiling = MoneyHelper.readMoney(account['debt_ceiling']);
-    final balance = MoneyHelper.readMoney(account['balance']);
-    final balanceType = account['balance_type'] as String? ?? 'credit';
-    final accountCode = account['account_code'] as String? ?? '';
-    final isSystem = (account['is_system'] as int?) == 1;
-    final currencyColor = _getCurrencyColor(currency);
-    final currencySymbol = _getCurrencySymbol(currency);
+  /// Formats the total balances map into a compact multi-currency display.
+  String _formatTotalBalances() {
+    if (_totalBalances.isEmpty) return CurrencyFormatter.format(0);
+    if (_totalBalances.length == 1) {
+      final entry = _totalBalances.entries.first;
+      return CurrencyFormatter.format(
+        entry.value.abs(),
+        symbol: _currencySymbol(entry.key),
+      );
+    }
+    // Multi-currency: show each on one line — but for the header we show the
+    // first currency and a count.
+    final entries = _totalBalances.entries.toList();
+    final first = entries.first;
+    return '${CurrencyFormatter.format(first.value.abs(), symbol: _currencySymbol(first.key))} +${entries.length - 1}';
+  }
 
-    // Use effective balance direction for expense accounts (debit-nature)
-    final accountType = account['account_type'] as String? ?? '';
-    final effectiveIsDebit = (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE');
-    // For debit-nature accounts, positive balance = debit (عليه)
-    final isCredit = effectiveIsDebit ? balance < 0 : balance > 0;
-    final balanceColor = isCredit ? AppColors.success : AppColors.error;
+  // ── Search bar ────────────────────────────────────────────────
+
+  Widget _buildSearchBar(ThemeData theme, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: SearchBar(
+        controller: _searchController,
+        hintText: 'بحث عن حساب مصروف...',
+        leading: const Icon(Icons.search),
+        trailing: _searchQuery.isNotEmpty
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 20),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                ),
+              ]
+            : null,
+        padding: WidgetStateProperty.all(
+          const EdgeInsets.symmetric(horizontal: 16),
+        ),
+      ),
+    );
+  }
+
+  // ── Filter & sort row ─────────────────────────────────────────
+
+  Widget _buildFilterRow(ThemeData theme, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        children: [
+          // Currency filter dropdown
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _currencyFilter,
+                  isExpanded: true,
+                  icon: const Icon(Icons.filter_list, size: 18),
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('كل العملات')),
+                    DropdownMenuItem(value: 'YER', child: Text('ر.ي يمني')),
+                    DropdownMenuItem(value: 'SAR', child: Text('ر.س سعودي')),
+                    DropdownMenuItem(value: 'USD', child: Text('\$ دولار')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _currencyFilter = val);
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Sort dropdown
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<_SortOption>(
+                  value: _sortOption,
+                  isExpanded: true,
+                  icon: const Icon(Icons.sort, size: 18),
+                  items: const [
+                    DropdownMenuItem(
+                      value: _SortOption.name,
+                      child: Text('حسب الاسم'),
+                    ),
+                    DropdownMenuItem(
+                      value: _SortOption.date,
+                      child: Text('حسب التاريخ'),
+                    ),
+                    DropdownMenuItem(
+                      value: _SortOption.balance,
+                      child: Text('حسب الرصيد'),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _sortOption = val);
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Sub-account card ──────────────────────────────────────────
+
+  Widget _buildSubAccountCard(
+    Map<String, dynamic> account,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final id = account['id'] as int;
+    final name = account['name'] as String? ?? '';
+    final description = account['description'] as String? ?? '';
+    final debtCeiling = MoneyHelper.readMoney(account['debt_ceiling']);
+    final phone = account['phone'] as String? ?? '';
+    final contactMethod = account['contact_method'] as String? ?? '';
+    final balances = _balanceCache[id] ?? {};
+    final expenseCount = _expenseCountCache[id] ?? 0;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -255,33 +527,35 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.2) : AppColors.primary.withOpacity(0.04),
+            color: isDark
+                ? Colors.black.withOpacity(0.2)
+                : AppColors.primary.withOpacity(0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
         ],
       ),
       child: InkWell(
-        onTap: () => _navigateToAccountDetail(account),
+        onTap: () => _navigateToDetail(account),
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Row 1: Account name and balance type
+              // ── Row 1: Name + expense count ────────────────────
               Row(
                 children: [
                   Container(
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: currencyColor.withOpacity(0.1),
+                      color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      isSystem ? Icons.account_balance_wallet : Icons.folder_open,
-                      color: currencyColor,
+                    child: const Icon(
+                      Icons.folder_open,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                   ),
@@ -292,118 +566,184 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       children: [
                         Text(
                           name,
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: currencyColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                accountCode,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: currencyColor,
-                                ),
-                              ),
+                        if (description.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            description,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
                             ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceVariant,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                currencySymbol,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  // Expense count badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.receipt_long, size: 14, color: AppColors.info),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$expenseCount',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.info,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  // Balance amount
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        CurrencyFormatter.format(balance),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: balanceColor,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: balanceColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isCredit ? 'له' : 'عليه',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: balanceColor,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Icon(Icons.arrow_back_ios, size: 16, color: AppColors.textHint),
                 ],
               ),
 
-              // Row 2: Debt ceiling info
-              if (debtCeiling > 0) ...[
+              // ── Row 2: Balances per currency ───────────────────
+              if (balances.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: balances.entries.map((entry) {
+                    final currencyCode = entry.key;
+                    final balance = entry.value;
+                    final color = _currencyColor(currencyCode);
+                    final symbol = _currencySymbol(currencyCode);
+                    final isPositive = balance >= 0;
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: (isPositive ? AppColors.error : AppColors.success)
+                            .withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: (isPositive ? AppColors.error : AppColors.success)
+                              .withOpacity(0.15),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              symbol,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: color,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            CurrencyFormatter.format(balance.abs()),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: isPositive ? AppColors.error : AppColors.success,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (isPositive ? AppColors.error : AppColors.success)
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isPositive ? 'عليه' : 'له',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: isPositive ? AppColors.error : AppColors.success,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ] else ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.06),
+                    color: AppColors.surfaceVariant.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withOpacity(0.15)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.shield, size: 16, color: AppColors.warning),
-                      const SizedBox(width: 8),
+                      Icon(Icons.info_outline, size: 14, color: AppColors.textHint),
+                      const SizedBox(width: 6),
                       Text(
-                        'سقف المديونية: ',
+                        'لا توجد عمليات مسجلة',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textHint,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // ── Row 3: Debt ceiling + phone ────────────────────
+              if (debtCeiling > 0 || phone.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    if (debtCeiling > 0) ...[
+                      Icon(Icons.shield, size: 14, color: AppColors.warning),
+                      const SizedBox(width: 4),
+                      Text(
+                        'سقف: ${CurrencyFormatter.format(debtCeiling)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    if (debtCeiling > 0 && phone.isNotEmpty)
+                      const SizedBox(width: 16),
+                    if (phone.isNotEmpty) ...[
+                      Icon(Icons.phone, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        phone,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      Text(
-                        CurrencyFormatter.format(debtCeiling),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.warning,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (debtCeiling > 0 && balance > 0)
-                        Text(
-                          '${(balance / debtCeiling * 100).toStringAsFixed(0)}%',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: balance / debtCeiling > 0.9 ? AppColors.error : AppColors.warning,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                      if (contactMethod == 'whatsapp') ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.chat, size: 14, color: AppColors.accentGreen),
+                      ] else if (contactMethod == 'sms') ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.sms, size: 14, color: AppColors.info),
+                      ],
                     ],
-                  ),
+                  ],
                 ),
               ],
             ],
@@ -412,6 +752,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       ),
     );
   }
+
+  // ── Empty state ───────────────────────────────────────────────
 
   Widget _buildEmptyState(ThemeData theme) {
     return Center(
@@ -427,16 +769,23 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 color: AppColors.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: Icon(Icons.account_balance_wallet, size: 40, color: AppColors.primary),
+              child: Icon(Icons.account_balance_wallet,
+                  size: 40, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
             Text(
-              'لا توجد حسابات مصروفات',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              _searchQuery.isNotEmpty || _currencyFilter != 'all'
+                  ? 'لا توجد نتائج'
+                  : 'لا توجد حسابات مصروفات',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'أضف حساب مصروف جديد بالضغط على زر الإضافة',
+              _searchQuery.isNotEmpty || _currencyFilter != 'all'
+                  ? 'جرّب تغيير معايير البحث أو التصفية'
+                  : 'أضف حساب مصروف جديد بالضغط على زر الإضافة',
               style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
               textAlign: TextAlign.center,
             ),
@@ -446,287 +795,32 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  Future<void> _navigateToAccountDetail(Map<String, dynamic> account) async {
+  // ══════════════════════════════════════════════════════════════
+  //  ACTIONS
+  // ══════════════════════════════════════════════════════════════
+
+  Future<void> _navigateToDetail(Map<String, dynamic> account) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ExpenseAccountDetailScreen(account: account),
+        builder: (_) => ExpenseAccountDetailScreen(subAccount: account),
       ),
     );
     if (!mounted) return;
     if (result == true) _loadData();
   }
 
-  void _showAddExpenseAccountDialog() {
-    final nameController = TextEditingController();
-    final debtCeilingController = TextEditingController();
-    final openingBalanceController = TextEditingController();
-    final notesController = TextEditingController();
-    String selectedCurrency = 'YER';
-    String balanceType = 'credit'; // له
-
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    showModalBottomSheet(
+  Future<void> _showAddSubAccountSheet() async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: StatefulBuilder(
-            builder: (ctx, setModalState) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(ctx).viewInsets.bottom,
-                  left: 16,
-                  right: 16,
-                  top: 16,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Handle bar
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: AppColors.divider,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      // Title
-                      Row(
-                        children: [
-                          Icon(Icons.create_new_folder, color: AppColors.primary, size: 24),
-                          const SizedBox(width: 10),
-                          Text(
-                            'إضافة حساب مصروف جديد',
-                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Account name
-                      TextFormField(
-                        controller: nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'اسم الحساب *',
-                          prefixIcon: Icon(Icons.text_fields),
-                          hintText: 'مثال: مصاريف إيجار',
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Currency selection
-                      DropdownButtonFormField<String>(
-                        value: selectedCurrency,
-                        decoration: const InputDecoration(
-                          labelText: 'العملة',
-                          prefixIcon: Icon(Icons.monetization_on),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'YER', child: Text('ريال يمني (ر.ي)')),
-                          DropdownMenuItem(value: 'SAR', child: Text('ريال سعودي (ر.س)')),
-                          DropdownMenuItem(value: 'USD', child: Text('دولار أمريكي (\$)')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => selectedCurrency = val);
-                        },
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Debt ceiling
-                      TextFormField(
-                        controller: debtCeilingController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'سقف المديونية',
-                          prefixIcon: Icon(Icons.shield),
-                          hintText: '0.00',
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Opening balance
-                      TextFormField(
-                        controller: openingBalanceController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'الرصيد الافتتاحي',
-                          prefixIcon: Icon(Icons.attach_money),
-                          hintText: '0.00',
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Balance type selector (له / عليه)
-                      Text(
-                        'نوع الرصيد الافتتاحي',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setModalState(() => balanceType = 'credit'),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: balanceType == 'credit'
-                                      ? AppColors.success.withOpacity(0.08)
-                                      : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: balanceType == 'credit' ? AppColors.success : AppColors.divider,
-                                    width: balanceType == 'credit' ? 2 : 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.south_east,
-                                      size: 20,
-                                      color: balanceType == 'credit' ? AppColors.success : AppColors.textHint,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'له',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: balanceType == 'credit' ? FontWeight.w700 : FontWeight.w500,
-                                        color: balanceType == 'credit' ? AppColors.success : AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    Text(
-                                      '(دائن)',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: balanceType == 'credit' ? AppColors.success : AppColors.textHint,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setModalState(() => balanceType = 'debit'),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: balanceType == 'debit'
-                                      ? AppColors.error.withOpacity(0.08)
-                                      : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: balanceType == 'debit' ? AppColors.error : AppColors.divider,
-                                    width: balanceType == 'debit' ? 2 : 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.north_west,
-                                      size: 20,
-                                      color: balanceType == 'debit' ? AppColors.error : AppColors.textHint,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'عليه',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: balanceType == 'debit' ? FontWeight.w700 : FontWeight.w500,
-                                        color: balanceType == 'debit' ? AppColors.error : AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    Text(
-                                      '(مدين)',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: balanceType == 'debit' ? AppColors.error : AppColors.textHint,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Notes
-                      TextFormField(
-                        controller: notesController,
-                        decoration: const InputDecoration(
-                          labelText: 'ملاحظات',
-                          prefixIcon: Icon(Icons.edit_note),
-                        ),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Save button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            if (nameController.text.trim().isEmpty) {
-                              context.showErrorSnackBar('اسم الحساب مطلوب');
-                              return;
-                            }
-                            await locator<AccountRepository>().createExpenseAccount(
-                              nameAr: nameController.text.trim(),
-                              currency: selectedCurrency,
-                              debtCeiling: double.tryParse(debtCeilingController.text),
-                              openingBalance: double.tryParse(openingBalanceController.text) ?? 0.0,
-                              balanceType: balanceType,
-                              notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
-                            );
-                            if (mounted) {
-                              Navigator.pop(ctx);
-                              context.showSuccessSnackBar('تم إنشاء حساب المصروف بنجاح');
-                              _loadData();
-                            }
-                          },
-                          icon: const Icon(Icons.save),
-                          label: const Text('حفظ الحساب'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
+      builder: (_) => const AddExpenseSubAccountSheet(),
     );
-    nameController.dispose();
-    debtCeilingController.dispose();
-    openingBalanceController.dispose();
-    notesController.dispose();
+    // Refresh data after sheet closes (may have added a sub-account)
+    if (mounted) _loadData();
   }
 }

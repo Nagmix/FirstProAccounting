@@ -47,14 +47,8 @@ class EmployeeRepository {
           'date': now,
           'created_at': now,
         });
-        await txn.rawUpdate(
-          'UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?',
-          [MoneyHelper.toCents(balance), now, accountId],
-        );
-        await txn.rawUpdate(
-          'UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?',
-          [MoneyHelper.toCents(balance), now, cashAccountId],
-        );
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, balance, 0.0, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, 0.0, balance, now);
       } else {
         // عليه - الموظف عليه رصيد: مدين = الصندوق، دائن = الموظف
         await txn.insert('transactions', {
@@ -75,15 +69,225 @@ class EmployeeRepository {
           'date': now,
           'created_at': now,
         });
-        await txn.rawUpdate(
-          'UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?',
-          [MoneyHelper.toCents(balance), now, cashAccountId],
-        );
-        await txn.rawUpdate(
-          'UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?',
-          [MoneyHelper.toCents(balance), now, accountId],
-        );
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, balance, 0.0, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, balance, now);
       }
     });
+  }
+
+  /// Get all transactions from the transactions table for the employee's
+  /// account (account_id = the employee's linked account_id).
+  Future<List<Map<String, dynamic>>> getEmployeeTransactions(int accountId) async {
+    final db = await _db;
+    return await db.query(
+      'transactions',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+      orderBy: 'date ASC, id ASC',
+    );
+  }
+
+  /// Get vouchers that have items referencing the employee's account.
+  Future<List<Map<String, dynamic>>> getEmployeeVouchers(int employeeId) async {
+    final db = await _db;
+    return await db.rawQuery('''
+      SELECT DISTINCT v.* FROM vouchers v 
+      INNER JOIN voucher_items vi ON v.id = vi.voucher_id 
+      INNER JOIN employees e ON e.account_id = vi.account_id 
+      WHERE e.id = ?
+      ORDER BY v.date ASC
+    ''', [employeeId]);
+  }
+
+  /// Record a transaction for an employee (له or عليه).
+  ///
+  /// Accounting logic:
+  /// - For 'credit' (له - employee is owed money):
+  ///   Debit employee account (5100+offset), Credit cash account (1100+offset)
+  /// - For 'debit' (عليه - employee owes money):
+  ///   Debit cash account (1100+offset), Credit employee account (5100+offset)
+  ///
+  /// Also updates the employee's balance in the employees table and the
+  /// cash box balance.
+  Future<void> recordEmployeeTransaction({
+    required int employeeId,
+    required double amount,
+    required String balanceType,
+    required String currency,
+    required int? cashBoxId,
+    String? description,
+  }) async {
+    final db = await _db;
+    final now = DateTime.now().toIso8601String();
+
+    // Check fiscal period
+    await _dbHelper.journal.checkFiscalPeriodOpen(now);
+
+    // Get employee data
+    final employeeRows = await db.query('employees', where: 'id = ?', whereArgs: [employeeId], limit: 1);
+    if (employeeRows.isEmpty) return;
+    final employee = employeeRows.first;
+    final employeeName = employee['name'] as String? ?? '';
+    final accountId = employee['account_id'] as int?;
+
+    // Determine account codes based on currency
+    final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+    final employeeAccountCode = (5100 + codeOffset).toString();
+    final cashAccountCode = (1100 + codeOffset).toString();
+
+    // Resolve employee account ID
+    int? empAccountId = accountId;
+    if (empAccountId == null) {
+      final empAccountRows = await db.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [employeeAccountCode, currency],
+        limit: 1,
+      );
+      empAccountId = empAccountRows.isNotEmpty ? empAccountRows.first['id'] as int : null;
+    }
+
+    // Resolve cash account ID from the selected cash box
+    int? cashAccountId;
+    if (cashBoxId != null) {
+      final cashBoxRows = await db.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+      if (cashBoxRows.isNotEmpty) {
+        cashAccountId = cashBoxRows.first['linked_account_id'] as int?;
+      }
+    }
+    if (cashAccountId == null) {
+      final cashAccountRows = await db.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [cashAccountCode, currency],
+        limit: 1,
+      );
+      cashAccountId = cashAccountRows.isNotEmpty ? cashAccountRows.first['id'] as int : null;
+    }
+
+    if (empAccountId == null || cashAccountId == null) return;
+
+    final journalId = generateUniqueJournalId();
+    final desc = description?.trim().isNotEmpty == true
+        ? description!.trim()
+        : '${balanceType == 'credit' ? 'له' : 'عليه'} - $employeeName';
+
+    await db.transaction((txn) async {
+      if (balanceType == 'credit') {
+        // له - الموظف له مبلغ: مدين = حساب الموظف، دائن = الصندوق
+        await txn.insert('transactions', {
+          'account_id': empAccountId,
+          'journal_id': journalId,
+          'debit': MoneyHelper.toCents(amount),
+          'credit': 0,
+          'description': desc,
+          'date': now,
+          'created_at': now,
+        });
+        await txn.insert('transactions', {
+          'account_id': cashAccountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(amount),
+          'description': desc,
+          'date': now,
+          'created_at': now,
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, empAccountId!, amount, 0.0, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId!, 0.0, amount, now);
+      } else {
+        // عليه - الموظف عليه مبلغ: مدين = الصندوق، دائن = حساب الموظف
+        await txn.insert('transactions', {
+          'account_id': cashAccountId,
+          'journal_id': journalId,
+          'debit': MoneyHelper.toCents(amount),
+          'credit': 0,
+          'description': desc,
+          'date': now,
+          'created_at': now,
+        });
+        await txn.insert('transactions', {
+          'account_id': empAccountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(amount),
+          'description': desc,
+          'date': now,
+          'created_at': now,
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId!, amount, 0.0, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, empAccountId!, 0.0, amount, now);
+      }
+
+      // Update cash box balance
+      if (cashBoxId != null) {
+        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+        if (cashBox.isNotEmpty) {
+          final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
+          final cbBalanceType = cashBox.first['balance_type'] as String? ?? 'credit';
+          final isCashIn = balanceType == 'debit'; // عليه = cash comes in
+          double newCashBalance;
+          if (cbBalanceType == 'credit') {
+            newCashBalance = isCashIn ? currentBalance + amount : currentBalance - amount;
+          } else {
+            newCashBalance = isCashIn ? currentBalance - amount : currentBalance + amount;
+          }
+          await txn.update('cash_boxes', {
+            'balance': MoneyHelper.toCents(newCashBalance),
+            'updated_at': now,
+          }, where: 'id = ?', whereArgs: [cashBoxId]);
+        }
+      }
+
+      // Update employee balance
+      final currentEmpBalance = MoneyHelper.readMoney(employee['balance']);
+      final currentEmpBalanceType = employee['balance_type'] as String? ?? 'credit';
+      double newEmpBalance;
+      String newEmpBalanceType;
+
+      if (balanceType == 'credit') {
+        // له increases credit (employee is owed more)
+        if (currentEmpBalanceType == 'credit') {
+          newEmpBalance = currentEmpBalance + amount;
+          newEmpBalanceType = 'credit';
+        } else {
+          newEmpBalance = currentEmpBalance - amount;
+          newEmpBalanceType = newEmpBalance < 0 ? 'credit' : 'debit';
+          newEmpBalance = newEmpBalance.abs();
+        }
+      } else {
+        // عليه increases debit (employee owes more)
+        if (currentEmpBalanceType == 'debit') {
+          newEmpBalance = currentEmpBalance + amount;
+          newEmpBalanceType = 'debit';
+        } else {
+          newEmpBalance = currentEmpBalance - amount;
+          newEmpBalanceType = newEmpBalance < 0 ? 'debit' : 'credit';
+          newEmpBalance = newEmpBalance.abs();
+        }
+      }
+
+      await txn.update('employees', {
+        'balance': MoneyHelper.toCents(newEmpBalance),
+        'balance_type': newEmpBalanceType,
+        'updated_at': now,
+      }, where: 'id = ?', whereArgs: [employeeId]);
+    });
+  }
+
+  /// Update the employee's balance in the employees table.
+  Future<void> updateEmployeeBalance(int employeeId, double newBalance, String balanceType) async {
+    final db = await _db;
+    final now = DateTime.now().toIso8601String();
+    await db.update(
+      'employees',
+      {
+        'balance': MoneyHelper.toCents(newBalance),
+        'balance_type': balanceType,
+        'updated_at': now,
+      },
+      where: 'id = ?',
+      whereArgs: [employeeId],
+    );
   }
 }
