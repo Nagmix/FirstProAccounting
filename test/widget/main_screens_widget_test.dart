@@ -260,11 +260,12 @@ void main() {
 
     test('isZero detects effectively zero amounts', () {
       // isZero uses toCents(amount) == 0, so 0.01 is the smallest
-      // non-zero monetary unit. Values < 0.01 round to 0 cents.
+      // non-zero monetary unit. toCents(0.009) = (0.9).round() = 1, not 0.
+      // Only amounts that round to 0 cents are considered zero.
       expect(MoneyHelper.isZero(0.0), isTrue);
       expect(MoneyHelper.isZero(0.01), isFalse); // 1 cent = not zero
       expect(MoneyHelper.isZero(-0.01), isFalse);
-      expect(MoneyHelper.isZero(0.009), isTrue); // rounds to 0 cents
+      expect(MoneyHelper.isZero(0.004), isTrue); // (0.4).round() = 0 cents
       expect(MoneyHelper.isZero(1.0), isFalse);
     });
 
