@@ -2,20 +2,22 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/di/service_locator.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/employee_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../ui/widgets/empty_state.dart';
+import '../../widgets/empty_state.dart';
 import 'employee_detail_screen.dart';
 
 /// Professional employees management screen for the FirstPro accounting app.
 ///
-/// Follows the same design pattern as [CustomersScreen]:
+/// Features:
 /// - Search bar for filtering by name or phone.
-/// - Tab bar: الكل / نشط / غير نشط.
+/// - Tab bar: الكل / مدينون / دائنون.
 /// - Employee list with avatar, name, job title, phone, and balance.
+/// - Compact filter button for currency selection.
 /// - FAB for adding a new employee via [AddEmployeeSheet].
 class EmployeesScreen extends StatefulWidget {
   const EmployeesScreen({super.key});
@@ -45,7 +47,7 @@ class _EmployeesScreenState extends State<EmployeesScreen>
     'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
   };
 
-  /// Currency filter options (no 'All' — each currency has its own balance).
+  /// Currency filter options.
   static const _currencyOptions = ['YER', 'SAR', 'USD'];
 
   @override
@@ -79,7 +81,6 @@ class _EmployeesScreenState extends State<EmployeesScreen>
           _employees = employees;
           _isLoading = false;
         });
-        // Always load currency balances for the selected currency
         _loadCurrencyBalances();
       }
     } catch (e) {
@@ -95,15 +96,13 @@ class _EmployeesScreenState extends State<EmployeesScreen>
     }
   }
 
-  // ── Load balances for all employees filtered by the selected currency ──
+  // ── Currency balance loading ──────────────────────────────────
   Future<void> _loadCurrencyBalances() async {
     setState(() => _isBalancesLoading = true);
-
     try {
       final newBalances = <int, double>{};
       final repo = locator<EmployeeRepository>();
 
-      // Load balances for all employees in parallel
       final futures = _employees.map((e) async {
         final id = e['id'] as int?;
         if (id != null) {
@@ -130,31 +129,10 @@ class _EmployeesScreenState extends State<EmployeesScreen>
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isBalancesLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('حدث خطأ أثناء تحميل الأرصدة'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      if (mounted) setState(() => _isBalancesLoading = false);
     }
   }
 
-  /// Get the balance for an employee based on the selected currency filter.
-  double _getEmployeeBalance(Map<String, dynamic> employee) {
-    final id = employee['id'] as int?;
-    if (id == null) return 0.0;
-    return _currencyBalances[id] ?? 0.0;
-  }
-
-  /// Get the currency symbol to display based on selected filter.
-  String _getCurrencySymbol() {
-    return _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
-  }
-
-  /// Handle currency filter change.
   void _onCurrencyChanged(String currency) {
     setState(() => _selectedCurrency = currency);
     _loadCurrencyBalances();
@@ -175,17 +153,23 @@ class _EmployeesScreenState extends State<EmployeesScreen>
       }).toList();
     }
 
-    // Apply tab filter
+    // Apply tab filter based on balance
     switch (tabIndex) {
-      case 1: // نشط
-        filtered = filtered
-            .where((e) => (e['is_active'] as int?) == 1)
-            .toList();
+      case 1: // مدينون — negative balance (عليه)
+        filtered = filtered.where((e) {
+          final id = e['id'] as int?;
+          if (id == null) return false;
+          final balance = _currencyBalances[id] ?? 0.0;
+          return balance < 0;
+        }).toList();
         break;
-      case 2: // غير نشط
-        filtered = filtered
-            .where((e) => (e['is_active'] as int?) != 1)
-            .toList();
+      case 2: // دائنون — positive balance (له)
+        filtered = filtered.where((e) {
+          final id = e['id'] as int?;
+          if (id == null) return false;
+          final balance = _currencyBalances[id] ?? 0.0;
+          return balance > 0;
+        }).toList();
         break;
       // case 0: الكل – no additional filter
     }
@@ -258,78 +242,77 @@ class _EmployeesScreenState extends State<EmployeesScreen>
     return _avatarColors[hash % _avatarColors.length];
   }
 
-  String _currencySymbol(String? code) {
-    switch (code) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return r'$';
-      case 'YER': default: return 'ر.ي';
-    }
-  }
-
-  // ── Currency Filter Widget ────────────────────────────────────────
-  Widget _buildCurrencyFilter(ThemeData theme, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.border,
+  // ── Show currency filter popup ────────────────────────────────
+  void _showCurrencyFilterPopup() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('تصفية حسب العملة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              ..._currencyOptions.map((option) {
+                final isSelected = _selectedCurrency == option;
+                final label = _currencyInfo[option]?['label'] ?? option;
+                final symbol = _currencyInfo[option]?['symbol'] ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _onCurrencyChanged(option);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+                        border: Border.all(
+                          color: isSelected ? AppColors.primary : AppColors.border,
+                          width: isSelected ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected ? Icons.check_circle : Icons.circle_outlined,
+                            color: isSelected ? AppColors.primary : AppColors.textHint,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              '$label ($option)',
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            symbol,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.currency_exchange,
-            size: 20,
-            color: AppColors.primary,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'العملة:',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _currencyOptions.map((option) {
-                  final isSelected = _selectedCurrency == option;
-                  final label = '${_currencyInfo[option]?['symbol'] ?? ''} $option';
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: ChoiceChip(
-                      label: Text(label),
-                      selected: isSelected,
-                      onSelected: (_) => _onCurrencyChanged(option),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected
-                            ? Colors.white
-                            : isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.textSecondary,
-                      ),
-                      backgroundColor: isDark
-                          ? AppColors.darkSurfaceVariant
-                          : AppColors.surfaceVariant,
-                      selectedColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -337,27 +320,29 @@ class _EmployeesScreenState extends State<EmployeesScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final currencySymbol = _getCurrencySymbol();
+    final isLight = theme.brightness == Brightness.light;
+    final currentSymbol = _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('الموظفين'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'بحث',
-            onPressed: () {
-              FocusScope.of(context).unfocus();
-            },
+          // Filter button (currency)
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: ActionChip(
+              avatar: Icon(Icons.currency_exchange, size: 16, color: AppColors.primary),
+              label: Text(
+                '$currentSymbol $_selectedCurrency',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+              ),
+              onPressed: _showCurrencyFilterPopup,
+              backgroundColor: AppColors.primary.withOpacity(0.08),
+              side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'تصفية',
-            onPressed: () {
-              // TODO: Implement advanced filter dialog
-            },
-          ),
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.person_add),
             tooltip: 'إضافة موظف',
@@ -368,8 +353,8 @@ class _EmployeesScreenState extends State<EmployeesScreen>
           controller: _tabController,
           tabs: const [
             Tab(text: 'الكل'),
-            Tab(text: 'نشط'),
-            Tab(text: 'غير نشط'),
+            Tab(text: 'مدينون'),
+            Tab(text: 'دائنون'),
           ],
         ),
       ),
@@ -382,7 +367,7 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: SearchBar(
                     controller: _searchController,
-                    hintText: 'بحث عن موظف...',
+                    hintText: 'بحث عن موظف بالاسم أو الهاتف...',
                     leading: const Icon(Icons.search),
                     padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(horizontal: 16),
@@ -390,10 +375,45 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                   ),
                 ),
 
-                // ── Currency Filter Row ──────────────────────────────
-                _buildCurrencyFilter(theme, isDark),
+                // ── Summary bar ───────────────────────────────────────
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isLight ? AppColors.border : AppColors.darkBorder, width: 0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.people, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_employees.length} موظف',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_isBalancesLoading)
+                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      else ...[
+                        Icon(Icons.account_balance_wallet, size: 16, color: AppColors.textHint),
+                        const SizedBox(width: 4),
+                        Text(
+                          'العملة: $_selectedCurrency',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.textHint,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
 
-                // ── Employee list ──────────────────────────────────────
+                // ── Employee list ─────────────────────────────────────
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
@@ -405,101 +425,92 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                           icon: tabIndex == 0
                               ? Icons.people
                               : tabIndex == 1
-                                  ? Icons.check_circle
-                                  : Icons.block,
+                                  ? Icons.trending_down
+                                  : Icons.trending_up,
                           title: tabIndex == 0
                               ? 'لا يوجد موظفين'
                               : tabIndex == 1
-                                  ? 'لا يوجد موظفين نشطين'
-                                  : 'لا يوجد موظفين غير نشطين',
+                                  ? 'لا يوجد موظفين مدينون'
+                                  : 'لا يوجد موظفين دائنون',
                           subtitle: tabIndex == 0
-                              ? 'قم بإضافة موظفين جدد لبدء إدارة رواتبهم'
+                              ? 'قم بإضافة موظفين جدد لبدء إدارة حساباتك'
                               : 'لم يتم العثور على نتائج مطابقة',
                           actionLabel: tabIndex == 0 ? 'إضافة موظف' : null,
-                          onAction:
-                              tabIndex == 0 ? () => _showAddEmployeeSheet() : null,
+                          onAction: tabIndex == 0 ? () => _showAddEmployeeSheet() : null,
                         );
                       }
 
-                      return _isBalancesLoading
-                          ? const Center(
-                              child: Padding(
-                                padding: EdgeInsets.only(top: 32),
-                                child: CircularProgressIndicator(),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 80),
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) {
-                                final employee = filtered[index];
-                                final balance = _getEmployeeBalance(employee);
-                                return _EmployeeCard(
-                                  employee: employee,
-                                  avatarColor: _avatarColor(
-                                      employee['name'] as String? ?? ''),
-                                  balance: balance,
-                                  currencySymbol: currencySymbol,
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            EmployeeDetailScreen(employee: employee),
-                                      ),
-                                    ).then((_) => _loadEmployees());
-                                  },
-                                  onDelete: () => _deleteEmployee(employee),
-                                );
-                              },
-                            );
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80, top: 2),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final employee = filtered[index];
+                          final id = employee['id'] as int?;
+                          final displayBalance = _currencyBalances[id] ?? 0.0;
+                          return _EmployeeCard(
+                            employee: employee,
+                            avatarColor: _avatarColor(employee['name'] as String? ?? ''),
+                            displayBalance: displayBalance,
+                            currencySymbol: _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
+                            isLight: isLight,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => EmployeeDetailScreen(employee: employee),
+                                ),
+                              ).then((_) => _loadEmployees());
+                            },
+                            onDelete: () => _deleteEmployee(employee),
+                          );
+                        },
+                      );
                     }),
                   ),
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddEmployeeSheet(),
         tooltip: 'إضافة موظف',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.person_add),
+        icon: const Icon(Icons.person_add),
+        label: const Text('إضافة موظف'),
       ),
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  EMPLOYEE CARD – matches _CustomerCard pattern
+//  EMPLOYEE CARD — Modern, Professional Design (matches _CustomerCard)
 // ═══════════════════════════════════════════════════════════════════
 class _EmployeeCard extends StatelessWidget {
   const _EmployeeCard({
     required this.employee,
     required this.avatarColor,
-    required this.balance,
+    required this.displayBalance,
     required this.currencySymbol,
+    required this.isLight,
     this.onTap,
     this.onDelete,
   });
 
   final Map<String, dynamic> employee;
   final Color avatarColor;
-  final double balance;
+  final double displayBalance;
   final String currencySymbol;
+  final bool isLight;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
     final name = employee['name'] as String? ?? '';
     final phone = employee['phone'] as String? ?? '';
     final jobTitle = employee['job_title'] as String? ?? '';
-    final isActive = (employee['is_active'] as int?) == 1;
-    // Positive balance = له (credit), negative = عليه (debit)
-    final isCredit = balance > 0;
-    final isDebit = balance < 0;
-
+    final isDebit = displayBalance < 0;
+    final isCredit = displayBalance > 0;
     final balanceColor = isDebit
         ? AppColors.error
         : isCredit
@@ -508,168 +519,180 @@ class _EmployeeCard extends StatelessWidget {
                 ? AppColors.textSecondary
                 : AppColors.darkTextSecondary;
 
-    return Card(
+    final balanceAbs = CurrencyFormatter.formatValue(displayBalance.abs());
+
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: InkWell(
-        onTap: onTap,
+      decoration: BoxDecoration(
+        color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        onLongPress: onDelete,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // ── Avatar ───────────────────────────────────────
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: avatarColor.withOpacity(0.15),
-                child: Text(
-                  name.isNotEmpty ? name[0] : '?',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: avatarColor,
-                    fontWeight: FontWeight.w700,
+        border: Border.all(
+          color: isLight ? AppColors.border.withOpacity(0.5) : AppColors.darkBorder.withOpacity(0.5),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isLight ? 0.04 : 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          onLongPress: onDelete,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // ── Avatar ───────────────────────────────────────
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [avatarColor, avatarColor.withOpacity(0.7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: avatarColor.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      name.isNotEmpty ? name[0] : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 14),
 
-              // ── Name, job title, phone ───────────────────────
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            name,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                // ── Name, job title, phone ──────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
-                        if (!isActive) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.error.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      // Job title row
+                      if (jobTitle.isNotEmpty)
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.work,
+                              size: 13,
+                              color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
                             ),
-                            child: Text(
-                              'غير نشط',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppColors.error,
-                                fontSize: 10,
+                            const SizedBox(width: 4),
+                            Text(
+                              jobTitle,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
                               ),
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        if (jobTitle.isNotEmpty) ...[
-                          Icon(
-                            Icons.work,
-                            size: 14,
-                            color: isLight
-                                ? AppColors.textHint
-                                : AppColors.darkTextSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            jobTitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isLight
-                                  ? AppColors.textSecondary
-                                  : AppColors.darkTextSecondary,
+                            if (phone.isNotEmpty) const SizedBox(width: 8),
+                          ],
+                        ),
+                      // Phone row
+                      if (phone.isNotEmpty)
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.phone,
+                              size: 13,
+                              color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
                             ),
-                          ),
-                          if (phone.isNotEmpty)
-                            const SizedBox(width: 8),
-                        ],
-                        if (phone.isNotEmpty) ...[
-                          Icon(
-                            Icons.phone,
-                            size: 14,
-                            color: isLight
-                                ? AppColors.textHint
-                                : AppColors.darkTextSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            phone,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isLight
-                                  ? AppColors.textSecondary
-                                  : AppColors.darkTextSecondary,
+                            const SizedBox(width: 4),
+                            Text(
+                              phone,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+                              ),
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
-              ),
 
-              // ── Balance ──────────────────────────────────────
-              if (balance != 0)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${balance.abs().toStringAsFixed(2)} $currencySymbol',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: balanceColor,
-                        fontWeight: FontWeight.w700,
-                      ),
+                const SizedBox(width: 8),
+
+                // ── Balance Section - الرصيد with color ──────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: displayBalance != 0
+                          ? [balanceColor.withOpacity(0.12), balanceColor.withOpacity(0.04)]
+                          : [Colors.grey.withOpacity(0.06), Colors.grey.withOpacity(0.02)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isDebit ? 'عليه' : isCredit ? 'له' : 'متساوي',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: balanceColor,
-                      ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: displayBalance != 0 ? balanceColor.withOpacity(0.25) : AppColors.border.withOpacity(0.3),
+                      width: 1,
                     ),
-                  ],
-                )
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '0.00 $currencySymbol',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: isLight
-                            ? AppColors.textSecondary
-                            : AppColors.darkTextSecondary,
-                        fontWeight: FontWeight.w700,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isDebit ? Icons.trending_down : isCredit ? Icons.trending_up : Icons.remove,
+                        size: 14,
+                        color: displayBalance != 0 ? balanceColor : AppColors.textHint,
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'متساوي',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: isLight
-                            ? AppColors.textHint
-                            : AppColors.darkTextSecondary,
+                      const SizedBox(width: 4),
+                      Text(
+                        '$balanceAbs $currencySymbol',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              const SizedBox(width: 4),
+                const SizedBox(width: 6),
 
-              // ── Arrow icon ───────────────────────────────────
-              Icon(
-                Icons.arrow_back_ios,
-                size: 16,
-                color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
-              ),
-            ],
+                // ── Arrow icon ──────────────────────────────────
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios,
+                    size: 12,
+                    color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -718,9 +741,6 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
       _balanceController.text =
           MoneyHelper.readMoney(e['balance']).toStringAsFixed(2);
       _balanceType = e['balance_type'] as String? ?? 'credit';
-      // Currency is no longer permanently tied to the employee.
-      // In edit mode, default to YER for the opening-balance currency
-      // selector (which only affects the display, not the employee record).
       _openingBalanceCurrency = e['currency'] as String? ?? 'YER';
       _notesController.text = e['notes'] as String? ?? '';
     }
@@ -746,9 +766,6 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
       final balance = double.tryParse(_balanceController.text) ?? 0.0;
       final isEditing = widget.employee != null;
 
-      // Build data map – currency and account_id are NOT set permanently.
-      // Currency is per-transaction; the employee can deal in any currency
-      // after creation.
       final data = <String, dynamic>{
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim().isEmpty
@@ -759,8 +776,8 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
             : _jobTitleController.text.trim(),
         'balance': balance,
         'balance_type': _balanceType,
-        'currency': _openingBalanceCurrency, // Default for DB NOT NULL, but NOT permanent
-        'account_id': null, // NOT permanently tied to an account
+        'currency': _openingBalanceCurrency,
+        'account_id': null,
         'notes': _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -773,8 +790,6 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
             .updateEmployee(widget.employee!['id'] as int, data);
       } else {
         data['created_at'] = now;
-        // Pass opening_balance_currency separately so the repository can
-        // create the journal entry against the correct currency accounts.
         if (balance > 0) {
           data['opening_balance_currency'] = _openingBalanceCurrency;
         }
@@ -932,7 +947,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Currency dropdown – inside opening balance section
+                      // Currency dropdown
                       DropdownButtonFormField<String>(
                         value: _openingBalanceCurrency,
                         decoration: const InputDecoration(
@@ -1036,89 +1051,21 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-
-                      // Note about currency scope
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: AppColors.primary.withOpacity(0.15)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline,
-                                size: 16,
-                                color: AppColors.primary.withOpacity(0.8)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'العملة هنا خاصة بالقيد الافتتاحي فقط. يمكنك التعامل بأي عملة بعد إنشاء الموظف.',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: AppColors.primary.withOpacity(0.85),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 14),
 
+                // Notes field
                 TextFormField(
                   controller: _notesController,
                   maxLines: 3,
-                  textInputAction: TextInputAction.newline,
                   decoration: const InputDecoration(
-                    labelText: 'الملاحظات',
-                    prefixIcon: Icon(Icons.edit_note),
+                    labelText: 'ملاحظات',
+                    prefixIcon: Icon(Icons.notes),
                     alignLabelWithHint: true,
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        onPressed: _isSaving ? null : _save,
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Icon(Icons.check, size: 20),
-                        label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _isSaving
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14)),
-                        child: const Text('إلغاء'),
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: bottomPadding),
               ],
             ),
           ),
