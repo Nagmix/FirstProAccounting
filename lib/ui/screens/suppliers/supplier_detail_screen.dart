@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_formatter.dart';
+import '../../../core/theme/design_system.dart';
+import '../../../core/services/bluetooth_printer_service.dart';
+import '../../../core/services/invoice_pdf_service.dart';
 import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
-import '../../../core/services/bluetooth_printer_service.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 import '../../../data/models/supplier_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
 
-/// Supplier Detail / Ledger Screen
-///
-/// Displays a supplier's full financial history with filter tabs,
-/// running balance, and quick actions for adding vouchers.
+/// Supplier Detail / Ledger Screen — Modern Professional Design
+/// Displays all financial movements for a specific supplier with
+/// filtering, search, statistics, and voucher creation capabilities.
 class SupplierDetailScreen extends StatefulWidget {
   final Supplier supplier;
 
@@ -27,612 +33,576 @@ class SupplierDetailScreen extends StatefulWidget {
   State<SupplierDetailScreen> createState() => _SupplierDetailScreenState();
 }
 
-class _SupplierDetailScreenState extends State<SupplierDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
+  bool _isLoading = true;
   List<Map<String, dynamic>> _allMovements = [];
   List<Map<String, dynamic>> _filteredMovements = [];
-  bool _isLoading = true;
-  String _selectedCurrency = 'YER';
-  DateTime? _startDate;
-  DateTime? _endDate;
+
+  // Filter state
+  int _selectedFilterIndex = 0;
+  String? _selectedCurrency = 'YER';
+  DateTimeRange? _dateRange;
+  String _searchQuery = '';
+
+  // Period filter state: 0=daily, 1=monthly, 2=yearly, 3=all
+  int _periodFilter = 3; // default = الجميع
+
+  // Search controller
+  final TextEditingController _searchController = TextEditingController();
+
+  // Statistics
+  double _totalDebit = 0.0;
+  double _totalCredit = 0.0;
+  double _netBalance = 0.0;
+
+  // Supplier data (refreshable)
+  Supplier? _freshSupplier;
 
   // Cash boxes for voucher dialog
   List<Map<String, dynamic>> _cashBoxes = [];
 
-  // Refreshable supplier data
-  Supplier? _freshSupplier;
+  static const List<_FilterTab> _filterTabs = [
+    _FilterTab(key: 'all', label: 'جميع الحركات والفواتير'),
+    _FilterTab(key: 'opening_balance', label: 'رصيد افتتاحي'),
+    _FilterTab(key: 'debit', label: 'عليه'),
+    _FilterTab(key: 'credit', label: 'له'),
+    _FilterTab(key: 'payment_voucher', label: 'سند صرف'),
+    _FilterTab(key: 'receipt_voucher', label: 'سند قبض'),
+    _FilterTab(key: 'general_entry', label: 'قيد عام'),
+    _FilterTab(key: 'outgoing_transfer', label: 'حوالة صادرة'),
+    _FilterTab(key: 'incoming_transfer', label: 'حوالة وارده'),
+    _FilterTab(key: 'sales', label: 'مبيعات فقط'),
+    _FilterTab(key: 'purchases', label: 'مشتريات فقط'),
+    _FilterTab(key: 'returns', label: 'مرتجع'),
+    _FilterTab(key: 'compound_entry', label: 'قيد متعدد'),
+  ];
 
-  // Filter tab definitions
-  static const _tabs = [
-    Tab(text: 'الكل'),
-    Tab(text: 'عليه'),
-    Tab(text: 'له'),
-    Tab(text: 'سند صرف'),
-    Tab(text: 'سند قبض'),
-    Tab(text: 'قيد عام'),
-    Tab(text: 'حوالة صادرة'),
-    Tab(text: 'حوالة وارده'),
-    Tab(text: 'مبيعات'),
-    Tab(text: 'مشتريات'),
-    Tab(text: 'مرتجع'),
-    Tab(text: 'قيد متعدد'),
+  static const List<MapEntry<String, String>> _currencyOptions = [
+    MapEntry('YER', 'YER'),
+    MapEntry('SAR', 'SAR'),
+    MapEntry('USD', 'USD'),
   ];
 
   @override
   void initState() {
     super.initState();
     _freshSupplier = widget.supplier;
-    _tabController = TabController(length: _tabs.length, vsync: this);
-    _tabController.addListener(_onTabChanged);
     _loadData();
   }
 
   @override
   void dispose() {
-    _tabController.removeListener(_onTabChanged);
-    _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
-  }
-
-  void _onTabChanged() {
-    if (!_tabController.indexIsChanging) {
-      _applyFilters();
-    }
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
     try {
-      // Refresh supplier data
       final supplierMap = await locator<SupplierRepository>().getSupplierById(widget.supplier.id!);
       if (supplierMap != null) {
         _freshSupplier = Supplier.fromMap(supplierMap);
       }
+    } catch (e) {
+      debugPrint('SupplierDetailScreen._loadData [refreshSupplier]: $e');
+    }
 
-      // Load cash boxes for voucher dialog
+    try {
       _cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
+    } catch (e) {
+      debugPrint('SupplierDetailScreen._loadData [cashBoxes]: $e');
+    }
 
-      // Load movements
-      final movements = await locator<SupplierRepository>().getSupplierMovements(widget.supplier.id!);
+    try {
+      await _loadMovements();
+    } catch (e) {
+      debugPrint('SupplierDetailScreen._loadData [movements]: $e');
+    }
 
-      // ── Add Opening Balance as first movement ──
-      // Query the transactions table for opening balance entries linked to this supplier
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _loadMovements() async {
+    final supplierId = widget.supplier.id!;
+    final supplierRepo = locator<SupplierRepository>();
+    final movements = <Map<String, dynamic>>[];
+
+    // 1. Load invoices for this supplier
+    try {
+      final invoices = await supplierRepo.getSupplierInvoices(supplierId);
+      for (final inv in invoices) {
+        final type = inv['type'] as String? ?? 'purchase';
+        final isReturn = (inv['is_return'] as int? ?? 0) == 1;
+        final total = MoneyHelper.readMoney(inv['total']);
+        final currency = inv['currency'] as String? ?? 'YER';
+        final createdAt = inv['created_at'] as String? ?? DateTime.now().toIso8601String();
+
+        String effectiveType, typeAr, filterKey;
+        IconData icon; Color color;
+        double debit = 0.0, credit = 0.0;
+
+        // Supplier accounting rules (liability account):
+        //   Purchase → we owe supplier more → credit (له)
+        //   Purchase return → we owe less → debit (عليه)
+        //   Sale → supplier owes us → debit (عليه)
+        //   Sale return → we owe more → credit (له)
+        if (type == 'purchase' && !isReturn) {
+          effectiveType = 'purchase'; typeAr = 'فاتورة مشتريات'; icon = Icons.shopping_cart;
+          color = AppColors.accentOrange; credit = total; filterKey = 'purchases';
+        } else if (type == 'purchase' && isReturn) {
+          effectiveType = 'purchase_return'; typeAr = 'مرتجع مشتريات'; icon = Icons.keyboard_return;
+          color = AppColors.accentPink; debit = total; filterKey = 'returns';
+        } else if (type == 'sale' && !isReturn) {
+          effectiveType = 'sale'; typeAr = 'فاتورة مبيعات'; icon = Icons.receipt_long;
+          color = AppColors.primary; debit = total; filterKey = 'sales';
+        } else if (type == 'sale' && isReturn) {
+          effectiveType = 'sale_return'; typeAr = 'مرتجع مبيعات'; icon = Icons.keyboard_return;
+          color = AppColors.warning; credit = total; filterKey = 'returns';
+        } else {
+          effectiveType = type; typeAr = 'فاتورة'; icon = Icons.receipt;
+          color = AppColors.textSecondary; credit = total; filterKey = 'all';
+        }
+
+        final remaining = MoneyHelper.readMoney(inv['remaining']);
+        final desc = '$typeAr - ${inv['id'] ?? ''}${remaining > 0 ? ' (متبقي: ${remaining.toStringAsFixed(2)})' : ''}';
+
+        movements.add({
+          'id': inv['id'], 'date': createdAt, 'type': effectiveType, 'type_ar': typeAr,
+          'filter_key': filterKey, 'icon': icon, 'color': color, 'description': desc,
+          'debit': debit, 'credit': credit, 'currency': currency,
+          'source': 'invoice', 'voucher_type': null,
+        });
+      }
+    } catch (e) {
+      debugPrint('SupplierDetailScreen._loadMovements [invoices]: $e');
+    }
+
+    // 2. Load vouchers
+    try {
+      final voucherRows = await supplierRepo.getSupplierVouchers(supplierId);
+
+      // Also find unlinked vouchers that touch supplier accounts
+      final supplierCurrency = _freshSupplier?.currency ?? widget.supplier.currency;
+      final supplierAccounts = await supplierRepo.getSupplierPayableAccounts(supplierCurrency);
+      final supplierAccountIds = supplierAccounts.map((a) => a['id']).toList();
+
+      if (supplierAccountIds.isNotEmpty) {
+        // Get all vouchers without a supplier_id
+        final db = await locator<DatabaseHelper>().database;
+        final unlinkedVouchers = await db.query(
+          'vouchers',
+          where: 'supplier_id IS NULL',
+          orderBy: 'date DESC',
+        );
+        for (final v in unlinkedVouchers) {
+          final voucherId = v['id'] as int?;
+          if (voucherId == null) continue;
+          try {
+            final items = await locator<CashBoxService>().getVoucherItems(voucherId);
+            for (final item in items) {
+              final accountId = item['account_id'] as int?;
+              if (accountId != null && supplierAccountIds.contains(accountId)) {
+                final desc = v['description'] as String? ?? '';
+                final supplierName = _freshSupplier?.name ?? widget.supplier.name;
+                if (desc.contains(supplierName)) {
+                  voucherRows.add(v);
+                }
+                break;
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      for (final v in voucherRows) {
+        final voucherType = v['voucher_type'] as String? ?? '';
+        final totalAmount = MoneyHelper.readMoney(v['total_amount']);
+        final currency = v['currency'] as String? ?? 'YER';
+        final dateStr = v['date'] as String? ?? v['created_at'] as String? ?? DateTime.now().toIso8601String();
+
+        String typeAr, filterKey;
+        IconData icon; Color color;
+        double debit = 0.0, credit = 0.0;
+
+        // Supplier voucher accounting:
+        //   Payment voucher → we pay supplier → debit (عليه)
+        //   Receipt voucher → supplier pays us → credit (له)
+        switch (voucherType) {
+          case 'receipt':
+            typeAr = 'سند قبض'; icon = Icons.assignment_turned_in; color = AppColors.success;
+            credit = totalAmount; filterKey = 'receipt_voucher'; break;
+          case 'payment':
+            typeAr = 'سند صرف'; icon = Icons.assignment_return; color = AppColors.error;
+            debit = totalAmount; filterKey = 'payment_voucher'; break;
+          case 'settlement':
+            typeAr = 'قيد عام'; icon = Icons.balance; color = AppColors.info;
+            credit = totalAmount; filterKey = 'general_entry'; break;
+          case 'compound':
+            typeAr = 'قيد متعدد'; icon = Icons.dynamic_feed; color = AppColors.accentBlue;
+            debit = totalAmount; filterKey = 'compound_entry'; break;
+          case 'outgoing_transfer':
+            typeAr = 'حوالة صادرة'; icon = Icons.send; color = AppColors.accentOrange;
+            debit = totalAmount; filterKey = 'outgoing_transfer'; break;
+          case 'incoming_transfer':
+            typeAr = 'حوالة وارده'; icon = Icons.call_received; color = AppColors.accentBlue;
+            credit = totalAmount; filterKey = 'incoming_transfer'; break;
+          default:
+            typeAr = 'سند'; icon = Icons.description; color = AppColors.textSecondary;
+            debit = totalAmount; filterKey = 'all';
+        }
+
+        final description = v['description'] as String? ?? '$typeAr - ${v['voucher_number'] ?? ''}';
+        movements.add({
+          'id': 'v_${v['id']}', 'date': dateStr, 'type': voucherType, 'type_ar': typeAr,
+          'filter_key': filterKey, 'icon': icon, 'color': color, 'description': description,
+          'debit': debit, 'credit': credit, 'currency': currency,
+          'source': 'voucher', 'voucher_type': voucherType,
+        });
+      }
+    } catch (e) {
+      debugPrint('SupplierDetailScreen._loadMovements [vouchers]: $e');
+    }
+
+    // 3. Opening balance transactions
+    try {
       final supplier = _freshSupplier ?? widget.supplier;
-      final obTransactions = await locator<SupplierRepository>().getSupplierOpeningBalanceTransactions(widget.supplier.id!);
+      final obTransactions = await locator<SupplierRepository>().getSupplierOpeningBalanceTransactions(supplierId);
 
       for (final ob in obTransactions) {
         final debit = MoneyHelper.readMoney(ob['debit']);
         final credit = MoneyHelper.readMoney(ob['credit']);
         final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
         final description = ob['description'] as String? ?? 'رصيد افتتاحي';
-        final obCurrency = ob['account_currency'] as String? ?? supplier.currency ?? 'YER';
+        final obCurrency = ob['account_currency'] as String? ?? supplier.currency;
 
-        movements.insert(0, {
-          ...Map<String, dynamic>.from(ob),
-          '_source': 'opening_balance',
-          '_sort_date': dateStr,
-        'type': 'opening_balance',
-        'type_ar': 'رصيد افتتاحي',
-        'description': description,
-        'debit': debit,
-        'credit': credit,
-        'currency': obCurrency,
-        'voucher_type': null,
-        'is_return': 0,
-      });
-    }
-
-    setState(() {
-      _allMovements = movements;
-    });
-    _applyFilters();
-    } catch (e) {
-      debugPrint('SupplierDetailScreen._loadData: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ أثناء تحميل البيانات'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        movements.add({
+          'id': 'ob_${ob['id']}', 'date': dateStr, 'type': 'opening_balance', 'type_ar': 'رصيد افتتاحي',
+          'filter_key': 'opening_balance', 'icon': Icons.account_balance_wallet, 'color': AppColors.accentBlue,
+          'description': description, 'debit': debit, 'credit': credit, 'currency': obCurrency,
+          'source': 'opening_balance', 'voucher_type': null,
+        });
       }
-    }
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
-  }
 
-  Future<void> _loadMovements() async {
-    setState(() => _isLoading = true);
-    final movements = await locator<SupplierRepository>().getSupplierMovements(widget.supplier.id!);
+      // Fallback for legacy data
+      if (obTransactions.isEmpty && (supplier.balance != 0.0 || supplier.currency.isNotEmpty)) {
+        double allDebit = 0.0, allCredit = 0.0;
+        for (final m in movements) {
+          allDebit += MoneyHelper.readMoney(m['debit']);
+          allCredit += MoneyHelper.readMoney(m['credit']);
+        }
+        final supplierSignedBalance = supplier.balanceType == 'credit' ? supplier.balance : -supplier.balance;
+        final openingAmount = supplierSignedBalance - (allCredit - allDebit);
 
-    // ── Add Opening Balance as first movement ──
-    final supplier = _freshSupplier ?? widget.supplier;
-    final obTransactions = await locator<SupplierRepository>().getSupplierOpeningBalanceTransactions(widget.supplier.id!);
-
-    for (final ob in obTransactions) {
-      final debit = MoneyHelper.readMoney(ob['debit']);
-      final credit = MoneyHelper.readMoney(ob['credit']);
-      final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
-      final description = ob['description'] as String? ?? 'رصيد افتتاحي';
-      final obCurrency = ob['account_currency'] as String? ?? supplier.currency ?? 'YER';
-
-      movements.insert(0, {
-        ...Map<String, dynamic>.from(ob),
-        '_source': 'opening_balance',
-        '_sort_date': dateStr,
-        'type': 'opening_balance',
-        'type_ar': 'رصيد افتتاحي',
-        'description': description,
-        'debit': debit,
-        'credit': credit,
-        'currency': obCurrency,
-        'voucher_type': null,
-        'is_return': 0,
-      });
+        if (openingAmount.abs() >= 0.005) {
+          final obCurrency = supplier.currency;
+          final isCredit = openingAmount > 0;
+          movements.insert(0, {
+            'id': 'opening_balance', 'date': supplier.createdAt.toIso8601String(),
+            'type': 'opening_balance', 'type_ar': 'رصيد افتتاحي', 'filter_key': 'opening_balance',
+            'icon': Icons.account_balance_wallet, 'color': AppColors.accentBlue,
+            'description': 'رصيد افتتاحي (${isCredit ? "له" : "عليه"})',
+            'debit': isCredit ? 0.0 : openingAmount.abs(), 'credit': isCredit ? openingAmount.abs() : 0.0,
+            'currency': obCurrency, 'source': 'opening_balance', 'voucher_type': null,
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('SupplierDetailScreen._loadMovements [opening_balance]: $e');
     }
 
-    setState(() {
-      _allMovements = movements;
-      _isLoading = false;
-    });
+    movements.sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
+    _allMovements = movements;
     _applyFilters();
   }
 
   void _applyFilters() {
-    final tabIndex = _tabController.index;
-    List<Map<String, dynamic>> result = List.from(_allMovements);
+    var filtered = _allMovements.map((m) => Map<String, dynamic>.from(m)).toList();
 
-    // Tab filter
-    switch (tabIndex) {
-      case 0: // الكل - all movements
-        break;
-      case 1: // عليه (debit)
-        result = result.where((m) => _getMovementDirection(m) == 'debit').toList();
-        break;
-      case 2: // له (credit)
-        result = result.where((m) => _getMovementDirection(m) == 'credit').toList();
-        break;
-      case 3: // سند صرف (payment voucher)
-        result = result.where((m) =>
-            m['_source'] == 'voucher' && m['voucher_type'] == 'payment').toList();
-        break;
-      case 4: // سند قبض (receipt voucher)
-        result = result.where((m) =>
-            m['_source'] == 'voucher' && m['voucher_type'] == 'receipt').toList();
-        break;
-      case 5: // قيد عام (settlement/general)
-        result = result.where((m) =>
-            m['_source'] == 'voucher' && m['voucher_type'] == 'settlement').toList();
-        break;
-      case 6: // حوالة صادرة
-        result = result.where((m) =>
-            m['_source'] == 'voucher' && m['voucher_type'] == 'outgoing_transfer').toList();
-        break;
-      case 7: // حوالة وارده
-        result = result.where((m) =>
-            m['_source'] == 'voucher' && m['voucher_type'] == 'incoming_transfer').toList();
-        break;
-      case 8: // مبيعات فقط
-        result = result.where((m) =>
-            m['_source'] == 'invoice' && m['type'] == 'sale').toList();
-        break;
-      case 9: // مشتريات فقط
-        result = result.where((m) =>
-            m['_source'] == 'invoice' && m['type'] == 'purchase').toList();
-        break;
-      case 10: // مرتجع
-        result = result.where((m) =>
-            m['_source'] == 'invoice' &&
-            (m['type'] == 'sale_return' || m['type'] == 'purchase_return' || m['is_return'] == 1)).toList();
-        break;
-      case 11: // قيد متعدد (compound)
-        result = result.where((m) =>
-            m['_source'] == 'voucher' && m['voucher_type'] == 'compound').toList();
-        break;
+    // Apply tab filter
+    final filterKey = _filterTabs[_selectedFilterIndex].key;
+    if (filterKey == 'debit') {
+      filtered = filtered.where((m) => MoneyHelper.readMoney(m['debit']) > 0).toList();
+    } else if (filterKey == 'credit') {
+      filtered = filtered.where((m) => MoneyHelper.readMoney(m['credit']) > 0).toList();
+    } else if (filterKey != 'all') {
+      filtered = filtered.where((m) => m['filter_key'] == filterKey).toList();
     }
 
-    // Currency filter (always apply since there is no "ALL" option)
-    result = result.where((m) {
-      final mCurrency = m['currency'] as String? ?? 'YER';
-      return mCurrency == _selectedCurrency;
-    }).toList();
-
-    // Date filter
-    if (_startDate != null) {
-      result = result.where((m) {
-        final dateStr = m['_sort_date'] as String? ?? '';
-        if (dateStr.isEmpty) return true;
-        try {
-          final date = DateTime.parse(dateStr);
-          return !date.isBefore(_startDate!);
-        } catch (e) {
-          debugPrint('SupplierDetailScreen._applyFilters: $e');
-          return true;
-        }
-      }).toList();
+    // Apply currency filter
+    if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
+      filtered = filtered.where((m) => m['currency'] == _selectedCurrency).toList();
     }
-    if (_endDate != null) {
-      result = result.where((m) {
-        final dateStr = m['_sort_date'] as String? ?? '';
-        if (dateStr.isEmpty) return true;
+
+    // Apply period filter
+    if (_periodFilter != 3) {
+      final now = DateTime.now();
+      filtered = filtered.where((m) {
+        final dateStr = m['date'] as String;
         try {
           final date = DateTime.parse(dateStr);
-          return !date.isAfter(_endDate!);
-        } catch (e) {
-          debugPrint('SupplierDetailScreen._applyFilters: $e');
-          return true;
-        }
+          switch (_periodFilter) {
+            case 0: // يومي - today
+              return date.year == now.year && date.month == now.month && date.day == now.day;
+            case 1: // شهري - current month
+              return date.year == now.year && date.month == now.month;
+            case 2: // سنوي - current year
+              return date.year == now.year;
+            default:
+              return true;
+          }
+        } catch (_) { return true; }
       }).toList();
     }
 
+    // Apply date range filter
+    if (_dateRange != null) {
+      filtered = filtered.where((m) {
+        final dateStr = m['date'] as String;
+        try {
+          final date = DateTime.parse(dateStr);
+          return !date.isBefore(_dateRange!.start) && !date.isAfter(_dateRange!.end.add(const Duration(days: 1)));
+        } catch (_) { return true; }
+      }).toList();
+    }
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      filtered = filtered.where((m) {
+        final desc = (m['description'] as String? ?? '').toLowerCase();
+        final typeAr = (m['type_ar'] as String? ?? '').toLowerCase();
+        return desc.contains(q) || typeAr.contains(q);
+      }).toList();
+    }
+
+    // Calculate running balance
+    double runningBalance = 0.0, totalDebit = 0.0, totalCredit = 0.0;
+    for (final m in filtered) {
+      final debit = MoneyHelper.readMoney(m['debit']);
+      final credit = MoneyHelper.readMoney(m['credit']);
+      runningBalance += credit - debit;
+      totalDebit += debit;
+      totalCredit += credit;
+      m['running_balance'] = runningBalance;
+    }
+
     setState(() {
-      _filteredMovements = result;
+      _filteredMovements = filtered;
+      _totalDebit = totalDebit;
+      _totalCredit = totalCredit;
+      _netBalance = runningBalance;
     });
   }
 
-  /// Determine the direction of a movement: 'debit' (عليه) or 'credit' (له).
-  String _getMovementDirection(Map<String, dynamic> movement) {
-    final source = movement['_source'] as String? ?? '';
-
-    if (source == 'opening_balance') {
-      // Opening balance: debit means عليه, credit means له
-      final debit = MoneyHelper.readMoney(movement['debit']);
-      final credit = MoneyHelper.readMoney(movement['credit']);
-      return debit > credit ? 'debit' : 'credit';
-    }
-
-    if (source == 'invoice') {
-      final type = movement['type'] as String? ?? '';
-      final isReturn = (movement['is_return'] as num?)?.toInt() == 1;
-      // Supplier is a LIABILITY account (credit nature / له):
-      //   Purchase invoice → we owe supplier more → credit (له)
-      //   Purchase return → we owe less → debit (عليه)
-      //   Sale to supplier → supplier owes us → debit (عليه)
-      //   Sale return → we owe more → credit (له)
-      if (type == 'purchase' && !isReturn) {
-        return 'credit'; // مشتريات = ندين للمورد أكثر = له
-      } else if (type == 'purchase' && isReturn) {
-        return 'debit'; // مرتجع مشتريات = ندين أقل = عليه
-      } else if (type == 'sale' && !isReturn) {
-        return 'debit'; // مبيعات للمورد = المورد يدين لنا = عليه
-      } else if (type == 'sale' && isReturn) {
-        return 'credit'; // مرتجع مبيعات = ندين أكثر = له
-      }
-      return 'credit';
-    }
-
-    if (source == 'voucher') {
-      final vType = movement['voucher_type'] as String? ?? '';
-      // Supplier is a LIABILITY account (credit nature / له):
-      //   Payment voucher (سند صرف) → we pay supplier → reduces what we owe → debit (عليه)
-      //     Accounting: Debit Suppliers, Credit Cash → supplier debited → عليه
-      //   Receipt voucher (سند قبض) → supplier pays us → increases what we owe → credit (له)
-      //     Accounting: Debit Cash, Credit Suppliers → supplier credited → له
-      switch (vType) {
-        case 'payment':
-          return 'debit'; // سند صرف = ندفع للمورد = عليه
-        case 'receipt':
-          return 'credit'; // سند قبض = المورد يدفع لنا = له
-        default:
-          return 'credit';
-      }
-    }
-
-    return 'credit';
-  }
-
-  /// Computes net position for the supplier from all movements.
-  /// The stored supplier.balance already includes all changes, so we should NOT
-  /// add it again on top of movements (that would double-count).
-  /// Instead, we compute net position purely from movements.
-  double _computeNetPosition() {
-    double creditTotal = 0;
-    double debitTotal = 0;
-
-    for (final m in _allMovements) {
-      final direction = _getMovementDirection(m);
-      final amount = _getMovementAmount(m);
-      if (direction == 'credit') {
-        creditTotal += amount;
-      } else {
-        debitTotal += amount;
-      }
-    }
-
-    return creditTotal - debitTotal;
-  }
-
-  double _getMovementAmount(Map<String, dynamic> movement) {
-    final source = movement['_source'] as String? ?? '';
-    if (source == 'opening_balance') {
-      final debit = MoneyHelper.readMoney(movement['debit']);
-      final credit = MoneyHelper.readMoney(movement['credit']);
-      return debit > credit ? debit : credit;
-    }
-    if (source == 'invoice') {
-      return MoneyHelper.readMoney(movement['total']);
-    }
-    if (source == 'voucher') {
-      return MoneyHelper.readMoney(movement['total_amount']);
-    }
-    return 0.0;
-  }
-
-  /// Compute running balance from all movements + opening balance.
-  List<double> _computeRunningBalances() {
-    final netPosition = _computeNetPosition();
-    // Build running balance from bottom (earliest) to top (latest)
-    final reversed = _filteredMovements.reversed.toList();
-    final runningBalances = <double>[];
-    double running = netPosition;
-
-    for (int i = 0; i < reversed.length; i++) {
-      runningBalances.add(running);
-      final m = reversed[i];
-      final direction = _getMovementDirection(m);
-      final amount = _getMovementAmount(m);
-      // Subtract the current amount since we're going backwards
-      if (direction == 'credit') {
-        running -= amount;
-      } else {
-        running += amount;
-      }
-    }
-
-    // Reverse to match original order
-    final result = runningBalances.reversed.toList();
-    return result;
-  }
-
-  // ── Opening balance (separate from movements) ────────────────
-  double get _openingBalance {
-    return widget.supplier.balance;
-  }
-
-  String get _openingBalanceLabel {
-    return widget.supplier.balanceType == 'credit' ? 'له' : 'عليه';
-  }
-
-  // ── Totals for bottom statistics (movements only, no opening balance) ──
-  double get _totalCredit {
-    double total = 0;
-    for (final m in _allMovements) {
-      if (_getMovementDirection(m) == 'credit') {
-        total += _getMovementAmount(m);
-      }
-    }
-    return total;
-  }
-
-  double get _totalDebit {
-    double total = 0;
-    for (final m in _allMovements) {
-      if (_getMovementDirection(m) == 'debit') {
-        total += _getMovementAmount(m);
-      }
-    }
-    return total;
-  }
-
-  Future<void> _pickStartDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _startDate ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-      locale: const Locale('ar'),
+  Future<void> _pickDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context, firstDate: DateTime(2020), lastDate: now,
+      initialDateRange: _dateRange, locale: const Locale('ar'),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.primary)),
+        child: child!,
+      ),
     );
-    if (picked != null) {
-      setState(() => _startDate = picked);
-      _applyFilters();
-    }
+    if (picked != null) { setState(() => _dateRange = picked); _applyFilters(); }
   }
 
-  Future<void> _pickEndDate() async {
-    final picked = await showDatePicker(
+  void _clearDateRange() { setState(() => _dateRange = null); _applyFilters(); }
+
+  // ── Show filter popup ──────────────────────────────────────────
+  void _showFilterPopup() {
+    showModalBottomSheet(
       context: context,
-      initialDate: _endDate ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-      locale: const Locale('ar'),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.filter_list, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text('تصفية الحركات', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setSheetState(() => _selectedFilterIndex = 0);
+                        setState(() => _selectedFilterIndex = 0);
+                      },
+                      child: Text('الكل', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // All filters as chips
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: List.generate(_filterTabs.length, (index) {
+                    final isSelected = _selectedFilterIndex == index;
+                    return ChoiceChip(
+                      label: Text(_filterTabs[index].label),
+                      selected: isSelected,
+                      onSelected: (_) {
+                        setSheetState(() => _selectedFilterIndex = index);
+                        setState(() => _selectedFilterIndex = index);
+                        _applyFilters();
+                      },
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? Colors.white : AppColors.textSecondary,
+                      ),
+                      backgroundColor: Theme.of(context).brightness == Brightness.light ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                      selectedColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.compact,
+                    );
+                  }),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('تطبيق'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
-    if (picked != null) {
-      setState(() => _endDate = picked);
-      _applyFilters();
-    }
   }
 
-  void _clearDateFilters() {
-    setState(() {
-      _startDate = null;
-      _endDate = null;
-    });
-    _applyFilters();
-  }
-
-  // ── Inline Voucher Dialog (same as customer) ──────────────────
+  // ── Add Voucher Dialog ──────────────────────────────────────────
   Future<void> _showAddVoucherDialog(String voucherType) async {
-    final supplier = _freshSupplier ?? widget.supplier;
     final amountController = TextEditingController();
     final descriptionController = TextEditingController();
     int? selectedCashBoxId;
-    String selectedCurrency = supplier.currency;
+    String selectedCurrency = _selectedCurrency ?? 'YER';
     bool isSaving = false;
 
     await showDialog(
       context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Supplier name (read-only)
-                    InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'المورد',
-                        prefixIcon: Icon(Icons.local_shipping),
-                      ),
-                      child: Text(supplier.name),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Amount
-                    TextFormField(
-                      controller: amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
-                      decoration: InputDecoration(
-                        labelText: 'المبلغ',
-                        prefixIcon: const Icon(Icons.attach_money),
-                        suffixText: selectedCurrency,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Currency
-                    DropdownButtonFormField<String>(
-                      value: selectedCurrency,
-                      decoration: const InputDecoration(
-                        labelText: 'العملة',
-                        prefixIcon: Icon(Icons.currency_exchange),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'YER', child: Text('ريال يمني (YER)')),
-                        DropdownMenuItem(value: 'SAR', child: Text('ريال سعودي (SAR)')),
-                        DropdownMenuItem(value: 'USD', child: Text('دولار أمريكي (USD)')),
-                      ],
-                      onChanged: (v) {
-                        if (v != null) {
-                          setDialogState(() => selectedCurrency = v);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Cash Box
-                    DropdownButtonFormField<int?>(
-                      value: selectedCashBoxId,
-                      decoration: const InputDecoration(
-                        labelText: 'الصندوق',
-                        prefixIcon: Icon(Icons.account_balance_wallet),
-                      ),
-                      items: _cashBoxes.map((cb) {
-                        return DropdownMenuItem<int?>(
-                          value: cb['id'] as int?,
-                          child: Text('${cb['name']}'),
-                        );
-                      }).toList(),
-                      onChanged: (v) {
-                        setDialogState(() => selectedCashBoxId = v);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Description
-                    TextFormField(
-                      controller: descriptionController,
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        labelText: voucherType == 'receipt' ? 'بيان سند القبض' : 'بيان سند الصرف',
-                        prefixIcon: const Icon(Icons.description),
-                      ),
-                    ),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InputDecorator(
+                  decoration: const InputDecoration(labelText: 'المورد', prefixIcon: Icon(Icons.local_shipping)),
+                  child: Text(_freshSupplier?.name ?? ''),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                  decoration: InputDecoration(labelText: 'المبلغ', prefixIcon: const Icon(Icons.attach_money), suffixText: selectedCurrency),
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  value: selectedCurrency,
+                  decoration: const InputDecoration(labelText: 'العملة', prefixIcon: Icon(Icons.currency_exchange)),
+                  items: const [
+                    DropdownMenuItem(value: 'YER', child: Text('ريال يمني (YER)')),
+                    DropdownMenuItem(value: 'SAR', child: Text('ريال سعودي (SAR)')),
+                    DropdownMenuItem(value: 'USD', child: Text('دولار أمريكي (USD)')),
                   ],
+                  onChanged: (v) { if (v != null) setDialogState(() => selectedCurrency = v); },
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('إلغاء'),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<int?>(
+                  value: selectedCashBoxId,
+                  decoration: const InputDecoration(labelText: 'الصندوق', prefixIcon: Icon(Icons.account_balance_wallet)),
+                  items: _cashBoxes.map((cb) => DropdownMenuItem<int?>(value: cb['id'] as int?, child: Text('${cb['name']}'))).toList(),
+                  onChanged: (v) { setDialogState(() => selectedCashBoxId = v); },
                 ),
-                FilledButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          final amount = double.tryParse(amountController.text);
-                          if (amount == null || amount <= 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('يرجى إدخال مبلغ صالح'), backgroundColor: AppColors.error),
-                            );
-                            return;
-                          }
-                          if (selectedCashBoxId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('يرجى اختيار الصندوق'), backgroundColor: AppColors.error),
-                            );
-                            return;
-                          }
-                          setDialogState(() => isSaving = true);
-
-                          try {
-                            final autoMappingService = locator<VoucherAutoMappingService>();
-                            final now = DateTime.now();
-                            final dateStr = now.toIso8601String().split('T').first;
-
-                            await autoMappingService.createReceiptPaymentVoucher(
-                              voucherType: voucherType,
-                              entityType: VoucherAutoMappingService.entitySupplier,
-                              entityId: supplier.id ?? 0,
-                              cashBoxId: selectedCashBoxId,
-                              amount: amount,
-                              currency: selectedCurrency,
-                              date: dateStr,
-                              description: descriptionController.text.trim().isEmpty
-                                  ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${supplier.name}'
-                                  : descriptionController.text.trim(),
-                            );
-
-                            if (context.mounted) {
-                              Navigator.pop(dialogContext);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(voucherType == 'receipt' ? 'تم إنشاء سند القبض بنجاح' : 'تم إنشاء سند الصرف بنجاح'),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
-                              _loadData();
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              final msg = e.toString().replaceFirst('Exception: ', '');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(msg.isNotEmpty ? msg : 'حدث خطأ أثناء الحفظ'),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                            setDialogState(() => isSaving = false);
-                          }
-                        },
-                  child: isSaving
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(voucherType == 'receipt' ? 'إنشاء سند قبض' : 'إنشاء سند صرف'),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: descriptionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: voucherType == 'receipt' ? 'بيان سند القبض' : 'بيان سند الصرف',
+                    prefixIcon: const Icon(Icons.description),
+                  ),
                 ),
               ],
-            );
-          },
-        );
-      },
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+            FilledButton(
+              onPressed: isSaving ? null : () async {
+                final amount = double.tryParse(amountController.text);
+                if (amount == null || amount <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال مبلغ صالح'), backgroundColor: AppColors.error));
+                  return;
+                }
+                if (selectedCashBoxId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى اختيار الصندوق'), backgroundColor: AppColors.error));
+                  return;
+                }
+                setDialogState(() => isSaving = true);
+                try {
+                  final autoMappingService = locator<VoucherAutoMappingService>();
+                  final dateStr = DateTime.now().toIso8601String().split('T').first;
+                  await autoMappingService.createReceiptPaymentVoucher(
+                    voucherType: voucherType,
+                    entityType: VoucherAutoMappingService.entitySupplier,
+                    entityId: _freshSupplier?.id ?? 0,
+                    cashBoxId: selectedCashBoxId,
+                    amount: amount,
+                    currency: selectedCurrency,
+                    date: dateStr,
+                    description: descriptionController.text.trim().isEmpty
+                        ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshSupplier?.name}'
+                        : descriptionController.text.trim(),
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(dialogContext);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(voucherType == 'receipt' ? 'تم إنشاء سند القبض بنجاح' : 'تم إنشاء سند الصرف بنجاح'),
+                      backgroundColor: AppColors.success,
+                    ));
+                    _loadData();
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    final msg = e.toString().replaceFirst('Exception: ', '');
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(msg.isNotEmpty ? msg : 'حدث خطأ أثناء الحفظ'), backgroundColor: AppColors.error,
+                    ));
+                  }
+                  setDialogState(() => isSaving = false);
+                }
+              },
+              child: isSaving
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(voucherType == 'receipt' ? 'إنشاء سند قبض' : 'إنشاء سند صرف'),
+            ),
+          ],
+        ),
+      ),
     );
     amountController.dispose();
     descriptionController.dispose();
   }
 
-  // ── Print / Export ────────────────────────────────────────────
+  // ── Print / Export ─────────────────────────────────────────────
   void _printReport() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -644,37 +614,25 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
                 ),
                 title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: const Text('إنشاء ملف PDF لكشف الحساب'),
                 trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _generatePdfStatement();
-                },
+                onTap: () { Navigator.pop(ctx); _generatePdfStatement(); },
               ),
               const SizedBox(height: 8),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  decoration: BoxDecoration(color: AppColors.accentBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),
                 ),
                 title: const Text('طباعة حرارية بلوتوث', style: TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: const Text('طباعة كشف حساب على طابعة حرارية'),
                 trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _printBluetoothStatement();
-                },
+                onTap: () async { Navigator.pop(ctx); await _printBluetoothStatement(); },
               ),
             ],
           ),
@@ -683,1574 +641,1032 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
     );
   }
 
-  /// Generate PDF account statement for the supplier.
   Future<void> _generatePdfStatement() async {
     final supplier = _freshSupplier ?? widget.supplier;
     try {
-      // Convert supplier movements to the format expected by the PDF generator
-      final movements = _filteredMovements.map((m) {
-        final source = m['_source'] as String? ?? '';
-        double debit = 0.0;
-        double credit = 0.0;
-        String typeAr = '';
-        String dateStr = '';
-        String description = '';
-
-        if (source == 'invoice') {
-          final type = m['type'] as String? ?? '';
-          final isReturn = (m['is_return'] as num?)?.toInt() == 1;
-          final total = MoneyHelper.readMoney(m['total']);
-          dateStr = m['created_at'] as String? ?? '';
-          description = _getInvoiceTypeAr(type, isReturn);
-          typeAr = description;
-
-          if (type == 'purchase' && !isReturn) {
-            debit = total;
-          } else if (type == 'sale' && !isReturn) {
-            credit = total;
-          } else if (isReturn) {
-            if (type == 'purchase') credit = total;
-            else debit = total;
-          } else {
-            debit = total;
-          }
-        } else if (source == 'opening_balance') {
-          debit = MoneyHelper.readMoney(m['debit']);
-          credit = MoneyHelper.readMoney(m['credit']);
-          dateStr = m['_sort_date'] as String? ?? m['date'] as String? ?? m['created_at'] as String? ?? '';
-          description = m['description'] as String? ?? 'رصيد افتتاحي';
-          typeAr = 'رصيد افتتاحي';
-        } else if (source == 'voucher') {
-          final vType = m['voucher_type'] as String? ?? '';
-          final totalAmount = MoneyHelper.readMoney(m['total_amount']);
-          dateStr = m['date'] as String? ?? m['created_at'] as String? ?? '';
-          description = m['description'] as String? ?? _getVoucherTypeAr(vType);
-          typeAr = _getVoucherTypeAr(vType);
-
-          switch (vType) {
-            case 'payment': credit = totalAmount; break;
-            case 'receipt': debit = totalAmount; break;
-            default: credit = totalAmount;
-          }
-        }
-
-        return {
-          'date': dateStr,
-          'type_ar': typeAr,
-          'description': description,
-          'debit': debit,
-          'credit': credit,
-        };
-      }).toList();
-
       await AccountStatementPdfGenerator.printAccountStatement(
-        entityName: supplier.name,
-        entityType: 'supplier',
-        movements: movements,
-        totalDebit: _totalDebit,
-        totalCredit: _totalCredit,
-        netBalance: _computeNetPosition(),
-        balanceLabel: Supplier.getDynamicBalanceLabel(_computeNetPosition(), supplier.balanceType),
-        phone: supplier.phone,
-        currency: supplier.currency,
+        entityName: supplier.name, entityType: 'supplier', movements: _filteredMovements,
+        totalDebit: _totalDebit, totalCredit: _totalCredit, netBalance: _netBalance,
+        balanceLabel: _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
+        phone: supplier.phone, currency: supplier.currency,
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء إنشاء كشف الحساب'), backgroundColor: AppColors.error),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء إنشاء كشف الحساب'), backgroundColor: AppColors.error));
     }
   }
 
-  /// Print supplier statement via Bluetooth thermal printer.
   Future<void> _printBluetoothStatement() async {
     final printerService = BluetoothPrinterService.instance;
     final supplier = _freshSupplier ?? widget.supplier;
-
     if (!printerService.isConnected) {
       final connected = await printerService.autoConnect();
       if (!connected) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
-              backgroundColor: AppColors.warning,
-              action: SnackBarAction(
-                label: 'الإعدادات',
-                textColor: Colors.white,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const BluetoothPrinterSettingsScreen()),
-                  );
-                },
-              ),
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text('الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
+            backgroundColor: AppColors.warning,
+            action: SnackBarAction(label: 'الإعدادات', textColor: Colors.white, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BluetoothPrinterSettingsScreen()))),
+          ));
         }
         return;
       }
     }
-
     try {
-      await printerService.printCustomerStatement({
-        'name': supplier.name,
-        'balance': _computeNetPosition().abs(),
-        'balance_type': _computeNetPosition() >= 0 ? 'credit' : 'debit',
-        'currency': supplier.currency,
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم إرسال كشف الحساب للطابعة الحرارية'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
-        );
-      }
+      await printerService.printCustomerStatement({'name': supplier.name, 'balance': _netBalance.abs(), 'balance_type': _netBalance >= 0 ? 'credit' : 'debit', 'currency': supplier.currency});
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال كشف الحساب للطابعة الحرارية'), backgroundColor: AppColors.success));
+    } on PrinterException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: AppColors.error));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error));
     }
   }
 
   void _exportToExcel() async {
     final supplier = _freshSupplier ?? widget.supplier;
     try {
-      // Convert supplier movements to the format expected by ExcelExporter
-      final movements = _filteredMovements.map((m) {
-        final source = m['_source'] as String? ?? '';
-        double debit = 0.0;
-        double credit = 0.0;
-        String typeAr = '';
-        String dateStr = '';
-        String description = '';
-
-        if (source == 'invoice') {
-          final type = m['type'] as String? ?? '';
-          final isReturn = (m['is_return'] as num?)?.toInt() == 1;
-          final total = MoneyHelper.readMoney(m['total']);
-          dateStr = m['created_at'] as String? ?? '';
-          description = _getInvoiceTypeAr(type, isReturn);
-          typeAr = description;
-
-          if (type == 'purchase' && !isReturn) {
-            debit = total;
-          } else if (type == 'sale' && !isReturn) {
-            credit = total;
-          } else if (isReturn) {
-            if (type == 'purchase') credit = total;
-            else debit = total;
-          } else {
-            debit = total;
-          }
-        } else if (source == 'opening_balance') {
-          debit = MoneyHelper.readMoney(m['debit']);
-          credit = MoneyHelper.readMoney(m['credit']);
-          dateStr = m['_sort_date'] as String? ?? m['date'] as String? ?? m['created_at'] as String? ?? '';
-          description = m['description'] as String? ?? 'رصيد افتتاحي';
-          typeAr = 'رصيد افتتاحي';
-        } else if (source == 'voucher') {
-          final vType = m['voucher_type'] as String? ?? '';
-          final totalAmount = MoneyHelper.readMoney(m['total_amount']);
-          dateStr = m['date'] as String? ?? m['created_at'] as String? ?? '';
-          description = m['description'] as String? ?? _getVoucherTypeAr(vType);
-          typeAr = _getVoucherTypeAr(vType);
-
-          switch (vType) {
-            case 'payment': credit = totalAmount; break;
-            case 'receipt': debit = totalAmount; break;
-            default: credit = totalAmount;
-          }
-        }
-
-        return {
-          'date': dateStr,
-          'type_ar': typeAr,
-          'description': description,
-          'debit': debit,
-          'credit': credit,
-        };
-      }).toList();
-
       await ExcelExporter.exportAccountStatementToExcel(
-        entityName: supplier.name,
-        entityType: 'مورد',
-        movements: movements,
-        totalDebit: _totalDebit,
-        totalCredit: _totalCredit,
-        netBalance: _computeNetPosition(),
+        entityName: supplier.name, entityType: 'مورد', movements: _filteredMovements,
+        totalDebit: _totalDebit, totalCredit: _totalCredit, netBalance: _netBalance,
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error));
     }
   }
 
-  String _getInvoiceTypeAr(String type, bool isReturn) {
-    if (type == 'purchase' && !isReturn) return 'فاتورة مشتريات';
-    if (type == 'purchase' && isReturn) return 'مرتجع مشتريات';
-    if (type == 'sale' && !isReturn) return 'فاتورة مبيعات';
-    if (type == 'sale' && isReturn) return 'مرتجع مبيعات';
-    return 'فاتورة';
-  }
-
-  String _getVoucherTypeAr(String vType) {
-    switch (vType) {
-      case 'receipt': return 'سند قبض';
-      case 'payment': return 'سند صرف';
-      case 'settlement': return 'قيد عام';
-      case 'compound': return 'قيد متعدد';
-      default: return 'سند';
-    }
+  String _currencySymbol(String? code) {
+    switch (code) { case 'SAR': return 'ر.س'; case 'USD': return r'$'; case 'YER': default: return 'ر.ي'; }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    // ignore: unused_local_variable
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final netPosition = _computeNetPosition();
-    final balanceLabel = Supplier.getDynamicBalanceLabel(
-      netPosition, widget.supplier.balanceType,
-    );
-    final isCreditBalance = balanceLabel == 'له';
-    final isEven = balanceLabel == 'متساوي';
+    final isLight = theme.brightness == Brightness.light;
+    final supplier = _freshSupplier ?? widget.supplier;
+    final isDebit = supplier.balanceType == 'debit';
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.supplier.name),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.print),
-              tooltip: 'طباعة',
-              onPressed: _printReport,
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          // Modern print button
+          Container(
+            margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
+            child: Material(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: _printReport,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.print_rounded, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text('طباعة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.table_chart),
-              tooltip: 'تصدير Excel',
-              onPressed: _exportToExcel,
-            ),
-          ],
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: _tabs,
-            isScrollable: true,
-            labelColor: isDark ? Colors.white : AppColors.primary,
-            unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-            indicatorColor: AppColors.primary,
-            tabAlignment: TabAlignment.start,
-            labelStyle: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
-            unselectedLabelStyle: theme.textTheme.bodySmall,
           ),
-        ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
+          // Modern export button
+          Container(
+            margin: const EdgeInsets.only(left: 4, right: 8, top: 8, bottom: 8),
+            child: Material(
+              color: AppColors.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: _exportToExcel,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sim_card_download_outlined, size: 18, color: AppColors.success),
+                      const SizedBox(width: 4),
+                      Text('تصدير', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.success)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // ── Header Card ────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [AppColors.primaryGradientStart, AppColors.primaryGradientEnd], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              boxShadow: DesignSystem.cardShadow(isLight: false),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Row(
                 children: [
-                  // ── Supplier Header ─────────────────────────────
-                  _SupplierHeader(
-                    supplier: widget.supplier,
-                    netPosition: netPosition,
-                    balanceLabel: balanceLabel,
-                    isCreditBalance: isCreditBalance,
-                    isEven: isEven,
-                    isDark: isDark,
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(
+                      child: Text(
+                        supplier.name.isNotEmpty ? supplier.name[0] : '?',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 22),
+                      ),
+                    ),
                   ),
-
-                  // ── Date & Currency Filters ────────────────────
-                  _FilterBar(
-                    startDate: _startDate,
-                    endDate: _endDate,
-                    selectedCurrency: _selectedCurrency,
-                    onPickStart: _pickStartDate,
-                    onPickEnd: _pickEndDate,
-                    onClearDates: _clearDateFilters,
-                    onCurrencyChanged: (v) {
-                      setState(() => _selectedCurrency = v);
-                      _applyFilters();
-                    },
-                    isDark: isDark,
-                  ),
-
-                  // ── Movements List ─────────────────────────────
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: _filteredMovements.isEmpty
-                        ? _buildEmptyState(theme)
-                        : RefreshIndicator(
-                            onRefresh: _loadMovements,
-                            child: _buildMovementsList(isDark),
-                          ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(supplier.name, style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        if (supplier.phone != null && supplier.phone!.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Row(children: [const Icon(Icons.phone, size: 13, color: Colors.white70), const SizedBox(width: 4), Text(supplier.phone!, style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70))]),
+                        ],
+                      ],
+                    ),
                   ),
-
-                  // ── Bottom Statistics ───────────────────────────
-                  _BottomStats(
-                    totalCredit: _totalCredit,
-                    totalDebit: _totalDebit,
-                    netPosition: netPosition,
-                    balanceLabel: balanceLabel,
-                    openingBalance: _openingBalance,
-                    openingBalanceLabel: _openingBalanceLabel,
-                    isDark: isDark,
+                  // Balance badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '${supplier.balance.abs().toStringAsFixed(2)} ${_currencySymbol(supplier.currency)}',
+                          style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (isDebit ? AppColors.error : AppColors.success).withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(isDebit ? 'عليه' : (supplier.balance > 0 ? 'له' : 'متساوي'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 72), // Lift above bottom stats bar
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FloatingActionButton.small(
-                heroTag: 'receipt',
-                onPressed: () => _showAddVoucherDialog('receipt'),
-                backgroundColor: AppColors.success,
-                tooltip: 'سند قبض',
-                child: const Icon(Icons.assignment_turned_in, color: Colors.white, size: 20),
+            ),
+          ),
+
+          // ── Period Filter RadioButtons ──────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            color: isLight ? AppColors.surface : AppColors.darkSurface,
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textHint),
+                const SizedBox(width: 8),
+                _buildPeriodChip('يومي', 0),
+                const SizedBox(width: 6),
+                _buildPeriodChip('شهري', 1),
+                const SizedBox(width: 6),
+                _buildPeriodChip('سنوي', 2),
+                const SizedBox(width: 6),
+                _buildPeriodChip('الجميع', 3),
+              ],
+            ),
+          ),
+
+          // ── Toolbar: Search + Filters ──────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            color: isLight ? AppColors.surface : AppColors.darkSurface,
+            child: Row(
+              children: [
+                // Search field
+                Expanded(
+                  child: SizedBox(
+                    height: 40,
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) { setState(() => _searchQuery = v.trim()); _applyFilters(); },
+                      decoration: InputDecoration(
+                        hintText: 'بحث حركة...',
+                        hintStyle: TextStyle(fontSize: 13, color: AppColors.textHint),
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(icon: const Icon(Icons.close, size: 16), onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); _applyFilters(); })
+                            : null,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                      ),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // Filter button
+                Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.border),
+                    borderRadius: BorderRadius.circular(10),
+                    color: _selectedFilterIndex > 0 ? AppColors.primary.withOpacity(0.08) : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      onTap: _showFilterPopup,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.filter_list, size: 18, color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.textSecondary),
+                            if (_selectedFilterIndex > 0) ...[
+                              const SizedBox(width: 4),
+                              Container(
+                                width: 6, height: 6,
+                                decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // Date range button
+                Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _dateRange != null ? AppColors.primary : AppColors.border),
+                    borderRadius: BorderRadius.circular(10),
+                    color: _dateRange != null ? AppColors.primary.withOpacity(0.08) : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      onTap: _dateRange != null ? _clearDateRange : _pickDateRange,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_dateRange != null ? Icons.event_busy : Icons.date_range, size: 18,
+                              color: _dateRange != null ? AppColors.primary : AppColors.textSecondary),
+                            if (_dateRange != null) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '${_dateRange!.start.day}/${_dateRange!.start.month}',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // Currency dropdown
+                Container(
+                  height: 40,
+                  padding: const EdgeInsets.only(left: 8, right: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _selectedCurrency ?? 'YER',
+                    underline: const SizedBox.shrink(),
+                    icon: const Icon(Icons.arrow_drop_down, size: 18),
+                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
+                    items: _currencyOptions.map((e) => DropdownMenuItem<String>(value: e.value, child: Text(e.key, style: const TextStyle(fontSize: 12)))).toList(),
+                    onChanged: (v) { if (v != null && v.isNotEmpty) { setState(() => _selectedCurrency = v); _applyFilters(); } },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Active filter label ────────────────────────────────
+          if (_selectedFilterIndex > 0)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              color: isLight ? AppColors.surface : AppColors.darkSurface,
+              child: Row(
+                children: [
+                  Text('الفلتر: ', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_filterTabs[_selectedFilterIndex].label, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () { setState(() => _selectedFilterIndex = 0); _applyFilters(); },
+                          child: Icon(Icons.close, size: 14, color: AppColors.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  Text('${_filteredMovements.length} حركة', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                ],
               ),
-              const SizedBox(height: 8),
-              FloatingActionButton.small(
-                heroTag: 'payment',
-                onPressed: () => _showAddVoucherDialog('payment'),
-                backgroundColor: AppColors.error,
-                tooltip: 'سند صرف',
-                child: const Icon(Icons.assignment_return, color: Colors.white, size: 20),
+            ),
+
+          // ── Action buttons row ──────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            color: isLight ? AppColors.surface : AppColors.darkSurface,
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddVoucherDialog('receipt'),
+                    icon: const Icon(Icons.assignment_turned_in, size: 16),
+                    label: const Text('سند قبض', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.success, side: const BorderSide(color: AppColors.success),
+                      padding: const EdgeInsets.symmetric(vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddVoucherDialog('payment'),
+                    icon: const Icon(Icons.assignment_return, size: 16),
+                    label: const Text('سند صرف', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error, side: const BorderSide(color: AppColors.error),
+                      padding: const EdgeInsets.symmetric(vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Movements List ─────────────────────────────────────
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredMovements.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.local_shipping, size: 64, color: AppColors.textHint.withOpacity(0.3)),
+                            const SizedBox(height: 16),
+                            Text('لا توجد حركات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80, top: 4),
+                        itemCount: _filteredMovements.length,
+                        itemBuilder: (context, index) {
+                          final m = _filteredMovements[index];
+                          return _MovementCard(
+                            movement: m,
+                            currencySymbol: _currencySymbol(m['currency']),
+                            isLight: isLight,
+                            onPrint: () {
+                              _printSingleTransaction(m);
+                            },
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+
+      // ── Bottom Balance Bar — Three separate fields: له / عليه / الرصيد ─
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: isLight ? AppColors.surface : AppColors.darkSurface,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), offset: const Offset(0, -2), blurRadius: 8)],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                // ── له (Credit) ──────────────────────────────
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.success.withOpacity(0.25), width: 1),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('له', style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700, color: AppColors.success, fontSize: 12,
+                        )),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_totalCredit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900, color: AppColors.success, fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // ── عليه (Debit) ─────────────────────────────
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.error.withOpacity(0.25), width: 1),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('عليه', style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 12,
+                        )),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_totalDebit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900, color: AppColors.error, fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // ── الرصيد (Net Balance) — direction by color ─
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _netBalance >= 0
+                            ? [AppColors.success.withOpacity(0.15), AppColors.success.withOpacity(0.05)]
+                            : [AppColors.error.withOpacity(0.15), AppColors.error.withOpacity(0.05)],
+                        begin: Alignment.centerRight,
+                        end: Alignment.centerLeft,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _netBalance >= 0 ? AppColors.success.withOpacity(0.4) : AppColors.error.withOpacity(0.4),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _netBalance >= 0 ? Icons.trending_up : Icons.trending_down,
+                              size: 13,
+                              color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Text('الرصيد', style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                              fontSize: 12,
+                            )),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_netBalance.abs().toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                            fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Period filter chip builder ───────────────────────────────
+  Widget _buildPeriodChip(String label, int value) {
+    final isSelected = _periodFilter == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _periodFilter = value);
+        _applyFilters();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))] : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected)
+              Container(
+                width: 8, height: 8,
+                margin: const EdgeInsets.only(left: 4),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Print single transaction based on its type
+  void _printSingleTransaction(Map<String, dynamic> m) async {
+    final source = m['source'] as String? ?? '';
+    final supplier = _freshSupplier ?? widget.supplier;
+
+    try {
+      if (source == 'invoice') {
+        final invoiceId = m['id']?.toString() ?? '';
+        if (invoiceId.isEmpty) throw Exception('معرف الفاتورة غير موجود');
+
+        final invoiceRepo = locator<InvoiceRepository>();
+        final invoice = await invoiceRepo.getInvoiceById(invoiceId);
+        if (invoice == null) throw Exception('لم يتم العثور على بيانات الفاتورة');
+
+        final items = await invoiceRepo.getInvoiceItems(invoiceId);
+        final pdfService = InvoicePdfService();
+        final pdfBytes = await pdfService.generateSalesInvoicePdf(invoice, items);
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'invoice_${invoiceId}.pdf');
+      } else if (source == 'voucher') {
+        final rawId = (m['id'] ?? '').toString().replaceAll('v_', '');
+        final voucherId = int.tryParse(rawId);
+        if (voucherId == null) throw Exception('معرف السند غير موجود');
+
+        final cashBoxService = locator<CashBoxService>();
+        final db = await locator<DatabaseHelper>().database;
+        final voucherRows = await db.query('vouchers', where: 'id = ?', whereArgs: [voucherId], limit: 1);
+        if (voucherRows.isEmpty) throw Exception('لم يتم العثور على بيانات السند');
+        final voucherData = voucherRows.first;
+        final voucherItems = await cashBoxService.getVoucherItems(voucherId);
+
+        final pdfBytes = await _generateVoucherPdf(voucherData, voucherItems, supplier.name);
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'voucher_$voucherId.pdf');
+      } else if (source == 'opening_balance') {
+        final pdfBytes = await _generateSingleTransactionPdf(m, supplier.name);
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'opening_balance.pdf');
+      } else {
+        final pdfBytes = await _generateSingleTransactionPdf(m, supplier.name);
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'transaction.pdf');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء الطباعة: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  /// Generate a PDF for a single voucher document.
+  Future<Uint8List> _generateVoucherPdf(
+    Map<String, dynamic> voucherData,
+    List<Map<String, dynamic>> items,
+    String supplierName,
+  ) async {
+    pw.Font? arabicFont;
+    try {
+      final fontData = await rootBundle.load('assets/fonts/Cairo-Variable.ttf');
+      arabicFont = pw.Font.ttf(fontData);
+    } catch (_) {}
+
+    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
+    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
+
+    final voucherType = voucherData['voucher_type'] as String? ?? '';
+    final voucherNumber = voucherData['voucher_number']?.toString() ?? '';
+    final dateStr = voucherData['date'] as String? ?? voucherData['created_at'] as String? ?? '';
+    final currency = voucherData['currency'] as String? ?? 'YER';
+    final currencySymbol = currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
+    final description = voucherData['description'] as String? ?? '';
+    final totalAmount = MoneyHelper.readMoney(voucherData['total_amount']);
+
+    String voucherTypeAr;
+    switch (voucherType) {
+      case 'receipt': voucherTypeAr = 'سند قبض'; break;
+      case 'payment': voucherTypeAr = 'سند صرف'; break;
+      case 'settlement': voucherTypeAr = 'قيد عام'; break;
+      case 'compound': voucherTypeAr = 'قيد متعدد'; break;
+      default: voucherTypeAr = 'سند';
+    }
+
+    String formattedDate = dateStr;
+    try { final dt = DateTime.parse(dateStr); formattedDate = '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}'; } catch (_) {}
+
+    final doc = pw.Document(
+      theme: pw.ThemeData.withFont(base: arabicFont ?? pw.Font.helvetica(), bold: arabicFont ?? pw.Font.helveticaBold()),
+    );
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (context) => pw.Directionality(
+          textDirection: pw.TextDirection.rtl,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Text(businessName, style: pw.TextStyle(font: arabicFont, fontSize: 18, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+              if (businessPhone.isNotEmpty) pw.Text('هاتف: $businessPhone', style: pw.TextStyle(font: arabicFont, fontSize: 10)),
+              pw.Divider(thickness: 2, color: const PdfColor(0.12, 0.42, 0.14)),
+              pw.SizedBox(height: 12),
+              // Title
+              pw.Center(
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: pw.BoxDecoration(color: PdfColor(0.12, 0.42, 0.14), borderRadius: pw.BorderRadius.circular(8)),
+                  child: pw.Text(voucherTypeAr, style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColor(1, 1, 1))),
+                ),
+              ),
+              pw.SizedBox(height: 16),
+              // Info
+              _pdfInfoRow('رقم السند', voucherNumber, arabicFont),
+              _pdfInfoRow('التاريخ', formattedDate, arabicFont),
+              _pdfInfoRow('المورد', supplierName, arabicFont),
+              _pdfInfoRow('العملة', currency, arabicFont),
+              if (description.isNotEmpty) _pdfInfoRow('البيان', description, arabicFont),
+              pw.SizedBox(height: 16),
+              // Items table
+              pw.Table(
+                border: pw.TableBorder.all(color: const PdfColor(0.8, 0.8, 0.8), width: 0.5),
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColor(0.12, 0.42, 0.14)),
+                    children: [
+                      _pdfCell('الحساب', arabicFont, bold: true, textColor: const PdfColor(1, 1, 1)),
+                      _pdfCell('مدين', arabicFont, bold: true, textColor: const PdfColor(1, 1, 1)),
+                      _pdfCell('دائن', arabicFont, bold: true, textColor: const PdfColor(1, 1, 1)),
+                    ],
+                  ),
+                  ...items.map((item) => pw.TableRow(children: [
+                    _pdfCell(item['account_name']?.toString() ?? item['account_id']?.toString() ?? '', arabicFont),
+                    _pdfCell(MoneyHelper.readMoney(item['debit']) > 0 ? '$currencySymbol ${CurrencyFormatter.format(MoneyHelper.readMoney(item['debit']))}' : '', arabicFont),
+                    _pdfCell(MoneyHelper.readMoney(item['credit']) > 0 ? '$currencySymbol ${CurrencyFormatter.format(MoneyHelper.readMoney(item['credit']))}' : '', arabicFont),
+                  ])),
+                ],
+              ),
+              pw.SizedBox(height: 16),
+              // Total
+              pw.Container(
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(border: pw.Border.all(color: const PdfColor(0.85, 0.85, 0.85)), borderRadius: pw.BorderRadius.circular(8)),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('الإجمالي', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('$currencySymbol ${CurrencyFormatter.format(totalAmount)}', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 30),
+              // Signature fields
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                children: ['المدير', 'المحاسب', 'المستلم'].map((label) => pw.Expanded(
+                  child: pw.Column(children: [
+                    pw.Container(height: 40, decoration: pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColor(0.5, 0.5, 0.5))))),
+                    pw.SizedBox(height: 4),
+                    pw.Text(label, style: pw.TextStyle(font: arabicFont, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  ]),
+                )).toList(),
               ),
             ],
           ),
         ),
       ),
     );
+
+    return doc.save();
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(Icons.local_shipping,
-                  size: 40, color: AppColors.primary),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'لا توجد حركات',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'لم يتم تسجيل أي حركات مالية لهذا المورد بعد',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.textHint,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+  /// Generate a PDF for a single transaction (opening balance, etc.).
+  Future<Uint8List> _generateSingleTransactionPdf(
+    Map<String, dynamic> m,
+    String supplierName,
+  ) async {
+    pw.Font? arabicFont;
+    try {
+      final fontData = await rootBundle.load('assets/fonts/Cairo-Variable.ttf');
+      arabicFont = pw.Font.ttf(fontData);
+    } catch (_) {}
+
+    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
+    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
+
+    final typeAr = m['type_ar'] as String? ?? '';
+    final description = m['description'] as String? ?? '';
+    final debit = MoneyHelper.readMoney(m['debit']);
+    final credit = MoneyHelper.readMoney(m['credit']);
+    final currency = m['currency'] as String? ?? 'YER';
+    final currencySymbol = currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
+    final dateStr = m['date'] as String? ?? '';
+
+    String formattedDate = dateStr;
+    try { final dt = DateTime.parse(dateStr); formattedDate = '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}'; } catch (_) {}
+
+    final amount = debit > 0 ? debit : credit;
+    final direction = debit > 0 ? 'عليه' : 'له';
+
+    final doc = pw.Document(
+      theme: pw.ThemeData.withFont(base: arabicFont ?? pw.Font.helvetica(), bold: arabicFont ?? pw.Font.helveticaBold()),
     );
-  }
 
-  Widget _buildMovementsList(bool isDark) {
-    final runningBalances = _computeRunningBalances();
-
-    return ListView.builder(
-      padding: EdgeInsets.only(
-        bottom: 80 + MediaQuery.of(context).padding.bottom,
-      ),
-      itemCount: _filteredMovements.length,
-      itemBuilder: (context, index) {
-        final movement = _filteredMovements[index];
-        final running = index < runningBalances.length
-            ? runningBalances[index]
-            : 0.0;
-        return _MovementCard(
-          movement: movement,
-          runningBalance: running,
-          supplier: widget.supplier,
-          isDark: isDark,
-          isLast: index == _filteredMovements.length - 1,
-        );
-      },
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  Supplier Header Widget
-// ═══════════════════════════════════════════════════════════════════════
-
-class _SupplierHeader extends StatelessWidget {
-  final Supplier supplier;
-  final double netPosition;
-  final String balanceLabel;
-  final bool isCreditBalance;
-  final bool isEven;
-  final bool isDark;
-
-  const _SupplierHeader({
-    required this.supplier,
-    required this.netPosition,
-    required this.balanceLabel,
-    required this.isCreditBalance,
-    required this.isEven,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final balanceColor = isEven
-        ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-        : isCreditBalance
-            ? AppColors.success
-            : AppColors.error;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: balanceColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: balanceColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (context) => pw.Directionality(
+          textDirection: pw.TextDirection.rtl,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: balanceColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.local_shipping,
-                  color: balanceColor,
-                  size: 24,
+              // Header
+              pw.Text(businessName, style: pw.TextStyle(font: arabicFont, fontSize: 18, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+              if (businessPhone.isNotEmpty) pw.Text('هاتف: $businessPhone', style: pw.TextStyle(font: arabicFont, fontSize: 10)),
+              pw.Divider(thickness: 2, color: const PdfColor(0.12, 0.42, 0.14)),
+              pw.SizedBox(height: 12),
+              // Title
+              pw.Center(
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: pw.BoxDecoration(color: PdfColor(0.12, 0.42, 0.14), borderRadius: pw.BorderRadius.circular(8)),
+                  child: pw.Text(typeAr, style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColor(1, 1, 1))),
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              pw.SizedBox(height: 16),
+              // Info
+              _pdfInfoRow('المورد', supplierName, arabicFont),
+              _pdfInfoRow('التاريخ', formattedDate, arabicFont),
+              _pdfInfoRow('العملة', currency, arabicFont),
+              if (description.isNotEmpty) _pdfInfoRow('البيان', description, arabicFont),
+              pw.SizedBox(height: 20),
+              // Amount box
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(16),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: const PdfColor(0.85, 0.85, 0.85)),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
                   children: [
-                    Text(
-                      supplier.name,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: balanceColor,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        if (supplier.phone != null) ...[
-                          Icon(Icons.phone,
-                              size: 14,
-                              color: isDark
-                                  ? AppColors.darkTextSecondary
-                                  : AppColors.textSecondary),
-                          const SizedBox(width: 4),
-                          Text(
-                            supplier.phone!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isDark
-                                  ? AppColors.darkTextSecondary
-                                  : AppColors.textSecondary,
-                            ),
+                        pw.Text('المبلغ', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('$currencySymbol ${CurrencyFormatter.format(amount)}', style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+                      ],
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: pw.BoxDecoration(
+                            color: debit > 0 ? const PdfColor(0.8, 0, 0) : const PdfColor(0.12, 0.42, 0.14),
+                            borderRadius: pw.BorderRadius.circular(4),
                           ),
-                          const SizedBox(width: 12),
-                        ],
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: balanceColor.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            balanceLabel,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: balanceColor,
-                            ),
-                          ),
+                          child: pw.Text(direction, style: pw.TextStyle(font: arabicFont, fontSize: 12, fontWeight: pw.FontWeight.bold, color: const PdfColor(1, 1, 1))),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: AppColors.divider),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'الرصيد الحالي',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                CurrencyFormatter.format(netPosition.abs()),
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: balanceColor,
-                ),
+              pw.SizedBox(height: 30),
+              // Signature fields
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                children: ['المدير', 'المحاسب', 'المستلم'].map((label) => pw.Expanded(
+                  child: pw.Column(children: [
+                    pw.Container(height: 40, decoration: pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColor(0.5, 0.5, 0.5))))),
+                    pw.SizedBox(height: 4),
+                    pw.Text(label, style: pw.TextStyle(font: arabicFont, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  ]),
+                )).toList(),
               ),
             ],
           ),
-          if (supplier.debtCeiling > 0) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'سقف المدينية',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                  ),
-                ),
-                Text(
-                  CurrencyFormatter.format(supplier.debtCeiling),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: netPosition.abs() > supplier.debtCeiling
-                        ? AppColors.error
-                        : AppColors.success,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
+        ),
       ),
     );
+
+    return doc.save();
   }
-}
 
-// ═══════════════════════════════════════════════════════════════════════
-//  Filter Bar Widget
-// ═══════════════════════════════════════════════════════════════════════
-
-class _FilterBar extends StatelessWidget {
-  final DateTime? startDate;
-  final DateTime? endDate;
-  final String selectedCurrency;
-  final VoidCallback onPickStart;
-  final VoidCallback onPickEnd;
-  final VoidCallback onClearDates;
-  final ValueChanged<String> onCurrencyChanged;
-  final bool isDark;
-
-  const _FilterBar({
-    this.startDate,
-    this.endDate,
-    required this.selectedCurrency,
-    required this.onPickStart,
-    required this.onPickEnd,
-    required this.onClearDates,
-    required this.onCurrencyChanged,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
+  // PDF helper methods
+  static pw.Widget _pdfInfoRow(String label, String value, pw.Font? font) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 6),
+      child: pw.Row(
         children: [
-          // Start date
-          GestureDetector(
-            onTap: onPickStart,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: startDate != null
-                    ? AppColors.primary.withOpacity(0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: startDate != null
-                      ? AppColors.primary.withOpacity(0.3)
-                      : Colors.transparent,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.calendar_today,
-                      size: 14,
-                      color: startDate != null
-                          ? AppColors.primary
-                          : AppColors.textHint),
-                  const SizedBox(width: 4),
-                  Text(
-                    startDate != null
-                        ? DateFormatter.formatDate(startDate!)
-                        : 'من',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: startDate != null
-                          ? AppColors.primary
-                          : AppColors.textHint,
-                      fontWeight: startDate != null
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // End date
-          GestureDetector(
-            onTap: onPickEnd,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: endDate != null
-                    ? AppColors.primary.withOpacity(0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: endDate != null
-                      ? AppColors.primary.withOpacity(0.3)
-                      : Colors.transparent,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.calendar_today,
-                      size: 14,
-                      color: endDate != null
-                          ? AppColors.primary
-                          : AppColors.textHint),
-                  const SizedBox(width: 4),
-                  Text(
-                    endDate != null
-                        ? DateFormatter.formatDate(endDate!)
-                        : 'إلى',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: endDate != null
-                          ? AppColors.primary
-                          : AppColors.textHint,
-                      fontWeight: endDate != null
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          if (startDate != null || endDate != null) ...[
-            const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(Icons.clear, size: 16),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-              onPressed: onClearDates,
-            ),
-          ],
-
-          const Spacer(),
-
-          // Currency filter
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: isDark ? AppColors.darkBorder : AppColors.border,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: DropdownButton<String>(
-              value: selectedCurrency,
-              underline: const SizedBox.shrink(),
-              isDense: true,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-              items: const [
-                DropdownMenuItem(value: 'YER', child: Text('ر.ي')),
-                DropdownMenuItem(value: 'SAR', child: Text('ر.س')),
-                DropdownMenuItem(value: 'USD', child: Text('\$')),
-              ],
-              onChanged: (v) {
-                if (v != null) onCurrencyChanged(v);
-              },
-            ),
-          ),
+          pw.Text('$label: ', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.4, 0.4, 0.4))),
+          pw.Expanded(child: pw.Text(value, style: pw.TextStyle(font: font, fontSize: 11, fontWeight: pw.FontWeight.bold))),
         ],
       ),
     );
   }
+
+  static pw.Widget _pdfCell(String text, pw.Font? font, {bool bold = false, PdfColor? textColor}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: pw.Text(text, style: pw.TextStyle(font: font, fontSize: 9, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal, color: textColor)),
+    );
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  Movement Card Widget
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  FILTER TAB MODEL
+// ═══════════════════════════════════════════════════════════════════
+class _FilterTab {
+  final String key;
+  final String label;
+  const _FilterTab({required this.key, required this.label});
+}
 
+// ═══════════════════════════════════════════════════════════════════
+//  MOVEMENT CARD — Professional Design
+// ═══════════════════════════════════════════════════════════════════
 class _MovementCard extends StatelessWidget {
   final Map<String, dynamic> movement;
-  final double runningBalance;
-  final Supplier supplier;
-  final bool isDark;
-  final bool isLast;
+  final String currencySymbol;
+  final bool isLight;
+  final VoidCallback? onPrint;
 
-  const _MovementCard({
-    required this.movement,
-    required this.runningBalance,
-    required this.supplier,
-    required this.isDark,
-    this.isLast = false,
-  });
+  const _MovementCard({required this.movement, required this.currencySymbol, required this.isLight, this.onPrint});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final source = movement['_source'] as String? ?? '';
-    final direction = _getDirection();
+    final icon = movement['icon'] as IconData;
+    final color = movement['color'] as Color;
+    final typeAr = movement['type_ar'] as String;
+    final description = movement['description'] as String;
+    final debit = MoneyHelper.readMoney(movement['debit']);
+    final credit = MoneyHelper.readMoney(movement['credit']);
+    final runningBalance = MoneyHelper.readMoney(movement['running_balance']);
+    final dateStr = movement['date'] as String;
 
-    if (source == 'invoice') {
-      return _buildInvoiceCard(theme, direction);
-    } else if (source == 'opening_balance') {
-      return _buildOpeningBalanceCard(theme, direction);
-    } else {
-      return _buildVoucherCard(theme, direction);
-    }
-  }
+    String formattedDate;
+    try {
+      final date = DateTime.parse(dateStr);
+      formattedDate = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    } catch (_) { formattedDate = dateStr; }
 
-  String _getDirection() {
-    final source = movement['_source'] as String? ?? '';
-    if (source == 'opening_balance') {
-      final debit = MoneyHelper.readMoney(movement['debit']);
-      final credit = MoneyHelper.readMoney(movement['credit']);
-      return debit > credit ? 'debit' : 'credit';
-    }
-    if (source == 'invoice') {
-      final type = movement['type'] as String? ?? '';
-      final isReturn = (movement['is_return'] as num?)?.toInt() == 1;
-      if (type == 'purchase' || type == 'purchase_return') {
-        return isReturn || type == 'purchase_return' ? 'credit' : 'debit';
-      } else {
-        return isReturn || type == 'sale_return' ? 'debit' : 'credit';
-      }
-    }
-    if (source == 'voucher') {
-      final vType = movement['voucher_type'] as String? ?? '';
-      switch (vType) {
-        case 'payment':
-          return 'credit';
-        case 'receipt':
-          return 'debit';
-        default:
-          return 'credit';
-      }
-    }
-    return 'credit';
-  }
-
-  double _getAmount() {
-    final source = movement['_source'] as String? ?? '';
-    if (source == 'opening_balance') {
-      final debit = MoneyHelper.readMoney(movement['debit']);
-      final credit = MoneyHelper.readMoney(movement['credit']);
-      return debit > credit ? debit : credit;
-    }
-    if (source == 'invoice') {
-      return MoneyHelper.readMoney(movement['total']);
-    }
-    return MoneyHelper.readMoney(movement['total_amount']);
-  }
-
-  Widget _buildInvoiceCard(ThemeData theme, String direction) {
-    final amount = _getAmount();
-    final type = movement['type'] as String? ?? '';
-    final isReturn = (movement['is_return'] as num?)?.toInt() == 1;
-    final dateStr = movement['created_at'] as String? ?? '';
-    final currency = movement['currency'] as String? ?? 'YER';
-    final isDebit = direction == 'debit';
-
-    DateTime? txDate;
-    try { txDate = DateTime.parse(dateStr); } catch (_) {}
-
-    final typeAr = _getInvoiceTypeAr(type, isReturn);
-    final typeColor = _getInvoiceTypeColor(type, isReturn);
-    final typeIcon = _getInvoiceTypeIcon(type, isReturn);
-
-    String currencySymbol;
-    switch (currency) {
-      case 'SAR': currencySymbol = 'ر.س'; break;
-      case 'USD': currencySymbol = r'$'; break;
-      default: currencySymbol = 'ر.ي';
-    }
+    final balanceColor = runningBalance >= 0 ? AppColors.success : AppColors.error;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.border,
-          width: 0.5,
-        ),
+        border: Border.all(color: isLight ? AppColors.border.withOpacity(0.5) : AppColors.darkBorder.withOpacity(0.5), width: 0.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isLight ? 0.03 : 0.15), blurRadius: 4, offset: const Offset(0, 1))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: Type badge + Running balance
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: typeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(typeIcon, size: 14, color: typeColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      typeAr,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: typeColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              // Date
-              if (txDate != null)
-                Text(
-                  DateFormatter.formatDate(txDate),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                    fontFamily: 'Cairo',
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Row 2: Direction + Amount
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDebit
-                        ? AppColors.error.withOpacity(0.08)
-                        : AppColors.success.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        isDebit ? 'عليه' : 'له',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDebit ? AppColors.error : AppColors.success,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        CurrencyFormatter.format(amount, symbol: currencySymbol),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDebit ? AppColors.error : AppColors.success,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Row 3: Running balance
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                'الرصيد: ',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                CurrencyFormatter.format(runningBalance.abs()),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: runningBalance.abs() < 0.005
-                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-                      : runningBalance > 0
-                          ? AppColors.success
-                          : AppColors.error,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                Supplier.getDynamicBalanceLabel(runningBalance, supplier.balanceType),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: runningBalance.abs() < 0.005
-                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-                      : runningBalance > 0
-                          ? AppColors.success
-                          : AppColors.error,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOpeningBalanceCard(ThemeData theme, String direction) {
-    final amount = _getAmount();
-    final dateStr = movement['_sort_date'] as String? ?? movement['date'] as String? ?? movement['created_at'] as String? ?? '';
-    final description = movement['description'] as String? ?? 'رصيد افتتاحي';
-    final currency = movement['currency'] as String? ?? 'YER';
-    final isDebit = direction == 'debit';
-
-    DateTime? txDate;
-    try { txDate = DateTime.parse(dateStr); } catch (_) {}
-
-    String currencySymbol;
-    switch (currency) {
-      case 'SAR': currencySymbol = 'ر.س'; break;
-      case 'USD': currencySymbol = r'$'; break;
-      default: currencySymbol = 'ر.ي';
-    }
-
-    const typeAr = 'رصيد افتتاحي';
-    const typeColor = AppColors.accentOrange;
-    const typeIcon = Icons.account_balance;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: typeColor.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: Type badge + date
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: typeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(typeIcon, size: 14, color: typeColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      typeAr,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: typeColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              if (txDate != null)
-                Text(
-                  DateFormatter.formatDate(txDate),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                    fontFamily: 'Cairo',
-                  ),
-                ),
-            ],
-          ),
-          if (description.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.article, size: 14, color: AppColors.textHint),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    description,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: color, size: 20),
             ),
-          ],
-          const SizedBox(height: 10),
+            const SizedBox(width: 10),
 
-          // Row 2: Direction + Amount
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDebit
-                        ? AppColors.error.withOpacity(0.08)
-                        : AppColors.success.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        isDebit ? 'عليه' : 'له',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDebit ? AppColors.error : AppColors.success,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        CurrencyFormatter.format(amount, symbol: currencySymbol),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDebit ? AppColors.error : AppColors.success,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Row 3: Running balance
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                'الرصيد: ',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                CurrencyFormatter.format(runningBalance.abs()),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: runningBalance.abs() < 0.005
-                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-                      : runningBalance > 0
-                          ? AppColors.success
-                          : AppColors.error,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                Supplier.getDynamicBalanceLabel(runningBalance, supplier.balanceType),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: runningBalance.abs() < 0.005
-                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-                      : runningBalance > 0
-                          ? AppColors.success
-                          : AppColors.error,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVoucherCard(ThemeData theme, String direction) {
-    final amount = _getAmount();
-    final vType = movement['voucher_type'] as String? ?? '';
-    final dateStr = movement['date'] as String? ?? movement['created_at'] ?? '';
-    final description = movement['description'] as String? ?? '';
-    final number = movement['voucher_number'] as String? ?? '';
-    final currency = movement['currency'] as String? ?? 'YER';
-    final isDebit = direction == 'debit';
-
-    DateTime? txDate;
-    try { txDate = DateTime.parse(dateStr); } catch (_) {}
-
-    final typeAr = _getVoucherTypeAr(vType);
-    final typeColor = _getVoucherTypeColor(vType);
-    final typeIcon = _getVoucherTypeIcon(vType);
-
-    String currencySymbol;
-    switch (currency) {
-      case 'SAR': currencySymbol = 'ر.س'; break;
-      case 'USD': currencySymbol = r'$'; break;
-      default: currencySymbol = 'ر.ي';
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.border,
-          width: 0.5,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: Type badge + number + date
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: typeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(typeIcon, size: 14, color: typeColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      typeAr,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: typeColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (number.isNotEmpty)
-                Text(
-                  number,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                  ),
-                ),
-              const Spacer(),
-              if (txDate != null)
-                Text(
-                  DateFormatter.formatDate(txDate),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                    fontFamily: 'Cairo',
-                  ),
-                ),
-            ],
-          ),
-          if (description.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.article, size: 14, color: AppColors.textHint),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    description,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 10),
-
-          // Row 2: Direction + Amount
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDebit
-                        ? AppColors.error.withOpacity(0.08)
-                        : AppColors.success.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        isDebit ? 'عليه' : 'له',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDebit ? AppColors.error : AppColors.success,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        CurrencyFormatter.format(amount, symbol: currencySymbol),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDebit ? AppColors.error : AppColors.success,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Row 3: Running balance
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                'الرصيد: ',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                CurrencyFormatter.format(runningBalance.abs()),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: runningBalance.abs() < 0.005
-                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-                      : runningBalance > 0
-                          ? AppColors.success
-                          : AppColors.error,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                Supplier.getDynamicBalanceLabel(runningBalance, supplier.balanceType),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: runningBalance.abs() < 0.005
-                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-                      : runningBalance > 0
-                          ? AppColors.success
-                          : AppColors.error,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Invoice type helpers ──────────────────────────────────────
-  String _getInvoiceTypeAr(String type, bool isReturn) {
-    if (isReturn) {
-      switch (type) {
-        case 'sale': return 'مرتجع مبيعات';
-        case 'purchase': return 'مرتجع مشتريات';
-        default: return 'فاتورة مرتجع';
-      }
-    }
-    switch (type) {
-      case 'sale': return 'فاتورة مبيعات';
-      case 'purchase': return 'فاتورة مشتريات';
-      case 'sale_return': return 'مرتجع مبيعات';
-      case 'purchase_return': return 'مرتجع مشتريات';
-      default: return 'فاتورة';
-    }
-  }
-
-  Color _getInvoiceTypeColor(String type, bool isReturn) {
-    if (isReturn) return AppColors.warning;
-    switch (type) {
-      case 'sale': return AppColors.success;
-      case 'purchase': return AppColors.info;
-      default: return AppColors.primary;
-    }
-  }
-
-  IconData _getInvoiceTypeIcon(String type, bool isReturn) {
-    if (isReturn) return Icons.keyboard_return;
-    switch (type) {
-      case 'sale': return Icons.point_of_sale;
-      case 'purchase': return Icons.shopping_cart;
-      default: return Icons.receipt;
-    }
-  }
-
-  // ── Voucher type helpers ──────────────────────────────────────
-  String _getVoucherTypeAr(String type) {
-    switch (type) {
-      case 'receipt': return 'سند قبض';
-      case 'payment': return 'سند صرف';
-      case 'settlement': return 'قيد عام';
-      case 'compound': return 'قيد متعدد';
-      default: return type;
-    }
-  }
-
-  Color _getVoucherTypeColor(String type) {
-    switch (type) {
-      case 'receipt': return AppColors.success;
-      case 'payment': return AppColors.error;
-      case 'settlement': return AppColors.info;
-      case 'compound': return AppColors.accentOrange;
-      default: return AppColors.primary;
-    }
-  }
-
-  IconData _getVoucherTypeIcon(String type) {
-    switch (type) {
-      case 'receipt': return Icons.arrow_downward;
-      case 'payment': return Icons.arrow_upward;
-      case 'settlement': return Icons.swap_horiz;
-      case 'compound': return Icons.compare_arrows;
-      default: return Icons.receipt;
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  Bottom Statistics Widget
-// ═══════════════════════════════════════════════════════════════════════
-
-class _BottomStats extends StatelessWidget {
-  final double totalCredit;
-  final double totalDebit;
-  final double netPosition;
-  final String balanceLabel;
-  final double openingBalance;
-  final String openingBalanceLabel;
-  final bool isDark;
-
-  const _BottomStats({
-    required this.totalCredit,
-    required this.totalDebit,
-    required this.netPosition,
-    required this.balanceLabel,
-    required this.openingBalance,
-    required this.openingBalanceLabel,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // ignore: unused_local_variable
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 12,
-        bottom: 12 + MediaQuery.of(context).padding.bottom,
-      ),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-        border: Border(
-          top: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.border,
-          ),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Opening balance row (only if non-zero)
-          if (openingBalance.abs() > 0.005)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
+            // Description + date + type
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _StatItem(
-                      label: 'رصيد افتتاحي ($openingBalanceLabel)',
-                      value: CurrencyFormatter.format(openingBalance),
-                      color: openingBalanceLabel == 'له' ? AppColors.success : AppColors.error,
-                      icon: Icons.account_balance,
-                    ),
+                  Text(description, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Text(formattedDate, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                        child: Text(typeAr, style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600, fontSize: 10)),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          Row(
-            children: [
-              // له
-              Expanded(
-                child: _StatItem(
-                  label: 'له',
-                  value: CurrencyFormatter.format(totalCredit),
-                  color: AppColors.success,
-                  icon: Icons.south_east,
+
+            const SizedBox(width: 6),
+
+            // Amount + running balance
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (debit > 0)
+                  Text('${debit.toStringAsFixed(2)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w700))
+                else if (credit > 0)
+                  Text('${credit.toStringAsFixed(2)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700))
+                else
+                  Text('0.00 $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                const SizedBox(height: 2),
+                Text(
+                  '${runningBalance.abs().toStringAsFixed(2)}',
+                  style: theme.textTheme.labelSmall?.copyWith(color: balanceColor, fontWeight: FontWeight.w600),
                 ),
-              ),
-              Container(
-                width: 1,
-                height: 36,
-                color: isDark ? AppColors.darkDivider : AppColors.divider,
-              ),
-              // عليه
-              Expanded(
-                child: _StatItem(
-                  label: 'عليه',
-                  value: CurrencyFormatter.format(totalDebit),
-                  color: AppColors.error,
-                  icon: Icons.north_west,
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 36,
-                color: isDark ? AppColors.darkDivider : AppColors.divider,
-              ),
-              // الرصيد
-              Expanded(
-                child: _StatItem(
-                  label: 'الرصيد ($balanceLabel)',
-                  value: CurrencyFormatter.format(netPosition.abs()),
-                  color: netPosition.abs() < 0.005
-                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
-                      : netPosition > 0
-                          ? AppColors.success
-                          : AppColors.error,
-                  icon: Icons.balance,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+              ],
+            ),
 
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  final IconData icon;
-
-  const _StatItem({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
+            // Print button
             const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                label,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
+            SizedBox(
+              width: 28, height: 28,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: Icon(Icons.print, size: 14, color: AppColors.textHint),
+                onPressed: onPrint,
+                tooltip: 'طباعة',
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
+      ),
     );
   }
 }
