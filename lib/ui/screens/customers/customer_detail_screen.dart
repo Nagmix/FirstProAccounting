@@ -685,7 +685,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(customer.name),
         actions: [
           // Modern print button
           Container(
