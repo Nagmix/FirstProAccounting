@@ -182,7 +182,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
     // Backward compatibility: find vouchers with NULL customer_id that reference
     // this customer's receivable account through voucher items
-    final customerCurrency = _freshCustomer?.currency ?? widget.customer.currency;
+    final customerCurrency = _freshCustomer?.currency ?? widget.customer.currency ?? 'YER';
     final customerAccounts = await customerRepo.getCustomerReceivableAccounts(customerCurrency);
     final customerAccountIds = customerAccounts.map((a) => a['id']).toList();
 
@@ -723,7 +723,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         netBalance: _netBalance,
         balanceLabel: _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
         phone: customer.phone,
-        currency: customer.currency,
+        currency: customer.currency ?? 'YER',
       );
     } catch (e) {
       if (mounted) {
