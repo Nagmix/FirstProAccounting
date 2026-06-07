@@ -47,6 +47,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   // Period filter state: 0=all, 1=daily, 2=monthly, 3=yearly
   int _periodFilter = 3; // default = الجميع
 
+  // Sort order: false=ascending (oldest first), true=descending (newest first)
+  bool _sortDescending = false;
+
   // Search controller
   final TextEditingController _searchController = TextEditingController();
 
@@ -291,6 +294,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
 
     movements.sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
+
+    // Calculate running balance for ALL movements chronologically
+    double runBal = 0.0;
+    for (final m in movements) {
+      final debit = MoneyHelper.readMoney(m['debit']);
+      final credit = MoneyHelper.readMoney(m['credit']);
+      runBal += credit - debit;
+      m['running_balance'] = runBal;
+    }
+
     _allMovements = movements;
     _applyFilters();
   }
@@ -355,22 +368,35 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       }).toList();
     }
 
-    // Calculate running balance
-    double runningBalance = 0.0, totalDebit = 0.0, totalCredit = 0.0;
+    // Apply sort order
+    if (_sortDescending) {
+      filtered = filtered.reversed.toList();
+    }
+
+    // Calculate totals from filtered movements (running_balance already computed in _loadMovements)
+    double totalDebit = 0.0, totalCredit = 0.0;
     for (final m in filtered) {
+      totalDebit += MoneyHelper.readMoney(m['debit']);
+      totalCredit += MoneyHelper.readMoney(m['credit']);
+    }
+
+    // Compute net balance from ALL movements (for the selected currency), not just filtered
+    double netBalance = 0.0;
+    for (final m in _allMovements) {
+      if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
+        final mCurrency = m['currency'] as String? ?? 'YER';
+        if (mCurrency != _selectedCurrency) continue;
+      }
       final debit = MoneyHelper.readMoney(m['debit']);
       final credit = MoneyHelper.readMoney(m['credit']);
-      runningBalance += credit - debit;
-      totalDebit += debit;
-      totalCredit += credit;
-      m['running_balance'] = runningBalance;
+      netBalance += credit - debit;
     }
 
     setState(() {
       _filteredMovements = filtered;
       _totalDebit = totalDebit;
       _totalCredit = totalCredit;
-      _netBalance = runningBalance;
+      _netBalance = netBalance;
     });
   }
 
@@ -944,6 +970,36 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
                     items: _currencyOptions.map((e) => DropdownMenuItem<String>(value: e.value, child: Text(e.key, style: const TextStyle(fontSize: 12)))).toList(),
                     onChanged: (v) { if (v != null && v.isNotEmpty) { setState(() => _selectedCurrency = v); _applyFilters(); } },
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Sort order toggle
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _sortDescending ? AppColors.primary : AppColors.border),
+                    borderRadius: BorderRadius.circular(10),
+                    color: _sortDescending ? AppColors.primary.withOpacity(0.08) : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() => _sortDescending = !_sortDescending);
+                        _applyFilters();
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Tooltip(
+                        message: _sortDescending ? 'ترتيب تنازلي' : 'ترتيب تصاعدي',
+                        child: Icon(
+                          _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                          size: 16,
+                          color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
