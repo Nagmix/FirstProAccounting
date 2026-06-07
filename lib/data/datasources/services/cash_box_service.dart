@@ -530,7 +530,10 @@ class CashBoxService {
   ///   - 'effective_balance': double — the net balance considering all sources
   ///   - 'total_inflows': double — sum of all inflows
   ///   - 'total_outflows': double — sum of all outflows
-  Future<Map<String, double>> getCashBoxBalanceForCurrency(int cashBoxId) async {
+  ///
+  /// **Note:** Renamed from getCashBoxBalanceForCurrency to avoid duplicate
+  /// definition with the older per-currency overload above.
+  Future<Map<String, double>> getCashBoxBalanceSummary(int cashBoxId) async {
     final db = await _db;
 
     // Single UNION ALL query that computes inflows and outflows from all sources

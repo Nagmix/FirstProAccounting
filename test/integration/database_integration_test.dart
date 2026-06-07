@@ -847,8 +847,8 @@ void main() {
         await db.insert('transactions', {
           'account_id': accountId,
           'journal_id': 3000 + transactions.indexOf(txn),
-          'debit': MoneyHelper.toCents(txn['debit']!),
-          'credit': MoneyHelper.toCents(txn['credit']!),
+          'debit': MoneyHelper.toCents(txn['debit'] as double),
+          'credit': MoneyHelper.toCents(txn['credit'] as double),
           'description': 'اختبار',
           'date': txn['date']!,
           'created_at': now,

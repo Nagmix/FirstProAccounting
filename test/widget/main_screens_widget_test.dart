@@ -312,15 +312,15 @@ void main() {
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.account_balance_wallet, size: 72),
-                  SizedBox(height: 16),
-                  Text('لا توجد صناديق أو بنوك'),
-                  SizedBox(height: 8),
+                children: [
+                  const Icon(Icons.account_balance_wallet, size: 72),
+                  const SizedBox(height: 16),
+                  const Text('لا توجد صناديق أو بنوك'),
+                  const SizedBox(height: 8),
                   FilledButton.icon(
                     onPressed: null,
-                    icon: Icon(Icons.add, size: 18),
-                    label: Text('إضافة جديدة'),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('إضافة جديدة'),
                   ),
                 ],
               ),

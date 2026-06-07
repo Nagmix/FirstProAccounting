@@ -5,7 +5,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/helpers/currency_constants.dart';
 import '../../../core/helpers/avatar_helper.dart';
-import '../../../core/helpers/delete_helper.dart';
+
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/cash_box_model.dart';
 import '../../widgets/empty_state.dart';
@@ -169,7 +169,8 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
 
   // ── Delete cash box ───────────────────────────────────────────
   Future<void> _deleteCashBox(CashBox cashBox) async {
-    final confirmed = await DeleteHelper.showDeleteConfirmation(
+    // Custom dialog for cash boxes: message mentions soft-delete behavior (7.5 fix)
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
