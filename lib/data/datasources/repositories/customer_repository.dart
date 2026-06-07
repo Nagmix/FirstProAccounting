@@ -346,4 +346,60 @@ class CustomerRepository {
       'SELECT * FROM vouchers WHERE customer_id IS NULL ORDER BY date ASC',
     );
   }
+
+  /// Calculate the balance of a specific customer for a given currency
+  /// by summing all financial movements in that currency.
+  Future<double> getCustomerBalanceForCurrency(int customerId, String currency) async {
+    final db = await _db;
+    double balance = 0.0;
+
+    // 1. Opening balance for this customer in this currency
+    final obByRef = await db.rawQuery('''
+      SELECT COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS net
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND t.reference_id = ?
+        AND a.account_code LIKE '12%'
+        AND a.currency = ?
+    ''', ['customer_$customerId', currency]);
+    balance += MoneyHelper.readCalculatedMoney(obByRef.first['net']);
+
+    // 2. Invoices
+    final invoices = await db.rawQuery('''
+      SELECT type, is_return, total FROM invoices
+      WHERE customer_id = ? AND currency = ?
+    ''', [customerId, currency]);
+    for (final inv in invoices) {
+      final type = inv['type'] as String? ?? 'sale';
+      final isReturn = (inv['is_return'] as int? ?? 0) == 1;
+      final total = MoneyHelper.readMoney(inv['total']);
+      if (type == 'sale' && !isReturn) {
+        balance -= total; // Sale = debit (عليه)
+      } else if (type == 'sale' && isReturn) {
+        balance += total; // Return = credit (له)
+      } else if (type == 'purchase' && !isReturn) {
+        balance += total; // Purchase = credit (له)
+      } else if (type == 'purchase' && isReturn) {
+        balance -= total; // Purchase return = debit (عليه)
+      }
+    }
+
+    // 3. Vouchers
+    final vouchers = await db.rawQuery('''
+      SELECT voucher_type, total_amount FROM vouchers
+      WHERE customer_id = ? AND currency = ?
+    ''', [customerId, currency]);
+    for (final v in vouchers) {
+      final vType = v['voucher_type'] as String? ?? '';
+      final amount = MoneyHelper.readMoney(v['total_amount']);
+      if (vType == 'receipt') {
+        balance += amount; // Receipt = credit (له)
+      } else if (vType == 'payment') {
+        balance -= amount; // Payment = debit (عليه)
+      }
+    }
+
+    return balance;
+  }
 }

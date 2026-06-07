@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/customer_model.dart';
 import '../../widgets/empty_state.dart';
 import 'add_customer_sheet.dart';
@@ -31,6 +33,21 @@ class _CustomersScreenState extends State<CustomersScreen>
   Timer? _searchDebounce;
   List<Customer> _customers = [];
   bool _isLoading = true;
+
+  // Currency filter state
+  String _selectedCurrency = 'YER';
+  bool _isBalancesLoading = false;
+  Map<int, double> _currencyBalances = {};
+
+  /// Currency display info.
+  static const _currencyInfo = {
+    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
+    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
+    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
+  };
+
+  /// Currency filter options (no 'All' — each currency has its own balance).
+  static const _currencyOptions = ['YER', 'SAR', 'USD'];
 
   @override
   void initState() {
@@ -62,6 +79,8 @@ class _CustomersScreenState extends State<CustomersScreen>
           _customers = maps.map((m) => Customer.fromMap(m)).toList();
           _isLoading = false;
         });
+        // Always load currency balances for the selected currency
+        _loadCurrencyBalances();
       }
     } catch (e) {
       if (mounted) {
@@ -71,6 +90,44 @@ class _CustomersScreenState extends State<CustomersScreen>
         );
       }
     }
+  }
+
+  // ── Currency balance loading ──────────────────────────────────
+  Future<void> _loadCurrencyBalances() async {
+    setState(() => _isBalancesLoading = true);
+    try {
+      final newBalances = <int, double>{};
+      final repo = locator<CustomerRepository>();
+
+      final futures = _customers.map((c) async {
+        if (c.id != null) {
+          final balance = await repo.getCustomerBalanceForCurrency(c.id!, _selectedCurrency);
+          return MapEntry(c.id!, balance);
+        }
+        return null;
+      });
+
+      final results = await Future.wait(futures);
+      for (final entry in results) {
+        if (entry != null) {
+          newBalances[entry.key] = entry.value;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _currencyBalances = newBalances;
+          _isBalancesLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isBalancesLoading = false);
+    }
+  }
+
+  void _onCurrencyChanged(String currency) {
+    setState(() => _selectedCurrency = currency);
+    _loadCurrencyBalances();
   }
 
   // ── Filter logic ──────────────────────────────────────────────
@@ -225,6 +282,49 @@ class _CustomersScreenState extends State<CustomersScreen>
                   ),
                 ),
 
+                // ── Currency Filter Row ──────────────────────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Theme.of(context).brightness == Brightness.light ? AppColors.border : AppColors.darkBorder),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.currency_exchange, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text('العملة:', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _currencyOptions.map((option) {
+                              final isSelected = _selectedCurrency == option;
+                              final label = '${_currencyInfo[option]?['symbol'] ?? ''} $option';
+                              final isLight = Theme.of(context).brightness == Brightness.light;
+                              return Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: ChoiceChip(
+                                  label: Text(label),
+                                  selected: isSelected,
+                                  onSelected: (_) => _onCurrencyChanged(option),
+                                  labelStyle: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isSelected ? Colors.white : AppColors.textSecondary),
+                                  backgroundColor: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                                  selectedColor: AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 // ── Customer list ─────────────────────────────────────
                 Expanded(
                   child: TabBarView(
@@ -260,6 +360,8 @@ class _CustomersScreenState extends State<CustomersScreen>
                           return _CustomerCard(
                             customer: customer,
                             avatarColor: _avatarColor(customer.name),
+                            displayBalance: _currencyBalances[customer.id] ?? 0.0,
+                            currencySymbol: _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -294,12 +396,16 @@ class _CustomerCard extends StatelessWidget {
   const _CustomerCard({
     required this.customer,
     required this.avatarColor,
+    required this.displayBalance,
+    required this.currencySymbol,
     this.onTap,
     this.onDelete,
   });
 
   final Customer customer;
   final Color avatarColor;
+  final double displayBalance;
+  final String currencySymbol;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
@@ -307,9 +413,9 @@ class _CustomerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    // Determine balance display based on balance + balanceType
-    final isDebit = customer.balanceType == 'debit' && customer.balance > 0;
-    final isCredit = customer.balanceType == 'credit' && customer.balance > 0;
+    // Determine balance display based on displayBalance
+    final isDebit = displayBalance < 0;
+    final isCredit = displayBalance > 0;
     final balanceColor = isDebit
         ? AppColors.error
         : isCredit
@@ -385,7 +491,7 @@ class _CustomerCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${customer.balance.abs().toStringAsFixed(2)} ${AppConstants.currency}',
+                    '${displayBalance.abs().toStringAsFixed(2)} $currencySymbol',
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: balanceColor,
                       fontWeight: FontWeight.w700,

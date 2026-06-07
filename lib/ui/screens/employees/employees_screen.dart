@@ -33,6 +33,21 @@ class _EmployeesScreenState extends State<EmployeesScreen>
   List<Map<String, dynamic>> _employees = [];
   bool _isLoading = true;
 
+  // Currency filter state
+  String _selectedCurrency = 'YER';
+  bool _isBalancesLoading = false;
+  Map<int, double> _currencyBalances = {};
+
+  /// Currency display info.
+  static const _currencyInfo = {
+    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
+    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
+    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
+  };
+
+  /// Currency filter options (no 'All' — each currency has its own balance).
+  static const _currencyOptions = ['YER', 'SAR', 'USD'];
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +79,8 @@ class _EmployeesScreenState extends State<EmployeesScreen>
           _employees = employees;
           _isLoading = false;
         });
+        // Always load currency balances for the selected currency
+        _loadCurrencyBalances();
       }
     } catch (e) {
       if (mounted) {
@@ -76,6 +93,71 @@ class _EmployeesScreenState extends State<EmployeesScreen>
         );
       }
     }
+  }
+
+  // ── Load balances for all employees filtered by the selected currency ──
+  Future<void> _loadCurrencyBalances() async {
+    setState(() => _isBalancesLoading = true);
+
+    try {
+      final newBalances = <int, double>{};
+      final repo = locator<EmployeeRepository>();
+
+      // Load balances for all employees in parallel
+      final futures = _employees.map((e) async {
+        final id = e['id'] as int?;
+        if (id != null) {
+          final balance = await repo.getEmployeeBalanceForCurrency(
+            id,
+            _selectedCurrency,
+          );
+          return MapEntry(id, balance);
+        }
+        return null;
+      });
+
+      final results = await Future.wait(futures);
+      for (final entry in results) {
+        if (entry != null) {
+          newBalances[entry.key] = entry.value;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _currencyBalances = newBalances;
+          _isBalancesLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isBalancesLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('حدث خطأ أثناء تحميل الأرصدة'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Get the balance for an employee based on the selected currency filter.
+  double _getEmployeeBalance(Map<String, dynamic> employee) {
+    final id = employee['id'] as int?;
+    if (id == null) return 0.0;
+    return _currencyBalances[id] ?? 0.0;
+  }
+
+  /// Get the currency symbol to display based on selected filter.
+  String _getCurrencySymbol() {
+    return _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
+  }
+
+  /// Handle currency filter change.
+  void _onCurrencyChanged(String currency) {
+    setState(() => _selectedCurrency = currency);
+    _loadCurrencyBalances();
   }
 
   // ── Filter logic ──────────────────────────────────────────────
@@ -184,8 +266,80 @@ class _EmployeesScreenState extends State<EmployeesScreen>
     }
   }
 
+  // ── Currency Filter Widget ────────────────────────────────────────
+  Widget _buildCurrencyFilter(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppColors.darkBorder : AppColors.border,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.currency_exchange,
+            size: 20,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'العملة:',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _currencyOptions.map((option) {
+                  final isSelected = _selectedCurrency == option;
+                  final label = '${_currencyInfo[option]?['symbol'] ?? ''} $option';
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: ChoiceChip(
+                      label: Text(label),
+                      selected: isSelected,
+                      onSelected: (_) => _onCurrencyChanged(option),
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected
+                            ? Colors.white
+                            : isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textSecondary,
+                      ),
+                      backgroundColor: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : AppColors.surfaceVariant,
+                      selectedColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final currencySymbol = _getCurrencySymbol();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('الموظفين'),
@@ -236,6 +390,9 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                   ),
                 ),
 
+                // ── Currency Filter Row ──────────────────────────────
+                _buildCurrencyFilter(theme, isDark),
+
                 // ── Employee list ──────────────────────────────────────
                 Expanded(
                   child: TabBarView(
@@ -264,29 +421,37 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                         );
                       }
 
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final employee = filtered[index];
-                          return _EmployeeCard(
-                            employee: employee,
-                            avatarColor: _avatarColor(
-                                employee['name'] as String? ?? ''),
-                            currencySymbol: _currencySymbol(
-                                employee['currency'] as String?),
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      EmployeeDetailScreen(employee: employee),
-                                ),
-                              ).then((_) => _loadEmployees());
-                            },
-                            onDelete: () => _deleteEmployee(employee),
-                          );
-                        },
-                      );
+                      return _isBalancesLoading
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 32),
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 80),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final employee = filtered[index];
+                                final balance = _getEmployeeBalance(employee);
+                                return _EmployeeCard(
+                                  employee: employee,
+                                  avatarColor: _avatarColor(
+                                      employee['name'] as String? ?? ''),
+                                  balance: balance,
+                                  currencySymbol: currencySymbol,
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            EmployeeDetailScreen(employee: employee),
+                                      ),
+                                    ).then((_) => _loadEmployees());
+                                  },
+                                  onDelete: () => _deleteEmployee(employee),
+                                );
+                              },
+                            );
                     }),
                   ),
                 ),
@@ -310,6 +475,7 @@ class _EmployeeCard extends StatelessWidget {
   const _EmployeeCard({
     required this.employee,
     required this.avatarColor,
+    required this.balance,
     required this.currencySymbol,
     this.onTap,
     this.onDelete,
@@ -317,6 +483,7 @@ class _EmployeeCard extends StatelessWidget {
 
   final Map<String, dynamic> employee;
   final Color avatarColor;
+  final double balance;
   final String currencySymbol;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
@@ -328,11 +495,10 @@ class _EmployeeCard extends StatelessWidget {
     final name = employee['name'] as String? ?? '';
     final phone = employee['phone'] as String? ?? '';
     final jobTitle = employee['job_title'] as String? ?? '';
-    final balance = MoneyHelper.readMoney(employee['balance']);
-    final balanceType = employee['balance_type'] as String? ?? 'credit';
     final isActive = (employee['is_active'] as int?) == 1;
-    final isDebit = balanceType == 'debit' && balance > 0;
-    final isCredit = balanceType == 'credit' && balance > 0;
+    // Positive balance = له (credit), negative = عليه (debit)
+    final isCredit = balance > 0;
+    final isDebit = balance < 0;
 
     final balanceColor = isDebit
         ? AppColors.error
@@ -451,7 +617,7 @@ class _EmployeeCard extends StatelessWidget {
               ),
 
               // ── Balance ──────────────────────────────────────
-              if (balance > 0)
+              if (balance != 0)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [

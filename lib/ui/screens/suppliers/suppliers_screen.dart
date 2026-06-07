@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/models/supplier_model.dart';
@@ -31,6 +32,19 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   List<Supplier> _suppliers = [];
   bool _isLoading = true;
 
+  // Currency filter state
+  String _selectedCurrency = 'YER';
+  bool _isBalancesLoading = false;
+  Map<int, double> _currencyBalances = {};
+
+  static const _currencyInfo = {
+    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
+    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
+    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
+  };
+
+  static const _currencyOptions = ['YER', 'SAR', 'USD'];
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +70,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           _suppliers = maps.map((m) => Supplier.fromMap(m)).toList();
           _isLoading = false;
         });
+        // Always load currency balances for the selected currency
+        _loadCurrencyBalances();
       }
     } catch (e) {
       if (mounted) {
@@ -65,6 +81,63 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         );
       }
     }
+  }
+
+  // ── Load balances for all suppliers filtered by the selected currency ──
+  Future<void> _loadCurrencyBalances() async {
+    setState(() => _isBalancesLoading = true);
+
+    try {
+      final newBalances = <int, double>{};
+      final repo = locator<SupplierRepository>();
+
+      // Load balances for all suppliers in parallel
+      final futures = _suppliers.map((s) async {
+        if (s.id != null) {
+          final balance = await repo.getSupplierBalanceForCurrency(
+            s.id!,
+            _selectedCurrency,
+          );
+          return MapEntry(s.id!, balance);
+        }
+        return null;
+      });
+
+      final results = await Future.wait(futures);
+      for (final entry in results) {
+        if (entry != null) {
+          newBalances[entry.key] = entry.value;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _currencyBalances = newBalances;
+          _isBalancesLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isBalancesLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('حدث خطأ أثناء تحميل الأرصدة'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Get the currency symbol to display based on selected filter.
+  String _getCurrencySymbol() {
+    return _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
+  }
+
+  /// Handle currency filter change.
+  void _onCurrencyChanged(String currency) {
+    setState(() => _selectedCurrency = currency);
+    _loadCurrencyBalances();
   }
 
   // ── Filter logic ──────────────────────────────────────────────
@@ -203,9 +276,148 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     return _avatarColors[hash % _avatarColors.length];
   }
 
+  // ── Currency Filter Widget ────────────────────────────────────────
+  Widget _buildCurrencyFilter(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppColors.darkBorder : AppColors.border,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.currency_exchange,
+            size: 20,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'العملة:',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _currencyOptions.map((option) {
+                  final isSelected = _selectedCurrency == option;
+                  final label =
+                      '${_currencyInfo[option]?['symbol'] ?? ''} $option';
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: ChoiceChip(
+                      label: Text(label),
+                      selected: isSelected,
+                      onSelected: (_) => _onCurrencyChanged(option),
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected
+                            ? Colors.white
+                            : isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textSecondary,
+                      ),
+                      backgroundColor: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : AppColors.surfaceVariant,
+                      selectedColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Total Balance Card Widget ─────────────────────────────────────
+  Widget _buildTotalBalanceCard(
+    ThemeData theme,
+    double totalBalance,
+    String currencySymbol,
+  ) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.local_shipping, color: AppColors.primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'إجمالي الرصيد (${_currencyInfo[_selectedCurrency]?['label'] ?? _selectedCurrency})',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+                Text(
+                  CurrencyFormatter.format(totalBalance.abs(),
+                      symbol: currencySymbol),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            totalBalance >= 0 ? 'له' : 'عليه',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: totalBalance >= 0 ? AppColors.success : AppColors.error,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredSuppliers;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final currencySymbol = _getCurrencySymbol();
+
+    // Compute total balance for the selected currency
+    double totalBalance = 0;
+    if (!_isBalancesLoading) {
+      for (final s in filtered) {
+        totalBalance += _currencyBalances[s.id] ?? 0.0;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -242,35 +454,56 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   ),
                 ),
 
+                // ── Currency Filter Row ───────────────────────────────
+                _buildCurrencyFilter(theme, isDark),
+
+                // ── Total balance card ────────────────────────────────
+                if (filtered.isNotEmpty)
+                  _buildTotalBalanceCard(theme, totalBalance, currencySymbol),
+
                 // ── Supplier list ─────────────────────────────────────
                 Expanded(
-                  child: filtered.isEmpty
-                      ? EmptyState(
-                          icon: Icons.local_shipping,
-                          title: _searchQuery.isNotEmpty
-                              ? 'لا توجد نتائج'
-                              : 'لا يوجد موردين',
-                          subtitle: _searchQuery.isNotEmpty
-                              ? 'لم يتم العثور على نتائج مطابقة للبحث'
-                              : 'قم بإضافة موردين جدد لبدء إدارة حساباتك',
-                          actionLabel:
-                              _searchQuery.isEmpty ? 'إضافة مورد' : null,
-                          onAction:
-                              _searchQuery.isEmpty ? _showAddSupplierSheet : null,
+                  child: _isBalancesLoading
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 32),
+                            child: CircularProgressIndicator(),
+                          ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 80),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                            final supplier = filtered[index];
-                            return _SupplierCard(
-                              supplier: supplier,
-                              avatarColor: _avatarColor(supplier.name),
-                              onTap: () => _navigateToDetail(supplier),
-                              onLongPress: () => _showContextMenu(supplier),
-                            );
-                          },
-                        ),
+                      : filtered.isEmpty
+                          ? EmptyState(
+                              icon: Icons.local_shipping,
+                              title: _searchQuery.isNotEmpty
+                                  ? 'لا توجد نتائج'
+                                  : 'لا يوجد موردين',
+                              subtitle: _searchQuery.isNotEmpty
+                                  ? 'لم يتم العثور على نتائج مطابقة للبحث'
+                                  : 'قم بإضافة موردين جدد لبدء إدارة حساباتك',
+                              actionLabel:
+                                  _searchQuery.isEmpty ? 'إضافة مورد' : null,
+                              onAction:
+                                  _searchQuery.isEmpty
+                                      ? _showAddSupplierSheet
+                                      : null,
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 80),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final supplier = filtered[index];
+                                final balance =
+                                    _currencyBalances[supplier.id] ?? 0.0;
+                                return _SupplierCard(
+                                  supplier: supplier,
+                                  avatarColor: _avatarColor(supplier.name),
+                                  balance: balance,
+                                  currencySymbol: currencySymbol,
+                                  onTap: () => _navigateToDetail(supplier),
+                                  onLongPress: () =>
+                                      _showContextMenu(supplier),
+                                );
+                              },
+                            ),
                 ),
               ],
             ),
@@ -292,12 +525,16 @@ class _SupplierCard extends StatelessWidget {
   const _SupplierCard({
     required this.supplier,
     required this.avatarColor,
+    required this.balance,
+    required this.currencySymbol,
     this.onTap,
     this.onLongPress,
   });
 
   final Supplier supplier;
   final Color avatarColor;
+  final double balance;
+  final String currencySymbol;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -306,17 +543,13 @@ class _SupplierCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
 
-    // Dynamic balance: compute the label based on actual financial position
-    // For the card, we use the stored balance as the net position
-    // since we don't have movement data here.
-    // balance is always positive; balanceType tells us the direction.
-    // When balance is 0, show "متساوي" regardless of balanceType.
-    final balanceLabel = supplier.balance.abs() < 0.005
+    // Dynamic balance: use the per-currency computed balance
+    // balance > 0 means credit (له), balance < 0 means debit (عليه)
+    final balanceLabel = balance.abs() < 0.005
         ? 'متساوي'
-        : Supplier.getDynamicBalanceLabel(
-            supplier.balance,
-            supplier.balanceType,
-          );
+        : balance > 0
+            ? 'له'
+            : 'عليه';
 
     final balanceColor = balanceLabel == 'متساوي'
         ? (isLight ? AppColors.textSecondary : AppColors.darkTextSecondary)
@@ -393,7 +626,8 @@ class _SupplierCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${supplier.balance.abs().toStringAsFixed(2)} ${AppConstants.currency}',
+                    CurrencyFormatter.format(balance.abs(),
+                        symbol: currencySymbol),
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: balanceColor,
                       fontWeight: FontWeight.w700,

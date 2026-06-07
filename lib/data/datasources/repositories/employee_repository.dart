@@ -386,6 +386,42 @@ class EmployeeRepository {
     });
   }
 
+  /// Calculate the balance of a specific employee for a given currency
+  Future<double> getEmployeeBalanceForCurrency(int employeeId, String currency) async {
+    final db = await _db;
+    double balance = 0.0;
+
+    // 1. Opening balance
+    final obByRef = await db.rawQuery('''
+      SELECT COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS net
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND t.reference_id = ?
+        AND a.account_code LIKE '51%'
+        AND a.currency = ?
+    ''', ['employee_$employeeId', currency]);
+    balance += MoneyHelper.readCalculatedMoney(obByRef.first['net']);
+
+    // 2. Transactions against employee's account
+    final employeeRows = await db.query('employees', where: 'id = ?', whereArgs: [employeeId], limit: 1);
+    if (employeeRows.isNotEmpty) {
+      final accountId = employeeRows.first['account_id'] as int?;
+      if (accountId != null) {
+        final transactions = await db.rawQuery('''
+          SELECT COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0) AS net
+          FROM transactions t
+          INNER JOIN accounts a ON t.account_id = a.id
+          WHERE t.account_id = ? AND a.currency = ?
+            AND (t.reference_type IS NULL OR t.reference_type != 'opening_balance')
+        ''', [accountId, currency]);
+        balance += MoneyHelper.readCalculatedMoney(transactions.first['net']);
+      }
+    }
+
+    return balance;
+  }
+
   /// Update the employee's balance in the employees table.
   Future<void> updateEmployeeBalance(int employeeId, double newBalance, String balanceType) async {
     final db = await _db;

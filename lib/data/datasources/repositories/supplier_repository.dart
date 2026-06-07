@@ -342,6 +342,62 @@ class SupplierRepository {
   //  MoneyHelper.readMoney / readCalculatedMoney.
   // ══════════════════════════════════════════════════════════════
 
+  /// جلب رصيد المورد بعملة معينة — get supplier balance for a specific currency.
+  /// Combines opening balance, invoices, and vouchers for the given currency.
+  Future<double> getSupplierBalanceForCurrency(int supplierId, String currency) async {
+    final db = await _db;
+    double balance = 0.0;
+
+    // 1. Opening balance
+    final obByRef = await db.rawQuery('''
+      SELECT COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS net
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND t.reference_id = ?
+        AND a.account_code LIKE '21%'
+        AND a.currency = ?
+    ''', ['supplier_$supplierId', currency]);
+    balance += MoneyHelper.readCalculatedMoney(obByRef.first['net']);
+
+    // 2. Invoices
+    final invoices = await db.rawQuery('''
+      SELECT type, is_return, total FROM invoices
+      WHERE supplier_id = ? AND currency = ?
+    ''', [supplierId, currency]);
+    for (final inv in invoices) {
+      final type = inv['type'] as String? ?? 'purchase';
+      final isReturn = (inv['is_return'] as int? ?? 0) == 1;
+      final total = MoneyHelper.readMoney(inv['total']);
+      if (type == 'purchase' && !isReturn) {
+        balance += total; // Purchase = credit (له)
+      } else if (type == 'purchase' && isReturn) {
+        balance -= total; // Purchase return = debit (عليه)
+      } else if (type == 'sale' && !isReturn) {
+        balance -= total; // Sale = debit (عليه)
+      } else if (type == 'sale' && isReturn) {
+        balance += total; // Sale return = credit (له)
+      }
+    }
+
+    // 3. Vouchers
+    final vouchers = await db.rawQuery('''
+      SELECT voucher_type, total_amount FROM vouchers
+      WHERE supplier_id = ? AND currency = ?
+    ''', [supplierId, currency]);
+    for (final v in vouchers) {
+      final vType = v['voucher_type'] as String? ?? '';
+      final amount = MoneyHelper.readMoney(v['total_amount']);
+      if (vType == 'payment') {
+        balance -= amount; // Payment = debit (عليه)
+      } else if (vType == 'receipt') {
+        balance += amount; // Receipt = credit (له)
+      }
+    }
+
+    return balance;
+  }
+
   /// جلب حسابات الموردين — find supplier payable accounts by currency.
   /// Returns account rows with matching name pattern.
   Future<List<Map<String, dynamic>>> getSupplierPayableAccounts(String currency) async {
