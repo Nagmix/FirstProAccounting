@@ -7,6 +7,7 @@ import 'migration_v44_to_v44.dart';
 import 'migration_v44_to_v45.dart';
 import 'migration_v46.dart';
 import 'migration_v47.dart';
+import 'migration_v48.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -73,5 +74,8 @@ class MigrationRunner {
 
     // v47 — Add employee_id column to vouchers table
     if (oldVersion < 47) await MigrationV47.migrate(db);
+
+    // v48 — Ensure employee_id column exists in vouchers table (safety net for fresh v47 installs)
+    if (oldVersion < 48) await MigrationV48.migrate(db);
   }
 }

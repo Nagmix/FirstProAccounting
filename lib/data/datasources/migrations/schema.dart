@@ -661,12 +661,14 @@ class DatabaseSchema {
         cash_box_id INTEGER,
         customer_id INTEGER,
         supplier_id INTEGER,
+        employee_id INTEGER,
         is_posted INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id),
         FOREIGN KEY (customer_id) REFERENCES customers (id),
-        FOREIGN KEY (supplier_id) REFERENCES suppliers (id)
+        FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
+        FOREIGN KEY (employee_id) REFERENCES employees (id)
       )
     ''');
 
@@ -740,6 +742,7 @@ class DatabaseSchema {
     await db.execute('CREATE INDEX idx_vouchers_voucher_type ON vouchers (voucher_type)');
     await db.execute('CREATE INDEX idx_vouchers_date ON vouchers (date)');
     await db.execute('CREATE INDEX idx_vouchers_created_at ON vouchers (created_at)');
+    await db.execute('CREATE INDEX idx_vouchers_employee_id ON vouchers (employee_id)');
     await db.execute('CREATE INDEX idx_voucher_items_voucher_id ON voucher_items (voucher_id)');
     await db.execute('CREATE INDEX idx_voucher_items_account_id ON voucher_items (account_id)');
     // v19 indexes

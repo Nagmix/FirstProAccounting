@@ -40,8 +40,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   CashBox? _freshCashBox;
 
   static const List<_FilterTab> _filterTabs = [
+    _FilterTab(key: 'all', label: 'جميع الحركات والفواتير'),
     _FilterTab(key: 'opening_balance', label: 'رصيد افتتاحي'),
-    _FilterTab(key: 'all', label: 'جميع الحركات'),
     _FilterTab(key: 'debit', label: 'عليه'),
     _FilterTab(key: 'credit', label: 'له'),
     _FilterTab(key: 'receipt_voucher', label: 'سند قبض'),

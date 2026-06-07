@@ -343,7 +343,7 @@ class CashBoxService {
       LEFT JOIN cash_boxes from_cb ON ce.from_cash_box_id = from_cb.id
       LEFT JOIN cash_boxes to_cb ON ce.to_cash_box_id = to_cb.id
       WHERE (ce.from_cash_box_id = ? OR ce.to_cash_box_id = ?) $exchangeFilter
-      ORDER BY ce.date ASC, ce.id ASC
+      ORDER BY ce.created_at ASC, ce.id ASC
     ''', exchangeArgs);
 
     for (final e in exchanges) {
@@ -391,7 +391,7 @@ class CashBoxService {
     final invoices = await db.rawQuery('''
       SELECT i.* FROM invoices i
       WHERE i.cash_box_id = ? $invoiceFilter
-      ORDER BY i.date ASC, i.id ASC
+      ORDER BY i.created_at ASC, i.id ASC
     ''', invoiceArgs);
 
     for (final inv in invoices) {

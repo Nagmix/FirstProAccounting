@@ -47,8 +47,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   List<Map<String, dynamic>> _cashBoxes = [];
 
   static const List<_FilterTab> _filterTabs = [
-    _FilterTab(key: 'opening_balance', label: 'رصيد افتتاحي'),
     _FilterTab(key: 'all', label: 'جميع الحركات والفواتير'),
+    _FilterTab(key: 'opening_balance', label: 'رصيد افتتاحي'),
     _FilterTab(key: 'debit', label: 'عليه'),
     _FilterTab(key: 'credit', label: 'له'),
     _FilterTab(key: 'payment_voucher', label: 'سند صرف'),
