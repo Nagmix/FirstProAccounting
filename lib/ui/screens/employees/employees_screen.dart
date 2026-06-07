@@ -7,7 +7,6 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../data/datasources/repositories/employee_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../data/datasources/repositories/account_repository.dart';
 import '../../../ui/widgets/empty_state.dart';
 import 'employee_detail_screen.dart';
 
@@ -533,7 +532,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
   final _notesController = TextEditingController();
 
   String _balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
-  String _currency = 'YER';
+  String _openingBalanceCurrency = 'YER';
   bool _isSaving = false;
 
   static const _currencyInfo = {
@@ -553,7 +552,10 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
       _balanceController.text =
           MoneyHelper.readMoney(e['balance']).toStringAsFixed(2);
       _balanceType = e['balance_type'] as String? ?? 'credit';
-      _currency = e['currency'] as String? ?? 'YER';
+      // Currency is no longer permanently tied to the employee.
+      // In edit mode, default to YER for the opening-balance currency
+      // selector (which only affects the display, not the employee record).
+      _openingBalanceCurrency = e['currency'] as String? ?? 'YER';
       _notesController.text = e['notes'] as String? ?? '';
     }
   }
@@ -576,21 +578,12 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
     try {
       final now = DateTime.now().toIso8601String();
       final balance = double.tryParse(_balanceController.text) ?? 0.0;
+      final isEditing = widget.employee != null;
 
-      // Get the employee account for this currency
-      int? accountId;
-      final accounts =
-          await locator<AccountRepository>().getAccountsByCurrency(_currency);
-      int accountCodeSuffix =
-          _currency == 'YER' ? 5100 : (_currency == 'SAR' ? 5101 : 5102);
-      final empAccount = accounts
-          .where((a) => a['account_code'] == accountCodeSuffix.toString())
-          .firstOrNull;
-      if (empAccount != null) {
-        accountId = empAccount['id'] as int;
-      }
-
-      final data = {
+      // Build data map – currency and account_id are NOT set permanently.
+      // Currency is per-transaction; the employee can deal in any currency
+      // after creation.
+      final data = <String, dynamic>{
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim().isEmpty
             ? null
@@ -600,8 +593,8 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
             : _jobTitleController.text.trim(),
         'balance': balance,
         'balance_type': _balanceType,
-        'currency': _currency,
-        'account_id': accountId,
+        'currency': null, // NOT permanently tied to a currency
+        'account_id': null, // NOT permanently tied to an account
         'notes': _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -609,34 +602,18 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
         'updated_at': now,
       };
 
-      final isEditing = widget.employee != null;
       if (isEditing) {
         await locator<ReferenceDataRepository>()
             .updateEmployee(widget.employee!['id'] as int, data);
       } else {
         data['created_at'] = now;
-        await locator<ReferenceDataRepository>().insertEmployee(data);
-
-        // If opening balance > 0, post journal entry
-        if (balance > 0 && accountId != null) {
-          int cashCodeSuffix =
-              _currency == 'YER' ? 1100 : (_currency == 'SAR' ? 1101 : 1102);
-          final cashAccount = accounts
-              .where((a) => a['account_code'] == cashCodeSuffix.toString())
-              .firstOrNull;
-          final cashAccountId =
-              cashAccount != null ? cashAccount['id'] as int : null;
-
-          if (cashAccountId != null) {
-            await locator<EmployeeRepository>().recordSalaryPayment(
-              accountId: accountId,
-              cashAccountId: cashAccountId,
-              balance: balance,
-              balanceType: _balanceType,
-              employeeName: _nameController.text,
-            );
-          }
+        // Pass opening_balance_currency separately so the repository can
+        // create the journal entry against the correct currency accounts.
+        if (balance > 0) {
+          data['opening_balance_currency'] = _openingBalanceCurrency;
         }
+        await locator<EmployeeRepository>()
+            .insertEmployeeWithOpeningBalance(data);
       }
 
       if (mounted) {
@@ -667,6 +644,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isEditing = widget.employee != null;
@@ -739,33 +717,37 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                 ),
                 const SizedBox(height: 14),
 
-                // العملة
-                DropdownButtonFormField<String>(
-                  value: _currency,
-                  decoration: const InputDecoration(
-                    labelText: 'العملة',
-                    prefixIcon: Icon(Icons.currency_exchange),
+                // ── القيد الافتتاحي Section ───────────────────────────
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isLight ? AppColors.border : AppColors.darkBorder,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  items: _currencyInfo.entries
-                      .map((e) => DropdownMenuItem(
-                            value: e.key,
-                            child: Text(
-                                '${e.value['label']} (${e.value['symbol']})'),
-                          ))
-                      .toList(),
-                  onChanged: isEditing
-                      ? null
-                      : (v) => setState(() => _currency = v!),
-                ),
-                const SizedBox(height: 14),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Section header
+                      Row(
+                        children: [
+                          Icon(Icons.book_outlined,
+                              size: 20, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'القيد الافتتاحي',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
 
-                // الرصيد الافتتاحي + اتجاه الرصيد
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextFormField(
+                      // Amount field
+                      TextFormField(
                         controller: _balanceController,
                         keyboardType:
                             const TextInputType.numberWithOptions(decimal: true),
@@ -777,14 +759,35 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                         decoration: InputDecoration(
                           labelText: 'الرصيد الافتتاحي',
                           prefixIcon: const Icon(Icons.calculate),
-                          suffixText: AppConstants.currency,
+                          suffixText: _currencyInfo[_openingBalanceCurrency]
+                                  ?['symbol'] as String? ??
+                              AppConstants.currency,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
+                      const SizedBox(height: 14),
+
+                      // Currency dropdown – inside opening balance section
+                      DropdownButtonFormField<String>(
+                        value: _openingBalanceCurrency,
+                        decoration: const InputDecoration(
+                          labelText: 'عملة القيد الافتتاحي',
+                          prefixIcon: Icon(Icons.currency_exchange),
+                        ),
+                        items: _currencyInfo.entries
+                            .map((e) => DropdownMenuItem(
+                                  value: e.key,
+                                  child: Text(
+                                      '${e.value['label']} (${e.value['symbol']})'),
+                                ))
+                            .toList(),
+                        onChanged: isEditing
+                            ? null
+                            : (v) => setState(() => _openingBalanceCurrency = v!),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Balance direction toggle
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
@@ -867,8 +870,37 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+
+                      // Note about currency scope
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: AppColors.primary.withOpacity(0.15)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                size: 16,
+                                color: AppColors.primary.withOpacity(0.8)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'العملة هنا خاصة بالقيد الافتتاحي فقط. يمكنك التعامل بأي عملة بعد إنشاء الموظف.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.primary.withOpacity(0.85),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
 

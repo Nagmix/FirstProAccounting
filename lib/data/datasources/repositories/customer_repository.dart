@@ -20,11 +20,20 @@ class CustomerRepository {
     final now = DateTime.now().toIso8601String();
     final openingBalance = MoneyHelper.readMoney(customerMap['balance']);
     final balanceType = customerMap['balance_type'] as String? ?? 'credit';
-    final customerCurrency = customerMap['currency'] as String? ?? 'YER';
+    // opening_balance_currency is a virtual key used only for the journal
+    // entry — it is NOT stored in the customers table. Fall back to the
+    // customer's currency field (for legacy callers) then to 'YER'.
+    final customerCurrency = customerMap['opening_balance_currency'] as String?
+        ?? customerMap['currency'] as String?
+        ?? 'YER';
 
     int? customerId;
     await db.transaction((txn) async {
-      customerId = await txn.insert('customers', MoneyHelper.toCentsMap(customerMap, MoneyHelper.customerMoneyFields));
+      // Strip the virtual key before inserting into the DB so SQLite
+      // doesn't try to write to a non-existent column.
+      final insertMap = Map<String, dynamic>.from(customerMap)
+        ..remove('opening_balance_currency');
+      customerId = await txn.insert('customers', MoneyHelper.toCentsMap(insertMap, MoneyHelper.customerMoneyFields));
 
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
@@ -118,7 +127,12 @@ class CustomerRepository {
       final balanceDiff = newBalance - oldBalance;
 
       if (balanceDiff.abs() >= 0.005) {
-        final customerCurrency = customerMap['currency'] as String? ?? oldCustomer['currency'] as String? ?? 'YER';
+        // Use opening_balance_currency if provided (new multi-currency flow),
+        // otherwise fall back to the stored currency (legacy), then 'YER'.
+        final customerCurrency = customerMap['opening_balance_currency'] as String?
+            ?? customerMap['currency'] as String?
+            ?? oldCustomer['currency'] as String?
+            ?? 'YER';
         final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
         final journalId = generateUniqueJournalId();
 
@@ -181,7 +195,11 @@ class CustomerRepository {
       }
     }
 
-    return await db.update('customers', MoneyHelper.toCentsMap(customerMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
+    // Strip the virtual key before updating so SQLite doesn't try to
+    // write to a non-existent column.
+    final updateMap = Map<String, dynamic>.from(customerMap)
+      ..remove('opening_balance_currency');
+    return await db.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteCustomer(int id) async {

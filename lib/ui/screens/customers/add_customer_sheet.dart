@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/license/license_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/di/service_locator.dart';
@@ -100,11 +99,20 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       balance: double.tryParse(_balanceController.text) ?? 0.0,
       balanceType: _balanceType,
-      currency: _currency,
+      currency: null, // Customer is multi-currency — no permanent currency
       debtCeiling: double.tryParse(_debtCeilingController.text) ?? 0.0,
     );
 
-    await locator<CustomerRepository>().insertCustomer(customer.toMap());
+    // Build the map and attach the opening balance currency separately
+    // so the repository can create the correct journal entry while
+    // the customer record itself stores no permanent currency.
+    final map = customer.toMap();
+    final openingBalance = double.tryParse(_balanceController.text) ?? 0.0;
+    if (openingBalance > 0) {
+      map['opening_balance_currency'] = _currency;
+    }
+
+    await locator<CustomerRepository>().insertCustomer(map);
 
     if (!mounted) return;
     setState(() => _isSaving = false);
@@ -185,45 +193,64 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(Icons.location_on)),
                 ),
-                const SizedBox(height:  14),
-
-                // العملة
-                DropdownButtonFormField<String>(
-                  value: _currency,
-                  decoration: const InputDecoration(
-                    labelText: 'العملة',
-                    prefixIcon: Icon(Icons.currency_exchange),
-                  ),
-                  items: _currencyInfo.entries.map((e) => DropdownMenuItem(
-                    value: e.key,
-                    child: Text('${e.value['label']} (${e.value['symbol']})'),
-                  )).toList(),
-                  onChanged: (v) => setState(() => _currency = v!),
-                ),
                 const SizedBox(height: 14),
 
-                // الرصيد الافتتاحي + اتجاه الرصيد
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextFormField(
-                        controller: _balanceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
-                        decoration: InputDecoration(
-                          labelText: 'الرصيد الافتتاحي',
-                          prefixIcon: const Icon(Icons.calculate),
-                          suffixText: AppConstants.currency,
-                        ),
+                // ════════════════════════════════════════════════════════
+                //  القيد الافتتاحي — Opening Balance Section
+                //  Currency & balance_type are ONLY for the opening
+                //  balance journal entry, not the customer account.
+                // ════════════════════════════════════════════════════════
+                _SectionLabel(label: 'القيد الافتتاحي'),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.04),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Amount + Currency row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: TextFormField(
+                              controller: _balanceController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              textInputAction: TextInputAction.next,
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                              decoration: InputDecoration(
+                                labelText: 'الرصيد الافتتاحي',
+                                prefixIcon: const Icon(Icons.calculate),
+                                suffixText: _currencyInfo[_currency]!['symbol'],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: DropdownButtonFormField<String>(
+                              value: _currency,
+                              decoration: const InputDecoration(
+                                labelText: 'عملة القيد الافتتاحي',
+                                prefixIcon: Icon(Icons.currency_exchange),
+                              ),
+                              items: _currencyInfo.entries.map((e) => DropdownMenuItem(
+                                value: e.key,
+                                child: Text('${e.value['label']} (${e.value['symbol']})', style: const TextStyle(fontSize: 13)),
+                              )).toList(),
+                              onChanged: (v) => setState(() => _currency = v!),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
+                      const SizedBox(height: 12),
+
+                      // Balance direction toggle (له / عليه)
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
@@ -282,20 +309,46 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+
+                      // Note about currency scope
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber.withOpacity(0.25)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 18, color: Colors.amber.shade800),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'العملة هنا خاصة بالقيد الافتتاحي فقط. يمكنك التعامل بأي عملة بعد إنشاء العميل.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.amber.shade900,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
 
+                // Debt ceiling — no currency suffix because customer is multi-currency
                 TextFormField(
                   controller: _debtCeilingController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.next,
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'سقف المدينية',
-                    prefixIcon: const Icon(Icons.credit_card),
-                    suffixText: AppConstants.currency,
+                    prefixIcon: Icon(Icons.credit_card),
                   ),
                 ),
                 const SizedBox(height: 14),

@@ -10,6 +10,76 @@ class EmployeeRepository {
 
   Future<Database> get _db => _dbHelper.database;
 
+  /// Insert a new employee with optional opening balance.
+  ///
+  /// Handles `opening_balance_currency` from the data map:
+  /// - Strips it before DB insert (not a real column).
+  /// - Uses it to resolve the correct currency accounts for the journal entry.
+  /// - Sets `currency` and `account_id` to null on the employee record
+  ///   (currency is per-transaction, not per-employee).
+  Future<int> insertEmployeeWithOpeningBalance(
+      Map<String, dynamic> employeeData) async {
+    final db = await _db;
+
+    // Extract opening balance currency before inserting
+    final openingBalanceCurrency =
+        employeeData.remove('opening_balance_currency') as String?;
+    final balance = MoneyHelper.readMoney(employeeData['balance']);
+    final balanceType =
+        employeeData['balance_type'] as String? ?? 'credit';
+    final employeeName = employeeData['name'] as String? ?? '';
+
+    // Ensure currency and account_id are NOT permanently set on the employee
+    employeeData['currency'] = null;
+    employeeData['account_id'] = null;
+
+    // Insert employee (convert money fields to cents)
+    final employeeId = await db.insert(
+        'employees', MoneyHelper.toCentsMap(employeeData, ['balance']));
+
+    // If opening balance > 0, create the journal entry against the
+    // appropriate currency accounts
+    if (balance > 0 && openingBalanceCurrency != null) {
+      final codeOffset = openingBalanceCurrency == 'SAR'
+          ? 1
+          : (openingBalanceCurrency == 'USD' ? 2 : 0);
+      final employeeAccountCode = (5100 + codeOffset).toString();
+      final cashAccountCode = (1100 + codeOffset).toString();
+
+      // Resolve employee account (5100+offset)
+      final empAccountRows = await db.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [employeeAccountCode, openingBalanceCurrency],
+        limit: 1,
+      );
+      final empAccountId =
+          empAccountRows.isNotEmpty ? empAccountRows.first['id'] as int : null;
+
+      // Resolve cash account (1100+offset)
+      final cashAccountRows = await db.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [cashAccountCode, openingBalanceCurrency],
+        limit: 1,
+      );
+      final cashAccountId =
+          cashAccountRows.isNotEmpty ? cashAccountRows.first['id'] as int : null;
+
+      if (empAccountId != null && cashAccountId != null) {
+        await recordSalaryPayment(
+          accountId: empAccountId,
+          cashAccountId: cashAccountId,
+          balance: balance,
+          balanceType: balanceType,
+          employeeName: employeeName,
+        );
+      }
+    }
+
+    return employeeId;
+  }
+
   /// Record a salary payment (opening balance) for a new employee.
   ///
   /// Creates double-entry transactions and updates account balances:

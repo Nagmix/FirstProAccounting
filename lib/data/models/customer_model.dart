@@ -11,7 +11,7 @@ class Customer {
   final String? notes;
   final double balance;
   final String balanceType; // 'debit' or 'credit'
-  final String currency;
+  final String? currency; // nullable — customer is multi-currency; currency is only for opening balance
   final double debtCeiling; // was creditLimit (سقف المدينية)
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -27,7 +27,7 @@ class Customer {
     this.notes,
     this.balance = 0.0,
     this.balanceType = 'credit',
-    this.currency = 'YER',
+    this.currency,
     this.debtCeiling = 0.0,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -65,7 +65,7 @@ class Customer {
       notes: map['notes'],
       balance: MoneyHelper.readMoney(map['balance']),
       balanceType: map['balance_type'] ?? 'credit',
-      currency: map['currency'] ?? 'YER',
+      currency: map['currency'] as String?,
       debtCeiling: MoneyHelper.readMoney(map['debt_ceiling'] ?? map['credit_limit']),
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
@@ -75,7 +75,7 @@ class Customer {
   Customer copyWith({
     int? id, String? name, String? phone, String? address, String? address2,
     String? email, String? contactMethod, String? notes,
-    double? balance, String? balanceType, String? currency,
+    double? balance, String? balanceType, Object? currency = _sentinel,
     double? debtCeiling, DateTime? createdAt, DateTime? updatedAt,
   }) {
     return Customer(
@@ -85,9 +85,12 @@ class Customer {
       contactMethod: contactMethod ?? this.contactMethod,
       notes: notes ?? this.notes, balance: balance ?? this.balance,
       balanceType: balanceType ?? this.balanceType,
-      currency: currency ?? this.currency,
+      currency: currency == _sentinel ? this.currency : currency as String?,
       debtCeiling: debtCeiling ?? this.debtCeiling,
       createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
+
+// Sentinel value to distinguish "not provided" from "explicitly null" in copyWith
+const _sentinel = Object();

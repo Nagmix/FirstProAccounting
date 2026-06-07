@@ -27,7 +27,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
   final _notesController = TextEditingController();
 
   String _balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
-  String _currency = 'YER';
+  String _currency = 'YER'; // currency for opening balance only
   String _contactMethod = 'whatsapp'; // 'whatsapp' or 'phone'
   bool _isSaving = false;
 
@@ -49,7 +49,9 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       _addressController.text = s.address ?? '';
       _balanceController.text = s.balance > 0 ? s.balance.toStringAsFixed(2) : '';
       _balanceType = s.balanceType;
-      _currency = s.currency;
+      // Currency is no longer tied to supplier permanently.
+      // Default to YER for the opening balance entry.
+      _currency = 'YER';
       _debtCeilingController.text = s.debtCeiling > 0 ? s.debtCeiling.toStringAsFixed(2) : '';
       _contactMethod = s.contactMethod ?? 'whatsapp';
       _notesController.text = s.notes ?? '';
@@ -82,7 +84,10 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       'address': _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
       'balance': balance,
       'balance_type': _balanceType,
-      'currency': _currency,
+      // Supplier is now multi-currency — do NOT set a permanent currency
+      'currency': null,
+      // Pass the opening balance currency separately for the journal entry
+      'opening_balance_currency': _currency,
       'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       'debt_ceiling': double.tryParse(_debtCeilingController.text) ?? 0.0,
       'contact_method': _contactMethod,
@@ -210,172 +215,200 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
               ),
               const SizedBox(height: 14),
 
-              // ── Currency ───────────────────────────────────────────
-              DropdownButtonFormField<String>(
-                value: _currency,
-                decoration: const InputDecoration(
-                  labelText: 'العملة',
-                  prefixIcon: Icon(Icons.currency_exchange),
+              // ══════════════════════════════════════════════════════
+              // ── القيد الافتتاحي (Opening Balance Section) ─────────
+              // ══════════════════════════════════════════════════════
+              _SectionLabel(label: 'القيد الافتتاحي'),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.divider),
                 ),
-                items: _currencyInfo.entries.map((e) => DropdownMenuItem(
-                  value: e.key,
-                  child: Text('${e.value['label']} (${e.value['symbol']})'),
-                )).toList(),
-                onChanged: (v) => setState(() => _currency = v!),
-              ),
-              const SizedBox(height: 14),
-
-              // ── Opening balance + له/عليه toggle ──────────────────
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _balanceController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}'))
-                      ],
-                      decoration: InputDecoration(
-                        labelText: 'الرصيد الافتتاحي',
-                        prefixIcon:
-                            const Icon(Icons.calculate),
-                        suffixText: AppConstants.currency,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Amount + Currency row ───────────────────────
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            'اتجاه الرصيد الافتتاحي',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
+                        // Amount field
+                        Expanded(
+                          flex: 3,
+                          child: TextFormField(
+                            controller: _balanceController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            textInputAction: TextInputAction.next,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*\.?\d{0,2}'))
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'الرصيد الافتتاحي',
+                              prefixIcon: const Icon(Icons.calculate),
+                              suffixText: _currencyInfo[_currency]?['symbol'] ?? AppConstants.currency,
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           ),
                         ),
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: _balanceType == 'credit'
-                                  ? AppColors.success
-                                  : AppColors.error,
+                        const SizedBox(width: 10),
+                        // Currency dropdown
+                        Expanded(
+                          flex: 2,
+                          child: DropdownButtonFormField<String>(
+                            value: _currency,
+                            decoration: InputDecoration(
+                              labelText: 'عملة القيد الافتتاحي',
+                              prefixIcon: const Icon(Icons.currency_exchange),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _balanceType = 'credit'),
-                                  child: Container(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: _balanceType == 'credit'
-                                          ? AppColors.success
-                                              .withOpacity(0.1)
-                                          : Colors.transparent,
-                                      borderRadius: const BorderRadius.only(
-                                        topRight: Radius.circular(9),
-                                        bottomRight: Radius.circular(9),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'له',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: _balanceType == 'credit'
-                                            ? AppColors.success
-                                            : AppColors.textHint,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _balanceType = 'debit'),
-                                  child: Container(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: _balanceType == 'debit'
-                                          ? AppColors.error
-                                              .withOpacity(0.1)
-                                          : Colors.transparent,
-                                      borderRadius: const BorderRadius.only(
-                                        topLeft: Radius.circular(9),
-                                        bottomLeft: Radius.circular(9),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'عليه',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: _balanceType == 'debit'
-                                            ? AppColors.error
-                                            : AppColors.textHint,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        // Prominent note about opening balance
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.warning.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.warning.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  size: 14, color: AppColors.warning),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  'هذا الخيار خاص بالرصيد الافتتاحي فقط وليس حالة دائمة للمورد',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: AppColors.warning,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            items: _currencyInfo.entries.map((e) => DropdownMenuItem(
+                              value: e.key,
+                              child: Text('${e.value['label']} (${e.value['symbol']})', style: const TextStyle(fontSize: 12)),
+                            )).toList(),
+                            onChanged: (v) => setState(() => _currency = v!),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+
+                    // ── Balance direction toggle (له/عليه) ─────────
+                    Row(
+                      children: [
+                        Text(
+                          'اتجاه الرصيد:',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: _balanceType == 'credit'
+                                    ? AppColors.success
+                                    : AppColors.error,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _balanceType = 'credit'),
+                                    child: Container(
+                                      padding:
+                                          const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: _balanceType == 'credit'
+                                            ? AppColors.success
+                                                .withOpacity(0.1)
+                                            : Colors.transparent,
+                                        borderRadius: const BorderRadius.only(
+                                          topRight: Radius.circular(9),
+                                          bottomRight: Radius.circular(9),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'له',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: _balanceType == 'credit'
+                                              ? AppColors.success
+                                              : AppColors.textHint,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _balanceType = 'debit'),
+                                    child: Container(
+                                      padding:
+                                          const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: _balanceType == 'debit'
+                                            ? AppColors.error
+                                                .withOpacity(0.1)
+                                            : Colors.transparent,
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(9),
+                                          bottomLeft: Radius.circular(9),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'عليه',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: _balanceType == 'debit'
+                                              ? AppColors.error
+                                              : AppColors.textHint,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // ── Info note about currency ────────────────────
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.info.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              size: 16, color: AppColors.info),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'العملة هنا خاصة بالقيد الافتتاحي فقط. يمكنك التعامل بأي عملة بعد إنشاء المورد.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.info,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
 
-              // ── سقف المدينية (Debt Ceiling) ───────────────────────
+              // ── سقف المدينية (Debt Ceiling) — no currency suffix ──
               TextFormField(
                 controller: _debtCeilingController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -383,10 +416,10 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
                 ],
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'سقف المدينية',
-                  prefixIcon: const Icon(Icons.credit_card),
-                  suffixText: AppConstants.currency,
+                  prefixIcon: Icon(Icons.credit_card),
+                  // No suffixText — supplier is now multi-currency
                 ),
               ),
               const SizedBox(height: 18),

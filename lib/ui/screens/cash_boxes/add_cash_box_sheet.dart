@@ -25,10 +25,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
 
   String _type = 'cash_box'; // 'cash_box' or 'bank'
   String _balanceType = 'credit'; // 'debit' or 'credit'
-  String _currency = 'YER'; // 'YER', 'SAR', 'USD'
-  int? _linkedAccountId;
+  String _currency = 'YER'; // 'YER', 'SAR', 'USD' — only for opening balance
   bool _isSaving = false;
-  bool _accountLinkError = false;
 
   bool get _isEdit => widget.existing != null;
 
@@ -57,29 +55,9 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
       _bankAccountNumberController.text = widget.existing!.bankAccountNumber ?? '';
       _bankNameController.text = widget.existing!.bankName ?? '';
       _bankBranchController.text = widget.existing!.bankBranch ?? '';
-      _linkedAccountId = widget.existing!.linkedAccountId;
-
-      // Derive currency from the linked account if editing
-      if (_linkedAccountId != null) {
-        _deriveCurrencyFromLinkedAccount();
-      }
-    } else {
-      // For new cash boxes, auto-link to default currency (YER) account
-      _onCurrencyChanged(_currency);
+      // Cash box is currency-agnostic; no need to derive currency from linked account
     }
-  }
-
-  /// When editing, try to figure out which currency the existing linked account belongs to.
-  Future<void> _deriveCurrencyFromLinkedAccount() async {
-    for (final entry in _cashBanksAccountCodes.entries) {
-      final account = await locator<JournalService>().getAccountByCodeAndCurrency(entry.value, entry.key);
-      if (account != null && account['id'] == _linkedAccountId) {
-        if (mounted) {
-          setState(() => _currency = entry.key);
-        }
-        break;
-      }
-    }
+    // Default currency for opening balance is YER
   }
 
   @override
@@ -92,61 +70,16 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
     super.dispose();
   }
 
-  /// Auto-link to the Cash & Banks account for the selected currency.
-  Future<void> _onCurrencyChanged(String newCurrency) async {
-    setState(() {
-      _currency = newCurrency;
-      _accountLinkError = false;
-    });
-
-    final code = _cashBanksAccountCodes[newCurrency]!;
-    final account = await locator<JournalService>().getAccountByCodeAndCurrency(code, newCurrency);
-
-    if (!mounted) return;
-
-    if (account != null) {
-      setState(() => _linkedAccountId = account['id'] as int);
-    } else {
-      // No matching account found — show warning but still allow the user to proceed
-      setState(() {
-        _linkedAccountId = null;
-        _accountLinkError = true;
-      });
-    }
+  /// Resolve the linked account for the opening balance journal entry based on currency.
+  /// This is temporary — only used for the journal entry, NOT stored on the cash box.
+  Future<int?> _resolveLinkedAccountForCurrency(String currency) async {
+    final code = _cashBanksAccountCodes[currency]!;
+    final account = await locator<JournalService>().getAccountByCodeAndCurrency(code, currency);
+    return account?['id'] as int?;
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
-    // Ensure we have a linked account before saving
-    if (_linkedAccountId == null) {
-      // Try one more time to resolve the account
-      final code = _cashBanksAccountCodes[_currency]!;
-      try {
-        final account = await locator<JournalService>().getAccountByCodeAndCurrency(code, _currency);
-        if (account != null) {
-          _linkedAccountId = account['id'] as int;
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-          return;
-        }
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في البحث عن الحساب: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-        return;
-      }
-    }
 
     setState(() => _isSaving = true);
 
@@ -160,14 +93,14 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
         bankBranch: _type == 'bank' ? _bankBranchController.text.trim() : null,
         balance: double.tryParse(_balanceController.text) ?? 0.0,
         balanceType: _balanceType,
-        linkedAccountId: _linkedAccountId,
+        linkedAccountId: null, // Cash box is currency-agnostic — no permanent link
         createdAt: widget.existing?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
       final map = cashBox.toMap();
-      // Include currency in the map so it gets persisted
-      map['currency'] = _currency;
+      // Cash box does NOT store a currency — it's currency-agnostic
+      map['currency'] = null;
       // Remove null id for new inserts (sqflite auto-generates)
       if (!_isEdit) {
         map.remove('id');
@@ -180,7 +113,22 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
 
         // ── Opening Balance Journal Entry ──
         final openingBalance = double.tryParse(_balanceController.text) ?? 0.0;
-        if (openingBalance > 0 && _linkedAccountId != null) {
+        if (openingBalance > 0) {
+          // Resolve the linked account for the selected currency (temporary, for journal only)
+          final linkedAccountId = await _resolveLinkedAccountForCurrency(_currency);
+
+          if (linkedAccountId == null) {
+            if (!mounted) return;
+            setState(() => _isSaving = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة. تأكد من وجود الحساب بدليل الحسابات.'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+            return;
+          }
+
           final codeOffset = _currency == 'SAR' ? 1 : (_currency == 'USD' ? 2 : 0);
           final openingBalanceAccount = await locator<JournalService>().getAccountByCodeAndCurrency(
             (2901 + codeOffset).toString(), _currency,
@@ -190,7 +138,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
           if (openingBalanceAccountId != null) {
             final name = _nameController.text.trim();
             await locator<CashBoxService>().recordCashBoxOpeningBalance(
-              linkedAccountId: _linkedAccountId!,
+              linkedAccountId: linkedAccountId,
               openingBalanceAccountId: openingBalanceAccountId,
               openingBalance: openingBalance,
               balanceType: _balanceType,
@@ -280,35 +228,6 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               ),
               const SizedBox(height: 14),
 
-              // ── Currency selection ──
-              DropdownButtonFormField<String>(
-                value: _currency,
-                decoration: InputDecoration(
-                  labelText: 'العملة',
-                  prefixIcon: const Icon(Icons.attach_money),
-                  suffixIcon: _linkedAccountId != null
-                      ? const Icon(Icons.link, size: 18, color: AppColors.success)
-                      : null,
-                ),
-                items: _currencyInfo.entries.map((entry) {
-                  return DropdownMenuItem<String>(
-                    value: entry.key,
-                    child: Text('${entry.value['label']} (${entry.key})'),
-                  );
-                }).toList(),
-                onChanged: (v) {
-                  if (v != null) _onCurrencyChanged(v);
-                },
-              ),
-              if (_accountLinkError) ...[
-                const SizedBox(height: 6),
-                Text(
-                  'لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة. تأكد من وجود الحساب بدليل الحسابات.',
-                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error),
-                ),
-              ],
-              const SizedBox(height: 14),
-
               // ── Bank-specific fields ──
               if (_type == 'bank') ...[
                 TextFormField(
@@ -340,8 +259,33 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 const SizedBox(height: 14),
               ],
 
-              // ── Opening balance (only for new cash boxes) ──
-              if (!_isEdit || _type == 'cash_box') ...[
+              // ── Opening balance section (only for new cash boxes) ──
+              if (!_isEdit) ...[
+                // ── Section header ──
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet_outlined, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'الرصيد الافتتاحي',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // ── Opening balance amount ──
                 TextFormField(
                   controller: _balanceController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -353,7 +297,53 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                     suffixText: currencySymbol,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
+
+                // ── Currency selection (inside opening balance section) ──
+                DropdownButtonFormField<String>(
+                  value: _currency,
+                  decoration: const InputDecoration(
+                    labelText: 'عملة القيد الافتتاحي',
+                    prefixIcon: Icon(Icons.attach_money),
+                  ),
+                  items: _currencyInfo.entries.map((entry) {
+                    return DropdownMenuItem<String>(
+                      value: entry.key,
+                      child: Text('${entry.value['label']} (${entry.key})'),
+                    );
+                  }).toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _currency = v);
+                  },
+                ),
+                const SizedBox(height: 6),
+
+                // ── Note about currency ──
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: AppColors.warning),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'العملة هنا خاصة بالقيد الافتتاحي فقط. يمكنك التعامل بأي عملة بعد إنشاء الصندوق.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
 
                 // ── Opening balance direction: له / عليه ──
                 Text('اتجاه الرصيد الافتتاحي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary)),
@@ -412,42 +402,35 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 const SizedBox(height: 14),
               ],
 
-              // ── Auto-linked account info (read-only) ──
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: _linkedAccountId != null
-                      ? AppColors.success.withOpacity(0.08)
-                      : AppColors.error.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _linkedAccountId != null
-                        ? AppColors.success.withOpacity(0.3)
-                        : AppColors.error.withOpacity(0.3),
+              // ── Edit mode: show existing balance info ──
+              if (_isEdit && widget.existing != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.15)),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _linkedAccountId != null ? Icons.link : Icons.warning,
-                      size: 18,
-                      color: _linkedAccountId != null ? AppColors.success : AppColors.error,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _linkedAccountId != null
-                            ? 'مرتبط تلقائيًا بحساب الصناديق والبنوك (${_cashBanksAccountCodes[_currency]} - $_currency)'
-                            : 'لم يتم ربط الحساب — اختر عملة أخرى أو تأكد من دليل الحسابات',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: _linkedAccountId != null ? AppColors.success : AppColors.error,
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'الصندوق لا يرتبط بعملة محددة — يمكنك التعامل بأي عملة.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 14),
+              ],
+
+              const SizedBox(height: 10),
 
               // ── Action buttons ──
               Row(

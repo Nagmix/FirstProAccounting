@@ -24,7 +24,11 @@ class SupplierRepository {
     final now = DateTime.now().toIso8601String();
     final openingBalance = MoneyHelper.readMoney(supplierMap['balance']);
     final balanceType = supplierMap['balance_type'] as String? ?? 'credit';
-    final supplierCurrency = supplierMap['currency'] as String? ?? 'YER';
+    // Currency is now specific to the opening balance entry only, NOT the supplier.
+    final openingBalanceCurrency = supplierMap['opening_balance_currency'] as String? ?? 'YER';
+
+    // Remove opening_balance_currency from supplier map before insert (it's not a supplier column)
+    supplierMap.remove('opening_balance_currency');
 
     int? supplierId;
     await db.transaction((txn) async {
@@ -32,11 +36,11 @@ class SupplierRepository {
 
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
-        final journalId = DateTime.now().millisecondsSinceEpoch;
-        final codeOffset = supplierCurrency == 'SAR' ? 1 : (supplierCurrency == 'USD' ? 2 : 0);
+        final journalId = generateUniqueJournalId();
+        final codeOffset = openingBalanceCurrency == 'SAR' ? 1 : (openingBalanceCurrency == 'USD' ? 2 : 0);
 
-        final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), supplierCurrency], limit: 1);
-        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), supplierCurrency], limit: 1);
+        final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), openingBalanceCurrency], limit: 1);
+        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), openingBalanceCurrency], limit: 1);
 
         final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
         final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
@@ -109,6 +113,12 @@ class SupplierRepository {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
 
+    // Currency for opening balance journal entry — separate from the supplier record
+    final openingBalanceCurrency = supplierMap['opening_balance_currency'] as String? ?? 'YER';
+
+    // Remove opening_balance_currency from supplier map before update (it's not a supplier column)
+    supplierMap.remove('opening_balance_currency');
+
     // Create journal entry for balance change when updating supplier
     final oldSupplier = await getSupplierById(id);
     if (oldSupplier != null && supplierMap.containsKey('balance')) {
@@ -117,12 +127,15 @@ class SupplierRepository {
       final balanceDiff = newBalance - oldBalance;
 
       if (balanceDiff.abs() >= 0.005) {
-        final supplierCurrency = supplierMap['currency'] as String? ?? oldSupplier['currency'] as String? ?? 'YER';
-        final codeOffset = supplierCurrency == 'SAR' ? 1 : (supplierCurrency == 'USD' ? 2 : 0);
+        // Use opening_balance_currency for the journal entry, falling back to the old supplier currency if needed
+        final journalCurrency = openingBalanceCurrency.isNotEmpty
+            ? openingBalanceCurrency
+            : (oldSupplier['currency'] as String? ?? 'YER');
+        final codeOffset = journalCurrency == 'SAR' ? 1 : (journalCurrency == 'USD' ? 2 : 0);
         final journalId = generateUniqueJournalId();
 
-        final suppliersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), supplierCurrency], limit: 1);
-        final openingBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), supplierCurrency], limit: 1);
+        final suppliersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), journalCurrency], limit: 1);
+        final openingBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), journalCurrency], limit: 1);
 
         final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
         final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
