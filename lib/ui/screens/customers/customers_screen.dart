@@ -498,7 +498,7 @@ class _CustomerCard extends StatelessWidget {
                 ? AppColors.textSecondary
                 : AppColors.darkTextSecondary;
 
-    final balanceAbs = CurrencyFormatter.format(displayBalance.abs());
+    final balanceAbs = CurrencyFormatter.formatValue(displayBalance.abs());
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

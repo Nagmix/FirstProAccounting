@@ -1,12 +1,22 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/cash_box_model.dart';
+import '../../widgets/empty_state.dart';
 import 'add_cash_box_sheet.dart';
 import 'cash_box_detail_screen.dart';
 
+/// Professional Cash Boxes / Banks management screen for the FirstPro accounting app.
+///
+/// Features:
+/// - Search bar for filtering by name.
+/// - Tab bar: الكل / صناديق / بنوك.
+/// - Cash box list with avatar, name, type badge, bank info, and balance.
+/// - Compact filter button for currency selection.
+/// - FAB for adding a new cash box or bank via [AddCashBoxSheet].
 class CashBoxesScreen extends StatefulWidget {
   const CashBoxesScreen({super.key});
 
@@ -17,15 +27,15 @@ class CashBoxesScreen extends StatefulWidget {
 class _CashBoxesScreenState extends State<CashBoxesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _searchDebounce;
   List<CashBox> _cashBoxes = [];
   bool _isLoading = true;
 
   // Currency filter state
-  String _selectedCurrency = 'YER'; // 'YER', 'SAR', 'USD' — no 'All' option
+  String _selectedCurrency = 'YER';
   bool _isBalancesLoading = false;
-
-  // Cached balances per cash box for the selected currency
-  // Key: cashBoxId, Value: balance for the selected currency
   Map<int, double> _currencyBalances = {};
 
   /// Currency display info.
@@ -35,19 +45,27 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
     'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
   };
 
-  /// Currency filter options (no 'All' — each currency has its own balance).
+  /// Currency filter options.
   static const _currencyOptions = ['YER', 'SAR', 'USD'];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _searchController.addListener(() {
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+      });
+    });
     _loadCashBoxes();
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -60,7 +78,6 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
           _cashBoxes = maps.map((m) => CashBox.fromMap(m)).toList();
           _isLoading = false;
         });
-        // Always load currency balances for the selected currency
         _loadCurrencyBalances();
       }
     } catch (e) {
@@ -76,15 +93,13 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
     }
   }
 
-  /// Load balances for all cash boxes filtered by the selected currency.
+  // ── Currency balance loading ──────────────────────────────────
   Future<void> _loadCurrencyBalances() async {
     setState(() => _isBalancesLoading = true);
-
     try {
       final newBalances = <int, double>{};
       final service = locator<CashBoxService>();
 
-      // Load balances for all cash boxes in parallel
       final futures = _cashBoxes.map((cb) async {
         if (cb.id != null) {
           final balance = await service.getCashBoxBalanceForCurrency(
@@ -110,46 +125,43 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isBalancesLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('حدث خطأ أثناء تحميل الأرصدة'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      if (mounted) setState(() => _isBalancesLoading = false);
     }
   }
 
-  /// Get the balance for a cash box based on the selected currency filter.
-  double _getCashBoxBalance(CashBox cashBox) {
-    // Always use the computed currency balance from transactions
-    return _currencyBalances[cashBox.id] ?? 0.0;
-  }
-
-  /// Get the currency symbol to display based on selected filter.
-  String _getCurrencySymbol() {
-    return _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
-  }
-
-  /// Handle currency filter change.
   void _onCurrencyChanged(String currency) {
     setState(() => _selectedCurrency = currency);
     _loadCurrencyBalances();
   }
 
-  List<CashBox> _filterByTab(int tabIndex) {
+  // ── Filter logic ──────────────────────────────────────────────
+  List<CashBox> _filterCashBoxes(int tabIndex) {
+    var filtered = _cashBoxes;
+
+    // Apply search query
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery;
+      filtered = filtered.where((cb) {
+        final nameMatch = cb.name.contains(q);
+        final bankMatch = cb.bankName?.contains(q) ?? false;
+        return nameMatch || bankMatch;
+      }).toList();
+    }
+
+    // Apply tab filter
     switch (tabIndex) {
       case 1:
-        return _cashBoxes.where((c) => c.isCashBox).toList();
+        filtered = filtered.where((c) => c.isCashBox).toList();
+        break;
       case 2:
-        return _cashBoxes.where((c) => c.isBank).toList();
-      default:
-        return _cashBoxes;
+        filtered = filtered.where((c) => c.isBank).toList();
+        break;
     }
+
+    return filtered;
   }
 
+  // ── Open add-cash-box bottom sheet ────────────────────────────
   Future<void> _showAddSheet({CashBox? existing}) async {
     final theme = Theme.of(context);
     await showModalBottomSheet(
@@ -162,6 +174,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
     _loadCashBoxes();
   }
 
+  // ── Delete cash box ───────────────────────────────────────────
   Future<void> _deleteCashBox(CashBox cashBox) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -210,19 +223,127 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
         .then((_) => _loadCashBoxes());
   }
 
+  // ── Show currency filter popup ────────────────────────────────
+  void _showCurrencyFilterPopup() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('تصفية حسب العملة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              ..._currencyOptions.map((option) {
+                final isSelected = _selectedCurrency == option;
+                final label = _currencyInfo[option]?['label'] ?? option;
+                final symbol = _currencyInfo[option]?['symbol'] ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _onCurrencyChanged(option);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+                        border: Border.all(
+                          color: isSelected ? AppColors.primary : AppColors.border,
+                          width: isSelected ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected ? Icons.check_circle : Icons.circle_outlined,
+                            color: isSelected ? AppColors.primary : AppColors.textHint,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              '$label ($option)',
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            symbol,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Avatar color based on name ────────────────────────────────
+  static const List<Color> _avatarColors = [
+    Color(0xFF1A237E),
+    Color(0xFF0D47A1),
+    Color(0xFF4A148C),
+    Color(0xFFB71C1C),
+    Color(0xFFE65100),
+    Color(0xFF006064),
+    Color(0xFF1B5E20),
+    Color(0xFF33691E),
+  ];
+
+  Color _avatarColor(String name) {
+    final hash = name.codeUnits.fold<int>(0, (prev, e) => prev + e);
+    return _avatarColors[hash % _avatarColors.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final currencySymbol = _getCurrencySymbol();
+    final isLight = theme.brightness == Brightness.light;
+    final currentSymbol = _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('الصناديق والبنوك'),
         actions: [
+          // Filter button (currency)
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: ActionChip(
+              avatar: Icon(Icons.currency_exchange, size: 16, color: AppColors.primary),
+              label: Text(
+                '$currentSymbol $_selectedCurrency',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+              ),
+              onPressed: _showCurrencyFilterPopup,
+              backgroundColor: AppColors.primary.withOpacity(0.08),
+              side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          ),
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'إضافة',
+            tooltip: 'إضافة صندوق أو بنك',
             onPressed: () => _showAddSheet(),
           ),
         ],
@@ -239,375 +360,327 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // ── Currency Filter Row ──────────────────────────────
-                _buildCurrencyFilter(theme, isDark),
+                // ── Search bar ────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: SearchBar(
+                    controller: _searchController,
+                    hintText: 'بحث عن صندوق أو بنك...',
+                    leading: const Icon(Icons.search),
+                    padding: WidgetStateProperty.all(
+                      const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                  ),
+                ),
 
-                // ── Tab Content ──────────────────────────────────────
+                // ── Summary bar ───────────────────────────────────────
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isLight ? AppColors.border : AppColors.darkBorder, width: 0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_cashBoxes.length} صندوق وبنك',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_isBalancesLoading)
+                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      else ...[
+                        Icon(Icons.account_balance_wallet, size: 16, color: AppColors.textHint),
+                        const SizedBox(width: 4),
+                        Text(
+                          'العملة: $_selectedCurrency',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.textHint,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // ── Cash box list ─────────────────────────────────────
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
                     children: List.generate(3, (tabIndex) {
-                      final filtered = _filterByTab(tabIndex);
+                      final filtered = _filterCashBoxes(tabIndex);
 
                       if (filtered.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.account_balance_wallet,
-                                  size: 72, color: AppColors.textHint),
-                              const SizedBox(height: 16),
-                              Text(
-                                tabIndex == 0
-                                    ? 'لا توجد صناديق أو بنوك'
-                                    : tabIndex == 1
-                                        ? 'لا توجد صناديق'
-                                        : 'لا توجد بنوك',
-                                style: theme.textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              FilledButton.icon(
-                                onPressed: () => _showAddSheet(),
-                                icon: const Icon(Icons.add, size: 18),
-                                label: const Text('إضافة جديدة'),
-                              ),
-                            ],
-                          ),
+                        return EmptyState(
+                          icon: tabIndex == 0
+                              ? Icons.account_balance_wallet
+                              : tabIndex == 1
+                                  ? Icons.account_balance_wallet
+                                  : Icons.account_balance,
+                          title: tabIndex == 0
+                              ? 'لا توجد صناديق أو بنوك'
+                              : tabIndex == 1
+                                  ? 'لا توجد صناديق'
+                                  : 'لا توجد بنوك',
+                          subtitle: tabIndex == 0
+                              ? 'قم بإضافة صناديق أو بنوك جديدة لبدء إدارة أموالك'
+                              : 'لم يتم العثور على نتائج مطابقة',
+                          actionLabel: tabIndex == 0 ? 'إضافة صندوق أو بنك' : null,
+                          onAction: tabIndex == 0 ? () => _showAddSheet() : null,
                         );
                       }
 
-                      // Compute total balance for the selected currency
-                      double totalBalance = 0;
-                      if (!_isBalancesLoading) {
-                        for (final cb in filtered) {
-                          totalBalance += _getCashBoxBalance(cb);
-                        }
-                      }
-
-                      return Column(
-                        children: [
-                          // ── Total balance card ───────────────────────
-                          _buildTotalBalanceCard(
-                            theme,
-                            totalBalance,
-                            currencySymbol,
-                          ),
-
-                          // ── Cash boxes list ──────────────────────────
-                          Expanded(
-                            child: _isBalancesLoading
-                                ? const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(top: 32),
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    padding: const EdgeInsets.only(bottom: 80),
-                                    itemCount: filtered.length,
-                                    itemBuilder: (context, index) {
-                                      final cashBox = filtered[index];
-                                      final balance =
-                                          _getCashBoxBalance(cashBox);
-                                      return _CashBoxCard(
-                                        cashBox: cashBox,
-                                        isDark: isDark,
-                                        balance: balance,
-                                        currencySymbol: currencySymbol,
-                                        onTap: () => _openDetail(cashBox),
-                                        onDelete: () =>
-                                            _deleteCashBox(cashBox),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ],
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80, top: 2),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final cashBox = filtered[index];
+                          return _CashBoxCard(
+                            cashBox: cashBox,
+                            avatarColor: _avatarColor(cashBox.name),
+                            displayBalance: _currencyBalances[cashBox.id] ?? 0.0,
+                            currencySymbol: _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
+                            isLight: isLight,
+                            onTap: () => _openDetail(cashBox),
+                            onDelete: () => _deleteCashBox(cashBox),
+                          );
+                        },
                       );
                     }),
                   ),
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddSheet(),
         tooltip: 'إضافة صندوق أو بنك',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  // ── Currency Filter Widget ────────────────────────────────────────
-  Widget _buildCurrencyFilter(ThemeData theme, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.border,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.currency_exchange,
-            size: 20,
-            color: AppColors.primary,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'العملة:',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _currencyOptions.map((option) {
-                  final isSelected = _selectedCurrency == option;
-                  final label = '${_currencyInfo[option]?['symbol'] ?? ''} $option';
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: ChoiceChip(
-                      label: Text(label),
-                      selected: isSelected,
-                      onSelected: (_) => _onCurrencyChanged(option),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected
-                            ? Colors.white
-                            : isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.textSecondary,
-                      ),
-                      backgroundColor: isDark
-                          ? AppColors.darkSurfaceVariant
-                          : AppColors.surfaceVariant,
-                      selectedColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Total Balance Card Widget ─────────────────────────────────────
-  Widget _buildTotalBalanceCard(
-    ThemeData theme,
-    double totalBalance,
-    String currencySymbol,
-  ) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child:
-                const Icon(Icons.account_balance_wallet, color: AppColors.primary),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _selectedCurrency == 'الكل'
-                      ? 'إجمالي الرصيد'
-                      : 'إجمالي الرصيد (${_currencyInfo[_selectedCurrency]?['label'] ?? _selectedCurrency})',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.primary,
-                  ),
-                ),
-                Text(
-                  CurrencyFormatter.format(totalBalance.abs(),
-                      symbol: currencySymbol),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            totalBalance >= 0 ? 'له' : 'عليه',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: totalBalance >= 0 ? AppColors.success : AppColors.error,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+        icon: const Icon(Icons.add),
+        label: const Text('إضافة صندوق أو بنك'),
       ),
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  CASH BOX CARD
+//  CASH BOX CARD — Modern, Professional Design (matches _CustomerCard)
 // ═══════════════════════════════════════════════════════════════════
 class _CashBoxCard extends StatelessWidget {
   const _CashBoxCard({
     required this.cashBox,
-    required this.isDark,
-    required this.balance,
+    required this.avatarColor,
+    required this.displayBalance,
     required this.currencySymbol,
+    required this.isLight,
     this.onTap,
     this.onDelete,
   });
 
   final CashBox cashBox;
-  final bool isDark;
-  final double balance;
+  final Color avatarColor;
+  final double displayBalance;
   final String currencySymbol;
+  final bool isLight;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isCredit = balance >= 0;
+    final isDebit = displayBalance < 0;
+    final isCredit = displayBalance > 0;
+    final balanceColor = isDebit
+        ? AppColors.error
+        : isCredit
+            ? AppColors.success
+            : isLight
+                ? AppColors.textSecondary
+                : AppColors.darkTextSecondary;
 
-    return Card(
+    final balanceAbs = CurrencyFormatter.formatValue(displayBalance.abs());
+
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: InkWell(
-        onTap: onTap,
+      decoration: BoxDecoration(
+        color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        onLongPress: onDelete,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              // ── Icon ────────────────────────────────────────────
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: cashBox.isBank
-                      ? AppColors.info.withOpacity(0.12)
-                      : AppColors.secondaryDark.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  cashBox.isBank
-                      ? Icons.account_balance
-                      : Icons.account_balance_wallet,
-                  color: cashBox.isBank ? AppColors.info : AppColors.secondaryDark,
-                ),
-              ),
-              const SizedBox(width: 14),
-
-              // ── Name & info ─────────────────────────────────────
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            cashBox.name,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: cashBox.isBank
-                                ? AppColors.info.withOpacity(0.1)
-                                : AppColors.secondaryDark.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            cashBox.typeAr,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: cashBox.isBank
-                                  ? AppColors.info
-                                  : AppColors.secondaryDark,
-                            ),
-                          ),
-                        ),
-                      ],
+        border: Border.all(
+          color: isLight ? AppColors.border.withOpacity(0.5) : AppColors.darkBorder.withOpacity(0.5),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isLight ? 0.04 : 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          onLongPress: onDelete,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // ── Avatar ───────────────────────────────────────
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [avatarColor, avatarColor.withOpacity(0.7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    if (cashBox.isBank && cashBox.bankName != null) ...[
-                      const SizedBox(height: 4),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: avatarColor.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      cashBox.isBank
+                          ? Icons.account_balance
+                          : Icons.account_balance_wallet,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+
+                // ── Name, type badge, bank info ──────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        '${cashBox.bankName}${cashBox.bankBranch != null ? ' - ${cashBox.bankBranch}' : ''}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.textSecondary,
+                        cashBox.name,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: cashBox.isBank
+                                  ? AppColors.info.withOpacity(0.1)
+                                  : AppColors.secondaryDark.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              cashBox.typeAr,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: cashBox.isBank ? AppColors.info : AppColors.secondaryDark,
+                              ),
+                            ),
+                          ),
+                          if (cashBox.isBank && cashBox.bankName != null && cashBox.bankName!.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.business,
+                              size: 13,
+                              color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                cashBox.bankName!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // ── Balance Section with gradient ──────────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: displayBalance != 0
+                          ? [balanceColor.withOpacity(0.12), balanceColor.withOpacity(0.04)]
+                          : [Colors.grey.withOpacity(0.06), Colors.grey.withOpacity(0.02)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: displayBalance != 0 ? balanceColor.withOpacity(0.25) : AppColors.border.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isDebit ? Icons.trending_down : isCredit ? Icons.trending_up : Icons.remove,
+                        size: 14,
+                        color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$balanceAbs $currencySymbol',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: displayBalance != 0 ? balanceColor : AppColors.textHint,
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 6),
 
-              // ── Balance ─────────────────────────────────────────
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    CurrencyFormatter.format(balance.abs(),
-                        symbol: currencySymbol),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                // ── Arrow icon ──────────────────────────────────
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isCredit ? 'له' : 'عليه',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: isCredit ? AppColors.success : AppColors.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Icon(
+                    Icons.arrow_back_ios,
+                    size: 12,
+                    color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
                   ),
-                ],
-              ),
-              const SizedBox(width: 4),
-
-              // ── Arrow icon ─────────────────────────────────────
-              Icon(
-                Icons.arrow_back_ios,
-                size: 16,
-                color:
-                    isDark ? AppColors.darkTextSecondary : AppColors.textHint,
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

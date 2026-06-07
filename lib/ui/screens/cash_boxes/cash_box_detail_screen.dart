@@ -3,14 +3,15 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/journal_service.dart';
 import '../../../data/models/cash_box_model.dart';
 
-/// Cash Box Detail / Ledger Screen
+/// Cash Box Detail / Ledger Screen — Modern Professional Design
 /// Displays all financial movements for a specific cash box with
-/// filtering, statistics, and voucher creation capabilities.
+/// filtering, search, statistics, and voucher creation capabilities.
 class CashBoxDetailScreen extends StatefulWidget {
   final CashBox cashBox;
   final String? initialCurrency; // pre-selected currency from list screen
@@ -30,6 +31,16 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   int _selectedFilterIndex = 0;
   String? _selectedCurrency;
   DateTimeRange? _dateRange;
+  String _searchQuery = '';
+
+  // Period filter state: 0=daily, 1=monthly, 2=yearly, 3=all
+  int _periodFilter = 3; // default = الجميع
+
+  // Sort order: false=ascending (oldest first), true=descending (newest first)
+  bool _sortDescending = false;
+
+  // Search controller
+  final TextEditingController _searchController = TextEditingController();
 
   // Statistics
   double _totalDebit = 0.0;
@@ -68,6 +79,12 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
@@ -79,7 +96,6 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       }
     } catch (e) {
       debugPrint('CashBoxDetailScreen._loadData [refreshCashBox]: $e');
-      // Keep using the original cashBox data
     }
 
     // Load all movements (non-fatal — partial data is better than nothing)
@@ -109,6 +125,16 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       currency: _selectedCurrency,
     );
 
+    // Calculate running balance per currency
+    final currencyRunBal = <String, double>{};
+    for (final m in movements) {
+      final currency = m['currency'] as String? ?? 'YER';
+      final debit = MoneyHelper.readMoney(m['debit']);
+      final credit = MoneyHelper.readMoney(m['credit']);
+      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
+      m['running_balance'] = currencyRunBal[currency];
+    }
+
     _allMovements = movements;
     _applyFilters();
   }
@@ -132,6 +158,27 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       filtered = filtered.where((m) => m['currency'] == _selectedCurrency).toList();
     }
 
+    // Apply period filter
+    if (_periodFilter != 3) {
+      final now = DateTime.now();
+      filtered = filtered.where((m) {
+        final dateStr = m['date'] as String;
+        try {
+          final date = DateTime.parse(dateStr);
+          switch (_periodFilter) {
+            case 0: // يومي - today
+              return date.year == now.year && date.month == now.month && date.day == now.day;
+            case 1: // شهري - current month
+              return date.year == now.year && date.month == now.month;
+            case 2: // سنوي - current year
+              return date.year == now.year;
+            default:
+              return true;
+          }
+        } catch (_) { return true; }
+      }).toList();
+    }
+
     // Apply date range filter
     if (_dateRange != null) {
       filtered = filtered.where((m) {
@@ -146,26 +193,45 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       }).toList();
     }
 
-    // Calculate running balance from movements (opening balance is now included as a movement)
-    // No need to derive opening balance separately.
-    double runningBalance = 0.0;
-    double totalDebit = 0.0;
-    double totalCredit = 0.0;
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      filtered = filtered.where((m) {
+        final desc = (m['description'] as String? ?? '').toLowerCase();
+        final typeAr = (m['type_ar'] as String? ?? '').toLowerCase();
+        return desc.contains(q) || typeAr.contains(q);
+      }).toList();
+    }
 
+    // Apply sort order
+    if (_sortDescending) {
+      filtered = filtered.reversed.toList();
+    }
+
+    // Calculate totals from filtered movements
+    double totalDebit = 0.0, totalCredit = 0.0;
     for (final m in filtered) {
+      totalDebit += MoneyHelper.readMoney(m['debit']);
+      totalCredit += MoneyHelper.readMoney(m['credit']);
+    }
+
+    // Compute net balance from ALL movements (for the selected currency), not just filtered
+    double netBalance = 0.0;
+    for (final m in _allMovements) {
+      if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
+        final mCurrency = m['currency'] as String? ?? 'YER';
+        if (mCurrency != _selectedCurrency) continue;
+      }
       final debit = MoneyHelper.readMoney(m['debit']);
       final credit = MoneyHelper.readMoney(m['credit']);
-      runningBalance += credit - debit; // positive = له (credit), negative = عليه (debit)
-      totalDebit += debit;
-      totalCredit += credit;
-      m['running_balance'] = runningBalance;
+      netBalance += credit - debit;
     }
 
     setState(() {
       _filteredMovements = filtered;
       _totalDebit = totalDebit;
       _totalCredit = totalCredit;
-      _netBalance = runningBalance;
+      _netBalance = netBalance;
     });
   }
 
@@ -206,6 +272,77 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       case 'USD': return r'$';
       case 'YER': default: return 'ر.ي';
     }
+  }
+
+  // ── Show filter popup ──────────────────────────────────────────
+  void _showFilterPopup() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.filter_list, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text('تصفية الحركات', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setSheetState(() => _selectedFilterIndex = 0);
+                        setState(() => _selectedFilterIndex = 0);
+                      },
+                      child: Text('الكل', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // All filters as chips
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: List.generate(_filterTabs.length, (index) {
+                    final isSelected = _selectedFilterIndex == index;
+                    return ChoiceChip(
+                      label: Text(_filterTabs[index].label),
+                      selected: isSelected,
+                      onSelected: (_) {
+                        setSheetState(() => _selectedFilterIndex = index);
+                        setState(() => _selectedFilterIndex = index);
+                        _applyFilters();
+                      },
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? Colors.white : AppColors.textSecondary,
+                      ),
+                      backgroundColor: Theme.of(context).brightness == Brightness.light ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                      selectedColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.compact,
+                    );
+                  }),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('تطبيق'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Add Voucher Dialog ──────────────────────────────────────────
@@ -419,13 +556,62 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
     final isLight = theme.brightness == Brightness.light;
     final cashBox = _freshCashBox ?? widget.cashBox;
     final isDebit = cashBox.balanceType == 'debit';
-    final balanceDisplay = cashBox.balance.abs().toStringAsFixed(2);
-    // ignore: unused_local_variable
-    final balanceColor = isDebit ? AppColors.error : (cashBox.balance > 0 ? AppColors.success : AppColors.textSecondary);
+    final balanceDisplay = CurrencyFormatter.formatValue(cashBox.balance.abs());
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(cashBox.name),
+        actions: [
+          // Modern print button (placeholder — no print/export for cash boxes yet)
+          Container(
+            margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
+            child: Material(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: () {
+                  // TODO: implement cash box print report
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.print_rounded, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text('طباعة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Modern export button (placeholder)
+          Container(
+            margin: const EdgeInsets.only(left: 4, right: 8, top: 8, bottom: 8),
+            child: Material(
+              color: AppColors.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: () {
+                  // TODO: implement cash box export
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sim_card_download_outlined, size: 18, color: AppColors.success),
+                      const SizedBox(width: 4),
+                      Text('تصدير', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.success)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -443,129 +629,273 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
             ),
             child: SafeArea(
               bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        child: Icon(
-                          cashBox.isBank ? Icons.account_balance : Icons.account_balance_wallet,
-                          color: Colors.white,
-                          size: 24,
-                        ),
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        cashBox.isBank ? Icons.account_balance : Icons.account_balance_wallet,
+                        color: Colors.white,
+                        size: 24,
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cashBox.name,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
                           children: [
-                            Text(
-                              cashBox.name,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    cashBox.typeAr,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 11,
-                                    ),
-                                  ),
+                              child: Text(
+                                cashBox.typeAr,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
                                 ),
-                                const SizedBox(width: 8),
-                                if (cashBox.isBank && cashBox.bankName != null && cashBox.bankName!.isNotEmpty) ...[
-                                  const Icon(Icons.business, size: 12, color: Colors.white70),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    cashBox.bankName!,
-                                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
-                                  ),
-                                ],
-                              ],
+                              ),
                             ),
+                            if (cashBox.isBank && cashBox.bankName != null && cashBox.bankName!.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              const Icon(Icons.business, size: 12, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Text(
+                                cashBox.bankName!,
+                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                              ),
+                            ],
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '$balanceDisplay ${_currencySymbol(cashBox.currency)}',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                            ),
+                      ],
+                    ),
+                  ),
+                  // Balance badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$balanceDisplay ${_currencySymbol(cashBox.currency)}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
                           ),
-                          const SizedBox(height: 2),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: isDebit ? AppColors.error.withOpacity(0.9) : AppColors.success.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              isDebit ? 'عليه' : (cashBox.balance > 0 ? 'له' : 'متساوي'),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
-                            ),
+                        ),
+                        const SizedBox(height: 2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (isDebit ? AppColors.error : AppColors.success).withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ],
-                      ),
-                    ],
+                          child: Text(
+                            isDebit ? 'عليه' : (cashBox.balance > 0 ? 'له' : 'متساوي'),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-          // ── Action Buttons Row ────────────────────────────────────
+          // ── Period Filter RadioButtons ──────────────────────────
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             color: isLight ? AppColors.surface : AppColors.darkSurface,
             child: Row(
               children: [
-                // سند قبض (Receipt Voucher)
+                Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textHint),
+                const SizedBox(width: 8),
+                _buildPeriodChip('يومي', 0),
+                const SizedBox(width: 6),
+                _buildPeriodChip('شهري', 1),
+                const SizedBox(width: 6),
+                _buildPeriodChip('سنوي', 2),
+                const SizedBox(width: 6),
+                _buildPeriodChip('الجميع', 3),
+              ],
+            ),
+          ),
+
+          // ── Toolbar: Search + Filters ──────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            color: isLight ? AppColors.surface : AppColors.darkSurface,
+            child: Row(
+              children: [
+                // Search field
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showAddVoucherDialog('receipt'),
-                    icon: const Icon(Icons.assignment_turned_in, size: 18),
-                    label: const Text('سند قبض'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.success,
-                      side: const BorderSide(color: AppColors.success),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: SizedBox(
+                    height: 40,
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) { setState(() => _searchQuery = v.trim()); _applyFilters(); },
+                      decoration: InputDecoration(
+                        hintText: 'بحث حركة...',
+                        hintStyle: TextStyle(fontSize: 13, color: AppColors.textHint),
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(icon: const Icon(Icons.close, size: 16), onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); _applyFilters(); })
+                            : null,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                      ),
+                      style: const TextStyle(fontSize: 13),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                // سند صرف (Payment Voucher)
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showAddVoucherDialog('payment'),
-                    icon: const Icon(Icons.assignment_return, size: 18),
-                    label: const Text('سند صرف'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                const SizedBox(width: 6),
+
+                // Filter button
+                Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.border),
+                    borderRadius: BorderRadius.circular(10),
+                    color: _selectedFilterIndex > 0 ? AppColors.primary.withOpacity(0.08) : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      onTap: _showFilterPopup,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.filter_list, size: 18, color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.textSecondary),
+                            if (_selectedFilterIndex > 0) ...[
+                              const SizedBox(width: 4),
+                              Container(
+                                width: 6, height: 6,
+                                decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // Date range button
+                Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _dateRange != null ? AppColors.primary : AppColors.border),
+                    borderRadius: BorderRadius.circular(10),
+                    color: _dateRange != null ? AppColors.primary.withOpacity(0.08) : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      onTap: _dateRange != null ? _clearDateRange : _pickDateRange,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_dateRange != null ? Icons.event_busy : Icons.date_range, size: 18,
+                              color: _dateRange != null ? AppColors.primary : AppColors.textSecondary),
+                            if (_dateRange != null) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '${_dateRange!.start.day}/${_dateRange!.start.month}',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // Currency dropdown
+                Container(
+                  height: 40,
+                  padding: const EdgeInsets.only(left: 8, right: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _selectedCurrency ?? 'YER',
+                    underline: const SizedBox.shrink(),
+                    icon: const Icon(Icons.arrow_drop_down, size: 18),
+                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
+                    items: _currencyOptions.map((e) => DropdownMenuItem<String>(value: e.value, child: Text(e.key, style: const TextStyle(fontSize: 12)))).toList(),
+                    onChanged: (v) { if (v != null && v.isNotEmpty) { setState(() => _selectedCurrency = v); _loadData(); } },
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Sort order toggle
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _sortDescending ? AppColors.primary : AppColors.border),
+                    borderRadius: BorderRadius.circular(10),
+                    color: _sortDescending ? AppColors.primary.withOpacity(0.08) : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() => _sortDescending = !_sortDescending);
+                        _applyFilters();
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Tooltip(
+                        message: _sortDescending ? 'ترتيب تنازلي' : 'ترتيب تصاعدي',
+                        child: Icon(
+                          _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                          size: 16,
+                          color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -573,107 +903,63 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
             ),
           ),
 
-          // ── Filter Tabs (horizontal scrollable) ────────────────
-          Container(
-            height: 44,
-            color: isLight ? AppColors.surface : AppColors.darkSurface,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              itemCount: _filterTabs.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
-              itemBuilder: (context, index) {
-                final isSelected = _selectedFilterIndex == index;
-                return ChoiceChip(
-                  label: Text(_filterTabs[index].label),
-                  selected: isSelected,
-                  onSelected: (_) {
-                    setState(() => _selectedFilterIndex = index);
-                    _applyFilters();
-                  },
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? Colors.white : AppColors.textSecondary,
+          // ── Active filter label ────────────────────────────────
+          if (_selectedFilterIndex > 0)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              color: isLight ? AppColors.surface : AppColors.darkSurface,
+              child: Row(
+                children: [
+                  Text('الفلتر: ', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_filterTabs[_selectedFilterIndex].label, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () { setState(() => _selectedFilterIndex = 0); _applyFilters(); },
+                          child: Icon(Icons.close, size: 14, color: AppColors.primary),
+                        ),
+                      ],
+                    ),
                   ),
-                  backgroundColor: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
-                  selectedColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  visualDensity: VisualDensity.compact,
-                );
-              },
+                  const Spacer(),
+                  Text('${_filteredMovements.length} حركة', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                ],
+              ),
             ),
-          ),
 
-          // ── Date & Currency Filters ────────────────────────────
+          // ── Action buttons row ──────────────────────────────────
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: isLight ? AppColors.surface : AppColors.darkSurface,
             child: Row(
               children: [
-                // Date range picker
                 Expanded(
-                  child: InkWell(
-                    onTap: _pickDateRange,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.date_range, size: 18, color: AppColors.primary),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              _dateRange != null
-                                  ? '${_dateRange!.start.day}/${_dateRange!.start.month} - ${_dateRange!.end.day}/${_dateRange!.end.month}'
-                                  : 'الفترة',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: _dateRange != null ? AppColors.primary : AppColors.textHint,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (_dateRange != null)
-                            GestureDetector(
-                              onTap: _clearDateRange,
-                              child: const Icon(Icons.close, size: 16, color: AppColors.error),
-                            ),
-                        ],
-                      ),
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddVoucherDialog('receipt'),
+                    icon: const Icon(Icons.assignment_turned_in, size: 16),
+                    label: const Text('سند قبض', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.success, side: const BorderSide(color: AppColors.success),
+                      padding: const EdgeInsets.symmetric(vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // Currency dropdown
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButton<String>(
-                    value: _selectedCurrency ?? 'YER',
-                    underline: const SizedBox.shrink(),
-                    icon: const Icon(Icons.arrow_drop_down, size: 20),
-                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-                    items: _currencyOptions.map((e) {
-                      return DropdownMenuItem<String>(
-                        value: e.value,
-                        child: Text(e.key),
-                      );
-                    }).toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => _selectedCurrency = v);
-                        _loadData(); // Reload movements with new currency filter
-                      }
-                    },
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddVoucherDialog('payment'),
+                    icon: const Icon(Icons.assignment_return, size: 16),
+                    label: const Text('سند صرف', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error, side: const BorderSide(color: AppColors.error),
+                      padding: const EdgeInsets.symmetric(vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                 ),
               ],
@@ -700,60 +986,188 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                         itemCount: _filteredMovements.length,
                         itemBuilder: (context, index) {
                           final m = _filteredMovements[index];
-                          return _MovementCard(movement: m, currencySymbol: _currencySymbol(m['currency']));
+                          return _MovementCard(
+                            movement: m,
+                            currencySymbol: _currencySymbol(m['currency']),
+                            isLight: isLight,
+                          );
                         },
                       ),
           ),
         ],
       ),
 
-      // ── Bottom Statistics Bar ──────────────────────────────────
+      // ── Bottom Balance Bar — Three separate fields: له / عليه / الرصيد ─
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isLight ? AppColors.surface : AppColors.darkSurface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              offset: const Offset(0, -2),
-              blurRadius: 8,
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), offset: const Offset(0, -2), blurRadius: 8)],
         ),
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                // له (credit)
+                // ── له (Credit) ──────────────────────────────
                 Expanded(
-                  child: _StatItem(
-                    label: 'له',
-                    value: _totalCredit.toStringAsFixed(2),
-                    color: AppColors.success,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.success.withOpacity(0.25), width: 1),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('له', style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700, color: AppColors.success, fontSize: 12,
+                        )),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_totalCredit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900, color: AppColors.success, fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Container(width: 1, height: 32, color: AppColors.divider),
-                // عليه (debit)
+                const SizedBox(width: 8),
+
+                // ── عليه (Debit) ─────────────────────────────
                 Expanded(
-                  child: _StatItem(
-                    label: 'عليه',
-                    value: _totalDebit.toStringAsFixed(2),
-                    color: AppColors.error,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.error.withOpacity(0.25), width: 1),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('عليه', style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 12,
+                        )),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_totalDebit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900, color: AppColors.error, fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Container(width: 1, height: 32, color: AppColors.divider),
-                // الرصيد (net) with له/عليه label
+                const SizedBox(width: 8),
+
+                // ── الرصيد (Net Balance) — direction by color ─
                 Expanded(
-                  child: _StatItem(
-                    label: _netBalance >= 0 ? 'له' : 'عليه',
-                    value: _netBalance.abs().toStringAsFixed(2),
-                    color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _netBalance >= 0
+                            ? [AppColors.success.withOpacity(0.15), AppColors.success.withOpacity(0.05)]
+                            : [AppColors.error.withOpacity(0.15), AppColors.error.withOpacity(0.05)],
+                        begin: Alignment.centerRight,
+                        end: Alignment.centerLeft,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _netBalance >= 0 ? AppColors.success.withOpacity(0.4) : AppColors.error.withOpacity(0.4),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _netBalance >= 0 ? Icons.trending_up : Icons.trending_down,
+                              size: 13,
+                              color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Text('الرصيد', style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                              fontSize: 12,
+                            )),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_netBalance.abs().toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                            fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Period filter chip builder ───────────────────────────────
+  Widget _buildPeriodChip(String label, int value) {
+    final isSelected = _periodFilter == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _periodFilter = value);
+        _applyFilters();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))] : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected)
+              Container(
+                width: 8, height: 8,
+                margin: const EdgeInsets.only(left: 4),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -770,18 +1184,18 @@ class _FilterTab {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  MOVEMENT CARD
+//  MOVEMENT CARD — Professional Design (matches customer _MovementCard)
 // ═══════════════════════════════════════════════════════════════════
 class _MovementCard extends StatelessWidget {
   final Map<String, dynamic> movement;
   final String currencySymbol;
+  final bool isLight;
 
-  const _MovementCard({required this.movement, required this.currencySymbol});
+  const _MovementCard({required this.movement, required this.currencySymbol, required this.isLight});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
     final icon = movement['icon'] as IconData;
     final color = movement['color'] as Color;
     final typeAr = movement['type_ar'] as String;
@@ -803,12 +1217,13 @@ class _MovementCard extends StatelessWidget {
 
     final balanceColor = runningBalance >= 0 ? AppColors.success : AppColors.error;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: isLight ? AppColors.divider : AppColors.darkBorder, width: 0.5),
+      decoration: BoxDecoration(
+        color: isLight ? AppColors.surface : AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isLight ? AppColors.border.withOpacity(0.5) : AppColors.darkBorder.withOpacity(0.5), width: 0.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isLight ? 0.03 : 0.15), blurRadius: 4, offset: const Offset(0, 1))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(10),
@@ -816,12 +1231,8 @@ class _MovementCard extends StatelessWidget {
           children: [
             // Icon
             Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(width: 10),
@@ -831,27 +1242,16 @@ class _MovementCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    description,
-                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
+                  Text(description, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
                   Row(
                     children: [
                       Text(formattedDate, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          typeAr,
-                          style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600, fontSize: 10),
-                        ),
+                        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                        child: Text(typeAr, style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600, fontSize: 10)),
                       ),
                     ],
                   ),
@@ -859,72 +1259,28 @@ class _MovementCard extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
-            // Debit / Credit + Running balance
+            // Amount + running balance
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (debit > 0)
-                  Text(
-                    '${debit.toStringAsFixed(2)} $currencySymbol',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
+                  Text('${debit.toStringAsFixed(2)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w700))
                 else if (credit > 0)
-                  Text(
-                    '${credit.toStringAsFixed(2)} $currencySymbol',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.success,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
+                  Text('${credit.toStringAsFixed(2)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700))
                 else
-                  Text(
-                    '0.00 $currencySymbol',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.textHint,
-                    ),
-                  ),
+                  Text('0.00 $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
                 const SizedBox(height: 2),
                 Text(
-                  '${runningBalance.abs().toStringAsFixed(2)} $currencySymbol',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: balanceColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  '${runningBalance.abs().toStringAsFixed(2)}',
+                  style: theme.textTheme.labelSmall?.copyWith(color: balanceColor, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  STAT ITEM
-// ═══════════════════════════════════════════════════════════════════
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatItem({required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 2),
-        Text(value, style: theme.textTheme.titleSmall?.copyWith(color: color, fontWeight: FontWeight.w800)),
-      ],
     );
   }
 }

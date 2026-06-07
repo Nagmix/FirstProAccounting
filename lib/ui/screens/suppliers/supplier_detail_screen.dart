@@ -316,13 +316,14 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
 
     movements.sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
 
-    // Calculate running balance for ALL movements chronologically
-    double runBal = 0.0;
+    // Calculate running balance for ALL movements chronologically, per currency
+    final currencyRunBal = <String, double>{};
     for (final m in movements) {
+      final currency = m['currency'] as String? ?? 'YER';
       final debit = MoneyHelper.readMoney(m['debit']);
       final credit = MoneyHelper.readMoney(m['credit']);
-      runBal += credit - debit;
-      m['running_balance'] = runBal;
+      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
+      m['running_balance'] = currencyRunBal[currency];
     }
 
     _allMovements = movements;
