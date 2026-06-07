@@ -1,7 +1,8 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import '../../../core/utils/money_helper.dart';
-import '../database_helper.dart';
-import '../../models/inventory_cost_layer_model.dart';
+
+import 'package:pro_accounting/core/utils/money_helper.dart';
+import 'package:pro_accounting/data/models/inventory_cost_layer_model.dart';
+import 'package:pro_accounting/data/datasources/database_helper.dart';
 
 class CostingEngineService {
   final DatabaseHelper _dbHelper;
@@ -245,6 +246,23 @@ class CostingEngineService {
 
     // Delete the allocation records
     await db.delete('movement_cost_allocations',
+        where: 'invoice_id = ?', whereArgs: [invoiceId]);
+  }
+
+  /// Reverse COGS allocations within an existing transaction (M-08 fix)
+  /// Used for sale returns to restore original cost layer allocations
+  /// instead of consuming new layers via calculateCOGSInTransaction.
+  Future<void> reverseCOGSAllocationsInTransaction(Transaction txn, {required String invoiceId}) async {
+    final allocations = await txn.query('movement_cost_allocations',
+        where: 'invoice_id = ?', whereArgs: [invoiceId]);
+    for (final alloc in allocations) {
+      final layerId = alloc['cost_layer_id'] as int;
+      final qtyUsed = (alloc['quantity_used'] as num).toDouble();
+      await txn.rawUpdate(
+          'UPDATE inventory_cost_layers SET quantity_remaining = quantity_remaining + ?, is_fully_consumed = 0 WHERE id = ?',
+          [qtyUsed, layerId]);
+    }
+    await txn.delete('movement_cost_allocations',
         where: 'invoice_id = ?', whereArgs: [invoiceId]);
   }
 

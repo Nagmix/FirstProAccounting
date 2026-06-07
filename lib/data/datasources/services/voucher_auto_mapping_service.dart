@@ -521,6 +521,10 @@ class VoucherAutoMappingService {
     required String date,
     String? description,
   }) async {
+    // M-04: Validate that fromAmount == toAmount when currencies are the same
+    if (fromCurrency == toCurrency && (fromAmount - toAmount).abs() >= 0.005) {
+      throw Exception('مبالغ القيد غير متوازنة: المبلغ من ($fromAmount) لا يساوي المبلغ إلى ($toAmount) مع نفس العملة');
+    }
     // التحقق من قفل الفترة المحاسبية
     await _dbHelper.journal.checkFiscalPeriodOpen(date);
 

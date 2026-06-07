@@ -246,10 +246,14 @@ class InvoiceRepository {
               await txn.insert('inventory_cost_layers', layer.toMap());
             }
           } else {
-            // Purchase return: stock leaves warehouse (always in base units)
-            // Check if product allows negative stock
+            // Purchase return: stock leaves warehouse at COST (not selling price)
+            // C-03: Use average_cost for the return, not unitPrice
+            // C-04: Update average cost after return
             final prodRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
             final allowNeg = prodRow.isNotEmpty ? (prodRow.first['allow_negative'] as int?) == 1 : false;
+            final returnCostPrice = prodRow.isNotEmpty ? MoneyHelper.readMoney(prodRow.first['average_cost']) : unitPrice;
+            final effectiveReturnCost = returnCostPrice > 0 ? returnCostPrice : MoneyHelper.readMoney(prodRow.first['cost_price']);
+
             if (allowNeg) {
               await txn.rawUpdate(
                 'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
@@ -261,15 +265,32 @@ class InvoiceRepository {
                 [baseQuantity, now, productId],
               );
             }
+
+            // C-04: After returning goods, recalculate average cost
+            // When goods leave at average cost, remaining stock's avg cost doesn't change
+            // (weighted average method). For FIFO/LIFO, reverse cost layers below.
+
             await txn.insert('stock_movements', {
               'product_id': productId,
               'movement_type': 'return',
               'quantity': -baseQuantity,
               'reference_type': 'purchase_return',
               'reference_id': invoiceIdStr,
-              'unit_cost': MoneyHelper.toCents(unitPrice),
+              'unit_cost': MoneyHelper.toCents(effectiveReturnCost), // C-03: Use cost, not selling price
               'created_at': now,
             });
+
+            // C-04: For FIFO/LIFO products, reverse cost layers on purchase return
+            final costingMethodStr = prodRow.isNotEmpty
+                ? (prodRow.first['costing_method'] as String? ?? 'weighted_average')
+                : 'weighted_average';
+            final costingMethod = CostingMethodExt.fromValue(costingMethodStr);
+            if (costingMethod != CostingMethod.weightedAverage) {
+              // Reverse the most recent cost layers for the returned quantity
+              await _dbHelper.costingEngine.reverseCOGSAllocationsInTransaction(
+                txn, invoiceId: invoiceIdStr,
+              );
+            }
           }
         }
       }
@@ -304,15 +325,20 @@ class InvoiceRepository {
       final int codeOffset = needsYerConversion ? 0 : (invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0));
       final String journalCurrency = needsYerConversion ? 'YER' : invoiceCurrency;
 
-      // ── Discount & Transport amounts for journal ──
-      // These are used to record the gross sales amount correctly.
-      // total = subtotal - discount + tax + transport
-      // grossTotal (for Sales credit) = total + discount (add discount back so it's recorded at gross)
-      // discountAmount and transportCharges are already computed above
+      // ── Discount, Transport & Tax amounts for journal ──
+      // Net Recording Approach (C-01/C-02/M-02 fix):
+      // Instead of recording at gross then reversing, record at net from the start.
       final double yerDiscount = needsYerConversion ? discountAmount * exchangeRate : discountAmount;
       final double yerTransport = needsYerConversion ? transportCharges * exchangeRate : transportCharges;
-      // Gross total for Sales credit = total + discount (so discount can be carved out separately)
-      final double journalGrossTotal = journalTotal + yerDiscount;
+      final double taxAmount = MoneyHelper.readMoney(invoiceMap['tax_amount']);
+      final double yerTax = needsYerConversion ? taxAmount * exchangeRate : taxAmount;
+      // ── Net Recording Approach (C-01/C-02/M-02 fix) ──
+      // Instead of recording at gross then reversing, record at net from the start.
+      // netRevenue = journalTotal + yerDiscount - yerTax (includes transport in revenue)
+      // netPurchaseCost = journalTotal + yerDiscount - yerTax (includes transport in cost)
+      // This ensures every journal entry is balanced by design.
+      final double netRevenueAmount = journalTotal + yerDiscount - yerTax;
+      final double netPurchaseCost = journalTotal + yerDiscount - yerTax;
 
       // Batch-fetch all required accounts in a single query (H-10: N+1 optimization)
       final accountCodes = [
@@ -321,6 +347,10 @@ class InvoiceRepository {
         (1200 + codeOffset).toString(), // Customers
         (2100 + codeOffset).toString(), // Suppliers
         (1100 + codeOffset).toString(), // Cash & Banks
+        (2300 + codeOffset).toString(), // VAT Payable (Output VAT - Liability)
+        (1400 + codeOffset).toString(), // VAT Receivable (Input VAT - Asset)
+        (5400 + codeOffset).toString(), // Discount Allowed
+        (4600 + codeOffset).toString(), // Discount Earned
       ];
       final placeholders = accountCodes.map((_) => '?').join(',');
       final accountRows = await txn.query(
@@ -346,25 +376,137 @@ class InvoiceRepository {
       final suppliersAccountId = suppliersAccount.isNotEmpty ? suppliersAccount.first['id'] as int : null;
       final cashBanksAccountId = cashBanksAccount.isNotEmpty ? cashBanksAccount.first['id'] as int : null;
 
+      // ── C-05: Resolve/create VAT and Discount accounts ──
+      // VAT Payable (Output VAT) - account 2300+offset (Liability)
+      final vatPayableAccount = accountByCode[(2300 + codeOffset).toString()];
+      int? vatPayableAccountId = vatPayableAccount != null ? vatPayableAccount['id'] as int : null;
+      if (vatPayableAccountId == null) {
+        final parentRows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2000 + codeOffset).toString(), journalCurrency], limit: 1);
+        final vatParentId = parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
+        vatPayableAccountId = await txn.insert('accounts', {
+          'name_ar': 'ضريبة القيمة المضافة المستحقة ($journalCurrency)',
+          'name_en': 'VAT Payable ($journalCurrency)',
+          'account_code': (2300 + codeOffset).toString(),
+          'account_type': 'LIABILITY',
+          'balance': 0,
+          'currency': journalCurrency,
+          'balance_type': 'credit',
+          'parent_id': vatParentId,
+          'is_active': 1,
+          'is_system': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+
+      // VAT Receivable (Input VAT) - account 1400+offset (Asset) — C-05
+      final vatReceivableAccount = accountByCode[(1400 + codeOffset).toString()];
+      int? vatReceivableAccountId = vatReceivableAccount != null ? vatReceivableAccount['id'] as int : null;
+      if (vatReceivableAccountId == null) {
+        final assetParentRows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1000 + codeOffset).toString(), journalCurrency], limit: 1);
+        final vatAssetParentId = assetParentRows.isNotEmpty ? assetParentRows.first['id'] as int : null;
+        vatReceivableAccountId = await txn.insert('accounts', {
+          'name_ar': 'ضريبة القيمة المضافة القابلة للخصم ($journalCurrency)',
+          'name_en': 'VAT Receivable ($journalCurrency)',
+          'account_code': (1400 + codeOffset).toString(),
+          'account_type': 'ASSET',
+          'balance': 0,
+          'currency': journalCurrency,
+          'balance_type': 'debit',
+          'parent_id': vatAssetParentId,
+          'is_active': 1,
+          'is_system': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+
+      // Discount Allowed - account 5400+offset (Expense)
+      final discountAllowedAccount = accountByCode[(5400 + codeOffset).toString()];
+      int? discountAllowedAccountId = discountAllowedAccount != null ? discountAllowedAccount['id'] as int : null;
+      if (discountAllowedAccountId == null) {
+        final expParentRows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(5000 + codeOffset).toString(), journalCurrency], limit: 1);
+        final expParentId = expParentRows.isNotEmpty ? expParentRows.first['id'] as int : null;
+        discountAllowedAccountId = await txn.insert('accounts', {
+          'name_ar': 'خصم مسموح به ($journalCurrency)',
+          'name_en': 'Discount Allowed ($journalCurrency)',
+          'account_code': (5400 + codeOffset).toString(),
+          'account_type': 'EXPENSE',
+          'balance': 0,
+          'currency': journalCurrency,
+          'balance_type': 'debit',
+          'parent_id': expParentId,
+          'is_active': 1,
+          'is_system': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+
+      // Discount Earned - account 4600+offset (Revenue / Contra-expense)
+      final discountEarnedAccount = accountByCode[(4600 + codeOffset).toString()];
+      int? discountEarnedAccountId = discountEarnedAccount != null ? discountEarnedAccount['id'] as int : null;
+      if (discountEarnedAccountId == null) {
+        final revParentRows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(4000 + codeOffset).toString(), journalCurrency], limit: 1);
+        final revParentId = revParentRows.isNotEmpty ? revParentRows.first['id'] as int : null;
+        discountEarnedAccountId = await txn.insert('accounts', {
+          'name_ar': 'خصم مشتريات مكتسب ($journalCurrency)',
+          'name_en': 'Purchase Discount Earned ($journalCurrency)',
+          'account_code': (4600 + codeOffset).toString(),
+          'account_type': 'REVENUE',
+          'balance': 0,
+          'currency': journalCurrency,
+          'balance_type': 'credit',
+          'parent_id': revParentId,
+          'is_active': 1,
+          'is_system': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+
       if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
         if (isReturn) {
-          // Sale Return: Debit Sales Revenue, Credit Customer/Cash
-          final debitAccountId = salesAccountId;
-          final creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-
-          if (debitAccountId != null && total > 0) {
+          // ── Sale return: Exact reverse of the original sale entry ──
+          // Debit: Sales = netRevenueAmount (reverse revenue)
+          // Debit: VAT Payable = yerTax (reverse VAT liability, if any)
+          // Credit: Cash/Customer = journalTotal (amount refunded)
+          // Credit: Discount Allowed = yerDiscount (reverse discount expense, if any)
+          // Balanced: netRevenueAmount + yerTax = journalTotal + yerDiscount
+          if (salesAccountId != null && netRevenueAmount.abs() >= 0.005) {
             await txn.insert('transactions', {
-              'account_id': debitAccountId,
+              'account_id': salesAccountId,
               'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalTotal),
+              'debit': MoneyHelper.toCents(netRevenueAmount),
               'credit': 0,
-              'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
+              'description': 'عكس إيراد مبيعات - مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, journalTotal, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, netRevenueAmount, 0.0, now);
           }
-          if (creditAccountId != null && total > 0) {
+          if (yerTax.abs() >= 0.005 && vatPayableAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': vatPayableAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(yerTax),
+              'credit': 0,
+              'description': 'عكس ضريبة مبيعات - مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatPayableAccountId, yerTax, 0.0, now);
+          }
+          final creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+          if (creditAccountId != null && journalTotal.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': creditAccountId,
               'journal_id': journalId,
@@ -373,13 +515,38 @@ class InvoiceRepository {
               'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, journalTotal, now);
           }
+          if (yerDiscount.abs() >= 0.005 && discountAllowedAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': discountAllowedAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerDiscount),
+              'description': 'عكس خصم مسموح به - مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountAllowedAccountId, 0.0, yerDiscount, now);
+          }
         } else if (isPartialCash) {
-          // Sale with partial cash:
-          // Debit Cash (paid) + Debit Customer (remaining) + Debit Discount Allowed = Credit Sales (gross)
-          if (cashBanksAccountId != null && effectivePaid > 0) {
+          // ── Partial cash sale: Net recording ──
+          // Debit: Cash = journalEffectivePaid
+          // Debit: Customer = journalRemainingAmount
+          // Debit: Discount Allowed = yerDiscount (if any, separate disclosure)
+          // Credit: Sales = netRevenueAmount (net revenue including transport, before tax)
+          // Credit: VAT Payable = yerTax (if any)
+          // Balanced: journalEffectivePaid + journalRemainingAmount + yerDiscount = netRevenueAmount + yerTax
+          if (cashBanksAccountId != null && journalEffectivePaid.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': cashBanksAccountId,
               'journal_id': journalId,
@@ -388,10 +555,14 @@ class InvoiceRepository {
               'description': 'فاتورة مبيعات (مدفوع) - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, journalEffectivePaid, 0.0, now);
           }
-          if (customersAccountId != null && remainingAmount > 0) {
+          if (customersAccountId != null && journalRemainingAmount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': customersAccountId,
               'journal_id': journalId,
@@ -400,30 +571,70 @@ class InvoiceRepository {
               'description': 'فاتورة مبيعات (آجل) - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, journalRemainingAmount, 0.0, now);
           }
-          // Discount Allowed (Debit) — separate from sales so discount is properly disclosed
-          if (discountAmount.abs() >= 0.005) {
-            // Will be recorded in the discount section below
+          if (yerDiscount.abs() >= 0.005 && discountAllowedAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': discountAllowedAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(yerDiscount),
+              'credit': 0,
+              'description': 'خصم مسموح به - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountAllowedAccountId, yerDiscount, 0.0, now);
           }
-          if (salesAccountId != null && total > 0) {
+          if (salesAccountId != null && netRevenueAmount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': salesAccountId,
               'journal_id': journalId,
               'debit': 0,
-              'credit': MoneyHelper.toCents(journalGrossTotal),
+              'credit': MoneyHelper.toCents(netRevenueAmount),
               'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, journalGrossTotal, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, netRevenueAmount, now);
+          }
+          if (yerTax.abs() >= 0.005 && vatPayableAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': vatPayableAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerTax),
+              'description': 'ضريبة قيمة مضافة مستحقة - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatPayableAccountId, 0.0, yerTax, now);
           }
         } else {
-          // Normal sale: full cash or full credit
-          // Debit Cash/Customer (= total, actual amount) + Debit Discount Allowed = Credit Sales (= gross)
+          // ── Normal sale: Net recording (C-01/C-02/M-02) ──
+          // Debit: Cash/Customer = journalTotal (actual amount paid/owed)
+          // Debit: Discount Allowed = yerDiscount (if any, separate disclosure)
+          // Credit: Sales = netRevenueAmount (net revenue including transport, before tax)
+          // Credit: VAT Payable = yerTax (if any)
+          // Balanced: journalTotal + yerDiscount = netRevenueAmount + yerTax
           final debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
-          if (debitAccountId != null && total > 0) {
+          if (debitAccountId != null && journalTotal.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': debitAccountId,
               'journal_id': journalId,
@@ -432,34 +643,72 @@ class InvoiceRepository {
               'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, journalTotal, 0.0, now);
           }
-          if (salesAccountId != null && total > 0) {
+          if (yerDiscount.abs() >= 0.005 && discountAllowedAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': discountAllowedAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(yerDiscount),
+              'credit': 0,
+              'description': 'خصم مسموح به - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountAllowedAccountId, yerDiscount, 0.0, now);
+          }
+          if (salesAccountId != null && netRevenueAmount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': salesAccountId,
               'journal_id': journalId,
               'debit': 0,
-              'credit': MoneyHelper.toCents(journalGrossTotal),
+              'credit': MoneyHelper.toCents(netRevenueAmount),
               'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, journalGrossTotal, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, netRevenueAmount, now);
+          }
+          if (yerTax.abs() >= 0.005 && vatPayableAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': vatPayableAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerTax),
+              'description': 'ضريبة قيمة مضافة مستحقة - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatPayableAccountId, 0.0, yerTax, now);
           }
         }
       } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
         if (isReturn) {
-          // A-04: Purchase Return: Debit Cash/Supplier, Credit Inventory (not Purchases)
-          // In perpetual inventory, purchase returns directly reduce inventory,
-          // not the purchases clearing account.
+          // ── Purchase return: Net recording (reverse of original purchase) ──
+          // Debit: Cash/Supplier = journalTotal (amount refunded)
+          // Debit: Discount Earned = yerDiscount (reverse discount revenue, if any)
+          // Credit: Purchases = netPurchaseCost (reverse purchase at net)
+          // Credit: VAT Receivable = yerTax (reverse VAT asset, if any)
+          // Balanced: journalTotal + yerDiscount = netPurchaseCost + yerTax
           final debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          // Resolve inventory account for this currency
-          final inventoryCode = (1300 + codeOffset).toString();
-          final invRows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [inventoryCode, journalCurrency], limit: 1);
-          final returnInventoryAccountId = invRows.isNotEmpty ? invRows.first['id'] as int : null;
-
-          if (debitAccountId != null && total > 0) {
+          if (debitAccountId != null && journalTotal.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': debitAccountId,
               'journal_id': journalId,
@@ -468,37 +717,102 @@ class InvoiceRepository {
               'description': 'فاتورة مشتريات - مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, journalTotal, 0.0, now);
           }
-          if (returnInventoryAccountId != null && total > 0) {
+          if (yerDiscount.abs() >= 0.005 && discountEarnedAccountId != null) {
             await txn.insert('transactions', {
-              'account_id': returnInventoryAccountId,
+              'account_id': discountEarnedAccountId,
               'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(journalTotal),
-              'description': 'تخفيض مخزون مرتجع مشتريات - ${invoiceMap['id']}',
+              'debit': MoneyHelper.toCents(yerDiscount),
+              'credit': 0,
+              'description': 'عكس خصم مشتريات مكتسب - مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, returnInventoryAccountId, 0.0, journalTotal, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountEarnedAccountId, yerDiscount, 0.0, now);
           }
-        } else if (isPartialCash) {
-          // Purchase with partial cash: Debit purchases (gross), Credit cash (paid) + Credit supplier (remaining)
-          // Purchases recorded at gross; discount carved out separately later
-          if (purchasesAccountId != null && total > 0) {
+          if (purchasesAccountId != null && netPurchaseCost.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalGrossTotal),
+              'debit': 0,
+              'credit': MoneyHelper.toCents(netPurchaseCost),
+              'description': 'عكس مشتريات - مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, netPurchaseCost, now);
+          }
+          if (yerTax.abs() >= 0.005 && vatReceivableAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': vatReceivableAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerTax),
+              'description': 'عكس ضريبة مشتريات - مرتجع - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatReceivableAccountId, 0.0, yerTax, now);
+          }
+        } else if (isPartialCash) {
+          // ── Partial cash purchase: Net recording ──
+          // Debit: Purchases = netPurchaseCost (net cost including transport, before tax)
+          // Debit: VAT Receivable = yerTax (if any, Asset account 1400+offset)
+          // Credit: Cash = journalEffectivePaid
+          // Credit: Supplier = journalRemainingAmount
+          // Credit: Discount Earned = yerDiscount (if any)
+          // Balanced: netPurchaseCost + yerTax = journalEffectivePaid + journalRemainingAmount + yerDiscount
+          if (purchasesAccountId != null && netPurchaseCost.abs() >= 0.005) {
+            await txn.insert('transactions', {
+              'account_id': purchasesAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(netPurchaseCost),
               'credit': 0,
               'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, journalGrossTotal, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, netPurchaseCost, 0.0, now);
           }
-          if (cashBanksAccountId != null && effectivePaid > 0) {
+          if (yerTax.abs() >= 0.005 && vatReceivableAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': vatReceivableAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(yerTax),
+              'credit': 0,
+              'description': 'ضريبة قيمة مضافة مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatReceivableAccountId, yerTax, 0.0, now);
+          }
+          if (cashBanksAccountId != null && journalEffectivePaid.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': cashBanksAccountId,
               'journal_id': journalId,
@@ -507,10 +821,14 @@ class InvoiceRepository {
               'description': 'فاتورة مشتريات (مدفوع) - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, journalEffectivePaid, now);
           }
-          if (suppliersAccountId != null && remainingAmount > 0) {
+          if (suppliersAccountId != null && journalRemainingAmount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': suppliersAccountId,
               'journal_id': journalId,
@@ -519,26 +837,70 @@ class InvoiceRepository {
               'description': 'فاتورة مشتريات (آجل) - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, journalRemainingAmount, now);
           }
+          if (yerDiscount.abs() >= 0.005 && discountEarnedAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': discountEarnedAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerDiscount),
+              'description': 'خصم مشتريات مكتسب - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountEarnedAccountId, 0.0, yerDiscount, now);
+          }
         } else {
-          // Normal purchase: full cash or full credit
-          // Purchases recorded at gross; discount carved out separately later
-          if (purchasesAccountId != null && total > 0) {
+          // ── Normal purchase: Net recording (C-01/C-02/M-02) ──
+          // Debit: Purchases = netPurchaseCost (net cost including transport, before tax)
+          // Debit: VAT Receivable = yerTax (if any, ASSET account 1400+offset — C-05)
+          // Credit: Cash/Supplier = journalTotal
+          // Credit: Discount Earned = yerDiscount (if any)
+          // Balanced: netPurchaseCost + yerTax = journalTotal + yerDiscount
+          if (purchasesAccountId != null && netPurchaseCost.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalGrossTotal),
+              'debit': MoneyHelper.toCents(netPurchaseCost),
               'credit': 0,
               'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, journalGrossTotal, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, netPurchaseCost, 0.0, now);
+          }
+          if (yerTax.abs() >= 0.005 && vatReceivableAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': vatReceivableAccountId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(yerTax),
+              'credit': 0,
+              'description': 'ضريبة قيمة مضافة مشتريات - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatReceivableAccountId, yerTax, 0.0, now);
           }
           final creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          if (creditAccountId != null && total > 0) {
+          if (creditAccountId != null && journalTotal.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': creditAccountId,
               'journal_id': journalId,
@@ -547,8 +909,28 @@ class InvoiceRepository {
               'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, journalTotal, now);
+          }
+          if (yerDiscount.abs() >= 0.005 && discountEarnedAccountId != null) {
+            await txn.insert('transactions', {
+              'account_id': discountEarnedAccountId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerDiscount),
+              'description': 'خصم مشتريات مكتسب - ${invoiceMap['id']}',
+              'date': now,
+              'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountEarnedAccountId, 0.0, yerDiscount, now);
           }
         }
       }
@@ -557,6 +939,14 @@ class InvoiceRepository {
       // P-01: Use product-specific account IDs when available, fall back to default accounts.
       // Group items by (cogs_account_id, inventory_account_id) to create aggregate entries per group.
       if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
+        if (isReturn) {
+          // M-08: Use reverseCOGSAllocations to restore original cost layers
+          // instead of calculateCOGSInTransaction which consumes new layers
+          await _dbHelper.costingEngine.reverseCOGSAllocationsInTransaction(
+            txn, invoiceId: invoiceMap['id'] as String,
+          );
+        }
+
         // Resolve default COGS + Inventory account IDs
         final cogsCode = (3200 + codeOffset).toString();
         final inventoryCode = (1300 + codeOffset).toString();
@@ -585,8 +975,13 @@ class InvoiceRepository {
           final costingMethod = CostingMethodExt.fromValue(costingMethodStr);
 
           double itemCogs;
-          if (costingMethod != CostingMethod.weightedAverage) {
-            // FIFO/LIFO: consume cost layers via costing engine
+          if (isReturn) {
+            // M-08: For sale returns, use average_cost for COGS (layers already restored above)
+            final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+            final effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+            itemCogs = effectiveCost * baseQuantity;
+          } else if (costingMethod != CostingMethod.weightedAverage) {
+            // FIFO/LIFO: consume cost layers via costing engine (only for non-return sales)
             itemCogs = await _dbHelper.costingEngine.calculateCOGSInTransaction(
               txn,
               productId: productId,
@@ -631,6 +1026,10 @@ class InvoiceRepository {
               'description': 'تكلفة بضاعة مباعة - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await txn.insert('transactions', {
               'account_id': inventoryAccountId,
@@ -640,6 +1039,10 @@ class InvoiceRepository {
               'description': 'تخفيض مخزون - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
@@ -653,6 +1056,10 @@ class InvoiceRepository {
               'description': 'إعادة مخزون مرتجع - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await txn.insert('transactions', {
               'account_id': cogsAccountId,
@@ -662,6 +1069,10 @@ class InvoiceRepository {
               'description': 'عكس تكلفة بضاعة مرتجعة - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
+              'currency_code': journalCurrency,
+              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'reference_type': invoiceType,
+              'reference_id': invoiceMap['id'] as String?,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
@@ -672,6 +1083,7 @@ class InvoiceRepository {
       // ── Purchase Inventory Transfer Entries ──
       // P-01: Use product-specific account IDs when available, fall back to default accounts.
       // Group items by (inventory_account_id, purchase_account_id) to create aggregate entries per group.
+      // For purchase returns, also transfer from Inventory back to Purchases clearing account.
       if ((invoiceType == 'purchase' || invoiceType == 'purchase_return')) {
         // Resolve default Inventory + Purchases account IDs
         final inventoryCode = (1300 + codeOffset).toString();
@@ -685,12 +1097,11 @@ class InvoiceRepository {
         final defaultPurchasesAccountId = invPurchRows.where((r) => r['account_code'] == purchasesCode).firstOrNull?['id'] as int?;
 
         // Group items by their effective (inventory_account, purchase_account) pair
-        // Fix #1: Use unitPrice (actual purchase price) instead of average_cost
-        // to ensure purchases account (3100) zeros out correctly.
-        // Entry 1: Debit Purchases = unitPrice × qty, Credit Cash/Supplier = unitPrice × qty
-        // Entry 2: Debit Inventory = unitPrice × qty, Credit Purchases = unitPrice × qty
-        // If average_cost ≠ unitPrice, the purchases account won't zero out.
+        // Use unitPrice (actual purchase price) for the inventory transfer entry
+        // to ensure purchases account zeros out correctly.
         final purchGroups = <String, double>{};
+        // For purchase returns, use average_cost instead of unitPrice
+        final returnGroups = <String, double>{};
         for (final item in items) {
           final productId = (item['product_id'] as num?)?.toInt();
           final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
@@ -698,25 +1109,38 @@ class InvoiceRepository {
           if (productId == null) continue;
           final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
           if (productRow.isEmpty) continue;
-          // Fix #1: Use unitPrice (actual purchase price) for inventory transfer entry
-          // FIX: Use `quantity * unitPrice` (not `baseQuantity * unitPrice`).
-          // When purchasing 1 carton at 1500 with conversion_factor=20:
-          //   quantity=1, unitPrice=1500, baseQuantity=20
-          //   Total = 1 × 1500 = 1500 (CORRECT), not 20 × 1500 = 30000 (WRONG)
-          final itemCost = quantity * unitPrice;
-          if (itemCost.abs() < 0.005) continue;
 
-          // P-01: Use product-specific accounts when set, otherwise default
-          final prodInvId = productRow.first['inventory_account_id'] as int?;
-          final prodPurchId = productRow.first['purchase_account_id'] as int?;
-          // B-05: Skip items where required account IDs are unavailable
-          final effectiveInvId = prodInvId ?? defaultInventoryAccountId;
-          final effectivePurchId = prodPurchId ?? defaultPurchasesAccountId;
-          if (effectiveInvId == null || effectivePurchId == null) continue;
-          final key = '${effectiveInvId}_$effectivePurchId';
-          purchGroups[key] = (purchGroups[key] ?? 0.0) + itemCost;
+          if (!isReturn) {
+            // Normal purchase: use quantity * unitPrice for transfer
+            final itemCost = quantity * unitPrice;
+            if (itemCost.abs() < 0.005) continue;
+
+            final prodInvId = productRow.first['inventory_account_id'] as int?;
+            final prodPurchId = productRow.first['purchase_account_id'] as int?;
+            final effectiveInvId = prodInvId ?? defaultInventoryAccountId;
+            final effectivePurchId = prodPurchId ?? defaultPurchasesAccountId;
+            if (effectiveInvId == null || effectivePurchId == null) continue;
+            final key = '${effectiveInvId}_$effectivePurchId';
+            purchGroups[key] = (purchGroups[key] ?? 0.0) + itemCost;
+          } else {
+            // Purchase return: use average_cost for the return transfer (C-03)
+            final avgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
+            final effectiveCost = avgCost > 0 ? avgCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
+            final itemCost = effectiveCost * baseQuantity;
+            if (itemCost.abs() < 0.005) continue;
+
+            final prodInvId = productRow.first['inventory_account_id'] as int?;
+            final prodPurchId = productRow.first['purchase_account_id'] as int?;
+            final effectiveInvId = prodInvId ?? defaultInventoryAccountId;
+            final effectivePurchId = prodPurchId ?? defaultPurchasesAccountId;
+            if (effectiveInvId == null || effectivePurchId == null) continue;
+            final key = '${effectiveInvId}_$effectivePurchId';
+            returnGroups[key] = (returnGroups[key] ?? 0.0) + itemCost;
+          }
         }
 
+        // Normal purchase inventory transfers
         for (final entry in purchGroups.entries) {
           final totalPurchaseCost = entry.value;
           if (totalPurchaseCost.abs() < 0.005) continue;
@@ -725,352 +1149,180 @@ class InvoiceRepository {
           final purchasesAccountId = int.tryParse(parts[1]);
           if (inventoryAccountId == null || purchasesAccountId == null) continue;
 
-          if (!isReturn) {
-            // Purchase: Debit Inventory (goods come in), Credit Purchases (transfer from purchases account)
-            await txn.insert('transactions', {
-              'account_id': inventoryAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(totalPurchaseCost),
-              'credit': 0,
-              'description': 'إضافة مخزون مشتريات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await txn.insert('transactions', {
-              'account_id': purchasesAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(totalPurchaseCost),
-              'description': 'تحويل من حساب المشتريات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalPurchaseCost, 0.0, now);
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, totalPurchaseCost, now);
-          } else {
-            // A-04: Purchase return inventory transfer is now handled in the main entry
-            // (Debit Cash/Supplier, Credit Inventory directly). No separate transfer needed.
-            // The main entry already credits Inventory at total amount, which covers
-            // both the cost reversal and the inventory reduction.
-          }
-        }
-      }
-
-      // ── P-02: VAT Journal Entries (ضريبة القيمة المضافة) ──
-      // Separate the VAT amount from the total into a VAT control account.
-      // For sales: part of the cash/customer debit is already allocated to total;
-      // we need to split: the sales credit includes VAT, so we reduce sales and credit VAT.
-      // Approach: Debit Sales (reduce by VAT), Credit VAT Payable (for sales)
-      // For purchases: Debit VAT Receivable, Credit Purchases (reduce by VAT)
-      final taxAmount = MoneyHelper.readMoney(invoiceMap['tax_amount']);
-      if (taxAmount.abs() >= 0.005) {
-        // P-01: Use invoice-level VAT account or product-level if all products share the same one
-        // For simplicity, use the default VAT account (2300 + offset)
-        final vatCode = (2300 + codeOffset).toString();
-        final vatRows = await txn.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [vatCode, journalCurrency],
-          limit: 1,
-        );
-        final vatAccountId = vatRows.isNotEmpty ? vatRows.first['id'] as int : null;
-
-        if (vatAccountId != null) {
-          final yerTax = needsYerConversion ? taxAmount * exchangeRate : taxAmount;
-          if ((invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
-            // Sales VAT: Debit Sales (reduce revenue by VAT amount), Credit VAT Payable
-            if (salesAccountId != null) {
-              await txn.insert('transactions', {
-                'account_id': salesAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(yerTax),
-                'credit': 0,
-                'description': 'ضريبة قيمة مضافة مبيعات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, yerTax, 0.0, now);
-            }
-            await txn.insert('transactions', {
-              'account_id': vatAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(yerTax),
-              'description': 'ضريبة قيمة مضافة مستحقة - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, yerTax, now);
-          } else if (invoiceType == 'sale_return' || (invoiceType == 'sale' && isReturn)) {
-            // Sales Return VAT: Debit VAT Payable, Credit Sales (restore revenue)
-            await txn.insert('transactions', {
-              'account_id': vatAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(yerTax),
-              'credit': 0,
-              'description': 'عكس ضريبة مرتجع مبيعات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, yerTax, 0.0, now);
-            if (salesAccountId != null) {
-              await txn.insert('transactions', {
-                'account_id': salesAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(yerTax),
-                'description': 'عكس ضريبة مرتجع مبيعات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, yerTax, now);
-            }
-          } else if (invoiceType == 'purchase' && !isReturn) {
-            // Purchase VAT: Debit VAT Receivable, Credit Purchases (reduce expense)
-            await txn.insert('transactions', {
-              'account_id': vatAccountId,
-              'journal_id': journalId,
-              'debit': MoneyHelper.toCents(yerTax),
-              'credit': 0,
-              'description': 'ضريبة قيمة مضافة مشتريات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, yerTax, 0.0, now);
-            if (purchasesAccountId != null) {
-              await txn.insert('transactions', {
-                'account_id': purchasesAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(yerTax),
-                'description': 'ضريبة قيمة مضافة مشتريات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, yerTax, now);
-            }
-          } else if (invoiceType == 'purchase_return' || (invoiceType == 'purchase' && isReturn)) {
-            // Purchase Return VAT: Debit Purchases, Credit VAT Receivable
-            if (purchasesAccountId != null) {
-              await txn.insert('transactions', {
-                'account_id': purchasesAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(yerTax),
-                'credit': 0,
-                'description': 'عكس ضريبة مرتجع مشتريات - ${invoiceMap['id']}',
-                'date': now,
-                'created_at': now,
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, yerTax, 0.0, now);
-            }
-            await txn.insert('transactions', {
-              'account_id': vatAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(yerTax),
-              'description': 'عكس ضريبة مرتجع مشتريات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, yerTax, now);
-          }
-        }
-      }
-
-      // ── M-01 + M-02: قيود الخصومات والنقل المستقلة ──
-      // حسب المعايير المحاسبية: يجب الإفصاح عن الإيرادات الإجمالية والخصومات بشكل منفصل
-      // ومصاريف/إيرادات النقل في حساب مستقل بدل تضمينها في المبيعات
-
-      // M-01: الخصومات — إنشاء قيد مستقل لحساب "خصم مسموح به"
-      // discountAmount and yerDiscount are already computed above
-      if (discountAmount.abs() >= 0.005 && (invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
-        // البحث عن حساب خصم مسموح به (5400+offset) أو إنشاؤه
-        final discountCode = (5400 + codeOffset).toString();
-        final discountAccount = await txn.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [discountCode, journalCurrency],
-          limit: 1,
-        );
-        int? discountAccountId;
-        if (discountAccount.isNotEmpty) {
-          discountAccountId = discountAccount.first['id'] as int;
-        } else {
-          // Find parent account for hierarchy
-          final parentRows = await txn.query(
-            'accounts',
-            where: 'account_code = ? AND currency = ?',
-            whereArgs: [(5000 + codeOffset).toString(), journalCurrency],
-            limit: 1,
-          );
-          final discountParentId = parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
-          discountAccountId = await txn.insert('accounts', {
-            'name_ar': 'خصم مسموح به ($journalCurrency)',
-            'name_en': 'Discount Allowed ($journalCurrency)',
-            'account_code': discountCode,
-            'account_type': 'EXPENSE',
-            'balance': 0,
-            'currency': journalCurrency,
-            'balance_type': 'debit',
-            'parent_id': discountParentId,
-            'is_active': 1,
-            'is_system': 1,
-            'created_at': now,
-            'updated_at': now,
-          });
-        }
-
-        // yerDiscount is already computed above
-        // مدين: خصم مسموح به (مصروف) / دائن: المبيعات (تخفيض الإيراد بقيمة الخصم)
-        // المبيعات أعلاه سُجلت بالإجمالي (شامل الخصم)، هنا نعكس الخصم
-        if (discountAccountId != null) {
+          // Purchase: Debit Inventory (goods come in), Credit Purchases (transfer from purchases account)
           await txn.insert('transactions', {
-            'account_id': discountAccountId,
+            'account_id': inventoryAccountId,
             'journal_id': journalId,
-            'debit': MoneyHelper.toCents(yerDiscount),
+            'debit': MoneyHelper.toCents(totalPurchaseCost),
             'credit': 0,
-            'description': 'خصم مسموح به - ${invoiceMap['id']}',
+            'description': 'إضافة مخزون مشتريات - ${invoiceMap['id']}',
             'date': now,
             'created_at': now,
+            'currency_code': journalCurrency,
+            'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+            'reference_type': invoiceType,
+            'reference_id': invoiceMap['id'] as String?,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountAccountId, yerDiscount, 0.0, now);
-        }
-        if (salesAccountId != null) {
           await txn.insert('transactions', {
-            'account_id': salesAccountId,
+            'account_id': purchasesAccountId,
             'journal_id': journalId,
             'debit': 0,
-            'credit': MoneyHelper.toCents(yerDiscount),
-            'description': 'تخفيض مبيعات بقيمة الخصم - ${invoiceMap['id']}',
+            'credit': MoneyHelper.toCents(totalPurchaseCost),
+            'description': 'تحويل من حساب المشتريات - ${invoiceMap['id']}',
             'date': now,
             'created_at': now,
+            'currency_code': journalCurrency,
+            'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+            'reference_type': invoiceType,
+            'reference_id': invoiceMap['id'] as String?,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, yerDiscount, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalPurchaseCost, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, totalPurchaseCost, now);
+        }
+
+        // Purchase return inventory transfers (C-03)
+        for (final entry in returnGroups.entries) {
+          final totalReturnCost = entry.value;
+          if (totalReturnCost.abs() < 0.005) continue;
+          final parts = entry.key.split('_');
+          final inventoryAccountId = int.tryParse(parts[0]);
+          final purchasesAccountId = int.tryParse(parts[1]);
+          if (inventoryAccountId == null || purchasesAccountId == null) continue;
+
+          // Purchase return: Debit Purchases (reverse), Credit Inventory (reverse at cost)
+          await txn.insert('transactions', {
+            'account_id': purchasesAccountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(totalReturnCost),
+            'credit': 0,
+            'description': 'تحويل مرتجع مشتريات - ${invoiceMap['id']}',
+            'date': now,
+            'created_at': now,
+            'currency_code': journalCurrency,
+            'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+            'reference_type': invoiceType,
+            'reference_id': invoiceMap['id'] as String?,
+          });
+          await txn.insert('transactions', {
+            'account_id': inventoryAccountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(totalReturnCost),
+            'description': 'تخفيض مخزون مرتجع مشتريات - ${invoiceMap['id']}',
+            'date': now,
+            'created_at': now,
+            'currency_code': journalCurrency,
+            'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+            'reference_type': invoiceType,
+            'reference_id': invoiceMap['id'] as String?,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, totalReturnCost, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalReturnCost, now);
         }
       }
 
-      // ── B-02: Purchase Discount (خصم مكتسب) ──
-      // For purchase returns with discounts, record the discount earned
-      if (discountAmount.abs() >= 0.005 && (invoiceType == 'purchase') && !isReturn) {
-        final purchaseDiscountCode = (4600 + codeOffset).toString();
-        var purchaseDiscountRows = await txn.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [purchaseDiscountCode, journalCurrency],
-          limit: 1,
-        );
-        int? purchaseDiscountAccountId;
-        if (purchaseDiscountRows.isNotEmpty) {
-          purchaseDiscountAccountId = purchaseDiscountRows.first['id'] as int;
-        } else {
-          // Find parent account for hierarchy
-          final revParentRows = await txn.query(
-            'accounts',
-            where: 'account_code = ? AND currency = ?',
-            whereArgs: [(4000 + codeOffset).toString(), journalCurrency],
-            limit: 1,
-          );
-          final pdParentId = revParentRows.isNotEmpty ? revParentRows.first['id'] as int : null;
-          purchaseDiscountAccountId = await txn.insert('accounts', {
-            'name_ar': 'خصم مشتريات مكتسب ($journalCurrency)',
-            'name_en': 'Purchase Discount Earned ($journalCurrency)',
-            'account_code': purchaseDiscountCode,
-            'account_type': 'REVENUE',
-            'balance': 0,
-            'currency': journalCurrency,
-            'balance_type': 'credit',
-            'parent_id': pdParentId,
-            'is_active': 1,
-            'is_system': 1,
-            'created_at': now,
-            'updated_at': now,
-          });
-        }
-        if (purchaseDiscountAccountId != null && purchasesAccountId != null) {
-          // yerDiscount is already computed above
-          // Credit Purchase Discount Earned (contra-revenue) and Debit Purchases (reduce cost)
-          // This replaces the old approach which incorrectly debited Supplier/Cash,
-          // causing the discount to reduce the payable twice.
-          await txn.insert('transactions', {
-            'account_id': purchaseDiscountAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(yerDiscount),
-            'description': 'خصم مشتريات مكتسب - ${invoiceMap['id']}',
-            'date': now,
-            'created_at': now,
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchaseDiscountAccountId, 0.0, yerDiscount, now);
-          // Reduce purchases by the discount (Debit Purchases was at gross, now reduce it)
-          if (purchasesAccountId != null) {
-            await txn.insert('transactions', {
-              'account_id': purchasesAccountId,
-              'journal_id': journalId,
-              'debit': 0,
-              'credit': MoneyHelper.toCents(yerDiscount),
-              'description': 'خصم مشتريات - تخفيض تكلفة المشتريات - ${invoiceMap['id']}',
-              'date': now,
-              'created_at': now,
-            });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, yerDiscount, now);
-          }
-        }
-      }
+      // ── VAT entries are now part of the main entries (C-05 fix) ──
+      // VAT is already included in the main sale/purchase entries above.
+      // No separate VAT reversal section needed — the old gross-up pattern is removed.
 
-      // M-02: مصاريف/إيرادات النقل — إنشاء قيد مستقل لحساب "أجور النقل"
-      if (transportCharges.abs() >= 0.005 && (invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
-        final transportCode = (5200 + codeOffset).toString();
-        final transportAccount = await txn.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [transportCode, journalCurrency],
-          limit: 1,
-        );
-        int? transportAccountId;
-        if (transportAccount.isNotEmpty) {
-          transportAccountId = transportAccount.first['id'] as int;
-        } else {
-          transportAccountId = await txn.insert('accounts', {
-            'name_ar': 'أجور النقل ($journalCurrency)',
-            'name_en': 'Transport Charges ($journalCurrency)',
-            'account_code': transportCode,
-            'account_type': 'EXPENSE',
-            'balance': 0,
-            'currency': journalCurrency,
-            'balance_type': 'debit',
-            'is_active': 1,
-            'is_system': 1,
-            'created_at': now,
-            'updated_at': now,
-          });
-        }
+      // ── Discount entries are now part of the main entry (C-01/C-02 fix) ──
+      // Discounts are already included in the main sale/purchase entries above.
+      // No separate discount reversal section needed — the old gross-up pattern is removed.
 
-        // yerTransport is already computed above
-        // مدين: أجور النقل (مصروف) / دائن: المبيعات (تخفيض الإيراد بقيمة النقل)
-        // المبيعات أعلاه سُجلت بالإجمالي (شامل النقل)، هنا نفصل النقل
-        if (transportAccountId != null) {
+      // ── M-01/M-10: Transport entries ──
+      // Sales transport: REMOVED. Transport is already included in netRevenueAmount.
+      // The customer pays for transport as part of the total, so it's revenue.
+
+      // Purchase transport: Move transport from Purchases clearing to Inventory (IAS 2)
+      // This ensures: (1) Purchases account zeros out correctly, (2) Inventory valuation includes transport
+      if (yerTransport.abs() >= 0.005 && invoiceType == 'purchase' && !isReturn) {
+        // Debit: Inventory = yerTransport (capitalize transport into inventory per IAS 2)
+        // Credit: Purchases = yerTransport (reduce purchases by transport, it's now in inventory)
+        final inventoryCode = (1300 + codeOffset).toString();
+        final purchasesCode = (3100 + codeOffset).toString();
+        final transportInvRows = await txn.query(
+          'accounts',
+          where: 'account_code IN (?, ?) AND currency = ?',
+          whereArgs: [inventoryCode, purchasesCode, journalCurrency],
+        );
+        final transportInvAccountId = transportInvRows.where((r) => r['account_code'] == inventoryCode).firstOrNull?['id'] as int?;
+        final transportPurchAccountId = transportInvRows.where((r) => r['account_code'] == purchasesCode).firstOrNull?['id'] as int?;
+
+        if (transportInvAccountId != null && transportPurchAccountId != null) {
           await txn.insert('transactions', {
-            'account_id': transportAccountId,
+            'account_id': transportInvAccountId,
             'journal_id': journalId,
             'debit': MoneyHelper.toCents(yerTransport),
             'credit': 0,
-            'description': 'مصاريف نقل - ${invoiceMap['id']}',
+            'description': 'رأس مالية مصاريف نقل في المخزون - ${invoiceMap['id']}',
             'date': now,
             'created_at': now,
+            'currency_code': journalCurrency,
+            'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+            'reference_type': invoiceType,
+            'reference_id': invoiceMap['id'] as String?,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, transportAccountId, yerTransport, 0.0, now);
-        }
-        if (salesAccountId != null) {
           await txn.insert('transactions', {
-            'account_id': salesAccountId,
+            'account_id': transportPurchAccountId,
             'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(yerTransport),
-            'description': 'تخفيض مبيعات بقيمة النقل - ${invoiceMap['id']}',
+            'description': 'تحويل مصاريف نقل من المشتريات - ${invoiceMap['id']}',
             'date': now,
             'created_at': now,
+            'currency_code': journalCurrency,
+            'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+            'reference_type': invoiceType,
+            'reference_id': invoiceMap['id'] as String?,
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, yerTransport, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, transportInvAccountId, yerTransport, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, transportPurchAccountId, 0.0, yerTransport, now);
+        }
+      }
+
+      // Purchase return transport: Reverse the transport transfer
+      if (yerTransport.abs() >= 0.005 && invoiceType == 'purchase' && isReturn) {
+        // Debit: Purchases = yerTransport
+        // Credit: Inventory = yerTransport
+        final inventoryCode = (1300 + codeOffset).toString();
+        final purchasesCode = (3100 + codeOffset).toString();
+        final transportInvRows = await txn.query(
+          'accounts',
+          where: 'account_code IN (?, ?) AND currency = ?',
+          whereArgs: [inventoryCode, purchasesCode, journalCurrency],
+        );
+        final transportInvAccountId = transportInvRows.where((r) => r['account_code'] == inventoryCode).firstOrNull?['id'] as int?;
+        final transportPurchAccountId = transportInvRows.where((r) => r['account_code'] == purchasesCode).firstOrNull?['id'] as int?;
+
+        if (transportInvAccountId != null && transportPurchAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': transportPurchAccountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(yerTransport),
+            'credit': 0,
+            'description': 'عكس تحويل مصاريف نقل - مرتجع - ${invoiceMap['id']}',
+            'date': now,
+            'created_at': now,
+            'currency_code': journalCurrency,
+            'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+            'reference_type': invoiceType,
+            'reference_id': invoiceMap['id'] as String?,
+          });
+          await txn.insert('transactions', {
+            'account_id': transportInvAccountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(yerTransport),
+            'description': 'عكس رأس مالية نقل في المخزون - مرتجع - ${invoiceMap['id']}',
+            'date': now,
+            'created_at': now,
+            'currency_code': journalCurrency,
+            'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+            'reference_type': invoiceType,
+            'reference_id': invoiceMap['id'] as String?,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, transportPurchAccountId, yerTransport, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, transportInvAccountId, 0.0, yerTransport, now);
         }
       }
 
