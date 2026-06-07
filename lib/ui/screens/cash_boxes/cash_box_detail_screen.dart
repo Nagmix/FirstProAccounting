@@ -71,22 +71,27 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
+    // Refresh cash box data (non-fatal if this fails)
     try {
-      // Refresh cash box data
       final cashBoxMap = await locator<CashBoxService>().getCashBoxById(widget.cashBox.id!);
       if (cashBoxMap != null) {
         _freshCashBox = CashBox.fromMap(cashBoxMap);
       }
+    } catch (e) {
+      debugPrint('CashBoxDetailScreen._loadData [refreshCashBox]: $e');
+      // Keep using the original cashBox data
+    }
 
-      // Load all movements
+    // Load all movements (non-fatal — partial data is better than nothing)
+    try {
       await _loadMovements();
     } catch (e) {
-      debugPrint('CashBoxDetailScreen._loadData: $e');
+      debugPrint('CashBoxDetailScreen._loadData [loadMovements]: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ أثناء تحميل البيانات'),
-            backgroundColor: AppColors.error,
+            content: Text('حدث خطأ أثناء تحميل بعض البيانات'),
+            backgroundColor: AppColors.warning,
           ),
         );
       }
