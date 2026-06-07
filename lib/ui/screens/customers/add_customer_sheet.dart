@@ -99,7 +99,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       balance: double.tryParse(_balanceController.text) ?? 0.0,
       balanceType: _balanceType,
-      currency: null, // Customer is multi-currency — no permanent currency
+      currency: _currency, // Store opening-balance currency as default (DB NOT NULL), but NOT permanent
       debtCeiling: double.tryParse(_debtCeilingController.text) ?? 0.0,
     );
 
@@ -211,41 +211,32 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Amount + Currency row
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: TextFormField(
-                              controller: _balanceController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              textInputAction: TextInputAction.next,
-                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
-                              decoration: InputDecoration(
-                                labelText: 'الرصيد الافتتاحي',
-                                prefixIcon: const Icon(Icons.calculate),
-                                suffixText: _currencyInfo[_currency]!['symbol'],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            flex: 2,
-                            child: DropdownButtonFormField<String>(
-                              value: _currency,
-                              decoration: const InputDecoration(
-                                labelText: 'عملة القيد الافتتاحي',
-                                prefixIcon: Icon(Icons.currency_exchange),
-                              ),
-                              items: _currencyInfo.entries.map((e) => DropdownMenuItem(
-                                value: e.key,
-                                child: Text('${e.value['label']} (${e.value['symbol']})', style: const TextStyle(fontSize: 13)),
-                              )).toList(),
-                              onChanged: (v) => setState(() => _currency = v!),
-                            ),
-                          ),
-                        ],
+                      // Amount field (full width)
+                      TextFormField(
+                        controller: _balanceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                        decoration: InputDecoration(
+                          labelText: 'الرصيد الافتتاحي',
+                          prefixIcon: const Icon(Icons.calculate),
+                          suffixText: _currencyInfo[_currency]!['symbol'],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Currency dropdown (full width to avoid text truncation)
+                      DropdownButtonFormField<String>(
+                        value: _currency,
+                        decoration: const InputDecoration(
+                          labelText: 'عملة القيد',
+                          prefixIcon: Icon(Icons.currency_exchange),
+                        ),
+                        items: _currencyInfo.entries.map((e) => DropdownMenuItem(
+                          value: e.key,
+                          child: Text('${e.value['label']} (${e.value['symbol']})'),
+                        )).toList(),
+                        onChanged: (v) => setState(() => _currency = v!),
                       ),
                       const SizedBox(height: 12),
 

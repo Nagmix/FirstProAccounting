@@ -84,8 +84,10 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       'address': _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
       'balance': balance,
       'balance_type': _balanceType,
-      // Supplier is now multi-currency — do NOT set a permanent currency
-      'currency': null,
+      // Supplier is multi-currency — store the opening balance currency
+      // as default (DB column is NOT NULL), but it does NOT permanently
+      // bind the supplier to this currency.
+      'currency': _currency,
       // Pass the opening balance currency separately for the journal entry
       'opening_balance_currency': _currency,
       'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
@@ -229,57 +231,46 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // ── Amount + Currency row ───────────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Amount field
-                        Expanded(
-                          flex: 3,
-                          child: TextFormField(
-                            controller: _balanceController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            textInputAction: TextInputAction.next,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                  RegExp(r'^\d*\.?\d{0,2}'))
-                            ],
-                            decoration: InputDecoration(
-                              labelText: 'الرصيد الافتتاحي',
-                              prefixIcon: const Icon(Icons.calculate),
-                              suffixText: _currencyInfo[_currency]?['symbol'] ?? AppConstants.currency,
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        // Currency dropdown
-                        Expanded(
-                          flex: 2,
-                          child: DropdownButtonFormField<String>(
-                            value: _currency,
-                            decoration: InputDecoration(
-                              labelText: 'عملة القيد الافتتاحي',
-                              prefixIcon: const Icon(Icons.currency_exchange),
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            items: _currencyInfo.entries.map((e) => DropdownMenuItem(
-                              value: e.key,
-                              child: Text('${e.value['label']} (${e.value['symbol']})', style: const TextStyle(fontSize: 12)),
-                            )).toList(),
-                            onChanged: (v) => setState(() => _currency = v!),
-                          ),
-                        ),
+                    // ── Amount field (full width) ─────────────────────
+                    TextFormField(
+                      controller: _balanceController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      textInputAction: TextInputAction.next,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}'))
                       ],
+                      decoration: InputDecoration(
+                        labelText: 'الرصيد الافتتاحي',
+                        prefixIcon: const Icon(Icons.calculate),
+                        suffixText: _currencyInfo[_currency]?['symbol'] ?? AppConstants.currency,
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // ── Currency dropdown (full width) ────────────────
+                    DropdownButtonFormField<String>(
+                      value: _currency,
+                      decoration: InputDecoration(
+                        labelText: 'عملة القيد',
+                        prefixIcon: const Icon(Icons.currency_exchange),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      items: _currencyInfo.entries.map((e) => DropdownMenuItem(
+                        value: e.key,
+                        child: Text('${e.value['label']} (${e.value['symbol']})'),
+                      )).toList(),
+                      onChanged: (v) => setState(() => _currency = v!),
                     ),
                     const SizedBox(height: 12),
 

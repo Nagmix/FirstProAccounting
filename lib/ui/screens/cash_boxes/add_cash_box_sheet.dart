@@ -99,8 +99,10 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
       );
 
       final map = cashBox.toMap();
-      // Cash box does NOT store a currency — it's currency-agnostic
-      map['currency'] = null;
+      // Cash box does NOT permanently bind to a currency, but the DB column
+      // is NOT NULL, so we store the opening-balance currency as the default.
+      // The currency selector is only meaningful for the opening balance entry.
+      map['currency'] = _currency;
       // Remove null id for new inserts (sqflite auto-generates)
       if (!_isEdit) {
         map.remove('id');
@@ -303,7 +305,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 DropdownButtonFormField<String>(
                   value: _currency,
                   decoration: const InputDecoration(
-                    labelText: 'عملة القيد الافتتاحي',
+                    labelText: 'عملة القيد',
                     prefixIcon: Icon(Icons.attach_money),
                   ),
                   items: _currencyInfo.entries.map((entry) {

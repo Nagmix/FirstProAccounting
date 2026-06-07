@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import '../constants/app_constants.dart';
 import '../di/service_locator.dart';
 import '../../data/datasources/repositories/product_repository.dart';
 import '../../data/datasources/repositories/reference_data_repository.dart';
@@ -134,7 +135,7 @@ class PosViewModel extends ChangeNotifier {
     return _orderDiscount;
   }
 
-  double get tax => (subtotal - effectiveDiscount) * 0.0; // VAT placeholder
+  double get tax => (subtotal - effectiveDiscount) * (AppConstants.defaultVatRate / 100);
   double get total => subtotal - effectiveDiscount + tax;
 
   double get totalPaid => _payments.fold(0.0, (sum, p) => sum + p.amount);
@@ -375,8 +376,22 @@ class PosViewModel extends ChangeNotifier {
   String _selectedCurrency = 'YER';
   String get selectedCurrency => _selectedCurrency;
 
+  double _exchangeRate = 1.0;
+  double get exchangeRate => _exchangeRate;
+
   void setSelectedCurrency(String currency) {
     _selectedCurrency = currency;
+    // Default exchange rates for common currencies
+    switch (currency) {
+      case 'SAR': _exchangeRate = 140.0; break;  // 1 SAR ≈ 140 YER
+      case 'USD': _exchangeRate = 530.0; break;  // 1 USD ≈ 530 YER
+      default: _exchangeRate = 1.0;
+    }
+    notifyListeners();
+  }
+
+  void setExchangeRate(double rate) {
+    _exchangeRate = rate;
     notifyListeners();
   }
 

@@ -8,8 +8,9 @@ import '../../data/models/invoice_item_model.dart';
 /// the invoice creation screen. Supports inline quantity editing and
 /// swipe-to-delete.
 ///
-/// Modern professional design with gradient accents, rounded containers,
-/// and smooth animations — matching the invoice screen redesign.
+/// Layout:
+///   Row 1: Item name ........................  quantity × price
+///   Row 2: [−] [ qty ] [+]                 total price
 class InvoiceItemCard extends StatelessWidget {
   const InvoiceItemCard({
     super.key,
@@ -81,42 +82,36 @@ class InvoiceItemCard extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(14),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Product icon with gradient ──────────────────
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [_accentBlue, _accentPurple],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _accentBlue.withOpacity(0.2),
-                          offset: const Offset(0, 2),
-                          blurRadius: 6,
+                  // ── Row 1: Item name + quantity × price ─────────
+                  Row(
+                    children: [
+                      // Product icon
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [_accentBlue, _accentPurple],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.inventory_2_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
+                        child: const Icon(
+                          Icons.inventory_2_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
 
-                  // ── Name & price ──────────────────────────────────
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                      // Item name
+                      Expanded(
+                        child: Text(
                           item.productName,
                           style: theme.textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -125,77 +120,78 @@ class InvoiceItemCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Text(
-                              '${CurrencyFormatter.formatValue(item.unitPrice)} × ${item.quantity.toStringAsFixed(item.quantity == item.quantity.truncate() ? 0 : 3)}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // quantity × price
+                      Text(
+                        '${item.quantity.toStringAsFixed(item.quantity == item.quantity.truncate() ? 0 : 3)} × ${CurrencyFormatter.formatValue(item.unitPrice)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (item.unitName != null && item.unitName!.isNotEmpty) ...[
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _accentBlue.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item.unitName!,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: _accentBlue,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
                             ),
-                            if (item.unitName != null && item.unitName!.isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: _accentBlue.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  item.unitName!,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: _accentBlue,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
 
-                  const SizedBox(width: 8),
+                  // ── Row 2: Quantity stepper + Total price ────────
+                  Row(
+                    children: [
+                      // Quantity stepper
+                      if (onQuantityChanged != null)
+                        _QuantityStepper(
+                          quantity: item.quantity,
+                          onChanged: onQuantityChanged!,
+                          isDark: isDark,
+                        ),
 
-                  // ── Quantity stepper ───────────────────────────────
-                  if (onQuantityChanged != null) ...[
-                    _QuantityStepper(
-                      quantity: item.quantity,
-                      onChanged: onQuantityChanged!,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(width: 10),
-                  ],
+                      const Spacer(),
 
-                  // ── Total ─────────────────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _accentBlue.withOpacity(isDark ? 0.15 : 0.08),
-                          _accentPurple.withOpacity(isDark ? 0.08 : 0.04),
-                        ],
-                        begin: Alignment.centerRight,
-                        end: Alignment.centerLeft,
+                      // Total price
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _accentBlue.withOpacity(isDark ? 0.15 : 0.08),
+                              _accentPurple.withOpacity(isDark ? 0.08 : 0.04),
+                            ],
+                            begin: Alignment.centerRight,
+                            end: Alignment.centerLeft,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: _accentBlue.withOpacity(0.12)),
+                        ),
+                        child: Text(
+                          CurrencyFormatter.format(item.totalPrice),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: _accentBlue,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _accentBlue.withOpacity(0.12)),
-                    ),
-                    child: Text(
-                      CurrencyFormatter.format(item.totalPrice),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: _accentBlue,
-                        fontSize: 13,
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -243,7 +239,7 @@ class _QuantityStepper extends StatelessWidget {
             onTap: () => onChanged((quantity - 1).clamp(0.001, 99999)),
           ),
           Container(
-            constraints: const BoxConstraints(minWidth: 34),
+            constraints: const BoxConstraints(minWidth: 36),
             alignment: Alignment.center,
             child: Text(
               quantity.toStringAsFixed(quantity == quantity.truncate() ? 0 : 3),
@@ -268,8 +264,8 @@ class _QuantityStepper extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        width: 28,
-        height: 28,
+        width: 30,
+        height: 30,
         decoration: BoxDecoration(
           color: _accentBlue.withOpacity(0.08),
           borderRadius: BorderRadius.circular(8),

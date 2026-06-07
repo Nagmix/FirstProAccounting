@@ -72,6 +72,11 @@ class InvoiceRepository {
 
       // Insert invoice items (convert money fields to cents)
       // P-06: Also store unit_cost (average cost at time of sale) for accurate deferred COGS
+
+      // ── Pre-compute discount & transport for stock distribution and journal entries ──
+      final discountAmount = MoneyHelper.readMoney(invoiceMap['discount_amount']);
+      final transportCharges = MoneyHelper.readMoney(invoiceMap['transport_charges']);
+
       for (final item in items) {
         // Enrich item with unit_cost from product's average_cost if not already set
         final productId = (item['product_id'] as num?)?.toInt();
@@ -298,6 +303,16 @@ class InvoiceRepository {
       final int codeOffset = needsYerConversion ? 0 : (invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0));
       final String journalCurrency = needsYerConversion ? 'YER' : invoiceCurrency;
 
+      // ── Discount & Transport amounts for journal ──
+      // These are used to record the gross sales amount correctly.
+      // total = subtotal - discount + tax + transport
+      // grossTotal (for Sales credit) = total + discount (add discount back so it's recorded at gross)
+      // discountAmount and transportCharges are already computed above
+      final double yerDiscount = needsYerConversion ? discountAmount * exchangeRate : discountAmount;
+      final double yerTransport = needsYerConversion ? transportCharges * exchangeRate : transportCharges;
+      // Gross total for Sales credit = total + discount (so discount can be carved out separately)
+      final double journalGrossTotal = journalTotal + yerDiscount;
+
       // Batch-fetch all required accounts in a single query (H-10: N+1 optimization)
       final accountCodes = [
         (4100 + codeOffset).toString(), // Sales
@@ -361,7 +376,8 @@ class InvoiceRepository {
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, journalTotal, now);
           }
         } else if (isPartialCash) {
-          // Sale with partial cash: Debit cash (paid) + Debit customer (remaining), Credit sales (total)
+          // Sale with partial cash:
+          // Debit Cash (paid) + Debit Customer (remaining) + Debit Discount Allowed = Credit Sales (gross)
           if (cashBanksAccountId != null && effectivePaid > 0) {
             await txn.insert('transactions', {
               'account_id': cashBanksAccountId,
@@ -386,20 +402,25 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, journalRemainingAmount, 0.0, now);
           }
+          // Discount Allowed (Debit) — separate from sales so discount is properly disclosed
+          if (discountAmount.abs() >= 0.005) {
+            // Will be recorded in the discount section below
+          }
           if (salesAccountId != null && total > 0) {
             await txn.insert('transactions', {
               'account_id': salesAccountId,
               'journal_id': journalId,
               'debit': 0,
-              'credit': MoneyHelper.toCents(journalTotal),
+              'credit': MoneyHelper.toCents(journalGrossTotal),
               'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, journalTotal, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, journalGrossTotal, now);
           }
         } else {
           // Normal sale: full cash or full credit
+          // Debit Cash/Customer (= total, actual amount) + Debit Discount Allowed = Credit Sales (= gross)
           final debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
           if (debitAccountId != null && total > 0) {
             await txn.insert('transactions', {
@@ -418,12 +439,12 @@ class InvoiceRepository {
               'account_id': salesAccountId,
               'journal_id': journalId,
               'debit': 0,
-              'credit': MoneyHelper.toCents(journalTotal),
+              'credit': MoneyHelper.toCents(journalGrossTotal),
               'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, journalTotal, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, journalGrossTotal, now);
           }
         }
       } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
@@ -462,18 +483,19 @@ class InvoiceRepository {
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, returnInventoryAccountId, 0.0, journalTotal, now);
           }
         } else if (isPartialCash) {
-          // Purchase with partial cash: Debit purchases (total), Credit cash (paid) + Credit supplier (remaining)
+          // Purchase with partial cash: Debit purchases (gross), Credit cash (paid) + Credit supplier (remaining)
+          // Purchases recorded at gross; discount carved out separately later
           if (purchasesAccountId != null && total > 0) {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalTotal),
+              'debit': MoneyHelper.toCents(journalGrossTotal),
               'credit': 0,
               'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, journalTotal, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, journalGrossTotal, 0.0, now);
           }
           if (cashBanksAccountId != null && effectivePaid > 0) {
             await txn.insert('transactions', {
@@ -501,17 +523,18 @@ class InvoiceRepository {
           }
         } else {
           // Normal purchase: full cash or full credit
+          // Purchases recorded at gross; discount carved out separately later
           if (purchasesAccountId != null && total > 0) {
             await txn.insert('transactions', {
               'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': MoneyHelper.toCents(journalTotal),
+              'debit': MoneyHelper.toCents(journalGrossTotal),
               'credit': 0,
               'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, journalTotal, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, journalGrossTotal, 0.0, now);
           }
           final creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
           if (creditAccountId != null && total > 0) {
@@ -858,7 +881,7 @@ class InvoiceRepository {
       // ومصاريف/إيرادات النقل في حساب مستقل بدل تضمينها في المبيعات
 
       // M-01: الخصومات — إنشاء قيد مستقل لحساب "خصم مسموح به"
-      final discountAmount = MoneyHelper.readMoney(invoiceMap['discount_amount']);
+      // discountAmount and yerDiscount are already computed above
       if (discountAmount.abs() >= 0.005 && (invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
         // البحث عن حساب خصم مسموح به (5400+offset) أو إنشاؤه
         final discountCode = (5400 + codeOffset).toString();
@@ -896,7 +919,7 @@ class InvoiceRepository {
           });
         }
 
-        final yerDiscount = needsYerConversion ? discountAmount * exchangeRate : discountAmount;
+        // yerDiscount is already computed above
         // مدين: خصم مسموح به (مصروف) / دائن: المبيعات (تخفيض الإيراد بقيمة الخصم)
         // المبيعات أعلاه سُجلت بالإجمالي (شامل الخصم)، هنا نعكس الخصم
         if (discountAccountId != null) {
@@ -963,8 +986,10 @@ class InvoiceRepository {
           });
         }
         if (purchaseDiscountAccountId != null && purchasesAccountId != null) {
-          final yerDiscount = needsYerConversion ? discountAmount * exchangeRate : discountAmount;
-          // Debit Suppliers/Cash (reduce payable), Credit Purchase Discount Earned
+          // yerDiscount is already computed above
+          // Credit Purchase Discount Earned (contra-revenue) and Debit Purchases (reduce cost)
+          // This replaces the old approach which incorrectly debited Supplier/Cash,
+          // causing the discount to reduce the payable twice.
           await txn.insert('transactions', {
             'account_id': purchaseDiscountAccountId,
             'journal_id': journalId,
@@ -975,19 +1000,18 @@ class InvoiceRepository {
             'created_at': now,
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchaseDiscountAccountId, 0.0, yerDiscount, now);
-          // Reduce the supplier/cash payable by the discount
-          final discountDebitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
-          if (discountDebitAccountId != null) {
+          // Reduce purchases by the discount (Debit Purchases was at gross, now reduce it)
+          if (purchasesAccountId != null) {
             await txn.insert('transactions', {
-              'account_id': discountDebitAccountId,
+              'account_id': purchasesAccountId,
               'journal_id': journalId,
-              'debit': MoneyHelper.toCents(yerDiscount),
-              'credit': 0,
-              'description': 'خصم مشتريات - تخفيض المستحق - ${invoiceMap['id']}',
+              'debit': 0,
+              'credit': MoneyHelper.toCents(yerDiscount),
+              'description': 'خصم مشتريات - تخفيض تكلفة المشتريات - ${invoiceMap['id']}',
               'date': now,
               'created_at': now,
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, discountDebitAccountId, yerDiscount, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, yerDiscount, now);
           }
         }
       }
@@ -1020,7 +1044,7 @@ class InvoiceRepository {
           });
         }
 
-        final yerTransport = needsYerConversion ? transportCharges * exchangeRate : transportCharges;
+        // yerTransport is already computed above
         // مدين: أجور النقل (مصروف) / دائن: المبيعات (تخفيض الإيراد بقيمة النقل)
         // المبيعات أعلاه سُجلت بالإجمالي (شامل النقل)، هنا نفصل النقل
         if (transportAccountId != null) {

@@ -1231,6 +1231,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         'shift_id': shiftId,
         'is_posted': 0,
         'currency': _vm.selectedCurrency,
+        'exchange_rate': _vm.exchangeRate,
         'created_at': now.toIso8601String(),
       };
 

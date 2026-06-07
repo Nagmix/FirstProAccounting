@@ -593,7 +593,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
             : _jobTitleController.text.trim(),
         'balance': balance,
         'balance_type': _balanceType,
-        'currency': null, // NOT permanently tied to a currency
+        'currency': _openingBalanceCurrency, // Default for DB NOT NULL, but NOT permanent
         'account_id': null, // NOT permanently tied to an account
         'notes': _notesController.text.trim().isEmpty
             ? null
@@ -770,7 +770,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                       DropdownButtonFormField<String>(
                         value: _openingBalanceCurrency,
                         decoration: const InputDecoration(
-                          labelText: 'عملة القيد الافتتاحي',
+                          labelText: 'عملة القيد',
                           prefixIcon: Icon(Icons.currency_exchange),
                         ),
                         items: _currencyInfo.entries
