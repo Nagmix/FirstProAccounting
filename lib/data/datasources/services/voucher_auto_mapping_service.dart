@@ -427,6 +427,7 @@ class VoucherAutoMappingService {
           'cash_box_id': cashBoxId,
           'customer_id': entityType == entityCustomer ? entityId : null,
           'supplier_id': entityType == entitySupplier ? entityId : null,
+          'employee_id': entityType == entityEmployee ? entityId : null,
           'is_posted': 1,
           'created_at': now,
           'updated_at': now,
@@ -585,6 +586,9 @@ class VoucherAutoMappingService {
           'supplier_id': fromEntityType == entitySupplier
               ? fromEntityId
               : (toEntityType == entitySupplier ? toEntityId : null),
+          'employee_id': fromEntityType == entityEmployee
+              ? fromEntityId
+              : (toEntityType == entityEmployee ? toEntityId : null),
           'is_posted': 1,
           'created_at': now,
           'updated_at': now,

@@ -6,6 +6,7 @@ import 'migration_v31_to_v43.dart';
 import 'migration_v44_to_v44.dart';
 import 'migration_v44_to_v45.dart';
 import 'migration_v46.dart';
+import 'migration_v47.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -69,5 +70,8 @@ class MigrationRunner {
 
     // v46 — Accounting integrity columns for transactions table
     if (oldVersion < 46) await MigrationV46.migrate(db);
+
+    // v47 — Add employee_id column to vouchers table
+    if (oldVersion < 47) await MigrationV47.migrate(db);
   }
 }

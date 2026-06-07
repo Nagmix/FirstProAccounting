@@ -84,34 +84,35 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    // Refresh supplier data
-    final supplierMap = await locator<SupplierRepository>().getSupplierById(widget.supplier.id!);
-    if (supplierMap != null) {
-      _freshSupplier = Supplier.fromMap(supplierMap);
-    }
+    try {
+      // Refresh supplier data
+      final supplierMap = await locator<SupplierRepository>().getSupplierById(widget.supplier.id!);
+      if (supplierMap != null) {
+        _freshSupplier = Supplier.fromMap(supplierMap);
+      }
 
-    // Load cash boxes for voucher dialog
-    _cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
+      // Load cash boxes for voucher dialog
+      _cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
 
-    // Load movements
-    final movements = await locator<SupplierRepository>().getSupplierMovements(widget.supplier.id!);
+      // Load movements
+      final movements = await locator<SupplierRepository>().getSupplierMovements(widget.supplier.id!);
 
-    // ── Add Opening Balance as first movement ──
-    // Query the transactions table for opening balance entries linked to this supplier
-    final supplier = _freshSupplier ?? widget.supplier;
-    final obTransactions = await locator<SupplierRepository>().getSupplierOpeningBalanceTransactions(widget.supplier.id!);
+      // ── Add Opening Balance as first movement ──
+      // Query the transactions table for opening balance entries linked to this supplier
+      final supplier = _freshSupplier ?? widget.supplier;
+      final obTransactions = await locator<SupplierRepository>().getSupplierOpeningBalanceTransactions(widget.supplier.id!);
 
-    for (final ob in obTransactions) {
-      final debit = MoneyHelper.readMoney(ob['debit']);
-      final credit = MoneyHelper.readMoney(ob['credit']);
-      final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
-      final description = ob['description'] as String? ?? 'رصيد افتتاحي';
-      final obCurrency = ob['account_currency'] as String? ?? supplier.currency ?? 'YER';
+      for (final ob in obTransactions) {
+        final debit = MoneyHelper.readMoney(ob['debit']);
+        final credit = MoneyHelper.readMoney(ob['credit']);
+        final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final description = ob['description'] as String? ?? 'رصيد افتتاحي';
+        final obCurrency = ob['account_currency'] as String? ?? supplier.currency ?? 'YER';
 
-      movements.insert(0, {
-        ...Map<String, dynamic>.from(ob),
-        '_source': 'opening_balance',
-        '_sort_date': dateStr,
+        movements.insert(0, {
+          ...Map<String, dynamic>.from(ob),
+          '_source': 'opening_balance',
+          '_sort_date': dateStr,
         'type': 'opening_balance',
         'type_ar': 'رصيد افتتاحي',
         'description': description,
@@ -125,9 +126,22 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
 
     setState(() {
       _allMovements = movements;
-      _isLoading = false;
     });
     _applyFilters();
+    } catch (e) {
+      debugPrint('SupplierDetailScreen._loadData: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء تحميل البيانات'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadMovements() async {
@@ -273,25 +287,35 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
     if (source == 'invoice') {
       final type = movement['type'] as String? ?? '';
       final isReturn = (movement['is_return'] as num?)?.toInt() == 1;
-      // Purchase invoice → we owe the supplier → debit (عليه)
-      // Sale to supplier → supplier owes us → credit (له)
-      // Returns flip the direction
-      if (type == 'purchase' || type == 'purchase_return') {
-        return isReturn || type == 'purchase_return' ? 'credit' : 'debit';
-      } else {
-        return isReturn || type == 'sale_return' ? 'debit' : 'credit';
+      // Supplier is a LIABILITY account (credit nature / له):
+      //   Purchase invoice → we owe supplier more → credit (له)
+      //   Purchase return → we owe less → debit (عليه)
+      //   Sale to supplier → supplier owes us → debit (عليه)
+      //   Sale return → we owe more → credit (له)
+      if (type == 'purchase' && !isReturn) {
+        return 'credit'; // مشتريات = ندين للمورد أكثر = له
+      } else if (type == 'purchase' && isReturn) {
+        return 'debit'; // مرتجع مشتريات = ندين أقل = عليه
+      } else if (type == 'sale' && !isReturn) {
+        return 'debit'; // مبيعات للمورد = المورد يدين لنا = عليه
+      } else if (type == 'sale' && isReturn) {
+        return 'credit'; // مرتجع مبيعات = ندين أكثر = له
       }
+      return 'credit';
     }
 
     if (source == 'voucher') {
       final vType = movement['voucher_type'] as String? ?? '';
-      // Payment voucher (سند صرف) → we pay the supplier → credit (له)
-      // Receipt voucher (سند قبض) → supplier pays us → debit (عليه)
+      // Supplier is a LIABILITY account (credit nature / له):
+      //   Payment voucher (سند صرف) → we pay supplier → reduces what we owe → debit (عليه)
+      //     Accounting: Debit Suppliers, Credit Cash → supplier debited → عليه
+      //   Receipt voucher (سند قبض) → supplier pays us → increases what we owe → credit (له)
+      //     Accounting: Debit Cash, Credit Suppliers → supplier credited → له
       switch (vType) {
         case 'payment':
-          return 'credit';
+          return 'debit'; // سند صرف = ندفع للمورد = عليه
         case 'receipt':
-          return 'debit';
+          return 'credit'; // سند قبض = المورد يدفع لنا = له
         default:
           return 'credit';
       }

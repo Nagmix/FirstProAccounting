@@ -65,19 +65,33 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    // Refresh employee data
-    final employeeMap = await locator<ReferenceDataRepository>().getEmployeeById(widget.employee['id'] as int);
-    if (employeeMap != null) {
-      _freshEmployee = employeeMap;
+    try {
+      // Refresh employee data
+      final employeeMap = await locator<ReferenceDataRepository>().getEmployeeById(widget.employee['id'] as int);
+      if (employeeMap != null) {
+        _freshEmployee = employeeMap;
+      }
+
+      // Load cash boxes
+      _cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
+
+      // Load all movements
+      await _loadMovements();
+    } catch (e) {
+      debugPrint('EmployeeDetailScreen._loadData: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء تحميل البيانات'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
 
-    // Load cash boxes
-    _cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
-
-    // Load all movements
-    await _loadMovements();
-
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadMovements() async {
@@ -98,15 +112,12 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
         final refType = txn['reference_type'] as String?;
         final currency = employee['currency'] as String? ?? 'YER';
 
-        // Employee account 5100 is an EXPENSE account (debit nature).
-        // From the employee's perspective:
-        //   Accounting debit on 5100 = expense increased = employee earned money = له
-        //   Accounting credit on 5100 = expense decreased = employee owes money = عليه
-        // So we must swap for display:
-        //   accounting debit → display credit (له)
-        //   accounting credit → display debit (عليه)
-        final displayDebit = credit > 0 ? credit : 0.0;  // credit on expense = عليه
-        final displayCredit = debit > 0 ? debit : 0.0;  // debit on expense = له
+        // Employee account (5100) follows standard accounting:
+        //   Accounting debit → عليه (employee owes more / company paid employee)
+        //   Accounting credit → له (employee is owed / company owes employee)
+        // No swap needed — direct mapping.
+        final displayDebit = debit > 0 ? debit : 0.0;
+        final displayCredit = credit > 0 ? credit : 0.0;
 
         String typeAr;
         String filterKey;
@@ -207,8 +218,8 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
       final description = ob['description'] as String? ?? 'رصيد افتتاحي';
       final obCurrency = ob['account_currency'] as String? ?? 'YER';
 
-      // Employee account 5100 is EXPENSE (debit nature): swap for display
-      // accounting debit → display credit (له), accounting credit → display debit (عليه)
+      // Direct accounting mapping (no swap):
+      //   accounting debit → عليه, accounting credit → له
       movements.add({
         'id': 'ob_${ob['id']}',
         'date': dateStr,
@@ -216,8 +227,8 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
         'type_ar': 'رصيد افتتاحي',
         'filter_key': 'all',
         'description': description,
-        'debit': credit > 0 ? credit : 0.0,  // credit on expense = عليه
-        'credit': debit > 0 ? debit : 0.0,   // debit on expense = له
+        'debit': debit > 0 ? debit : 0.0,
+        'credit': credit > 0 ? credit : 0.0,
         'currency': obCurrency,
         'source': 'opening_balance',
       });

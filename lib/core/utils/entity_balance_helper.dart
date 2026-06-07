@@ -261,9 +261,11 @@ class EntityBalanceHelper {
     );
   }
 
-  /// Supplier: Receipt (سند قبض) → supplier pays us → they owe us more (debit effect)
-  /// Actually: when a supplier pays us, it means we owe them less OR they owe us.
-  /// This INCREASES the supplier's debit position (عليه).
+  /// Supplier: Receipt (سند قبض) → supplier pays us (e.g., refund/return)
+  /// Accounting entry: Debit Cash, Credit Suppliers → supplier account is CREDITED
+  /// This INCREASES the supplier's credit position (له) because:
+  ///   - If supplier refunds us for a return, we now owe them more (credit increases)
+  ///   - In signed terms: signedChange = +amount (credit effect)
   static Future<void> supplierReceipt({
     required Transaction txn,
     required int supplierId,
@@ -273,8 +275,8 @@ class EntityBalanceHelper {
     await applySupplierBalanceChange(
       txn: txn,
       supplierId: supplierId,
-      creditEffect: 0,
-      debitEffect: amount,
+      creditEffect: amount,
+      debitEffect: 0,
       now: now,
     );
   }

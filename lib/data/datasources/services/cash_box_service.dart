@@ -873,17 +873,20 @@ class CashBoxService {
         }
       }
 
-      // تحديث رصيد العميل/المورد إذا كان مرتبطاً بالسند
+      // تحديث رصيد العميل/المورد/الموظف إذا كان مرتبطاً بالسند
       final customerId = voucherMap['customer_id'];
       final supplierId = voucherMap['supplier_id'];
+      final employeeId = voucherMap['employee_id'];
       final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
       final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
 
-      // ── Update customer/supplier balance with balance_type-aware logic ──
+      // ── Update customer/supplier/employee balance with balance_type-aware logic ──
       // Receipt from customer: reduces what they owe us (credit effect)
       // Payment to customer: increases what they owe us (debit effect)
       // Payment to supplier: reduces what we owe them (debit effect)
-      // Receipt from supplier: increases what they owe us (debit effect)
+      // Receipt from supplier: increases what we owe them (credit effect)
+      // Receipt from employee (سند قبض): credit effect (employee's credit increases)
+      // Payment to employee (سند صرف): debit effect (employee's debit increases)
       if (customerId != null && totalAmount > 0) {
         if (voucherType == 'receipt') {
           await EntityBalanceHelper.customerReceipt(
@@ -904,6 +907,20 @@ class CashBoxService {
         } else if (voucherType == 'receipt') {
           await EntityBalanceHelper.supplierReceipt(
             txn: txn, supplierId: supplierId as int, amount: totalAmount, now: now,
+          );
+        }
+      }
+
+      if (employeeId != null && totalAmount > 0) {
+        if (voucherType == 'receipt') {
+          // Receipt from employee: credit effect (employee's credit position increases)
+          await EntityBalanceHelper.applyEmployeeBalanceChange(
+            txn: txn, employeeId: employeeId as int, creditEffect: totalAmount, debitEffect: 0, now: now,
+          );
+        } else if (voucherType == 'payment') {
+          // Payment to employee: debit effect (employee's debit position increases)
+          await EntityBalanceHelper.applyEmployeeBalanceChange(
+            txn: txn, employeeId: employeeId as int, creditEffect: 0, debitEffect: totalAmount, now: now,
           );
         }
       }
