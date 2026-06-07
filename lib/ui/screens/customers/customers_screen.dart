@@ -498,9 +498,7 @@ class _CustomerCard extends StatelessWidget {
                 ? AppColors.textSecondary
                 : AppColors.darkTextSecondary;
 
-    final balanceAbs = displayBalance.abs().toStringAsFixed(2);
-    final directionLabel = isDebit ? 'عليه' : isCredit ? 'له' : '—';
-    final directionColor = isDebit ? AppColors.error : isCredit ? AppColors.success : AppColors.textHint;
+    final balanceAbs = CurrencyFormatter.format(displayBalance.abs());
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -598,37 +596,44 @@ class _CustomerCard extends StatelessWidget {
 
                 const SizedBox(width: 8),
 
-                // ── Balance Section ──────────────────────────────
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: balanceColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                // ── Balance Section - الرصيد with color ──────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: displayBalance != 0
+                          ? [balanceColor.withOpacity(0.12), balanceColor.withOpacity(0.04)]
+                          : [Colors.grey.withOpacity(0.06), Colors.grey.withOpacity(0.02)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: displayBalance != 0 ? balanceColor.withOpacity(0.25) : AppColors.border.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isDebit ? Icons.trending_down : isCredit ? Icons.trending_up : Icons.remove,
+                        size: 14,
+                        color: displayBalance != 0 ? balanceColor : AppColors.textHint,
                       ),
-                      child: Text(
+                      const SizedBox(width: 4),
+                      Text(
                         '$balanceAbs $currencySymbol',
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
-                          color: balanceColor,
+                          color: displayBalance != 0 ? balanceColor : AppColors.textHint,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      directionLabel,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                        color: directionColor,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
 
                 // ── Arrow icon ──────────────────────────────────
                 Container(

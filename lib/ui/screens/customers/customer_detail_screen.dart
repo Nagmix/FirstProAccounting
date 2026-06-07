@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/services/bluetooth_printer_service.dart';
+import '../../../core/services/invoice_pdf_service.dart';
 import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
+import '../../../data/datasources/repositories/invoice_repository.dart';
+import '../../../data/datasources/repositories/reference_data_repository.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 import '../../../data/models/customer_model.dart';
@@ -35,6 +43,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   String? _selectedCurrency = 'YER';
   DateTimeRange? _dateRange;
   String _searchQuery = '';
+
+  // Period filter state: 0=all, 1=daily, 2=monthly, 3=yearly
+  int _periodFilter = 3; // default = الجميع
 
   // Search controller
   final TextEditingController _searchController = TextEditingController();
@@ -300,6 +311,27 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     // Apply currency filter
     if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
       filtered = filtered.where((m) => m['currency'] == _selectedCurrency).toList();
+    }
+
+    // Apply period filter
+    if (_periodFilter != 3) {
+      final now = DateTime.now();
+      filtered = filtered.where((m) {
+        final dateStr = m['date'] as String;
+        try {
+          final date = DateTime.parse(dateStr);
+          switch (_periodFilter) {
+            case 0: // يومي - today
+              return date.year == now.year && date.month == now.month && date.day == now.day;
+            case 1: // شهري - current month
+              return date.year == now.year && date.month == now.month;
+            case 2: // سنوي - current year
+              return date.year == now.year;
+            default:
+              return true;
+          }
+        } catch (_) { return true; }
+      }).toList();
     }
 
     // Apply date range filter
@@ -655,8 +687,52 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       appBar: AppBar(
         title: Text(customer.name),
         actions: [
-          IconButton(icon: const Icon(Icons.print), tooltip: 'طباعة', onPressed: _printReport),
-          IconButton(icon: const Icon(Icons.file_download), tooltip: 'تصدير إكسل', onPressed: _exportToExcel),
+          // Modern print button
+          Container(
+            margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
+            child: Material(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: _printReport,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.print_rounded, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text('طباعة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Modern export button
+          Container(
+            margin: const EdgeInsets.only(left: 4, right: 8, top: 8, bottom: 8),
+            child: Material(
+              color: AppColors.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: _exportToExcel,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sim_card_download_outlined, size: 18, color: AppColors.success),
+                      const SizedBox(width: 4),
+                      Text('تصدير', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.success)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
       body: Column(
@@ -728,6 +804,26 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+
+          // ── Period Filter RadioButtons ──────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            color: isLight ? AppColors.surface : AppColors.darkSurface,
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textHint),
+                const SizedBox(width: 8),
+                _buildPeriodChip('يومي', 0),
+                const SizedBox(width: 6),
+                _buildPeriodChip('شهري', 1),
+                const SizedBox(width: 6),
+                _buildPeriodChip('سنوي', 2),
+                const SizedBox(width: 6),
+                _buildPeriodChip('الجميع', 3),
+              ],
             ),
           ),
 
@@ -953,7 +1049,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         ],
       ),
 
-      // ── Bottom Statistics Bar ──────────────────────────────────
+      // ── Bottom Balance Bar ──────────────────────────────────
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isLight ? AppColors.surface : AppColors.darkSurface,
@@ -963,29 +1059,55 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                // له (credit)
-                Expanded(
-                  child: _StatItem(label: 'له', value: _totalCredit.toStringAsFixed(2), color: AppColors.success, symbol: _currencySymbol(_selectedCurrency)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: _netBalance >= 0
+                      ? [AppColors.success.withOpacity(0.1), AppColors.success.withOpacity(0.05)]
+                      : [AppColors.error.withOpacity(0.1), AppColors.error.withOpacity(0.05)],
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
                 ),
-                Container(width: 1, height: 36, color: AppColors.divider),
-                // عليه (debit)
-                Expanded(
-                  child: _StatItem(label: 'عليه', value: _totalDebit.toStringAsFixed(2), color: AppColors.error, symbol: _currencySymbol(_selectedCurrency)),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: _netBalance >= 0 ? AppColors.success.withOpacity(0.3) : AppColors.error.withOpacity(0.3),
+                  width: 1.5,
                 ),
-                Container(width: 1, height: 36, color: AppColors.divider),
-                // الرصيد (net)
-                Expanded(
-                  child: _StatItem(
-                    label: _netBalance >= 0 ? 'له' : 'عليه',
-                    value: _netBalance.abs().toStringAsFixed(2),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _netBalance >= 0 ? Icons.trending_up : Icons.trending_down,
+                    size: 20,
                     color: _netBalance >= 0 ? AppColors.success : AppColors.error,
-                    symbol: _currencySymbol(_selectedCurrency),
-                    isBold: true,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  Text(
+                    'الرصيد',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (_netBalance >= 0 ? AppColors.success : AppColors.error).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${_netBalance.abs().toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -993,39 +1115,357 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     );
   }
 
-  // Print single transaction
-  void _printSingleTransaction(Map<String, dynamic> m) {
+  // ── Period filter chip builder ───────────────────────────────
+  Widget _buildPeriodChip(String label, int value) {
+    final isSelected = _periodFilter == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _periodFilter = value);
+        _applyFilters();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))] : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected)
+              Container(
+                width: 8, height: 8,
+                margin: const EdgeInsets.only(left: 4),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Print single transaction based on its type
+  void _printSingleTransaction(Map<String, dynamic> m) async {
+    final source = m['source'] as String? ?? '';
+    final type = m['type'] as String? ?? '';
     final customer = _freshCustomer ?? widget.customer;
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+
+    try {
+      if (source == 'invoice') {
+        // Print invoice using InvoicePdfService
+        final invoiceId = m['id']?.toString() ?? '';
+        if (invoiceId.isEmpty) throw Exception('معرف الفاتورة غير موجود');
+
+        final invoiceRepo = locator<InvoiceRepository>();
+        final invoice = await invoiceRepo.getInvoiceById(invoiceId);
+        if (invoice == null) throw Exception('لم يتم العثور على بيانات الفاتورة');
+
+        final items = await invoiceRepo.getInvoiceItems(invoiceId);
+        final pdfService = InvoicePdfService();
+        final pdfBytes = await pdfService.generateSalesInvoicePdf(invoice, items);
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'invoice_${invoiceId}.pdf');
+      } else if (source == 'voucher') {
+        // Print voucher as a voucher document
+        final rawId = (m['id'] ?? '').toString().replaceAll('v_', '');
+        final voucherId = int.tryParse(rawId);
+        if (voucherId == null) throw Exception('معرف السند غير موجود');
+
+        final cashBoxService = locator<CashBoxService>();
+        final db = await locator<DatabaseHelper>().database;
+        final voucherRows = await db.query('vouchers', where: 'id = ?', whereArgs: [voucherId], limit: 1);
+        if (voucherRows.isEmpty) throw Exception('لم يتم العثور على بيانات السند');
+        final voucherData = voucherRows.first;
+        final voucherItems = await cashBoxService.getVoucherItems(voucherId);
+
+        final pdfBytes = await _generateVoucherPdf(voucherData, voucherItems, customer.name);
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'voucher_$voucherId.pdf');
+      } else if (source == 'opening_balance') {
+        // Print opening balance as a receipt
+        final pdfBytes = await _generateSingleTransactionPdf(m, customer.name);
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'opening_balance.pdf');
+      } else {
+        // Fallback: print as single transaction
+        final pdfBytes = await _generateSingleTransactionPdf(m, customer.name);
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'transaction.pdf');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء الطباعة: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  /// Generate a PDF for a single voucher document.
+  Future<Uint8List> _generateVoucherPdf(
+    Map<String, dynamic> voucherData,
+    List<Map<String, dynamic>> items,
+    String customerName,
+  ) async {
+    pw.Font? arabicFont;
+    try {
+      final fontData = await rootBundle.load('assets/fonts/Cairo-Variable.ttf');
+      arabicFont = pw.Font.ttf(fontData);
+    } catch (_) {}
+
+    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
+    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
+
+    final voucherType = voucherData['voucher_type'] as String? ?? '';
+    final voucherNumber = voucherData['voucher_number']?.toString() ?? '';
+    final dateStr = voucherData['date'] as String? ?? voucherData['created_at'] as String? ?? '';
+    final currency = voucherData['currency'] as String? ?? 'YER';
+    final currencySymbol = currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
+    final description = voucherData['description'] as String? ?? '';
+    final totalAmount = MoneyHelper.readMoney(voucherData['total_amount']);
+
+    String voucherTypeAr;
+    switch (voucherType) {
+      case 'receipt': voucherTypeAr = 'سند قبض'; break;
+      case 'payment': voucherTypeAr = 'سند صرف'; break;
+      case 'settlement': voucherTypeAr = 'قيد عام'; break;
+      case 'compound': voucherTypeAr = 'قيد متعدد'; break;
+      default: voucherTypeAr = 'سند';
+    }
+
+    String formattedDate = dateStr;
+    try { final dt = DateTime.parse(dateStr); formattedDate = '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}'; } catch (_) {}
+
+    final doc = pw.Document(
+      theme: pw.ThemeData.withFont(base: arabicFont ?? pw.Font.helvetica(), bold: arabicFont ?? pw.Font.helveticaBold()),
+    );
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (context) => pw.Directionality(
+          textDirection: pw.TextDirection.rtl,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              Text('طباعة الحركة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
-              Text(m['description'] ?? '', style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
+              // Header
+              pw.Text(businessName, style: pw.TextStyle(font: arabicFont, fontSize: 18, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+              if (businessPhone.isNotEmpty) pw.Text('هاتف: $businessPhone', style: pw.TextStyle(font: arabicFont, fontSize: 10)),
+              pw.Divider(thickness: 2, color: const PdfColor(0.12, 0.42, 0.14)),
+              pw.SizedBox(height: 12),
+              // Title
+              pw.Center(
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: pw.BoxDecoration(color: PdfColor(0.12, 0.42, 0.14), borderRadius: pw.BorderRadius.circular(8)),
+                  child: pw.Text(voucherTypeAr, style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColor(1, 1, 1))),
                 ),
-                title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
-                trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _generatePdfStatement(); // Will print filtered movements
-                },
+              ),
+              pw.SizedBox(height: 16),
+              // Info
+              _pdfInfoRow('رقم السند', voucherNumber, arabicFont),
+              _pdfInfoRow('التاريخ', formattedDate, arabicFont),
+              _pdfInfoRow('العميل', customerName, arabicFont),
+              _pdfInfoRow('العملة', currency, arabicFont),
+              if (description.isNotEmpty) _pdfInfoRow('البيان', description, arabicFont),
+              pw.SizedBox(height: 16),
+              // Items table
+              pw.Table(
+                border: pw.TableBorder.all(color: const PdfColor(0.8, 0.8, 0.8), width: 0.5),
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColor(0.12, 0.42, 0.14)),
+                    children: [
+                      _pdfCell('الحساب', arabicFont, bold: true, textColor: const PdfColor(1, 1, 1)),
+                      _pdfCell('مدين', arabicFont, bold: true, textColor: const PdfColor(1, 1, 1)),
+                      _pdfCell('دائن', arabicFont, bold: true, textColor: const PdfColor(1, 1, 1)),
+                    ],
+                  ),
+                  ...items.map((item) => pw.TableRow(children: [
+                    _pdfCell(item['account_name']?.toString() ?? item['account_id']?.toString() ?? '', arabicFont),
+                    _pdfCell(MoneyHelper.readMoney(item['debit']) > 0 ? '$currencySymbol ${CurrencyFormatter.format(MoneyHelper.readMoney(item['debit']))}' : '', arabicFont),
+                    _pdfCell(MoneyHelper.readMoney(item['credit']) > 0 ? '$currencySymbol ${CurrencyFormatter.format(MoneyHelper.readMoney(item['credit']))}' : '', arabicFont),
+                  ])),
+                ],
+              ),
+              pw.SizedBox(height: 16),
+              // Total
+              pw.Container(
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(border: pw.Border.all(color: const PdfColor(0.85, 0.85, 0.85)), borderRadius: pw.BorderRadius.circular(8)),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('الإجمالي', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('$currencySymbol ${CurrencyFormatter.format(totalAmount)}', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 30),
+              // Signature fields
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                children: ['المدير', 'المحاسب', 'المستلم'].map((label) => pw.Expanded(
+                  child: pw.Column(children: [
+                    pw.Container(height: 40, decoration: pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColor(0.5, 0.5, 0.5))))),
+                    pw.SizedBox(height: 4),
+                    pw.Text(label, style: pw.TextStyle(font: arabicFont, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  ]),
+                )).toList(),
               ),
             ],
           ),
         ),
       ),
+    );
+
+    return doc.save();
+  }
+
+  /// Generate a PDF for a single transaction (opening balance, etc.).
+  Future<Uint8List> _generateSingleTransactionPdf(
+    Map<String, dynamic> m,
+    String customerName,
+  ) async {
+    pw.Font? arabicFont;
+    try {
+      final fontData = await rootBundle.load('assets/fonts/Cairo-Variable.ttf');
+      arabicFont = pw.Font.ttf(fontData);
+    } catch (_) {}
+
+    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
+    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
+
+    final typeAr = m['type_ar'] as String? ?? '';
+    final description = m['description'] as String? ?? '';
+    final debit = MoneyHelper.readMoney(m['debit']);
+    final credit = MoneyHelper.readMoney(m['credit']);
+    final currency = m['currency'] as String? ?? 'YER';
+    final currencySymbol = currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
+    final dateStr = m['date'] as String? ?? '';
+
+    String formattedDate = dateStr;
+    try { final dt = DateTime.parse(dateStr); formattedDate = '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}'; } catch (_) {}
+
+    final amount = debit > 0 ? debit : credit;
+    final direction = debit > 0 ? 'عليه' : 'له';
+
+    final doc = pw.Document(
+      theme: pw.ThemeData.withFont(base: arabicFont ?? pw.Font.helvetica(), bold: arabicFont ?? pw.Font.helveticaBold()),
+    );
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (context) => pw.Directionality(
+          textDirection: pw.TextDirection.rtl,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Text(businessName, style: pw.TextStyle(font: arabicFont, fontSize: 18, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+              if (businessPhone.isNotEmpty) pw.Text('هاتف: $businessPhone', style: pw.TextStyle(font: arabicFont, fontSize: 10)),
+              pw.Divider(thickness: 2, color: const PdfColor(0.12, 0.42, 0.14)),
+              pw.SizedBox(height: 12),
+              // Title
+              pw.Center(
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: pw.BoxDecoration(color: PdfColor(0.12, 0.42, 0.14), borderRadius: pw.BorderRadius.circular(8)),
+                  child: pw.Text(typeAr, style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColor(1, 1, 1))),
+                ),
+              ),
+              pw.SizedBox(height: 16),
+              // Info
+              _pdfInfoRow('العميل', customerName, arabicFont),
+              _pdfInfoRow('التاريخ', formattedDate, arabicFont),
+              _pdfInfoRow('العملة', currency, arabicFont),
+              if (description.isNotEmpty) _pdfInfoRow('البيان', description, arabicFont),
+              pw.SizedBox(height: 20),
+              // Amount box
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(16),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: const PdfColor(0.85, 0.85, 0.85)),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  children: [
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text('المبلغ', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('$currencySymbol ${CurrencyFormatter.format(amount)}', style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+                      ],
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: pw.BoxDecoration(
+                            color: debit > 0 ? const PdfColor(0.8, 0, 0) : const PdfColor(0.12, 0.42, 0.14),
+                            borderRadius: pw.BorderRadius.circular(4),
+                          ),
+                          child: pw.Text(direction, style: pw.TextStyle(font: arabicFont, fontSize: 12, fontWeight: pw.FontWeight.bold, color: const PdfColor(1, 1, 1))),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 30),
+              // Signature fields
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                children: ['المدير', 'المحاسب', 'المستلم'].map((label) => pw.Expanded(
+                  child: pw.Column(children: [
+                    pw.Container(height: 40, decoration: pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColor(0.5, 0.5, 0.5))))),
+                    pw.SizedBox(height: 4),
+                    pw.Text(label, style: pw.TextStyle(font: arabicFont, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  ]),
+                )).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return doc.save();
+  }
+
+  // PDF helper methods
+  static pw.Widget _pdfInfoRow(String label, String value, pw.Font? font) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 6),
+      child: pw.Row(
+        children: [
+          pw.Text('$label: ', style: pw.TextStyle(font: font, fontSize: 11, color: const PdfColor(0.4, 0.4, 0.4))),
+          pw.Expanded(child: pw.Text(value, style: pw.TextStyle(font: font, fontSize: 11, fontWeight: pw.FontWeight.bold))),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _pdfCell(String text, pw.Font? font, {bool bold = false, PdfColor? textColor}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: pw.Text(text, style: pw.TextStyle(font: font, fontSize: 9, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal, color: textColor)),
     );
   }
 }
