@@ -21,7 +21,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
   bool _isLoading = true;
 
   // Currency filter state
-  String _selectedCurrency = 'الكل'; // 'الكل', 'YER', 'SAR', 'USD'
+  String _selectedCurrency = 'YER'; // 'YER', 'SAR', 'USD' — no 'All' option
   bool _isBalancesLoading = false;
 
   // Cached balances per cash box for the selected currency
@@ -35,8 +35,8 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
     'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
   };
 
-  /// Currency filter options.
-  static const _currencyOptions = ['الكل', 'YER', 'SAR', 'USD'];
+  /// Currency filter options (no 'All' — each currency has its own balance).
+  static const _currencyOptions = ['YER', 'SAR', 'USD'];
 
   @override
   void initState() {
@@ -60,10 +60,8 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
           _cashBoxes = maps.map((m) => CashBox.fromMap(m)).toList();
           _isLoading = false;
         });
-        // Load currency balances if a specific currency is selected
-        if (_selectedCurrency != 'الكل') {
-          _loadCurrencyBalances();
-        }
+        // Always load currency balances for the selected currency
+        _loadCurrencyBalances();
       }
     } catch (e) {
       if (mounted) {
@@ -80,15 +78,6 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
 
   /// Load balances for all cash boxes filtered by the selected currency.
   Future<void> _loadCurrencyBalances() async {
-    if (_selectedCurrency == 'الكل') {
-      // No need for async balances when showing stored balance
-      setState(() {
-        _currencyBalances = {};
-        _isBalancesLoading = false;
-      });
-      return;
-    }
-
     setState(() => _isBalancesLoading = true);
 
     try {
@@ -135,34 +124,19 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
 
   /// Get the balance for a cash box based on the selected currency filter.
   double _getCashBoxBalance(CashBox cashBox) {
-    if (_selectedCurrency == 'الكل') {
-      // Use stored balance from CashBox model
-      return cashBox.balanceType == 'credit' ? cashBox.balance : -cashBox.balance;
-    } else {
-      // Use the computed currency balance
-      return _currencyBalances[cashBox.id] ?? 0.0;
-    }
+    // Always use the computed currency balance from transactions
+    return _currencyBalances[cashBox.id] ?? 0.0;
   }
 
   /// Get the currency symbol to display based on selected filter.
   String _getCurrencySymbol() {
-    if (_selectedCurrency == 'الكل') {
-      return 'ر.ي'; // Default symbol for "all" view
-    }
     return _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
   }
 
   /// Handle currency filter change.
   void _onCurrencyChanged(String currency) {
     setState(() => _selectedCurrency = currency);
-    if (currency != 'الكل') {
-      _loadCurrencyBalances();
-    } else {
-      setState(() {
-        _currencyBalances = {};
-        _isBalancesLoading = false;
-      });
-    }
+    _loadCurrencyBalances();
   }
 
   List<CashBox> _filterByTab(int tabIndex) {
@@ -398,9 +372,7 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
               child: Row(
                 children: _currencyOptions.map((option) {
                   final isSelected = _selectedCurrency == option;
-                  final label = option == 'الكل'
-                      ? 'الكل'
-                      : '${_currencyInfo[option]?['symbol'] ?? ''} $option';
+                  final label = '${_currencyInfo[option]?['symbol'] ?? ''} $option';
                   return Padding(
                     padding: const EdgeInsets.only(left: 6),
                     child: ChoiceChip(

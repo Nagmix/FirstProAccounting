@@ -56,6 +56,8 @@ class SupplierRepository {
               'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
               'date': now,
               'created_at': now,
+              'reference_type': 'opening_balance',
+              'reference_id': 'supplier_$supplierId',
             });
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
@@ -65,6 +67,8 @@ class SupplierRepository {
               'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
               'date': now,
               'created_at': now,
+              'reference_type': 'opening_balance',
+              'reference_id': 'supplier_$supplierId',
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, openingBalance, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
@@ -78,6 +82,8 @@ class SupplierRepository {
               'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
               'date': now,
               'created_at': now,
+              'reference_type': 'opening_balance',
+              'reference_id': 'supplier_$supplierId',
             });
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
@@ -87,6 +93,8 @@ class SupplierRepository {
               'description': 'رصيد افتتاحي مورد - ${supplierMap['name']}',
               'date': now,
               'created_at': now,
+              'reference_type': 'opening_balance',
+              'reference_id': 'supplier_$supplierId',
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, openingBalance, 0.0, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
@@ -152,6 +160,8 @@ class SupplierRepository {
                 'description': 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}',
                 'date': now,
                 'created_at': now,
+                'reference_type': 'opening_balance',
+                'reference_id': 'supplier_$id',
               });
               await txn.insert('transactions', {
                 'account_id': openingBalanceAccountId,
@@ -161,6 +171,8 @@ class SupplierRepository {
                 'description': 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}',
                 'date': now,
                 'created_at': now,
+                'reference_type': 'opening_balance',
+                'reference_id': 'supplier_$id',
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, balanceDiff, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, balanceDiff, 0.0, now);
@@ -175,6 +187,8 @@ class SupplierRepository {
                 'description': 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}',
                 'date': now,
                 'created_at': now,
+                'reference_type': 'opening_balance',
+                'reference_id': 'supplier_$id',
               });
               await txn.insert('transactions', {
                 'account_id': openingBalanceAccountId,
@@ -184,6 +198,8 @@ class SupplierRepository {
                 'description': 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}',
                 'date': now,
                 'created_at': now,
+                'reference_type': 'opening_balance',
+                'reference_id': 'supplier_$id',
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, absDiff, 0.0, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, absDiff, now);
@@ -274,6 +290,35 @@ class SupplierRepository {
     });
 
     return movements;
+  }
+
+  /// جلب معاملات القيد الافتتاحي للمورد — find opening balance transactions
+  /// linked to this supplier via reference_id.
+  /// Returns transaction rows with account currency info.
+  Future<List<Map<String, dynamic>>> getSupplierOpeningBalanceTransactions(int supplierId) async {
+    final db = await _db;
+    // First try: search by reference_id (new data with 'supplier_{id}')
+    final byRef = await db.rawQuery('''
+      SELECT t.*, a.currency AS account_currency
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND t.reference_id = ?
+        AND a.account_code LIKE '21%'
+    ''', ['supplier_$supplierId']);
+    
+    if (byRef.isNotEmpty) return byRef;
+    
+    // Fallback: search by description pattern (legacy data without reference_id)
+    return await db.rawQuery('''
+      SELECT t.*, a.currency AS account_currency
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND a.account_code LIKE '21%'
+        AND t.description LIKE 'رصيد افتتاحي مورد%'
+      ORDER BY t.date ASC
+    ''');
   }
 
   /// التحقق من تجاوز سقف الدين للمورد

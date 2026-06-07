@@ -40,6 +40,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   CashBox? _freshCashBox;
 
   static const List<_FilterTab> _filterTabs = [
+    _FilterTab(key: 'opening_balance', label: 'رصيد افتتاحي'),
     _FilterTab(key: 'all', label: 'جميع الحركات'),
     _FilterTab(key: 'debit', label: 'عليه'),
     _FilterTab(key: 'credit', label: 'له'),
@@ -54,7 +55,6 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   ];
 
   static const List<MapEntry<String, String>> _currencyOptions = [
-    MapEntry('الكل', ''),
     MapEntry('YER', 'YER'),
     MapEntry('SAR', 'SAR'),
     MapEntry('USD', 'USD'),
@@ -64,7 +64,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   void initState() {
     super.initState();
     _freshCashBox = widget.cashBox;
-    _selectedCurrency = widget.initialCurrency;
+    _selectedCurrency = widget.initialCurrency ?? 'YER';
     _loadData();
   }
 
@@ -108,7 +108,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       filtered = filtered.where((m) => m['filter_key'] == filterKey).toList();
     }
 
-    // Apply currency filter (additional check on top of what getCashBoxMovements does)
+    // Apply currency filter (mandatory — no 'All' option)
     if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
       filtered = filtered.where((m) => m['currency'] == _selectedCurrency).toList();
     }
@@ -127,28 +127,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       }).toList();
     }
 
-    // Calculate opening balance: the cash box's stored balance minus the sum
-    // of all tracked movements. This captures any initial balance set when the
-    // cash box was created that doesn't have a corresponding transaction.
-    final cashBox = _freshCashBox ?? widget.cashBox;
-    double openingBalance = 0.0;
-    if (cashBox.balance != 0.0) {
-      double allDebit = 0.0;
-      double allCredit = 0.0;
-      for (final m in _allMovements) {
-        allDebit += MoneyHelper.readMoney(m['debit']);
-        allCredit += MoneyHelper.readMoney(m['credit']);
-      }
-      // Running balance convention: positive = credit (له), negative = debit (عليه)
-      final cashBoxBalance = cashBox.balanceType == 'credit'
-          ? cashBox.balance
-          : -cashBox.balance;
-      final movementBalance = allCredit - allDebit;
-      openingBalance = cashBoxBalance - movementBalance;
-    }
-
-    // Calculate running balance and totals
-    double runningBalance = openingBalance;
+    // Calculate running balance from movements (opening balance is now included as a movement)
+    // No need to derive opening balance separately.
+    double runningBalance = 0.0;
     double totalDebit = 0.0;
     double totalCredit = 0.0;
 
@@ -165,7 +146,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       _filteredMovements = filtered;
       _totalDebit = totalDebit;
       _totalCredit = totalCredit;
-      _netBalance = openingBalance + totalCredit - totalDebit;
+      _netBalance = runningBalance;
     });
   }
 
@@ -658,7 +639,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: DropdownButton<String>(
-                    value: _selectedCurrency ?? '',
+                    value: _selectedCurrency ?? 'YER',
                     underline: const SizedBox.shrink(),
                     icon: const Icon(Icons.arrow_drop_down, size: 20),
                     style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
@@ -669,8 +650,10 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                       );
                     }).toList(),
                     onChanged: (v) {
-                      setState(() => _selectedCurrency = (v?.isEmpty ?? true) ? null : v);
-                      _loadData(); // Reload movements with new currency filter
+                      if (v != null) {
+                        setState(() => _selectedCurrency = v);
+                        _loadData(); // Reload movements with new currency filter
+                      }
                     },
                   ),
                 ),

@@ -111,7 +111,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
       if (_isEdit) {
         await locator<CashBoxService>().updateCashBox(cashBox.id!, map);
       } else {
-        await locator<CashBoxService>().insertCashBox(map);
+        final cashBoxId = await locator<CashBoxService>().insertCashBox(map);
 
         // ── Opening Balance Journal Entry ──
         final openingBalance = double.tryParse(_balanceController.text) ?? 0.0;
@@ -145,6 +145,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               openingBalance: openingBalance,
               balanceType: _balanceType,
               cashBoxName: name,
+              cashBoxId: cashBoxId,
             );
           }
         }

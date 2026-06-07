@@ -75,6 +75,7 @@ class EmployeeRepository {
           balance: balance,
           balanceType: balanceType,
           employeeName: employeeName,
+          employeeId: employeeId,
         );
       }
     }
@@ -93,6 +94,7 @@ class EmployeeRepository {
     required double balance,
     required String balanceType,
     required String employeeName,
+    int? employeeId,
   }) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
@@ -109,6 +111,8 @@ class EmployeeRepository {
           'description': 'رصيد افتتاحي موظف - $employeeName',
           'date': now,
           'created_at': now,
+          'reference_type': 'opening_balance',
+          'reference_id': employeeId != null ? 'employee_$employeeId' : null,
         });
         await txn.insert('transactions', {
           'account_id': cashAccountId,
@@ -118,6 +122,8 @@ class EmployeeRepository {
           'description': 'رصيد افتتاحي موظف - $employeeName',
           'date': now,
           'created_at': now,
+          'reference_type': 'opening_balance',
+          'reference_id': employeeId != null ? 'employee_$employeeId' : null,
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, balance, 0.0, now);
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, 0.0, balance, now);
@@ -131,6 +137,8 @@ class EmployeeRepository {
           'description': 'رصيد افتتاحي موظف (عليه) - $employeeName',
           'date': now,
           'created_at': now,
+          'reference_type': 'opening_balance',
+          'reference_id': employeeId != null ? 'employee_$employeeId' : null,
         });
         await txn.insert('transactions', {
           'account_id': accountId,
@@ -140,6 +148,8 @@ class EmployeeRepository {
           'description': 'رصيد افتتاحي موظف (عليه) - $employeeName',
           'date': now,
           'created_at': now,
+          'reference_type': 'opening_balance',
+          'reference_id': employeeId != null ? 'employee_$employeeId' : null,
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, balance, 0.0, now);
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, balance, now);
@@ -169,6 +179,35 @@ class EmployeeRepository {
       WHERE e.id = ?
       ORDER BY v.date ASC
     ''', [employeeId]);
+  }
+
+  /// جلب معاملات القيد الافتتاحي للموظف — find opening balance transactions
+  /// linked to this employee via reference_id.
+  /// Returns transaction rows with account currency info.
+  Future<List<Map<String, dynamic>>> getEmployeeOpeningBalanceTransactions(int employeeId) async {
+    final db = await _db;
+    // First try: search by reference_id (new data with 'employee_{id}')
+    final byRef = await db.rawQuery('''
+      SELECT t.*, a.currency AS account_currency
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND t.reference_id = ?
+        AND a.account_code LIKE '51%'
+    ''', ['employee_$employeeId']);
+    
+    if (byRef.isNotEmpty) return byRef;
+    
+    // Fallback: search by description pattern (legacy data without reference_id)
+    return await db.rawQuery('''
+      SELECT t.*, a.currency AS account_currency
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND a.account_code LIKE '51%'
+        AND t.description LIKE 'رصيد افتتاحي موظف%'
+      ORDER BY t.date ASC
+    ''');
   }
 
   /// Record a transaction for an employee (له or عليه).

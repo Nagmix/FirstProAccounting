@@ -32,7 +32,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   List<Map<String, dynamic>> _allMovements = [];
   List<Map<String, dynamic>> _filteredMovements = [];
   bool _isLoading = true;
-  String _selectedCurrency = 'ALL';
+  String _selectedCurrency = 'YER';
   DateTime? _startDate;
   DateTime? _endDate;
 
@@ -94,6 +94,34 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
 
     // Load movements
     final movements = await locator<SupplierRepository>().getSupplierMovements(widget.supplier.id!);
+
+    // ── Add Opening Balance as first movement ──
+    // Query the transactions table for opening balance entries linked to this supplier
+    final supplier = _freshSupplier ?? widget.supplier;
+    final obTransactions = await locator<SupplierRepository>().getSupplierOpeningBalanceTransactions(widget.supplier.id!);
+
+    for (final ob in obTransactions) {
+      final debit = MoneyHelper.readMoney(ob['debit']);
+      final credit = MoneyHelper.readMoney(ob['credit']);
+      final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+      final description = ob['description'] as String? ?? 'رصيد افتتاحي';
+      final obCurrency = ob['account_currency'] as String? ?? supplier.currency ?? 'YER';
+
+      movements.insert(0, {
+        ...Map<String, dynamic>.from(ob),
+        '_source': 'opening_balance',
+        '_sort_date': dateStr,
+        'type': 'opening_balance',
+        'type_ar': 'رصيد افتتاحي',
+        'description': description,
+        'debit': debit,
+        'credit': credit,
+        'currency': obCurrency,
+        'voucher_type': null,
+        'is_return': 0,
+      });
+    }
+
     setState(() {
       _allMovements = movements;
       _isLoading = false;
@@ -104,6 +132,33 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   Future<void> _loadMovements() async {
     setState(() => _isLoading = true);
     final movements = await locator<SupplierRepository>().getSupplierMovements(widget.supplier.id!);
+
+    // ── Add Opening Balance as first movement ──
+    final supplier = _freshSupplier ?? widget.supplier;
+    final obTransactions = await locator<SupplierRepository>().getSupplierOpeningBalanceTransactions(widget.supplier.id!);
+
+    for (final ob in obTransactions) {
+      final debit = MoneyHelper.readMoney(ob['debit']);
+      final credit = MoneyHelper.readMoney(ob['credit']);
+      final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+      final description = ob['description'] as String? ?? 'رصيد افتتاحي';
+      final obCurrency = ob['account_currency'] as String? ?? supplier.currency ?? 'YER';
+
+      movements.insert(0, {
+        ...Map<String, dynamic>.from(ob),
+        '_source': 'opening_balance',
+        '_sort_date': dateStr,
+        'type': 'opening_balance',
+        'type_ar': 'رصيد افتتاحي',
+        'description': description,
+        'debit': debit,
+        'credit': credit,
+        'currency': obCurrency,
+        'voucher_type': null,
+        'is_return': 0,
+      });
+    }
+
     setState(() {
       _allMovements = movements;
       _isLoading = false;
@@ -164,13 +219,11 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
         break;
     }
 
-    // Currency filter
-    if (_selectedCurrency != 'ALL') {
-      result = result.where((m) {
-        final mCurrency = m['currency'] as String? ?? 'YER';
-        return mCurrency == _selectedCurrency;
-      }).toList();
-    }
+    // Currency filter (always apply since there is no "ALL" option)
+    result = result.where((m) {
+      final mCurrency = m['currency'] as String? ?? 'YER';
+      return mCurrency == _selectedCurrency;
+    }).toList();
 
     // Date filter
     if (_startDate != null) {
@@ -208,6 +261,13 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   /// Determine the direction of a movement: 'debit' (عليه) or 'credit' (له).
   String _getMovementDirection(Map<String, dynamic> movement) {
     final source = movement['_source'] as String? ?? '';
+
+    if (source == 'opening_balance') {
+      // Opening balance: debit means عليه, credit means له
+      final debit = MoneyHelper.readMoney(movement['debit']);
+      final credit = MoneyHelper.readMoney(movement['credit']);
+      return debit > credit ? 'debit' : 'credit';
+    }
 
     if (source == 'invoice') {
       final type = movement['type'] as String? ?? '';
@@ -262,6 +322,11 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
 
   double _getMovementAmount(Map<String, dynamic> movement) {
     final source = movement['_source'] as String? ?? '';
+    if (source == 'opening_balance') {
+      final debit = MoneyHelper.readMoney(movement['debit']);
+      final credit = MoneyHelper.readMoney(movement['credit']);
+      return debit > credit ? debit : credit;
+    }
     if (source == 'invoice') {
       return MoneyHelper.readMoney(movement['total']);
     }
@@ -670,6 +735,12 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
           } else {
             debit = total;
           }
+        } else if (source == 'opening_balance') {
+          debit = MoneyHelper.readMoney(m['debit']);
+          credit = MoneyHelper.readMoney(m['credit']);
+          dateStr = m['_sort_date'] as String? ?? m['date'] as String? ?? m['created_at'] as String? ?? '';
+          description = m['description'] as String? ?? 'رصيد افتتاحي';
+          typeAr = 'رصيد افتتاحي';
         } else if (source == 'voucher') {
           final vType = m['voucher_type'] as String? ?? '';
           final totalAmount = MoneyHelper.readMoney(m['total_amount']);
@@ -798,6 +869,12 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
           } else {
             debit = total;
           }
+        } else if (source == 'opening_balance') {
+          debit = MoneyHelper.readMoney(m['debit']);
+          credit = MoneyHelper.readMoney(m['credit']);
+          dateStr = m['_sort_date'] as String? ?? m['date'] as String? ?? m['created_at'] as String? ?? '';
+          description = m['description'] as String? ?? 'رصيد افتتاحي';
+          typeAr = 'رصيد افتتاحي';
         } else if (source == 'voucher') {
           final vType = m['voucher_type'] as String? ?? '';
           final totalAmount = MoneyHelper.readMoney(m['total_amount']);
@@ -1355,7 +1432,6 @@ class _FilterBar extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
               items: const [
-                DropdownMenuItem(value: 'ALL', child: Text('كل العملات')),
                 DropdownMenuItem(value: 'YER', child: Text('ر.ي')),
                 DropdownMenuItem(value: 'SAR', child: Text('ر.س')),
                 DropdownMenuItem(value: 'USD', child: Text('\$')),
@@ -1398,6 +1474,8 @@ class _MovementCard extends StatelessWidget {
 
     if (source == 'invoice') {
       return _buildInvoiceCard(theme, direction);
+    } else if (source == 'opening_balance') {
+      return _buildOpeningBalanceCard(theme, direction);
     } else {
       return _buildVoucherCard(theme, direction);
     }
@@ -1405,6 +1483,11 @@ class _MovementCard extends StatelessWidget {
 
   String _getDirection() {
     final source = movement['_source'] as String? ?? '';
+    if (source == 'opening_balance') {
+      final debit = MoneyHelper.readMoney(movement['debit']);
+      final credit = MoneyHelper.readMoney(movement['credit']);
+      return debit > credit ? 'debit' : 'credit';
+    }
     if (source == 'invoice') {
       final type = movement['type'] as String? ?? '';
       final isReturn = (movement['is_return'] as num?)?.toInt() == 1;
@@ -1430,6 +1513,11 @@ class _MovementCard extends StatelessWidget {
 
   double _getAmount() {
     final source = movement['_source'] as String? ?? '';
+    if (source == 'opening_balance') {
+      final debit = MoneyHelper.readMoney(movement['debit']);
+      final credit = MoneyHelper.readMoney(movement['credit']);
+      return debit > credit ? debit : credit;
+    }
     if (source == 'invoice') {
       return MoneyHelper.readMoney(movement['total']);
     }
@@ -1508,6 +1596,178 @@ class _MovementCard extends StatelessWidget {
                 ),
             ],
           ),
+          const SizedBox(height: 10),
+
+          // Row 2: Direction + Amount
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDebit
+                        ? AppColors.error.withOpacity(0.08)
+                        : AppColors.success.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        isDebit ? 'عليه' : 'له',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isDebit ? AppColors.error : AppColors.success,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        CurrencyFormatter.format(amount, symbol: currencySymbol),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isDebit ? AppColors.error : AppColors.success,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Row 3: Running balance
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                'الرصيد: ',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                CurrencyFormatter.format(runningBalance.abs()),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: runningBalance.abs() < 0.005
+                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
+                      : runningBalance > 0
+                          ? AppColors.success
+                          : AppColors.error,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                Supplier.getDynamicBalanceLabel(runningBalance, supplier.balanceType),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: runningBalance.abs() < 0.005
+                      ? (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)
+                      : runningBalance > 0
+                          ? AppColors.success
+                          : AppColors.error,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOpeningBalanceCard(ThemeData theme, String direction) {
+    final amount = _getAmount();
+    final dateStr = movement['_sort_date'] as String? ?? movement['date'] as String? ?? movement['created_at'] as String? ?? '';
+    final description = movement['description'] as String? ?? 'رصيد افتتاحي';
+    final currency = movement['currency'] as String? ?? 'YER';
+    final isDebit = direction == 'debit';
+
+    DateTime? txDate;
+    try { txDate = DateTime.parse(dateStr); } catch (_) {}
+
+    String currencySymbol;
+    switch (currency) {
+      case 'SAR': currencySymbol = 'ر.س'; break;
+      case 'USD': currencySymbol = r'$'; break;
+      default: currencySymbol = 'ر.ي';
+    }
+
+    const typeAr = 'رصيد افتتاحي';
+    const typeColor = AppColors.accentOrange;
+    const typeIcon = Icons.account_balance;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: typeColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Type badge + date
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: typeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(typeIcon, size: 14, color: typeColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      typeAr,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: typeColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              if (txDate != null)
+                Text(
+                  DateFormatter.formatDate(txDate),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+            ],
+          ),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.article, size: 14, color: AppColors.textHint),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
 
           // Row 2: Direction + Amount

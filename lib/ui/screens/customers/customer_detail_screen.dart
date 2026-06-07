@@ -31,7 +31,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
   // Filter state
   int _selectedFilterIndex = 0;
-  String? _selectedCurrency;
+  String? _selectedCurrency = 'YER';
   DateTimeRange? _dateRange;
 
   // Statistics
@@ -46,6 +46,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   List<Map<String, dynamic>> _cashBoxes = [];
 
   static const List<_FilterTab> _filterTabs = [
+    _FilterTab(key: 'opening_balance', label: 'رصيد افتتاحي'),
     _FilterTab(key: 'all', label: 'جميع الحركات والفواتير'),
     _FilterTab(key: 'debit', label: 'عليه'),
     _FilterTab(key: 'credit', label: 'له'),
@@ -61,7 +62,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   ];
 
   static const List<MapEntry<String, String>> _currencyOptions = [
-    MapEntry('الكل', ''),
     MapEntry('YER', 'YER'),
     MapEntry('SAR', 'SAR'),
     MapEntry('USD', 'USD'),
@@ -279,24 +279,52 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
 
     // ── Add Opening Balance as first movement ──
-    // The opening balance is a real accounting entry that should appear
-    // in the transaction list just like any other movement.
+    // Query the transactions table for opening balance entries linked to this customer
     final customer = _freshCustomer ?? widget.customer;
-    if (customer.balance != 0.0 || (customer.currency?.isNotEmpty ?? false)) {
-      // Check if there's an opening balance by comparing stored balance with movements
+    final obTransactions = await locator<CustomerRepository>().getCustomerOpeningBalanceTransactions(customerId);
+    
+    for (final ob in obTransactions) {
+      final debit = MoneyHelper.readMoney(ob['debit']);
+      final credit = MoneyHelper.readMoney(ob['credit']);
+      final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+      final description = ob['description'] as String? ?? 'رصيد افتتاحي';
+      // Determine currency from the linked account
+      final obCurrency = ob['account_currency'] as String? ?? customer.currency ?? 'YER';
+      
+      // For customer accounts (1200+offset): debit = عليه, credit = له
+      final isCredit = credit > 0;
+      
+      movements.add({
+        'id': 'ob_${ob['id']}',
+        'date': dateStr,
+        'type': 'opening_balance',
+        'type_ar': 'رصيد افتتاحي',
+        'filter_key': 'opening_balance',
+        'icon': Icons.account_balance_wallet,
+        'color': AppColors.accentBlue,
+        'description': description,
+        'debit': debit,
+        'credit': credit,
+        'currency': obCurrency,
+        'source': 'opening_balance',
+        'voucher_type': null,
+      });
+    }
+    
+    // Fallback: If no opening balance found in transactions (legacy data),
+    // derive from stored balance vs movements
+    if (obTransactions.isEmpty && (customer.balance != 0.0 || (customer.currency?.isNotEmpty ?? false))) {
       double allDebit = 0.0;
       double allCredit = 0.0;
       for (final m in movements) {
         allDebit += MoneyHelper.readMoney(m['debit']);
         allCredit += MoneyHelper.readMoney(m['credit']);
       }
-      // Signed balance: positive = credit (له), negative = debit (عليه)
       final customerSignedBalance = customer.balanceType == 'credit' ? customer.balance : -customer.balance;
       final movementBalance = allCredit - allDebit;
       final openingAmount = customerSignedBalance - movementBalance;
 
       if (openingAmount.abs() >= 0.005) {
-        // There IS an opening balance that isn't covered by movements
         final obCurrency = customer.currency ?? 'YER';
         final isCredit = openingAmount > 0;
         movements.insert(0, {
@@ -304,7 +332,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           'date': customer.createdAt ?? DateTime.now().toIso8601String(),
           'type': 'opening_balance',
           'type_ar': 'رصيد افتتاحي',
-          'filter_key': 'all',
+          'filter_key': 'opening_balance',
           'icon': Icons.account_balance_wallet,
           'color': AppColors.accentBlue,
           'description': 'رصيد افتتاحي (${isCredit ? "له" : "عليه"})',
@@ -1011,7 +1039,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: DropdownButton<String>(
-                    value: _selectedCurrency ?? '',
+                    value: _selectedCurrency ?? 'YER',
                     underline: const SizedBox.shrink(),
                     icon: const Icon(Icons.arrow_drop_down, size: 20),
                     style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
@@ -1022,8 +1050,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       );
                     }).toList(),
                     onChanged: (v) {
-                      setState(() => _selectedCurrency = (v?.isEmpty ?? true) ? null : v);
-                      _applyFilters();
+                      if (v != null && v.isNotEmpty) {
+                        setState(() => _selectedCurrency = v);
+                        _applyFilters();
+                      }
                     },
                   ),
                 ),

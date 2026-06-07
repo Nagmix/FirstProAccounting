@@ -183,6 +183,31 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
       });
     }
 
+    // ── Add Opening Balance as a movement ──
+    // Query the transactions table for opening balance entries linked to this employee
+    final obTransactions = await locator<EmployeeRepository>().getEmployeeOpeningBalanceTransactions(employeeId);
+    
+    for (final ob in obTransactions) {
+      final debit = MoneyHelper.readMoney(ob['debit']);
+      final credit = MoneyHelper.readMoney(ob['credit']);
+      final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+      final description = ob['description'] as String? ?? 'رصيد افتتاحي';
+      final obCurrency = ob['account_currency'] as String? ?? 'YER';
+      
+      movements.add({
+        'id': 'ob_${ob['id']}',
+        'date': dateStr,
+        'type': 'opening_balance',
+        'type_ar': 'رصيد افتتاحي',
+        'filter_key': 'all',
+        'description': description,
+        'debit': debit,
+        'credit': credit,
+        'currency': obCurrency,
+        'source': 'opening_balance',
+      });
+    }
+
     // Sort by date ascending for running balance
     movements.sort((a, b) {
       final dateA = a['date'] as String;

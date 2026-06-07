@@ -160,29 +160,53 @@ class CashBoxService {
     ''', [cashBoxId, currency]);
     balance += MoneyHelper.readCalculatedMoney(purchaseReturnPaid.first['total']);
 
-    // 11. Opening balance transactions against Cash & Banks account in this currency
-    //     that reference this cash box via description
-    final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
-    final cashBanksAccount = await db.query(
-      'accounts',
-      where: 'account_code = ? AND currency = ?',
-      whereArgs: [(1100 + codeOffset).toString(), currency],
-      limit: 1,
-    );
-    if (cashBanksAccount.isNotEmpty) {
-      final accountId = cashBanksAccount.first['id'] as int;
-      final obTransactions = await db.rawQuery('''
-        SELECT 
-          COALESCE(SUM(debit), 0) AS total_debit,
-          COALESCE(SUM(credit), 0) AS total_credit
-        FROM transactions
-        WHERE account_id = ? AND reference_type = 'opening_balance'
-      ''', [accountId]);
-      final totalDebit = MoneyHelper.readCalculatedMoney(obTransactions.first['total_debit']);
-      final totalCredit = MoneyHelper.readCalculatedMoney(obTransactions.first['total_credit']);
-      // Debit on cash account = increase (cash in), Credit = decrease (cash out)
-      balance += totalDebit - totalCredit;
+    // 11. Opening balance transactions for this cash box in this currency.
+    //     First try to find by reference_id (new data), then fall back to
+    //     searching by account code + reference_type (legacy data).
+    double obBalance = 0.0;
+
+    // 11a. Try reference_id first (for data created after the fix)
+    if (cashBoxId != null) {
+      final obByRef = await db.rawQuery('''
+        SELECT
+          COALESCE(SUM(t.debit), 0) AS total_debit,
+          COALESCE(SUM(t.credit), 0) AS total_credit
+        FROM transactions t
+        INNER JOIN accounts a ON t.account_id = a.id
+        WHERE t.reference_type = 'opening_balance'
+          AND t.reference_id = ?
+          AND a.account_code LIKE '11%'
+          AND a.currency = ?
+      ''', ['cash_box_$cashBoxId', currency]);
+      obBalance += MoneyHelper.readCalculatedMoney(obByRef.first['total_debit'])
+                 - MoneyHelper.readCalculatedMoney(obByRef.first['total_credit']);
     }
+
+    // 11b. Fallback: if no reference_id match, search by account code (legacy)
+    if (obBalance.abs() < 0.005) {
+      final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+      final cashBanksAccount = await db.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [(1100 + codeOffset).toString(), currency],
+        limit: 1,
+      );
+      if (cashBanksAccount.isNotEmpty) {
+        final accountId = cashBanksAccount.first['id'] as int;
+        final obTransactions = await db.rawQuery('''
+          SELECT
+            COALESCE(SUM(debit), 0) AS total_debit,
+            COALESCE(SUM(credit), 0) AS total_credit
+          FROM transactions
+          WHERE account_id = ? AND reference_type = 'opening_balance'
+        ''', [accountId]);
+        final totalDebit = MoneyHelper.readCalculatedMoney(obTransactions.first['total_debit']);
+        final totalCredit = MoneyHelper.readCalculatedMoney(obTransactions.first['total_credit']);
+        obBalance = totalDebit - totalCredit;
+      }
+    }
+
+    balance += obBalance;
 
     return balance;
   }
@@ -433,6 +457,92 @@ class CashBoxService {
         'source': 'invoice',
         'voucher_type': null,
       });
+    }
+
+    // 5. Opening balance transactions for this cash box
+    //    Query transactions table for opening_balance entries linked to this cash box
+    if (cashBoxId != null) {
+      // First try by reference_id (new data with reference_id = 'cash_box_{id}')
+      final obMovements = await db.rawQuery('''
+        SELECT t.*, a.currency AS account_currency
+        FROM transactions t
+        INNER JOIN accounts a ON t.account_id = a.id
+        WHERE t.reference_type = 'opening_balance'
+          AND t.reference_id = ?
+          AND a.account_code LIKE '11%'
+      ''', ['cash_box_$cashBoxId']);
+
+      for (final ob in obMovements) {
+        final obCurrency = ob['account_currency'] as String? ?? 'YER';
+        // Apply currency filter if specified
+        if (currency != null && obCurrency != currency) continue;
+
+        final debit = MoneyHelper.readMoney(ob['debit']);
+        final credit = MoneyHelper.readMoney(ob['credit']);
+        final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final description = ob['description'] as String? ?? 'رصيد افتتاحي';
+
+        // For cash accounts: debit = cash in (له), credit = cash out (عليه)
+        movements.add({
+          'id': 'ob_${ob['id']}',
+          'date': dateStr,
+          'type': 'opening_balance',
+          'type_ar': 'رصيد افتتاحي',
+          'filter_key': 'opening_balance',
+          'icon': Icons.account_balance_wallet,
+          'color': AppColors.accentBlue,
+          'description': description,
+          'debit': credit > 0 ? credit : 0.0, // credit on cash account = cash out = عليه
+          'credit': debit > 0 ? debit : 0.0,  // debit on cash account = cash in = له
+          'currency': obCurrency,
+          'source': 'opening_balance',
+          'voucher_type': null,
+        });
+      }
+
+      // Fallback: also check for legacy opening balance entries without reference_id
+      // by looking at the Cash & Banks account for this currency
+      if (obMovements.isEmpty) {
+        final resolvedCurrency = currency ?? 'YER';
+        final codeOffset = resolvedCurrency == 'SAR' ? 1 : (resolvedCurrency == 'USD' ? 2 : 0);
+        final cashBanksAccount = await db.query(
+          'accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [(1100 + codeOffset).toString(), resolvedCurrency],
+          limit: 1,
+        );
+        if (cashBanksAccount.isNotEmpty) {
+          final accountId = cashBanksAccount.first['id'] as int;
+          final legacyOb = await db.rawQuery('''
+            SELECT * FROM transactions
+            WHERE account_id = ? AND reference_type = 'opening_balance'
+            ORDER BY date ASC
+          ''', [accountId]);
+
+          for (final ob in legacyOb) {
+            final debit = MoneyHelper.readMoney(ob['debit']);
+            final credit = MoneyHelper.readMoney(ob['credit']);
+            final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+            final description = ob['description'] as String? ?? 'رصيد افتتاحي';
+
+            movements.add({
+              'id': 'ob_${ob['id']}',
+              'date': dateStr,
+              'type': 'opening_balance',
+              'type_ar': 'رصيد افتتاحي',
+              'filter_key': 'opening_balance',
+              'icon': Icons.account_balance_wallet,
+              'color': AppColors.accentBlue,
+              'description': description,
+              'debit': credit > 0 ? credit : 0.0,
+              'credit': debit > 0 ? debit : 0.0,
+              'currency': resolvedCurrency,
+              'source': 'opening_balance',
+              'voucher_type': null,
+            });
+          }
+        }
+      }
     }
 
     // Sort by date ascending
@@ -992,10 +1102,12 @@ class CashBoxService {
     required double openingBalance,
     required String balanceType,
     required String cashBoxName,
+    int? cashBoxId,
   }) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
     final journalId = generateUniqueJournalId();
+    final referenceId = cashBoxId != null ? 'cash_box_$cashBoxId' : null;
 
     if (balanceType == 'debit') {
       // Debit Cash & Banks, Credit Opening Balance Equity
@@ -1007,6 +1119,8 @@ class CashBoxService {
         'description': 'رصيد افتتاحي صندوق - $cashBoxName',
         'date': now,
         'created_at': now,
+        'reference_type': 'opening_balance',
+        'reference_id': referenceId,
       });
       await db.insert('transactions', {
         'account_id': openingBalanceAccountId,
@@ -1016,6 +1130,8 @@ class CashBoxService {
         'description': 'رصيد افتتاحي صندوق - $cashBoxName',
         'date': now,
         'created_at': now,
+        'reference_type': 'opening_balance',
+        'reference_id': referenceId,
       });
       await _dbHelper.journal.updateAccountBalance(linkedAccountId, openingBalance, isDebit: true);
       await _dbHelper.journal.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: false);
@@ -1029,6 +1145,8 @@ class CashBoxService {
         'description': 'رصيد افتتاحي صندوق - $cashBoxName',
         'date': now,
         'created_at': now,
+        'reference_type': 'opening_balance',
+        'reference_id': referenceId,
       });
       await db.insert('transactions', {
         'account_id': openingBalanceAccountId,
@@ -1038,6 +1156,8 @@ class CashBoxService {
         'description': 'رصيد افتتاحي صندوق - $cashBoxName',
         'date': now,
         'created_at': now,
+        'reference_type': 'opening_balance',
+        'reference_id': referenceId,
       });
       await _dbHelper.journal.updateAccountBalance(linkedAccountId, openingBalance, isDebit: false);
       await _dbHelper.journal.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: true);

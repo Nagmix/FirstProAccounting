@@ -39,6 +39,7 @@ class CustomerRepository {
       if (openingBalance > 0) {
         final journalId = generateUniqueJournalId();
         final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+        final referenceId = 'customer_$customerId';
 
         final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), customerCurrency], limit: 1);
         final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), customerCurrency], limit: 1);
@@ -57,6 +58,8 @@ class CustomerRepository {
               'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
               'date': now,
               'created_at': now,
+              'reference_type': 'opening_balance',
+              'reference_id': referenceId,
             });
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
@@ -66,6 +69,8 @@ class CustomerRepository {
               'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
               'date': now,
               'created_at': now,
+              'reference_type': 'opening_balance',
+              'reference_id': referenceId,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, openingBalance, 0.0, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
@@ -79,6 +84,8 @@ class CustomerRepository {
               'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
               'date': now,
               'created_at': now,
+              'reference_type': 'opening_balance',
+              'reference_id': referenceId,
             });
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
@@ -88,6 +95,8 @@ class CustomerRepository {
               'description': 'رصيد افتتاحي عميل - ${customerMap['name']}',
               'date': now,
               'created_at': now,
+              'reference_type': 'opening_balance',
+              'reference_id': referenceId,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, openingBalance, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
@@ -297,6 +306,35 @@ class CustomerRepository {
       "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET' AND currency = ?",
       ['%العملاء%', currency],
     );
+  }
+
+  /// جلب معاملات القيد الافتتاحي للعميل — find opening balance transactions
+  /// linked to this customer via reference_id.
+  /// Returns transaction rows with account currency info.
+  Future<List<Map<String, dynamic>>> getCustomerOpeningBalanceTransactions(int customerId) async {
+    final db = await _db;
+    // First try: search by reference_id (new data with 'customer_{id}')
+    final byRef = await db.rawQuery('''
+      SELECT t.*, a.currency AS account_currency
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND t.reference_id = ?
+        AND a.account_code LIKE '12%'
+    ''', ['customer_$customerId']);
+    
+    if (byRef.isNotEmpty) return byRef;
+    
+    // Fallback: search by description pattern (legacy data without reference_id)
+    return await db.rawQuery('''
+      SELECT t.*, a.currency AS account_currency
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE t.reference_type = 'opening_balance'
+        AND a.account_code LIKE '12%'
+        AND t.description LIKE 'رصيد افتتاحي عميل%'
+      ORDER BY t.date ASC
+    ''');
   }
 
   /// جلب السندات غير المرتبطة — find unlinked vouchers (NULL customer_id)
