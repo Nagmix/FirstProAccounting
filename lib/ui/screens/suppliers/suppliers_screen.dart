@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
@@ -13,12 +13,10 @@ import 'supplier_detail_screen.dart';
 ///
 /// Features:
 /// - Search bar for filtering by name or phone.
+/// - Tab bar: الكل / مدينون / دائنون.
 /// - Supplier list with avatar, name, phone, and balance.
+/// - Compact filter button for currency selection.
 /// - FAB for adding a new supplier via [AddSupplierSheet].
-/// - Tap to navigate to detail/ledger screen.
-/// - Long press for Edit/Delete options.
-/// - Dynamic balance display based on actual financial position.
-/// - Empty state when no suppliers exist.
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
 
@@ -26,9 +24,12 @@ class SuppliersScreen extends StatefulWidget {
   State<SuppliersScreen> createState() => _SuppliersScreenState();
 }
 
-class _SuppliersScreenState extends State<SuppliersScreen> {
+class _SuppliersScreenState extends State<SuppliersScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Timer? _searchDebounce;
   List<Supplier> _suppliers = [];
   bool _isLoading = true;
 
@@ -37,30 +38,37 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   bool _isBalancesLoading = false;
   Map<int, double> _currencyBalances = {};
 
+  /// Currency display info.
   static const _currencyInfo = {
     'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
     'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
     'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
   };
 
+  /// Currency filter options.
   static const _currencyOptions = ['YER', 'SAR', 'USD'];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.trim());
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+      });
     });
     _loadSuppliers();
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  // ── Load suppliers from database ──────────────────────────────
   Future<void> _loadSuppliers() async {
     setState(() => _isLoading = true);
     try {
@@ -70,7 +78,6 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           _suppliers = maps.map((m) => Supplier.fromMap(m)).toList();
           _isLoading = false;
         });
-        // Always load currency balances for the selected currency
         _loadCurrencyBalances();
       }
     } catch (e) {
@@ -83,21 +90,16 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     }
   }
 
-  // ── Load balances for all suppliers filtered by the selected currency ──
+  // ── Currency balance loading ──────────────────────────────────
   Future<void> _loadCurrencyBalances() async {
     setState(() => _isBalancesLoading = true);
-
     try {
       final newBalances = <int, double>{};
       final repo = locator<SupplierRepository>();
 
-      // Load balances for all suppliers in parallel
       final futures = _suppliers.map((s) async {
         if (s.id != null) {
-          final balance = await repo.getSupplierBalanceForCurrency(
-            s.id!,
-            _selectedCurrency,
-          );
+          final balance = await repo.getSupplierBalanceForCurrency(s.id!, _selectedCurrency);
           return MapEntry(s.id!, balance);
         }
         return null;
@@ -117,33 +119,20 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isBalancesLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('حدث خطأ أثناء تحميل الأرصدة'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      if (mounted) setState(() => _isBalancesLoading = false);
     }
   }
 
-  /// Get the currency symbol to display based on selected filter.
-  String _getCurrencySymbol() {
-    return _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
-  }
-
-  /// Handle currency filter change.
   void _onCurrencyChanged(String currency) {
     setState(() => _selectedCurrency = currency);
     _loadCurrencyBalances();
   }
 
   // ── Filter logic ──────────────────────────────────────────────
-  List<Supplier> get _filteredSuppliers {
+  List<Supplier> _filterSuppliers(int tabIndex) {
     var filtered = _suppliers;
 
+    // Apply search query
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery;
       filtered = filtered.where((s) {
@@ -153,74 +142,34 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       }).toList();
     }
 
+    // Apply tab filter based on balance and balance_type
+    switch (tabIndex) {
+      case 1: // مدينون
+        filtered = filtered.where((s) {
+          if (s.balanceType == 'debit' && s.balance > 0) return true;
+          return false;
+        }).toList();
+        break;
+      case 2: // دائنون
+        filtered = filtered.where((s) {
+          if (s.balanceType == 'credit' && s.balance > 0) return true;
+          return false;
+        }).toList();
+        break;
+    }
+
     return filtered;
   }
 
   // ── Open add-supplier bottom sheet ────────────────────────────
-  Future<void> _showAddSupplierSheet({Supplier? supplier}) async {
+  Future<void> _showAddSupplierSheet() async {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => AddSupplierSheet(supplier: supplier),
+      builder: (context) => const AddSupplierSheet(),
     );
-    if (!mounted) return;
     _loadSuppliers();
-  }
-
-  // ── Navigate to supplier detail/ledger ────────────────────────
-  Future<void> _navigateToDetail(Supplier supplier) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SupplierDetailScreen(supplier: supplier),
-      ),
-    );
-    if (!mounted) return;
-    _loadSuppliers();
-  }
-
-  // ── Show long-press menu (Edit / Delete) ──────────────────────
-  void _showContextMenu(Supplier supplier) {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(
-                supplier.name,
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.edit, color: AppColors.primary),
-              title: const Text('تعديل'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showAddSupplierSheet(supplier: supplier);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: AppColors.error),
-              title: const Text('حذف',
-                  style: TextStyle(color: AppColors.error)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _deleteSupplier(supplier);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
   }
 
   // ── Delete supplier ───────────────────────────────────────────
@@ -228,8 +177,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning,
-            color: AppColors.error, size: 40),
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
         title: const Text('حذف المورد'),
         content: Text('هل أنت متأكد من حذف المورد "${supplier.name}"؟'),
         actions: [
@@ -276,166 +224,121 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     return _avatarColors[hash % _avatarColors.length];
   }
 
-  // ── Currency Filter Widget ────────────────────────────────────────
-  Widget _buildCurrencyFilter(ThemeData theme, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.border,
+  // ── Show currency filter popup ────────────────────────────────
+  void _showCurrencyFilterPopup() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('تصفية حسب العملة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              ..._currencyOptions.map((option) {
+                final isSelected = _selectedCurrency == option;
+                final label = _currencyInfo[option]?['label'] ?? option;
+                final symbol = _currencyInfo[option]?['symbol'] ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _onCurrencyChanged(option);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+                        border: Border.all(
+                          color: isSelected ? AppColors.primary : AppColors.border,
+                          width: isSelected ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected ? Icons.check_circle : Icons.circle_outlined,
+                            color: isSelected ? AppColors.primary : AppColors.textHint,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              '$label ($option)',
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            symbol,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.currency_exchange,
-            size: 20,
-            color: AppColors.primary,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'العملة:',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _currencyOptions.map((option) {
-                  final isSelected = _selectedCurrency == option;
-                  final label =
-                      '${_currencyInfo[option]?['symbol'] ?? ''} $option';
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: ChoiceChip(
-                      label: Text(label),
-                      selected: isSelected,
-                      onSelected: (_) => _onCurrencyChanged(option),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected
-                            ? Colors.white
-                            : isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.textSecondary,
-                      ),
-                      backgroundColor: isDark
-                          ? AppColors.darkSurfaceVariant
-                          : AppColors.surfaceVariant,
-                      selectedColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Total Balance Card Widget ─────────────────────────────────────
-  Widget _buildTotalBalanceCard(
-    ThemeData theme,
-    double totalBalance,
-    String currencySymbol,
-  ) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.local_shipping, color: AppColors.primary),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'إجمالي الرصيد (${_currencyInfo[_selectedCurrency]?['label'] ?? _selectedCurrency})',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.primary,
-                  ),
-                ),
-                Text(
-                  CurrencyFormatter.format(totalBalance.abs(),
-                      symbol: currencySymbol),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            totalBalance >= 0 ? 'له' : 'عليه',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: totalBalance >= 0 ? AppColors.success : AppColors.error,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredSuppliers;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final currencySymbol = _getCurrencySymbol();
-
-    // Compute total balance for the selected currency
-    double totalBalance = 0;
-    if (!_isBalancesLoading) {
-      for (final s in filtered) {
-        totalBalance += _currencyBalances[s.id] ?? 0.0;
-      }
-    }
+    final isLight = theme.brightness == Brightness.light;
+    final currentSymbol = _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('قائمة الموردين'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'بحث',
-            onPressed: () {
-              FocusScope.of(context).unfocus();
-            },
+          // Filter button (currency)
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: ActionChip(
+              avatar: Icon(Icons.currency_exchange, size: 16, color: AppColors.primary),
+              label: Text(
+                '$currentSymbol $_selectedCurrency',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+              ),
+              onPressed: _showCurrencyFilterPopup,
+              backgroundColor: AppColors.primary.withOpacity(0.08),
+              side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
           ),
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.local_shipping),
             tooltip: 'إضافة مورد',
-            onPressed: () => _showAddSupplierSheet(),
+            onPressed: _showAddSupplierSheet,
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'الكل'),
+            Tab(text: 'مدينون'),
+            Tab(text: 'دائنون'),
+          ],
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -446,7 +349,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: SearchBar(
                     controller: _searchController,
-                    hintText: 'بحث عن مورد...',
+                    hintText: 'بحث عن مورد بالاسم أو الهاتف...',
                     leading: const Icon(Icons.search),
                     padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(horizontal: 16),
@@ -454,205 +357,300 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   ),
                 ),
 
-                // ── Currency Filter Row ───────────────────────────────
-                _buildCurrencyFilter(theme, isDark),
-
-                // ── Total balance card ────────────────────────────────
-                if (filtered.isNotEmpty)
-                  _buildTotalBalanceCard(theme, totalBalance, currencySymbol),
+                // ── Summary bar ───────────────────────────────────────
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isLight ? AppColors.border : AppColors.darkBorder, width: 0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.local_shipping, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_suppliers.length} مورد',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_isBalancesLoading)
+                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      else ...[
+                        Icon(Icons.account_balance_wallet, size: 16, color: AppColors.textHint),
+                        const SizedBox(width: 4),
+                        Text(
+                          'العملة: $_selectedCurrency',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.textHint,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
 
                 // ── Supplier list ─────────────────────────────────────
                 Expanded(
-                  child: _isBalancesLoading
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.only(top: 32),
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
-                      : filtered.isEmpty
-                          ? EmptyState(
-                              icon: Icons.local_shipping,
-                              title: _searchQuery.isNotEmpty
-                                  ? 'لا توجد نتائج'
-                                  : 'لا يوجد موردين',
-                              subtitle: _searchQuery.isNotEmpty
-                                  ? 'لم يتم العثور على نتائج مطابقة للبحث'
-                                  : 'قم بإضافة موردين جدد لبدء إدارة حساباتك',
-                              actionLabel:
-                                  _searchQuery.isEmpty ? 'إضافة مورد' : null,
-                              onAction:
-                                  _searchQuery.isEmpty
-                                      ? _showAddSupplierSheet
-                                      : null,
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 80),
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) {
-                                final supplier = filtered[index];
-                                final balance =
-                                    _currencyBalances[supplier.id] ?? 0.0;
-                                return _SupplierCard(
-                                  supplier: supplier,
-                                  avatarColor: _avatarColor(supplier.name),
-                                  balance: balance,
-                                  currencySymbol: currencySymbol,
-                                  onTap: () => _navigateToDetail(supplier),
-                                  onLongPress: () =>
-                                      _showContextMenu(supplier),
-                                );
-                              },
-                            ),
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: List.generate(3, (tabIndex) {
+                      final filtered = _filterSuppliers(tabIndex);
+
+                      if (filtered.isEmpty) {
+                        return EmptyState(
+                          icon: tabIndex == 0
+                              ? Icons.local_shipping
+                              : tabIndex == 1
+                                  ? Icons.trending_down
+                                  : Icons.trending_up,
+                          title: tabIndex == 0
+                              ? 'لا يوجد موردين'
+                              : tabIndex == 1
+                                  ? 'لا يوجد موردين مدينون'
+                                  : 'لا يوجد موردين دائنون',
+                          subtitle: tabIndex == 0
+                              ? 'قم بإضافة موردين جدد لبدء إدارة حساباتك'
+                              : 'لم يتم العثور على نتائج مطابقة',
+                          actionLabel: tabIndex == 0 ? 'إضافة مورد' : null,
+                          onAction: tabIndex == 0 ? _showAddSupplierSheet : null,
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80, top: 2),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final supplier = filtered[index];
+                          return _SupplierCard(
+                            supplier: supplier,
+                            avatarColor: _avatarColor(supplier.name),
+                            displayBalance: _currencyBalances[supplier.id] ?? 0.0,
+                            currencySymbol: _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
+                            isLight: isLight,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => SupplierDetailScreen(supplier: supplier),
+                                ),
+                              ).then((_) => _loadSuppliers());
+                            },
+                            onDelete: () => _deleteSupplier(supplier),
+                          );
+                        },
+                      );
+                    }),
+                  ),
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddSupplierSheet(),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddSupplierSheet,
         tooltip: 'إضافة مورد',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.local_shipping),
+        icon: const Icon(Icons.local_shipping),
+        label: const Text('إضافة مورد'),
       ),
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  SUPPLIER CARD
+//  SUPPLIER CARD — Modern, Professional Design
 // ═══════════════════════════════════════════════════════════════════
 class _SupplierCard extends StatelessWidget {
   const _SupplierCard({
     required this.supplier,
     required this.avatarColor,
-    required this.balance,
+    required this.displayBalance,
     required this.currencySymbol,
+    required this.isLight,
     this.onTap,
-    this.onLongPress,
+    this.onDelete,
   });
 
   final Supplier supplier;
   final Color avatarColor;
-  final double balance;
+  final double displayBalance;
   final String currencySymbol;
+  final bool isLight;
   final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
-
-    // Dynamic balance: use the per-currency computed balance
-    // balance > 0 means credit (له), balance < 0 means debit (عليه)
-    final balanceLabel = balance.abs() < 0.005
-        ? 'متساوي'
-        : balance > 0
-            ? 'له'
-            : 'عليه';
-
-    final balanceColor = balanceLabel == 'متساوي'
-        ? (isLight ? AppColors.textSecondary : AppColors.darkTextSecondary)
-        : balanceLabel == 'له'
+    final isDebit = displayBalance < 0;
+    final isCredit = displayBalance > 0;
+    final balanceColor = isDebit
+        ? AppColors.error
+        : isCredit
             ? AppColors.success
-            : AppColors.error;
+            : isLight
+                ? AppColors.textSecondary
+                : AppColors.darkTextSecondary;
 
-    return Card(
+    final balanceAbs = CurrencyFormatter.format(displayBalance.abs());
+
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
+      decoration: BoxDecoration(
+        color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // ── Avatar ───────────────────────────────────────
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: avatarColor.withOpacity(0.15),
-                child: Text(
-                  supplier.name.isNotEmpty ? supplier.name[0] : '?',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: avatarColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // ── Name, phone ──────────────────────────────────
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      supplier.name,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+        border: Border.all(
+          color: isLight ? AppColors.border.withOpacity(0.5) : AppColors.darkBorder.withOpacity(0.5),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isLight ? 0.04 : 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          onLongPress: onDelete,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // ── Avatar ───────────────────────────────────────
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [avatarColor, avatarColor.withOpacity(0.7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: avatarColor.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      supplier.name.isNotEmpty ? supplier.name[0] : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          supplier.contactMethod == 'whatsapp'
-                              ? Icons.chat
-                              : Icons.phone_in_talk,
-                          size: 14,
-                          color: isLight
-                              ? AppColors.textHint
-                              : AppColors.darkTextSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          supplier.phone ?? '—',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isLight
-                                ? AppColors.textSecondary
-                                : AppColors.darkTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 14),
 
-              // ── Balance ──────────────────────────────────────
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    CurrencyFormatter.format(balance.abs(),
-                        symbol: currencySymbol),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: balanceColor,
-                      fontWeight: FontWeight.w700,
+                // ── Name, phone ──────────────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        supplier.name,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            supplier.contactMethod == 'whatsapp'
+                                ? Icons.chat
+                                : Icons.phone_in_talk,
+                            size: 13,
+                            color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            supplier.phone ?? '—',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // ── Balance Section - الرصيد with color ──────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: displayBalance != 0
+                          ? [balanceColor.withOpacity(0.12), balanceColor.withOpacity(0.04)]
+                          : [Colors.grey.withOpacity(0.06), Colors.grey.withOpacity(0.02)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: displayBalance != 0 ? balanceColor.withOpacity(0.25) : AppColors.border.withOpacity(0.3),
+                      width: 1,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    balanceLabel,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: balanceColor,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isDebit ? Icons.trending_down : isCredit ? Icons.trending_up : Icons.remove,
+                        size: 14,
+                        color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$balanceAbs $currencySymbol',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(width: 4),
+                ),
+                const SizedBox(width: 6),
 
-              // ── Arrow icon (RTL – points left visually) ─────
-              Icon(
-                Icons.arrow_back_ios,
-                size: 16,
-                color: isLight
-                    ? AppColors.textHint
-                    : AppColors.darkTextSecondary,
-              ),
-            ],
+                // ── Arrow icon ──────────────────────────────────
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios,
+                    size: 12,
+                    color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
