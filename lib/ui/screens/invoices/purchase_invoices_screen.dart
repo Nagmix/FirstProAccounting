@@ -180,7 +180,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           },
           icon: const Icon(Icons.add),
           label: const Text('فاتورة مشتريات'),
-          backgroundColor: AppColors.accentOrange,
+          backgroundColor: AppColors.secondary,
           foregroundColor: Colors.white,
         ),
       ),
@@ -227,13 +227,13 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.accentOrange, const Color(0xFFFF8F00)],
+          colors: [AppColors.secondary, const Color(0xFFFF8F00)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: AppColors.accentOrange.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: AppColors.secondary.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -328,14 +328,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             ),
             const SizedBox(width: 6),
             ActionChip(
-              avatar: Icon(Icons.calendar_month, size: 16, color: _dateRange != null ? AppColors.accentOrange : null),
+              avatar: Icon(Icons.calendar_month, size: 16, color: _dateRange != null ? AppColors.secondary : null),
               label: Text(
                 _dateRange != null
                     ? '${DateFormatter.formatDate(_dateRange!.start)} – ${DateFormatter.formatDate(_dateRange!.end)}'
                     : 'الفترة',
-                style: TextStyle(fontSize: 12, color: _dateRange != null ? AppColors.accentOrange : null),
+                style: TextStyle(fontSize: 12, color: _dateRange != null ? AppColors.secondary : null),
               ),
-              side: _dateRange != null ? BorderSide(color: AppColors.accentOrange) : null,
+              side: _dateRange != null ? BorderSide(color: AppColors.secondary) : null,
               onPressed: _pickDateRange,
             ),
             if (_dateRange != null) ...[
@@ -360,9 +360,9 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     bool isActive = false,
   }) {
     return ActionChip(
-      avatar: Icon(icon, size: 16, color: isActive ? AppColors.accentOrange : null),
-      label: Text(label, style: TextStyle(fontSize: 12, color: isActive ? AppColors.accentOrange : null, fontWeight: isActive ? FontWeight.w600 : null)),
-      side: isActive ? BorderSide(color: AppColors.accentOrange) : null,
+      avatar: Icon(icon, size: 16, color: isActive ? AppColors.secondary : null),
+      label: Text(label, style: TextStyle(fontSize: 12, color: isActive ? AppColors.secondary : null, fontWeight: isActive ? FontWeight.w600 : null)),
+      side: isActive ? BorderSide(color: AppColors.secondary) : null,
       onPressed: () {
         showModalBottomSheet(
           context: context,
@@ -376,7 +376,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 const SizedBox(height: 12),
                 ...items.map((item) => ListTile(
                   title: Text(item, style: TextStyle(fontWeight: item == selected ? FontWeight.w700 : FontWeight.w400)),
-                  trailing: item == selected ? const Icon(Icons.check, color: AppColors.accentOrange, size: 20) : null,
+                  trailing: item == selected ? const Icon(Icons.check, color: AppColors.secondary, size: 20) : null,
                   onTap: () {
                     onChanged(item);
                     Navigator.pop(ctx);
@@ -439,7 +439,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       locale: const Locale('ar'),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: AppColors.accentOrange),
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: AppColors.secondary),
         ),
         child: child!,
       ),
@@ -546,7 +546,7 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                         CurrencyFormatter.format(total),
                         style: context.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: AppColors.accentOrange,
+                          color: AppColors.secondary,
                         ),
                       ),
                       if (currency != 'YER')
@@ -626,12 +626,12 @@ class _PurchaseInvoiceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: (isCash ? AppColors.success : AppColors.accentOrange).withOpacity(0.08),
+        color: (isCash ? AppColors.success : AppColors.secondary).withOpacity(0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         isCash ? 'نقداً' : 'آجل',
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: isCash ? AppColors.success : AppColors.accentOrange),
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: isCash ? AppColors.success : AppColors.secondary),
       ),
     );
   }

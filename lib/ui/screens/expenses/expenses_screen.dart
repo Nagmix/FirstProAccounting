@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/helpers/currency_constants.dart';
+import '../../../core/helpers/avatar_helper.dart';
+import '../../../core/helpers/delete_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/datasources/repositories/expense_sub_account_repository.dart';
 import '../../../ui/widgets/empty_state.dart';
@@ -158,86 +161,30 @@ class _ExpensesScreenState extends State<ExpensesScreen>
   // ── Delete sub-account ────────────────────────────────────────
   Future<void> _deleteSubAccount(Map<String, dynamic> account) async {
     final name = account['name'] as String? ?? '';
-    final confirmed = await showDialog<bool>(
+    final confirmed = await DeleteHelper.showDeleteConfirmation(
       context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
-        title: const Text('حذف حساب المصروف'),
-        content: Text('هل أنت متأكد من حذف حساب المصروف "$name"؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
+      entityType: 'حساب المصروف',
+      entityName: name,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await locator<ExpenseSubAccountRepository>()
           .deleteSubAccount(account['id'] as int);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم حذف حساب المصروف "$name"'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        DeleteHelper.showDeleteSuccess(context, 'حساب المصروف', name);
       }
       _loadData();
     }
   }
 
-  // ── Avatar color based on name ────────────────────────────────
-  static const List<Color> _avatarColors = [
-    Color(0xFF1A237E),
-    Color(0xFF0D47A1),
-    Color(0xFF4A148C),
-    Color(0xFFB71C1C),
-    Color(0xFFE65100),
-    Color(0xFF006064),
-    Color(0xFF1B5E20),
-    Color(0xFF33691E),
-  ];
-
-  Color _avatarColor(String name) {
-    final hash = name.codeUnits.fold<int>(0, (prev, e) => prev + e);
-    return _avatarColors[hash % _avatarColors.length];
-  }
-
-  // ignore: unused_element
-  String _currencySymbol(String code) {
-    switch (code) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return r'$';
-      default: return 'ر.ي';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('حسابات المصروفات'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'بحث',
-            onPressed: () {
-              FocusScope.of(context).unfocus();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'تصفية',
-            onPressed: () {
-              // TODO: Implement advanced filter dialog
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             tooltip: 'إضافة حساب',
@@ -270,6 +217,30 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                   ),
                 ),
 
+                // ── Summary bar ───────────────────────────────────────
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isLight ? AppColors.border : AppColors.darkBorder, width: 0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_subAccounts.length} حساب مصروف',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 // ── Sub-accounts list ──────────────────────────────────
                 Expanded(
                   child: TabBarView(
@@ -297,16 +268,20 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                         );
                       }
 
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
+                      return RefreshIndicator(
+                        onRefresh: _loadData,
+                        color: AppColors.primary,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
                           final account = filtered[index];
                           return _ExpenseCard(
                             account: account,
                             balanceCache: _balanceCache,
                             expenseCountCache: _expenseCountCache,
-                            avatarColor: _avatarColor(
+                            avatarColor: AvatarHelper.avatarColor(
                                 account['name'] as String? ?? ''),
                             onTap: () {
                               Navigator.of(context).push(
@@ -319,18 +294,20 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                             onDelete: () => _deleteSubAccount(account),
                           );
                         },
+                        )
                       );
                     }),
                   ),
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddSubAccountSheet,
         tooltip: 'إضافة حساب مصروف',
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('إضافة حساب'),
       ),
     );
   }
@@ -356,13 +333,7 @@ class _ExpenseCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
-  String _currencySymbol(String code) {
-    switch (code) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return r'$';
-      default: return 'ر.ي';
-    }
-  }
+  String _currencySymbol(String code) => CurrencyConstants.currencySymbol(code);
 
   @override
   Widget build(BuildContext context) {
@@ -371,7 +342,6 @@ class _ExpenseCard extends StatelessWidget {
     final id = account['id'] as int;
     final name = account['name'] as String? ?? '';
     final description = account['description'] as String? ?? '';
-    final phone = account['phone'] as String? ?? '';
     final balances = balanceCache[id] ?? {};
     final expenseCount = expenseCountCache[id] ?? 0;
 
@@ -396,178 +366,163 @@ class _ExpenseCard extends StatelessWidget {
                 ? AppColors.textSecondary
                 : AppColors.darkTextSecondary;
 
-    return Card(
+    final balanceAbs = CurrencyFormatter.formatValue(primaryBalance.abs());
+
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: InkWell(
-        onTap: onTap,
+      decoration: BoxDecoration(
+        color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        onLongPress: onDelete,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // ── Avatar ───────────────────────────────────────
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: avatarColor.withOpacity(0.15),
-                child: Text(
-                  name.isNotEmpty ? name[0] : '?',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: avatarColor,
-                    fontWeight: FontWeight.w700,
+        border: Border.all(
+          color: isLight ? AppColors.border.withOpacity(0.5) : AppColors.darkBorder.withOpacity(0.5),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isLight ? 0.04 : 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          onLongPress: onDelete,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // ── Avatar (matches CustomerCard/EmployeeCard style) ────
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [avatarColor, avatarColor.withOpacity(0.7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: avatarColor.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      name.isNotEmpty ? name[0] : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 14),
 
-              // ── Name, description, phone ─────────────────────
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+                // ── Name, description ──────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        if (description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
                           Icon(
-                            Icons.description,
-                            size: 14,
-                            color: isLight
-                                ? AppColors.textHint
-                                : AppColors.darkTextSecondary,
+                            description.isNotEmpty ? Icons.description : Icons.receipt_long,
+                            size: 13,
+                            color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
                           ),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              description,
+                              description.isNotEmpty ? description : '$expenseCount عملية',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: isLight
-                                    ? AppColors.textSecondary
-                                    : AppColors.darkTextSecondary,
+                                color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ] else if (phone.isNotEmpty) ...[
-                          Icon(
-                            Icons.phone,
-                            size: 14,
-                            color: isLight
-                                ? AppColors.textHint
-                                : AppColors.darkTextSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            phone,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isLight
-                                  ? AppColors.textSecondary
-                                  : AppColors.darkTextSecondary,
-                            ),
-                          ),
-                        ] else ...[
-                          Icon(
-                            Icons.receipt_long,
-                            size: 14,
-                            color: isLight
-                                ? AppColors.textHint
-                                : AppColors.darkTextSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$expenseCount عملية',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isLight
-                                  ? AppColors.textSecondary
-                                  : AppColors.darkTextSecondary,
-                            ),
-                          ),
                         ],
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              // ── Balance ──────────────────────────────────────
-              if (balances.isNotEmpty)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${CurrencyFormatter.format(primaryBalance.abs())} ${_currencySymbol(primaryCurrency)}',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: balanceColor,
-                        fontWeight: FontWeight.w700,
-                      ),
+                const SizedBox(width: 8),
+
+                // ── Balance Section (gradient badge) ────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: totalBalance != 0
+                          ? [balanceColor.withOpacity(0.12), balanceColor.withOpacity(0.04)]
+                          : [Colors.grey.withOpacity(0.06), Colors.grey.withOpacity(0.02)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isDebit
-                          ? 'عليه'
-                          : isCredit
-                              ? 'له'
-                              : 'متساوي',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: balanceColor,
-                      ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: totalBalance != 0 ? balanceColor.withOpacity(0.25) : AppColors.border.withOpacity(0.3),
+                      width: 1,
                     ),
-                    if (balances.length > 1) ...[
-                      const SizedBox(height: 2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isDebit ? Icons.trending_up : isCredit ? Icons.trending_down : Icons.remove,
+                        size: 14,
+                        color: totalBalance != 0 ? balanceColor : AppColors.textHint,
+                      ),
+                      const SizedBox(width: 4),
                       Text(
-                        '+${balances.length - 1} عملة',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: isLight
-                              ? AppColors.textHint
-                              : AppColors.darkTextSecondary,
-                          fontSize: 10,
+                        '$balanceAbs ${_currencySymbol(primaryCurrency)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: totalBalance != 0 ? balanceColor : AppColors.textHint,
                         ),
                       ),
                     ],
-                  ],
-                )
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '0.00 ${AppConstants.currency}',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: isLight
-                            ? AppColors.textSecondary
-                            : AppColors.darkTextSecondary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'لا عمليات',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: isLight
-                            ? AppColors.textHint
-                            : AppColors.darkTextSecondary,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              const SizedBox(width: 4),
+                const SizedBox(width: 6),
 
-              // ── Arrow icon ───────────────────────────────────
-              Icon(
-                Icons.arrow_back_ios,
-                size: 16,
-                color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
-              ),
-            ],
+                // ── Arrow icon ──────────────────────────────────
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios,
+                    size: 12,
+                    color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

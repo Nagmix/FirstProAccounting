@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/helpers/currency_constants.dart';
+import '../../../core/helpers/avatar_helper.dart';
+import '../../../core/helpers/delete_helper.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/models/supplier_model.dart';
 import '../../widgets/empty_state.dart';
@@ -37,16 +40,6 @@ class _SuppliersScreenState extends State<SuppliersScreen>
   String _selectedCurrency = 'YER';
   bool _isBalancesLoading = false;
   Map<int, double> _currencyBalances = {};
-
-  /// Currency display info.
-  static const _currencyInfo = {
-    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
-    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
-    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
-  };
-
-  /// Currency filter options.
-  static const _currencyOptions = ['YER', 'SAR', 'USD'];
 
   @override
   void initState() {
@@ -134,26 +127,28 @@ class _SuppliersScreenState extends State<SuppliersScreen>
 
     // Apply search query
     if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery;
+      final q = _searchQuery.toLowerCase();
       filtered = filtered.where((s) {
-        final nameMatch = s.name.contains(q);
-        final phoneMatch = s.phone?.contains(q) ?? false;
+        final nameMatch = s.name.toLowerCase().contains(q);
+        final phoneMatch = s.phone?.toLowerCase().contains(q) ?? false;
         return nameMatch || phoneMatch;
       }).toList();
     }
 
-    // Apply tab filter based on balance and balance_type
+    // Apply tab filter based on currency-specific balance
     switch (tabIndex) {
-      case 1: // مدينون
+      case 1: // مدينون — negative balance (عليه)
         filtered = filtered.where((s) {
-          if (s.balanceType == 'debit' && s.balance > 0) return true;
-          return false;
+          if (s.id == null) return false;
+          final balance = _currencyBalances[s.id] ?? 0.0;
+          return balance < 0;
         }).toList();
         break;
-      case 2: // دائنون
+      case 2: // دائنون — positive balance (له)
         filtered = filtered.where((s) {
-          if (s.balanceType == 'credit' && s.balance > 0) return true;
-          return false;
+          if (s.id == null) return false;
+          final balance = _currencyBalances[s.id] ?? 0.0;
+          return balance > 0;
         }).toList();
         break;
     }
@@ -174,136 +169,25 @@ class _SuppliersScreenState extends State<SuppliersScreen>
 
   // ── Delete supplier ───────────────────────────────────────────
   Future<void> _deleteSupplier(Supplier supplier) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await DeleteHelper.showDeleteConfirmation(
       context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
-        title: const Text('حذف المورد'),
-        content: Text('هل أنت متأكد من حذف المورد "${supplier.name}"؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
+      entityType: 'المورد',
+      entityName: supplier.name,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await locator<SupplierRepository>().deleteSupplier(supplier.id!);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم حذف المورد "${supplier.name}"'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        DeleteHelper.showDeleteSuccess(context, 'المورد', supplier.name);
       }
       _loadSuppliers();
     }
-  }
-
-  // ── Avatar color based on name ────────────────────────────────
-  static const List<Color> _avatarColors = [
-    Color(0xFF1A237E),
-    Color(0xFF0D47A1),
-    Color(0xFF4A148C),
-    Color(0xFFB71C1C),
-    Color(0xFFE65100),
-    Color(0xFF006064),
-    Color(0xFF1B5E20),
-    Color(0xFF33691E),
-  ];
-
-  Color _avatarColor(String name) {
-    final hash = name.codeUnits.fold<int>(0, (prev, e) => prev + e);
-    return _avatarColors[hash % _avatarColors.length];
-  }
-
-  // ── Show currency filter popup ────────────────────────────────
-  void _showCurrencyFilterPopup() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('تصفية حسب العملة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 16),
-              ..._currencyOptions.map((option) {
-                final isSelected = _selectedCurrency == option;
-                final label = _currencyInfo[option]?['label'] ?? option;
-                final symbol = _currencyInfo[option]?['symbol'] ?? '';
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _onCurrencyChanged(option);
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-                        border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.border,
-                          width: isSelected ? 2 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected ? Icons.check_circle : Icons.circle_outlined,
-                            color: isSelected ? AppColors.primary : AppColors.textHint,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              '$label ($option)',
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            symbol,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final currentSymbol = _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
+    final currentSymbol = CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
 
     return Scaffold(
       appBar: AppBar(
@@ -318,7 +202,11 @@ class _SuppliersScreenState extends State<SuppliersScreen>
                 '$currentSymbol $_selectedCurrency',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
               ),
-              onPressed: _showCurrencyFilterPopup,
+              onPressed: () => CurrencyConstants.showCurrencyFilterPopup(
+                context: context,
+                selectedCurrency: _selectedCurrency,
+                onSelected: _onCurrencyChanged,
+              ),
               backgroundColor: AppColors.primary.withOpacity(0.08),
               side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -390,6 +278,16 @@ class _SuppliersScreenState extends State<SuppliersScreen>
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Icon(Icons.calculate, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'الإجمالي: ${CurrencyFormatter.formatValue(_currencyBalances.values.fold(0.0, (sum, b) => sum + b))} $currentSymbol',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -422,16 +320,20 @@ class _SuppliersScreenState extends State<SuppliersScreen>
                         );
                       }
 
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80, top: 2),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
+                      return RefreshIndicator(
+                        onRefresh: _loadSuppliers,
+                        color: AppColors.primary,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80, top: 2),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
                           final supplier = filtered[index];
                           return _SupplierCard(
                             supplier: supplier,
-                            avatarColor: _avatarColor(supplier.name),
+                            avatarColor: AvatarHelper.avatarColor(supplier.name),
                             displayBalance: _currencyBalances[supplier.id] ?? 0.0,
-                            currencySymbol: _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
+                            currencySymbol: CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
                             isLight: isLight,
                             onTap: () {
                               Navigator.of(context).push(
@@ -443,6 +345,7 @@ class _SuppliersScreenState extends State<SuppliersScreen>
                             onDelete: () => _deleteSupplier(supplier),
                           );
                         },
+                        )
                       );
                     }),
                   ),

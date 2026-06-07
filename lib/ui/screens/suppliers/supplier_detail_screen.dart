@@ -152,7 +152,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
         //   Sale return → we owe more → credit (له)
         if (type == 'purchase' && !isReturn) {
           effectiveType = 'purchase'; typeAr = 'فاتورة مشتريات'; icon = Icons.shopping_cart;
-          color = AppColors.accentOrange; credit = total; filterKey = 'purchases';
+          color = AppColors.secondary; credit = total; filterKey = 'purchases';
         } else if (type == 'purchase' && isReturn) {
           effectiveType = 'purchase_return'; typeAr = 'مرتجع مشتريات'; icon = Icons.keyboard_return;
           color = AppColors.accentPink; debit = total; filterKey = 'returns';
@@ -245,7 +245,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
             typeAr = 'قيد متعدد'; icon = Icons.dynamic_feed; color = AppColors.accentBlue;
             debit = totalAmount; filterKey = 'compound_entry'; break;
           case 'outgoing_transfer':
-            typeAr = 'حوالة صادرة'; icon = Icons.send; color = AppColors.accentOrange;
+            typeAr = 'حوالة صادرة'; icon = Icons.send; color = AppColors.secondary;
             debit = totalAmount; filterKey = 'outgoing_transfer'; break;
           case 'incoming_transfer':
             typeAr = 'حوالة وارده'; icon = Icons.call_received; color = AppColors.accentBlue;
@@ -395,7 +395,17 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
       filtered = filtered.reversed.toList();
     }
 
-    // Calculate totals from filtered movements (running_balance already computed in _loadMovements)
+    // Recalculate running balance for filtered movements
+    final currencyRunBal = <String, double>{};
+    for (final m in filtered) {
+      final currency = m['currency'] as String? ?? 'YER';
+      final debit = MoneyHelper.readMoney(m['debit']);
+      final credit = MoneyHelper.readMoney(m['credit']);
+      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
+      m['running_balance'] = currencyRunBal[currency];
+    }
+
+    // Calculate totals from filtered movements
     double totalDebit = 0.0, totalCredit = 0.0;
     for (final m in filtered) {
       totalDebit += MoneyHelper.readMoney(m['debit']);
@@ -476,7 +486,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                       label: Text(_filterTabs[index].label),
                       selected: isSelected,
                       onSelected: (_) {
-                        setSheetState(() => _selectedFilterIndex = index);
+                        Navigator.pop(ctx);
                         setState(() => _selectedFilterIndex = index);
                         _applyFilters();
                       },
@@ -492,14 +502,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                     );
                   }),
                 ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text('تطبيق'),
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -863,13 +866,13 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
               children: [
                 Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textHint),
                 const SizedBox(width: 8),
-                _buildPeriodChip('يومي', 0),
+                _buildPeriodChip('اليوم', 0),
                 const SizedBox(width: 6),
-                _buildPeriodChip('شهري', 1),
+                _buildPeriodChip('هذا الشهر', 1),
                 const SizedBox(width: 6),
-                _buildPeriodChip('سنوي', 2),
+                _buildPeriodChip('هذه السنة', 2),
                 const SizedBox(width: 6),
-                _buildPeriodChip('الجميع', 3),
+                _buildPeriodChip('الكل', 3),
               ],
             ),
           ),
@@ -1106,10 +1109,14 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                           ],
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80, top: 4),
-                        itemCount: _filteredMovements.length,
-                        itemBuilder: (context, index) {
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        color: AppColors.primary,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80, top: 4),
+                          itemCount: _filteredMovements.length,
+                          itemBuilder: (context, index) {
                           final m = _filteredMovements[index];
                           return _MovementCard(
                             movement: m,
@@ -1120,6 +1127,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                             },
                           );
                         },
+                        )
                       ),
           ),
         ],

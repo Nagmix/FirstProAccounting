@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/voucher_repository.dart';
@@ -148,7 +149,7 @@ class _VouchersScreenState extends State<VouchersScreen>
       case 'settlement':
         return AppColors.info;
       case 'compound':
-        return AppColors.accentOrange;
+        return AppColors.secondary;
       case 'inventory':
         return Colors.brown;
       default:
@@ -195,7 +196,10 @@ class _VouchersScreenState extends State<VouchersScreen>
 
     final number = voucher['voucher_number'] as String? ?? '';
     final type = voucher['voucher_type'] as String? ?? 'receipt';
-    final date = voucher['date'] as String? ?? '';
+    final dateStr = voucher['date'] as String? ?? '';
+    final formattedDate = dateStr.isNotEmpty
+        ? DateFormatter.formatDateTime(DateTime.parse(dateStr))
+        : '';
     final totalAmount = MoneyHelper.readMoney(voucher['total_amount']);
     final currency = voucher['currency'] as String? ?? 'YER';
     final description = voucher['description'] as String? ?? '';
@@ -305,7 +309,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                 ),
                 child: Column(
                   children: [
-                    _buildDetailRow(theme, 'التاريخ', date),
+                    _buildDetailRow(theme, 'التاريخ', formattedDate),
                     if (description.isNotEmpty) _buildDetailRow(theme, 'الوصف', description),
                     _buildDetailRow(theme, 'العملة', currency),
                     _buildDetailRow(theme, 'المبلغ الإجمالي', CurrencyFormatter.format(totalAmount, symbol: currencySymbol)),
@@ -479,7 +483,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                 theme: theme,
                 isDark: isDark,
                 icon: Icons.compare_arrows,
-                color: AppColors.accentOrange,
+                color: AppColors.secondary,
                 title: 'سند تسوية مزدوج',
                 subtitle: 'قيد متعدد البنود بين حسابات شجرة المحاسبة',
                 onTap: () {
@@ -616,10 +620,11 @@ class _VouchersScreenState extends State<VouchersScreen>
                   ),
                 ],
               ),
-        floatingActionButton: FloatingActionButton(
+        floatingActionButton: FloatingActionButton.extended(
           onPressed: _showCreateMenu,
           backgroundColor: AppColors.primary,
-          child: const Icon(Icons.add, color: Colors.white),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text('إضافة سند', style: TextStyle(color: Colors.white)),
         ),
       ),
     );
@@ -697,7 +702,10 @@ class _VouchersScreenState extends State<VouchersScreen>
   Widget _buildVoucherCard(Map<String, dynamic> voucher, ThemeData theme, bool isDark) {
     final number = voucher['voucher_number'] as String? ?? '';
     final type = voucher['voucher_type'] as String? ?? 'receipt';
-    final date = voucher['date'] as String? ?? '';
+    final dateStr = voucher['date'] as String? ?? '';
+    final formattedDate = dateStr.isNotEmpty
+        ? DateFormatter.formatDateTime(DateTime.parse(dateStr))
+        : '';
     final totalAmount = MoneyHelper.readMoney(voucher['total_amount']);
     final currency = voucher['currency'] as String? ?? 'YER';
     final description = voucher['description'] as String? ?? '';
@@ -774,7 +782,7 @@ class _VouchersScreenState extends State<VouchersScreen>
                       children: [
                         Icon(Icons.calendar_today, size: 12, color: AppColors.textHint),
                         const SizedBox(width: 4),
-                        Text(date, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                        Text(formattedDate, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
                         if (description.isNotEmpty) ...[
                           const SizedBox(width: 8),
                           Expanded(

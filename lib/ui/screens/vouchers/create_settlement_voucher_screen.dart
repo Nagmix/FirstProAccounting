@@ -47,7 +47,7 @@ class _CreateSettlementVoucherScreenState
   int? _creditAccountId;
   final _amountController = TextEditingController();
 
-  Color get _accentColor => widget.isCompound ? AppColors.accentOrange : AppColors.info;
+  Color get _accentColor => widget.isCompound ? AppColors.secondary : AppColors.info;
 
   String get _title => widget.isCompound ? 'سند تسوية مزدوج' : 'سند تسوية';
   String get _subtitle => widget.isCompound

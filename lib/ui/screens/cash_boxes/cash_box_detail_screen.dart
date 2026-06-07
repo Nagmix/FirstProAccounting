@@ -4,6 +4,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/account_statement_pdf_generator.dart';
+import '../../../core/utils/excel_exporter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/journal_service.dart';
@@ -208,6 +210,16 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       filtered = filtered.reversed.toList();
     }
 
+    // Recalculate running balance for filtered movements
+    final currencyRunBal = <String, double>{};
+    for (final m in filtered) {
+      final currency = m['currency'] as String? ?? 'YER';
+      final debit = MoneyHelper.readMoney(m['debit']);
+      final credit = MoneyHelper.readMoney(m['credit']);
+      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
+      m['running_balance'] = currencyRunBal[currency];
+    }
+
     // Calculate totals from filtered movements
     double totalDebit = 0.0, totalCredit = 0.0;
     for (final m in filtered) {
@@ -313,7 +325,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                       label: Text(_filterTabs[index].label),
                       selected: isSelected,
                       onSelected: (_) {
-                        setSheetState(() => _selectedFilterIndex = index);
+                        Navigator.pop(ctx);
                         setState(() => _selectedFilterIndex = index);
                         _applyFilters();
                       },
@@ -329,14 +341,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     );
                   }),
                 ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text('تطبيق'),
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -550,6 +555,79 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
     descriptionController.dispose();
   }
 
+  // ── Print Report ─────────────────────────────────────────────
+  void _printReport() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('خيارات الطباعة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
+                ),
+                title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('إنشاء ملف PDF لكشف حساب الصندوق'),
+                trailing: const Icon(Icons.arrow_back_ios, size: 16),
+                onTap: () { Navigator.pop(ctx); _generatePdfStatement(); },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _generatePdfStatement() async {
+    final cashBox = _freshCashBox ?? widget.cashBox;
+    try {
+      await AccountStatementPdfGenerator.printAccountStatement(
+        entityName: cashBox.name,
+        entityType: 'cash_box',
+        movements: _filteredMovements,
+        totalDebit: _totalDebit,
+        totalCredit: _totalCredit,
+        netBalance: _netBalance,
+        balanceLabel: _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
+        currency: _selectedCurrency ?? cashBox.currency,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء إنشاء كشف الحساب'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  void _exportToExcel() async {
+    final cashBox = _freshCashBox ?? widget.cashBox;
+    try {
+      await ExcelExporter.exportAccountStatementToExcel(
+        entityName: cashBox.name,
+        entityType: 'صندوق',
+        movements: _filteredMovements,
+        totalDebit: _totalDebit,
+        totalCredit: _totalCredit,
+        netBalance: _netBalance,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -561,16 +639,14 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          // Modern print button (placeholder — no print/export for cash boxes yet)
+          // Modern print button
           Container(
             margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
             child: Material(
               color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
               child: InkWell(
-                onTap: () {
-                  // TODO: implement cash box print report
-                },
+                onTap: _printReport,
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -586,16 +662,14 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
               ),
             ),
           ),
-          // Modern export button (placeholder)
+          // Modern export button
           Container(
             margin: const EdgeInsets.only(left: 4, right: 8, top: 8, bottom: 8),
             child: Material(
               color: AppColors.success.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
               child: InkWell(
-                onTap: () {
-                  // TODO: implement cash box export
-                },
+                onTap: _exportToExcel,
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -738,13 +812,13 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
               children: [
                 Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textHint),
                 const SizedBox(width: 8),
-                _buildPeriodChip('يومي', 0),
+                _buildPeriodChip('اليوم', 0),
                 const SizedBox(width: 6),
-                _buildPeriodChip('شهري', 1),
+                _buildPeriodChip('هذا الشهر', 1),
                 const SizedBox(width: 6),
-                _buildPeriodChip('سنوي', 2),
+                _buildPeriodChip('هذه السنة', 2),
                 const SizedBox(width: 6),
-                _buildPeriodChip('الجميع', 3),
+                _buildPeriodChip('الكل', 3),
               ],
             ),
           ),
@@ -981,10 +1055,14 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           ],
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80, top: 4),
-                        itemCount: _filteredMovements.length,
-                        itemBuilder: (context, index) {
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        color: AppColors.primary,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80, top: 4),
+                          itemCount: _filteredMovements.length,
+                          itemBuilder: (context, index) {
                           final m = _filteredMovements[index];
                           return _MovementCard(
                             movement: m,
@@ -992,6 +1070,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                             isLight: isLight,
                           );
                         },
+                        )
                       ),
           ),
         ],

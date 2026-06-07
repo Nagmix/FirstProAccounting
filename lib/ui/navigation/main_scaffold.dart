@@ -100,10 +100,10 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     _DrawerMenuItem(icon: Icons.inventory_2, label: 'طلبات البيع', route: AppConstants.salesOrders, color: Colors.indigo),
     _DrawerMenuItem(icon: Icons.history, label: 'الورديات', route: AppConstants.shifts, color: Colors.brown),
     _DrawerMenuItem(icon: Icons.people, label: 'قائمة العملاء', route: AppConstants.customers, color: AppColors.primaryLight),
-    _DrawerMenuItem(icon: Icons.inventory_2, label: 'المنتجات والمخزون', route: AppConstants.products, color: AppColors.accentOrange),
+    _DrawerMenuItem(icon: Icons.inventory_2, label: 'المنتجات والمخزون', route: AppConstants.products, color: AppColors.secondary),
     _DrawerMenuItem(icon: Icons.attach_money, label: 'المصروفات', route: AppConstants.expenses, color: AppColors.error),
     _DrawerMenuItem(icon: Icons.person, label: 'الموظفين', route: AppConstants.employees, color: AppColors.accentBlue),
-    _DrawerMenuItem(icon: Icons.account_balance_wallet, label: 'الصناديق والبنوك', route: AppConstants.cashBoxes, color: AppColors.accentGreen),
+    _DrawerMenuItem(icon: Icons.account_balance_wallet, label: 'الصناديق والبنوك', route: AppConstants.cashBoxes, color: AppColors.success),
     // ── New: Currency Exchange, Cash Transfers, Debt Tracking ─────
     _DrawerMenuItem(icon: Icons.swap_horiz, label: 'مصارفة عملات', route: AppConstants.currencyExchange, color: Color(0xFF00ACC1)),
     _DrawerMenuItem(icon: Icons.swap_horiz, label: 'تحويل بين الصناديق', route: AppConstants.cashTransfers, color: Color(0xFF1E88E5)),
@@ -171,12 +171,26 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
               ),
               actions: [
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('هذه الميزة قيد التطوير'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.chat),
                   tooltip: 'واتساب',
                 ),
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('هذه الميزة قيد التطوير'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.notifications),
                   tooltip: 'الإشعارات',
                 ),
@@ -263,7 +277,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                       _QuickAddOption(
                         icon: Icons.person_add,
                         label: 'عميل جديد',
-                        color: AppColors.accentGreen,
+                        color: AppColors.success,
                         onTap: () {
                           Navigator.pop(context);
                           AppRouter.push(context, AppConstants.addCustomer);
@@ -273,7 +287,7 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                       _QuickAddOption(
                         icon: Icons.inventory_2,
                         label: 'منتج جديد',
-                        color: AppColors.accentOrange,
+                        color: AppColors.secondary,
                         onTap: () {
                           Navigator.pop(context);
                           AppRouter.push(context, AppConstants.addProduct);
@@ -493,7 +507,7 @@ class _MoreTab extends StatelessWidget {
             title: 'نقطة البيع',
             subtitle: 'واجهة بيع سريعة',
             color: AppColors.accentBlue,
-            onTap: () => Navigator.pushNamed(context, AppConstants.pos),
+            onTap: () => AppRouter.push(context, AppConstants.pos),
           ),
           _MoreTile(
             icon: Icons.description,
@@ -525,36 +539,36 @@ class _MoreTab extends StatelessWidget {
             icon: Icons.inventory_2,
             title: 'المنتجات والمخزون',
             subtitle: 'إدارة الأصناف والمخازن',
-            color: AppColors.accentOrange,
-            onTap: () => Navigator.pushNamed(context, AppConstants.products),
+            color: AppColors.secondary,
+            onTap: () => AppRouter.push(context, AppConstants.products),
           ),
           _MoreTile(
             icon: Icons.attach_money,
             title: 'المصروفات',
             subtitle: 'إدارة المصروفات والمصاريف',
             color: AppColors.error,
-            onTap: () => Navigator.pushNamed(context, AppConstants.expenses),
+            onTap: () => AppRouter.push(context, AppConstants.expenses),
           ),
           _MoreTile(
             icon: Icons.person,
             title: 'الموظفين',
             subtitle: 'إدارة الموظفين والأرصدة',
             color: AppColors.accentBlue,
-            onTap: () => Navigator.pushNamed(context, AppConstants.employees),
+            onTap: () => AppRouter.push(context, AppConstants.employees),
           ),
           _MoreTile(
             icon: Icons.local_shipping,
             title: 'الموردين',
             subtitle: 'إدارة الموردين وأرصدتهم',
             color: AppColors.info,
-            onTap: () => Navigator.pushNamed(context, AppConstants.suppliers),
+            onTap: () => AppRouter.push(context, AppConstants.suppliers),
           ),
           _MoreTile(
             icon: Icons.warehouse,
             title: 'المستودعات',
             subtitle: 'إدارة المستودعات والمخازن',
             color: AppColors.secondaryDark,
-            onTap: () => Navigator.pushNamed(context, AppConstants.warehouses),
+            onTap: () => AppRouter.push(context, AppConstants.warehouses),
           ),
 
           // ── Section: المالية والحسابات ──────────────────────────
@@ -565,8 +579,8 @@ class _MoreTab extends StatelessWidget {
             icon: Icons.account_balance_wallet,
             title: 'الصناديق والبنوك',
             subtitle: 'إدارة الصناديق والبنوك والأرصدة',
-            color: AppColors.accentGreen,
-            onTap: () => Navigator.pushNamed(context, AppConstants.cashBoxes),
+            color: AppColors.success,
+            onTap: () => AppRouter.push(context, AppConstants.cashBoxes),
           ),
           // ── New: Currency Exchange ────────────────────────────────
           _MoreTile(
@@ -611,28 +625,28 @@ class _MoreTab extends StatelessWidget {
             title: 'دليل الحسابات',
             subtitle: 'شجرة الحسابات المحاسبية',
             color: AppColors.primary,
-            onTap: () => Navigator.pushNamed(context, AppConstants.chartOfAccounts),
+            onTap: () => AppRouter.push(context, AppConstants.chartOfAccounts),
           ),
           _MoreTile(
             icon: Icons.attach_money,
             title: 'إدارة العملات',
             subtitle: 'العملات وأسعار الصرف',
             color: AppColors.success,
-            onTap: () => Navigator.pushNamed(context, AppConstants.currencies),
+            onTap: () => AppRouter.push(context, AppConstants.currencies),
           ),
           _MoreTile(
             icon: Icons.bar_chart,
             title: 'التقارير',
             subtitle: 'تقارير المبيعات والمشتريات',
             color: AppColors.primaryLight,
-            onTap: () => Navigator.pushNamed(context, AppConstants.reports),
+            onTap: () => AppRouter.push(context, AppConstants.reports),
           ),
           _MoreTile(
             icon: Icons.show_chart,
             title: 'الإحصائيات',
             subtitle: 'إحصائيات شاملة',
             color: const Color(0xFF7B1FA2),
-            onTap: () => Navigator.pushNamed(context, AppConstants.statistics),
+            onTap: () => AppRouter.push(context, AppConstants.statistics),
           ),
           _MoreTile(
             icon: Icons.history,
@@ -651,14 +665,14 @@ class _MoreTab extends StatelessWidget {
             title: 'الإعدادات',
             subtitle: 'تخصيص التطبيق',
             color: AppColors.textSecondary,
-            onTap: () => Navigator.pushNamed(context, AppConstants.settings),
+            onTap: () => AppRouter.push(context, AppConstants.settings),
           ),
           _MoreTile(
             icon: Icons.headset,
             title: 'الدعم الفني',
             subtitle: 'الشكاوى والملاحظات',
             color: AppColors.warning,
-            onTap: () => Navigator.pushNamed(context, AppConstants.support),
+            onTap: () => AppRouter.push(context, AppConstants.support),
           ),
 
           const Divider(height: 32),

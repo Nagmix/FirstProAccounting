@@ -21,8 +21,6 @@ class AppColors {
   // ── Accent Colors ────────────────────────────────────────────────
   static const Color accentBlue = Color(0xFF87A0E5);
   static const Color accentPink = Color(0xFFF56E98);
-  static const Color accentOrange = Color(0xFFF1B440);
-  static const Color accentGreen = Color(0xFF4CAF50);
   static const Color accentPurple = Color(0xFF9C27B0);
 
   // ── Light theme surfaces ─────────────────────────────────────────
@@ -86,11 +84,11 @@ class AppColors {
 
   // ── Chart / Data Visualization Colors ────────────────────────────
   static const List<Color> chartColors = [
-    Color(0xFF87A0E5),
-    Color(0xFFF56E98),
-    Color(0xFFF1B440),
-    Color(0xFF4CAF50),
-    Color(0xFF2633C5),
-    Color(0xFFFF9800),
+    accentBlue,
+    accentPink,
+    secondary,
+    success,
+    primary,
+    warning,
   ];
 }

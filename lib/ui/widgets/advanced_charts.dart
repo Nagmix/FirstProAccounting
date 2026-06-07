@@ -178,8 +178,8 @@ class SalesByCategoryPieChart extends StatelessWidget {
   static const _chartColors = [
     AppColors.accentBlue,
     AppColors.accentPink,
-    AppColors.accentGreen,
-    AppColors.accentOrange,
+    AppColors.success,
+    AppColors.secondary,
     AppColors.warning,
     AppColors.info,
     AppColors.primary,

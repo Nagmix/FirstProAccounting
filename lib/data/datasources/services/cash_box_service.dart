@@ -326,7 +326,7 @@ class CashBoxService {
           'id': 'e_${e['id']}', 'date': dateStr,
           'type': isSource ? 'exchange_out' : 'exchange_in',
           'type_ar': isSource ? 'صرافة (صادر)' : 'صرافة (وارد)',
-          'filter_key': 'exchange', 'icon': Icons.currency_exchange, 'color': AppColors.accentOrange,
+          'filter_key': 'exchange', 'icon': Icons.currency_exchange, 'color': AppColors.secondary,
           'description': 'صرافة: $fromCurrency → $toCurrency',
           'debit': isSource ? amount : 0.0, 'credit': isSource ? 0.0 : amount,
           'currency': curr, 'source': 'exchange', 'voucher_type': null,
@@ -368,7 +368,7 @@ class CashBoxService {
           'id': 'i_${inv['id']}', 'date': dateStr, 'type': type, 'type_ar': typeAr,
           'filter_key': filterKey,
           'icon': type == 'sale' ? Icons.receipt_long : Icons.shopping_cart,
-          'color': type == 'sale' ? AppColors.primary : AppColors.accentOrange,
+          'color': type == 'sale' ? AppColors.primary : AppColors.secondary,
           'description': '$typeAr - ${inv['invoice_number'] ?? inv['id'] ?? ''}',
           'debit': debit, 'credit': credit, 'currency': curr, 'source': 'invoice', 'voucher_type': null,
         });

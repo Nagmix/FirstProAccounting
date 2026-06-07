@@ -257,9 +257,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
               const SizedBox(width: 8),
               _buildStatChip(theme, isDark, Icons.pie_chart, 'الحسابات', '$_totalAccounts', AppColors.accentBlue),
               const SizedBox(width: 8),
-              _buildStatChip(theme, isDark, Icons.receipt, 'الفواتير', '$_totalInvoices', AppColors.accentGreen),
+              _buildStatChip(theme, isDark, Icons.receipt, 'الفواتير', '$_totalInvoices', AppColors.success),
               const SizedBox(width: 8),
-              _buildStatChip(theme, isDark, Icons.attach_money, 'المصروفات', '$_totalExpenses', AppColors.accentOrange),
+              _buildStatChip(theme, isDark, Icons.attach_money, 'المصروفات', '$_totalExpenses', AppColors.secondary),
             ],
           ),
         ],
@@ -375,8 +375,8 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       'ASSET': AppColors.accentBlue,
       'LIABILITY': AppColors.accentPink,
       'EQUITY': AppColors.accentPurple,
-      'COST': AppColors.accentOrange,
-      'REVENUE': AppColors.accentGreen,
+      'COST': AppColors.secondary,
+      'REVENUE': AppColors.success,
       'EXPENSE': AppColors.error,
     };
 

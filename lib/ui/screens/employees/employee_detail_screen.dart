@@ -348,6 +348,16 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
       filtered = filtered.reversed.toList();
     }
 
+    // Recalculate running balance for filtered movements
+    final currencyRunBal = <String, double>{};
+    for (final m in filtered) {
+      final currency = m['currency'] as String? ?? 'YER';
+      final debit = MoneyHelper.readMoney(m['debit']);
+      final credit = MoneyHelper.readMoney(m['credit']);
+      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
+      m['running_balance'] = currencyRunBal[currency];
+    }
+
     // Calculate totals from filtered movements
     double totalDebit = 0.0, totalCredit = 0.0;
     for (final m in filtered) {
@@ -429,7 +439,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
                       label: Text(_filterTabs[index].label),
                       selected: isSelected,
                       onSelected: (_) {
-                        setSheetState(() => _selectedFilterIndex = index);
+                        Navigator.pop(ctx);
                         setState(() => _selectedFilterIndex = index);
                         _applyFilters();
                       },
@@ -445,14 +455,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
                     );
                   }),
                 ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text('تطبيق'),
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -881,13 +884,13 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
               children: [
                 Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textHint),
                 const SizedBox(width: 8),
-                _buildPeriodChip('يومي', 0),
+                _buildPeriodChip('اليوم', 0),
                 const SizedBox(width: 6),
-                _buildPeriodChip('شهري', 1),
+                _buildPeriodChip('هذا الشهر', 1),
                 const SizedBox(width: 6),
-                _buildPeriodChip('سنوي', 2),
+                _buildPeriodChip('هذه السنة', 2),
                 const SizedBox(width: 6),
-                _buildPeriodChip('الجميع', 3),
+                _buildPeriodChip('الكل', 3),
               ],
             ),
           ),
@@ -1124,10 +1127,14 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
                           ],
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80, top: 4),
-                        itemCount: _filteredMovements.length,
-                        itemBuilder: (context, index) {
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        color: AppColors.primary,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80, top: 4),
+                          itemCount: _filteredMovements.length,
+                          itemBuilder: (context, index) {
                           final m = _filteredMovements[index];
                           return _MovementCard(
                             movement: m,
@@ -1135,6 +1142,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
                             isLight: isLight,
                           );
                         },
+                        )
                       ),
           ),
         ],

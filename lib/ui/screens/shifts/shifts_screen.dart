@@ -224,7 +224,7 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                 icon: Icons.attach_money,
                 label: 'إجمالي المبيعات',
                 value: CurrencyFormatter.formatCompactWithSymbol(_totalSalesAll),
-                color: AppColors.accentGreen,
+                color: AppColors.success,
               ),
             ],
           ),

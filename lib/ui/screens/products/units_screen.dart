@@ -521,7 +521,7 @@ class _UnitCard extends StatelessWidget {
   Color get _typeColor {
     switch (unit.unitType) {
       case 'count': return AppColors.primary;
-      case 'weight': return AppColors.accentOrange;
+      case 'weight': return AppColors.secondary;
       case 'liquid': return AppColors.info;
       case 'packaging': return AppColors.warning;
       case 'pharmacy': return AppColors.accentPink;

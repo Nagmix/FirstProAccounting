@@ -634,12 +634,12 @@ class _SalesInvoiceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: (isCash ? AppColors.success : AppColors.accentOrange).withOpacity(0.08),
+        color: (isCash ? AppColors.success : AppColors.secondary).withOpacity(0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         isCash ? 'نقداً' : 'آجل',
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: isCash ? AppColors.success : AppColors.accentOrange),
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: isCash ? AppColors.success : AppColors.secondary),
       ),
     );
   }

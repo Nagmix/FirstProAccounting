@@ -531,11 +531,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildGridRow(_ActionItem a, _ActionItem b, _ActionItem c, bool isDark) {
     return Row(
       children: [
-        Expanded(child: a.icon != null ? _GridActionCard(item: a, isDark: isDark, onTap: () => _navigateTo(a.route)) : const SizedBox()),
+        Expanded(child: a.icon != null ? _GridActionCard(item: a, isDark: isDark, onTap: () => _navigateTo(a.route)) : const SizedBox.shrink()),
         SizedBox(width: _kColSpacing),
-        Expanded(child: b.icon != null ? _GridActionCard(item: b, isDark: isDark, onTap: () => _navigateTo(b.route)) : const SizedBox()),
+        Expanded(child: b.icon != null ? _GridActionCard(item: b, isDark: isDark, onTap: () => _navigateTo(b.route)) : const SizedBox.shrink()),
         SizedBox(width: _kColSpacing),
-        Expanded(child: c.icon != null ? _GridActionCard(item: c, isDark: isDark, onTap: () => _navigateTo(c.route)) : const SizedBox()),
+        Expanded(child: c.icon != null ? _GridActionCard(item: c, isDark: isDark, onTap: () => _navigateTo(c.route)) : const SizedBox.shrink()),
       ],
     );
   }
@@ -833,6 +833,9 @@ class _GridActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // BUG-004 fix: never render a clickable card for placeholder items
+    if (item.icon == null) return const SizedBox.shrink();
+
     final theme = Theme.of(context);
     final effectiveBg = item.bgColor ?? item.color.withOpacity(0.1);
 

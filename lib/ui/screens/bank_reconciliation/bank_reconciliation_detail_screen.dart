@@ -443,7 +443,7 @@ class _BankReconciliationDetailScreenState
                                 icon: const Icon(Icons.add, size: 18),
                                 label: const Text('إضافة بند بنكي'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.accentGreen,
+                                  backgroundColor: AppColors.success,
                                   foregroundColor: Colors.white,
                                 ),
                               ),

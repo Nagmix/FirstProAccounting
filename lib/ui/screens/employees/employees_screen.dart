@@ -6,6 +6,9 @@ import '../../../core/utils/money_helper.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/helpers/currency_constants.dart';
+import '../../../core/helpers/avatar_helper.dart';
+import '../../../core/helpers/delete_helper.dart';
 import '../../../data/datasources/repositories/employee_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
 import '../../widgets/empty_state.dart';
@@ -39,16 +42,6 @@ class _EmployeesScreenState extends State<EmployeesScreen>
   String _selectedCurrency = 'YER';
   bool _isBalancesLoading = false;
   Map<int, double> _currencyBalances = {};
-
-  /// Currency display info.
-  static const _currencyInfo = {
-    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
-    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
-    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
-  };
-
-  /// Currency filter options.
-  static const _currencyOptions = ['YER', 'SAR', 'USD'];
 
   @override
   void initState() {
@@ -191,137 +184,26 @@ class _EmployeesScreenState extends State<EmployeesScreen>
   // ── Delete employee ───────────────────────────────────────────
   Future<void> _deleteEmployee(Map<String, dynamic> employee) async {
     final name = employee['name'] as String? ?? '';
-    final confirmed = await showDialog<bool>(
+    final confirmed = await DeleteHelper.showDeleteConfirmation(
       context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
-        title: const Text('حذف الموظف'),
-        content: Text('هل أنت متأكد من حذف الموظف "$name"؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
+      entityType: 'الموظف',
+      entityName: name,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await locator<ReferenceDataRepository>()
           .deleteEmployee(employee['id'] as int);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم حذف الموظف "$name"'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        DeleteHelper.showDeleteSuccess(context, 'الموظف', name);
       }
       _loadEmployees();
     }
-  }
-
-  // ── Avatar color based on name ────────────────────────────────
-  static const List<Color> _avatarColors = [
-    Color(0xFF1A237E),
-    Color(0xFF0D47A1),
-    Color(0xFF4A148C),
-    Color(0xFFB71C1C),
-    Color(0xFFE65100),
-    Color(0xFF006064),
-    Color(0xFF1B5E20),
-    Color(0xFF33691E),
-  ];
-
-  Color _avatarColor(String name) {
-    final hash = name.codeUnits.fold<int>(0, (prev, e) => prev + e);
-    return _avatarColors[hash % _avatarColors.length];
-  }
-
-  // ── Show currency filter popup ────────────────────────────────
-  void _showCurrencyFilterPopup() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('تصفية حسب العملة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 16),
-              ..._currencyOptions.map((option) {
-                final isSelected = _selectedCurrency == option;
-                final label = _currencyInfo[option]?['label'] ?? option;
-                final symbol = _currencyInfo[option]?['symbol'] ?? '';
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _onCurrencyChanged(option);
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-                        border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.border,
-                          width: isSelected ? 2 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected ? Icons.check_circle : Icons.circle_outlined,
-                            color: isSelected ? AppColors.primary : AppColors.textHint,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              '$label ($option)',
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            symbol,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final currentSymbol = _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
+    final currentSymbol = CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
 
     return Scaffold(
       appBar: AppBar(
@@ -336,7 +218,11 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                 '$currentSymbol $_selectedCurrency',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
               ),
-              onPressed: _showCurrencyFilterPopup,
+              onPressed: () => CurrencyConstants.showCurrencyFilterPopup(
+                context: context,
+                selectedCurrency: _selectedCurrency,
+                onSelected: _onCurrencyChanged,
+              ),
               backgroundColor: AppColors.primary.withOpacity(0.08),
               side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -408,6 +294,16 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Icon(Icons.calculate, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'الإجمالي: ${CurrencyFormatter.formatValue(_currencyBalances.values.fold(0.0, (sum, b) => sum + b))} $currentSymbol',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -440,18 +336,22 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                         );
                       }
 
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80, top: 2),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
+                      return RefreshIndicator(
+                        onRefresh: _loadEmployees,
+                        color: AppColors.primary,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80, top: 2),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
                           final employee = filtered[index];
                           final id = employee['id'] as int?;
                           final displayBalance = _currencyBalances[id] ?? 0.0;
                           return _EmployeeCard(
                             employee: employee,
-                            avatarColor: _avatarColor(employee['name'] as String? ?? ''),
+                            avatarColor: AvatarHelper.avatarColor(employee['name'] as String? ?? ''),
                             displayBalance: displayBalance,
-                            currencySymbol: _currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
+                            currencySymbol: CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
                             isLight: isLight,
                             onTap: () {
                               Navigator.of(context).push(
@@ -463,6 +363,7 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                             onDelete: () => _deleteEmployee(employee),
                           );
                         },
+                        )
                       );
                     }),
                   ),

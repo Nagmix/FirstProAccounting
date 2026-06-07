@@ -238,7 +238,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                             final cat = categories[index];
                             return ListTile(
                               dense: true,
-                              leading: const Icon(Icons.folder, size: 20, color: AppColors.accentOrange),
+                              leading: const Icon(Icons.folder, size: 20, color: AppColors.secondary),
                               title: Text(cat['name'] as String),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete, size: 18, color: AppColors.error),

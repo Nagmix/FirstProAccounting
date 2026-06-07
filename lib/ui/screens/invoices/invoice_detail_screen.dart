@@ -199,7 +199,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       decoration: BoxDecoration(
         gradient: _isSale
             ? LinearGradient(colors: [AppColors.primary, AppColors.primaryLight], begin: Alignment.topRight, end: Alignment.bottomLeft)
-            : LinearGradient(colors: [AppColors.accentOrange, const Color(0xFFFF8F00)], begin: Alignment.topRight, end: Alignment.bottomLeft),
+            : LinearGradient(colors: [AppColors.secondary, const Color(0xFFFF8F00)], begin: Alignment.topRight, end: Alignment.bottomLeft),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(24),
           bottomRight: Radius.circular(24),
@@ -681,7 +681,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
           ],
           const Divider(height: 24),
           _summaryRow('الإجمالي', CurrencyFormatter.format(total),
-              valueStyle: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: _isSale ? AppColors.primary : AppColors.accentOrange)),
+              valueStyle: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: _isSale ? AppColors.primary : AppColors.secondary)),
           const SizedBox(height: 8),
           _summaryRow('المدفوع', CurrencyFormatter.format(paidAmount), valueColor: AppColors.success),
           const SizedBox(height: 8),
@@ -792,7 +792,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                   label: const Text('تسجيل دفعة'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: _isSale ? AppColors.primary : AppColors.accentOrange),
+                    side: BorderSide(color: _isSale ? AppColors.primary : AppColors.secondary),
                   ),
                 ),
               ),

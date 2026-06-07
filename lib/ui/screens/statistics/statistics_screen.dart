@@ -461,9 +461,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
             title: 'رصيد الصندوق',
             value: _cashBalance,
             icon: Icons.account_balance_wallet,
-            color: AppColors.accentOrange,
+            color: AppColors.secondary,
             subtitle: 'الرصيد الحالي',
-            accentBarColor: AppColors.accentOrange,
+            accentBarColor: AppColors.secondary,
           ),
         ],
       ),
@@ -670,7 +670,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                 : index == 1
                     ? AppColors.textSecondary
                     : index == 2
-                        ? AppColors.accentOrange
+                        ? AppColors.secondary
                         : AppColors.primaryLight;
 
             return Padding(

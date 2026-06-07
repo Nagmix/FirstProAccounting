@@ -235,12 +235,12 @@ class InvoicePaymentSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.accentOrange.withOpacity(0.08), AppColors.accentOrange.withOpacity(0.03)],
+                  colors: [AppColors.secondary.withOpacity(0.08), AppColors.secondary.withOpacity(0.03)],
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.accentOrange.withOpacity(0.2)),
+                border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
@@ -248,16 +248,16 @@ class InvoicePaymentSection extends StatelessWidget {
                     width: 26,
                     height: 26,
                     decoration: BoxDecoration(
-                      color: AppColors.accentOrange.withOpacity(0.12),
+                      color: AppColors.secondary.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.info_outline_rounded, color: AppColors.accentOrange, size: 14),
+                    child: const Icon(Icons.info_outline_rounded, color: AppColors.secondary, size: 14),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'سيتم تسجيل المبلغ كرصيد على الحساب',
-                      style: context.textTheme.bodySmall?.copyWith(color: AppColors.accentOrange, fontWeight: FontWeight.w600),
+                      style: context.textTheme.bodySmall?.copyWith(color: AppColors.secondary, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -439,7 +439,7 @@ class InvoicePaymentSection extends StatelessWidget {
               icon: Icons.schedule_rounded,
               label: 'أجل',
               isSelected: paymentMechanism == 'credit',
-              color: AppColors.accentOrange,
+              color: AppColors.secondary,
               onTap: onSetCreditMechanism,
             ),
           ),
@@ -563,9 +563,9 @@ class InvoicePaymentSection extends StatelessWidget {
     const methods = [
       ('cash', 'نقدي', Icons.payments_rounded, AppColors.success),
       ('check', 'شيك', Icons.sticky_note_2_rounded, AppColors.accentBlue),
-      ('transfer', 'حوالة', Icons.swap_horiz_rounded, AppColors.accentOrange),
+      ('transfer', 'حوالة', Icons.swap_horiz_rounded, AppColors.secondary),
       ('bank', 'بنك', Icons.account_balance_rounded, Color(0xFF4F6AF0)),
-      ('ewallet', 'محفظة', Icons.account_balance_wallet_rounded, AppColors.accentGreen),
+      ('ewallet', 'محفظة', Icons.account_balance_wallet_rounded, AppColors.success),
       ('bank_transfer', 'حوالة مصرفية', Icons.business_rounded, Color(0xFF6A1B9A)),
     ];
 
@@ -617,12 +617,12 @@ class InvoicePaymentSection extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.accentGreen.withOpacity(0.06), AppColors.accentGreen.withOpacity(0.02)],
+          colors: [AppColors.success.withOpacity(0.06), AppColors.success.withOpacity(0.02)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.accentGreen.withOpacity(0.2)),
+        border: Border.all(color: AppColors.success.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,16 +634,16 @@ class InvoicePaymentSection extends StatelessWidget {
               labelText: 'اختر المحفظة الإلكترونية',
               prefixIcon: Container(
                 margin: const EdgeInsets.only(left: 8),
-                child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.accentGreen, size: 18),
+                child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.success, size: 18),
               ),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.accentGreen.withOpacity(0.3)),
+                borderSide: BorderSide(color: AppColors.success.withOpacity(0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.accentGreen, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.success, width: 1.5),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               filled: true,

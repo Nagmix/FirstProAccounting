@@ -97,7 +97,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
       case 'settlement':
         return AppColors.info;
       case 'compound':
-        return AppColors.accentOrange;
+        return AppColors.secondary;
       default:
         return AppColors.primary;
     }
@@ -445,7 +445,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
       case 'settlement':
         return AppColors.info;
       case 'compound':
-        return AppColors.accentOrange;
+        return AppColors.secondary;
       default:
         return AppColors.primary;
     }
@@ -708,7 +708,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                       CurrencyFormatter.format(_totalCredit),
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: AppColors.accentOrange,
+                        color: AppColors.secondary,
                       ),
                     ),
                   ],
