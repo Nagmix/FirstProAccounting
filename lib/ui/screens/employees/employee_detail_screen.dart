@@ -199,13 +199,18 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
         Color color;
         double debit = 0.0, credit = 0.0;
 
+        // Employee voucher direction:
+        // - Receipt (سند قبض): Employee pays us back → they OWE us → debit (عليه)
+        // - Payment (سند صرف): We pay the employee → they are CREDITED → credit (له)
+        // This is OPPOSITE to customer/supplier direction because employees are
+        // expense accounts (debit nature) — paying them increases their credit position.
         switch (voucherType) {
           case 'receipt':
-            typeAr = 'سند قبض'; icon = Icons.assignment_turned_in; color = AppColors.success;
-            credit = totalAmount; filterKey = 'receipt_voucher'; break;
+            typeAr = 'سند قبض'; icon = Icons.assignment_turned_in; color = AppColors.error;
+            debit = totalAmount; filterKey = 'receipt_voucher'; break;
           case 'payment':
-            typeAr = 'سند صرف'; icon = Icons.assignment_return; color = AppColors.error;
-            debit = totalAmount; filterKey = 'payment_voucher'; break;
+            typeAr = 'سند صرف'; icon = Icons.assignment_return; color = AppColors.success;
+            credit = totalAmount; filterKey = 'payment_voucher'; break;
           case 'settlement':
             typeAr = 'قيد عام'; icon = Icons.balance; color = AppColors.info;
             credit = totalAmount; filterKey = 'general_entry'; break;
@@ -348,14 +353,23 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
       filtered = filtered.reversed.toList();
     }
 
-    // Recalculate running balance for filtered movements
-    final currencyRunBal = <String, double>{};
+    // Preserve running balance from full calculation (_allMovements)
+    // instead of recalculating from filtered subset.
+    // The running balance must reflect the true cumulative position at each
+    // point in time, including transactions that are hidden by filters.
+    // _allMovements already has correct running_balance values from _loadMovements().
+    final allBalances = <String, double>{};
+    for (final m in _allMovements) {
+      final mId = m['id'] as String?;
+      if (mId != null) {
+        allBalances[mId] = MoneyHelper.readMoney(m['running_balance']);
+      }
+    }
     for (final m in filtered) {
-      final currency = m['currency'] as String? ?? 'YER';
-      final debit = MoneyHelper.readMoney(m['debit']);
-      final credit = MoneyHelper.readMoney(m['credit']);
-      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
-      m['running_balance'] = currencyRunBal[currency];
+      final mId = m['id'] as String?;
+      if (mId != null && allBalances.containsKey(mId)) {
+        m['running_balance'] = allBalances[mId];
+      }
     }
 
     // Calculate totals from filtered movements

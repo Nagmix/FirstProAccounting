@@ -786,9 +786,11 @@ class ReportService {
 
       // Revenue accounts (account_type = 'REVENUE') — credit nature
       // Manual entries that are NOT linked to invoices (reference_type != 'invoice')
+      final revCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
+      final revCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
       final revAccounts = await db.rawQuery(
-        "SELECT a.id FROM accounts a WHERE a.account_type = 'REVENUE' AND a.is_active = 1"
-        "${currency != null && currency.isNotEmpty ? " AND a.currency = '$currency'" : ""}",
+        "SELECT a.id FROM accounts a WHERE a.account_type = 'REVENUE' AND a.is_active = 1$revCurrencyFilter",
+        revCurrencyArgs,
       );
       for (final acct in revAccounts) {
         final revArgs = <dynamic>[acct['id']];
@@ -804,9 +806,11 @@ class ReportService {
       }
 
       // Expense accounts (account_type = 'EXPENSE') — debit nature
+      final expCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
+      final expCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
       final expAccounts = await db.rawQuery(
-        "SELECT a.id FROM accounts a WHERE a.account_type = 'EXPENSE' AND a.is_active = 1"
-        "${currency != null && currency.isNotEmpty ? " AND a.currency = '$currency'" : ""}",
+        "SELECT a.id FROM accounts a WHERE a.account_type = 'EXPENSE' AND a.is_active = 1$expCurrencyFilter",
+        expCurrencyArgs,
       );
       for (final acct in expAccounts) {
         final expArgs = <dynamic>[acct['id']];
@@ -822,9 +826,11 @@ class ReportService {
       }
 
       // COGS accounts (account_type = 'COGS' or account_code like '4%') — debit nature
+      final cogsCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
+      final cogsCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
       final cogsAccounts = await db.rawQuery(
-        "SELECT a.id FROM accounts a WHERE a.account_type = 'COGS' AND a.is_active = 1"
-        "${currency != null && currency.isNotEmpty ? " AND a.currency = '$currency'" : ""}",
+        "SELECT a.id FROM accounts a WHERE a.account_type = 'COGS' AND a.is_active = 1$cogsCurrencyFilter",
+        cogsCurrencyArgs,
       );
       for (final acct in cogsAccounts) {
         final cogsArgs = <dynamic>[acct['id']];

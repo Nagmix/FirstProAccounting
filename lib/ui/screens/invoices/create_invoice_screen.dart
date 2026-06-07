@@ -666,10 +666,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
     // Check record limit
     final canAdd = await _checkRecordLimit();
-    if (!canAdd) return;
+    if (!canAdd || !mounted) return;
 
     // Validate
     if (_vm.items.isEmpty) {
+      if (!mounted) return;
       context.showErrorSnackBar('الرجاء إضافة صنف واحد على الأقل');
       return;
     }

@@ -374,14 +374,22 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       filtered = filtered.reversed.toList();
     }
 
-    // Recalculate running balance for filtered movements
-    final currencyRunBal = <String, double>{};
+    // Preserve running balance from full calculation (_allMovements)
+    // instead of recalculating from filtered subset.
+    // The running balance must reflect the true cumulative position at each
+    // point in time, including transactions that are hidden by filters.
+    final allBalances = <String, double>{};
+    for (final m in _allMovements) {
+      final mId = m['id'] as String?;
+      if (mId != null) {
+        allBalances[mId] = MoneyHelper.readMoney(m['running_balance']);
+      }
+    }
     for (final m in filtered) {
-      final currency = m['currency'] as String? ?? 'YER';
-      final debit = MoneyHelper.readMoney(m['debit']);
-      final credit = MoneyHelper.readMoney(m['credit']);
-      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
-      m['running_balance'] = currencyRunBal[currency];
+      final mId = m['id'] as String?;
+      if (mId != null && allBalances.containsKey(mId)) {
+        m['running_balance'] = allBalances[mId];
+      }
     }
 
     // Calculate totals from filtered movements
@@ -1425,8 +1433,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   ),
                   ...items.map((item) => pw.TableRow(children: [
                     _pdfCell(item['account_name']?.toString() ?? item['account_id']?.toString() ?? '', arabicFont),
-                    _pdfCell(MoneyHelper.readMoney(item['debit']) > 0 ? '$currencySymbol ${CurrencyFormatter.format(MoneyHelper.readMoney(item['debit']))}' : '', arabicFont),
-                    _pdfCell(MoneyHelper.readMoney(item['credit']) > 0 ? '$currencySymbol ${CurrencyFormatter.format(MoneyHelper.readMoney(item['credit']))}' : '', arabicFont),
+                    _pdfCell(MoneyHelper.readMoney(item['debit']) > 0 ? '$currencySymbol ${CurrencyFormatter.formatValue(MoneyHelper.readMoney(item['debit']))}' : '', arabicFont),
+                    _pdfCell(MoneyHelper.readMoney(item['credit']) > 0 ? '$currencySymbol ${CurrencyFormatter.formatValue(MoneyHelper.readMoney(item['credit']))}' : '', arabicFont),
                   ])),
                 ],
               ),
@@ -1439,7 +1447,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text('الإجمالي', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('$currencySymbol ${CurrencyFormatter.format(totalAmount)}', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+                    pw.Text('$currencySymbol ${CurrencyFormatter.formatValue(totalAmount)}', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
                   ],
                 ),
               ),
@@ -1539,7 +1547,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         pw.Text('المبلغ', style: pw.TextStyle(font: arabicFont, fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('$currencySymbol ${CurrencyFormatter.format(amount)}', style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+                        pw.Text('$currencySymbol ${CurrencyFormatter.formatValue(amount)}', style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
                       ],
                     ),
                     pw.SizedBox(height: 8),
