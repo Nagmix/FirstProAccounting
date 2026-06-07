@@ -1049,7 +1049,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         ],
       ),
 
-      // ── Bottom Balance Bar ──────────────────────────────────
+      // ── Bottom Balance Bar — Three separate fields: له / عليه / الرصيد ─
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isLight ? AppColors.surface : AppColors.darkSurface,
@@ -1058,56 +1058,123 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _netBalance >= 0
-                      ? [AppColors.success.withOpacity(0.1), AppColors.success.withOpacity(0.05)]
-                      : [AppColors.error.withOpacity(0.1), AppColors.error.withOpacity(0.05)],
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: _netBalance >= 0 ? AppColors.success.withOpacity(0.3) : AppColors.error.withOpacity(0.3),
-                  width: 1.5,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _netBalance >= 0 ? Icons.trending_up : Icons.trending_down,
-                    size: 20,
-                    color: _netBalance >= 0 ? AppColors.success : AppColors.error,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'الرصيد',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: _netBalance >= 0 ? AppColors.success : AppColors.error,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                // ── له (Credit) ──────────────────────────────
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     decoration: BoxDecoration(
-                      color: (_netBalance >= 0 ? AppColors.success : AppColors.error).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      color: AppColors.success.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.success.withOpacity(0.25), width: 1),
                     ),
-                    child: Text(
-                      '${_netBalance.abs().toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('له', style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700, color: AppColors.success, fontSize: 12,
+                        )),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_totalCredit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900, color: AppColors.success, fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // ── عليه (Debit) ─────────────────────────────
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.error.withOpacity(0.25), width: 1),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('عليه', style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 12,
+                        )),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_totalDebit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900, color: AppColors.error, fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // ── الرصيد (Net Balance) — direction by color ─
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _netBalance >= 0
+                            ? [AppColors.success.withOpacity(0.15), AppColors.success.withOpacity(0.05)]
+                            : [AppColors.error.withOpacity(0.15), AppColors.error.withOpacity(0.05)],
+                        begin: Alignment.centerRight,
+                        end: Alignment.centerLeft,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _netBalance >= 0 ? AppColors.success.withOpacity(0.4) : AppColors.error.withOpacity(0.4),
+                        width: 1.5,
                       ),
                     ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _netBalance >= 0 ? Icons.trending_up : Icons.trending_down,
+                              size: 13,
+                              color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Text('الرصيد', style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                              fontSize: 12,
+                            )),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_netBalance.abs().toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                            fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
