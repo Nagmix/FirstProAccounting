@@ -54,10 +54,10 @@ class VoucherAutoMappingService {
     final db = await _db;
     final entities = <Map<String, dynamic>>[];
 
-    // العملاء
+    // العملاء (لا يوجد عمود is_active في جدول العملاء)
     try {
       final customers = await db.query('customers',
-          where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+          orderBy: 'name ASC');
       for (final c in customers) {
         entities.add({
           'id': c['id'],
@@ -73,10 +73,10 @@ class VoucherAutoMappingService {
       // جدول العملاء غير موجود أو هيكل مختلف
     }
 
-    // الموردين
+    // الموردين (لا يوجد عمود is_active في جدول الموردين)
     try {
       final suppliers = await db.query('suppliers',
-          where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+          orderBy: 'name ASC');
       for (final s in suppliers) {
         entities.add({
           'id': s['id'],
@@ -142,7 +142,7 @@ class VoucherAutoMappingService {
       switch (type) {
         case entityCustomer:
           final rows = await db.query('customers',
-              where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+              orderBy: 'name ASC');
           for (final c in rows) {
             entities.add({
               'id': c['id'],
@@ -158,7 +158,7 @@ class VoucherAutoMappingService {
 
         case entitySupplier:
           final rows = await db.query('suppliers',
-              where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+              orderBy: 'name ASC');
           for (final s in rows) {
             entities.add({
               'id': s['id'],

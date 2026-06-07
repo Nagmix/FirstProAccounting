@@ -95,21 +95,34 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
         final credit = MoneyHelper.readMoney(txn['credit']);
         final description = txn['description'] as String? ?? '';
         final dateStr = txn['date'] as String? ?? txn['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final refType = txn['reference_type'] as String?;
         final currency = employee['currency'] as String? ?? 'YER';
 
-        // Determine type from amounts
+        // Employee account 5100 is an EXPENSE account (debit nature).
+        // From the employee's perspective:
+        //   Accounting debit on 5100 = expense increased = employee earned money = له
+        //   Accounting credit on 5100 = expense decreased = employee owes money = عليه
+        // So we must swap for display:
+        //   accounting debit → display credit (له)
+        //   accounting credit → display debit (عليه)
+        final displayDebit = credit > 0 ? credit : 0.0;  // credit on expense = عليه
+        final displayCredit = debit > 0 ? debit : 0.0;  // debit on expense = له
+
         String typeAr;
         String filterKey;
-        if (debit > 0) {
+        if (displayDebit > 0) {
           typeAr = 'عليه';
           filterKey = 'debit';
-        } else if (credit > 0) {
+        } else if (displayCredit > 0) {
           typeAr = 'له';
           filterKey = 'credit';
         } else {
           typeAr = 'قيد';
           filterKey = 'all';
         }
+
+        // Skip opening balance transactions here — they're loaded separately below
+        if (refType == 'opening_balance') continue;
 
         movements.add({
           'id': 't_${txn['id']}',
@@ -118,8 +131,8 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
           'type_ar': typeAr,
           'filter_key': filterKey,
           'description': description,
-          'debit': debit,
-          'credit': credit,
+          'debit': displayDebit,
+          'credit': displayCredit,
           'currency': currency,
           'source': 'transaction',
         });
@@ -193,7 +206,9 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
       final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
       final description = ob['description'] as String? ?? 'رصيد افتتاحي';
       final obCurrency = ob['account_currency'] as String? ?? 'YER';
-      
+
+      // Employee account 5100 is EXPENSE (debit nature): swap for display
+      // accounting debit → display credit (له), accounting credit → display debit (عليه)
       movements.add({
         'id': 'ob_${ob['id']}',
         'date': dateStr,
@@ -201,8 +216,8 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
         'type_ar': 'رصيد افتتاحي',
         'filter_key': 'all',
         'description': description,
-        'debit': debit,
-        'credit': credit,
+        'debit': credit > 0 ? credit : 0.0,  // credit on expense = عليه
+        'credit': debit > 0 ? debit : 0.0,   // debit on expense = له
         'currency': obCurrency,
         'source': 'opening_balance',
       });
@@ -244,32 +259,16 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
       }).toList();
     }
 
-    // Calculate opening balance
-    final employee = _freshEmployee ?? widget.employee;
-    final balance = MoneyHelper.readMoney(employee['balance']);
-    final balanceType = employee['balance_type'] as String? ?? 'credit';
-    double openingBalance = 0.0;
-    if (balance != 0.0) {
-      double allDebit = 0.0;
-      double allCredit = 0.0;
-      for (final m in _allMovements) {
-        allDebit += MoneyHelper.readMoney(m['debit']);
-        allCredit += MoneyHelper.readMoney(m['credit']);
-      }
-      final empBalance = balanceType == 'credit' ? balance : -balance;
-      final movementBalance = allCredit - allDebit;
-      openingBalance = empBalance - movementBalance;
-    }
-
     // Calculate running balance and totals
-    double runningBalance = openingBalance;
+    // Opening balance is now included as a movement, so start from 0
+    double runningBalance = 0.0;
     double totalDebit = 0.0;
     double totalCredit = 0.0;
 
     for (final m in filtered) {
       final debit = MoneyHelper.readMoney(m['debit']);
       final credit = MoneyHelper.readMoney(m['credit']);
-      runningBalance += credit - debit;
+      runningBalance += credit - debit; // positive = له, negative = عليه
       totalDebit += debit;
       totalCredit += credit;
       m['running_balance'] = runningBalance;
@@ -279,7 +278,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
       _filteredMovements = filtered;
       _totalDebit = totalDebit;
       _totalCredit = totalCredit;
-      _netBalance = openingBalance + totalCredit - totalDebit;
+      _netBalance = runningBalance;
     });
   }
 

@@ -10,6 +10,7 @@ import '../../../core/services/bluetooth_printer_service.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
+import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 import '../../../data/models/supplier_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
 
@@ -538,99 +539,53 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                             );
                             return;
                           }
+                          if (selectedCashBoxId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('يرجى اختيار الصندوق'), backgroundColor: AppColors.error),
+                            );
+                            return;
+                          }
                           setDialogState(() => isSaving = true);
 
-                          final now = DateTime.now();
-                          final voucherNumber = await locator<CashBoxService>().getNextVoucherNumber(voucherType);
+                          try {
+                            final autoMappingService = locator<VoucherAutoMappingService>();
+                            final now = DateTime.now();
+                            final dateStr = now.toIso8601String().split('T').first;
 
-                          // Find the supplier's account
-                          final supplierAccounts = await locator<SupplierRepository>().getSupplierPayableAccounts(selectedCurrency);
-                          final supplierAccountId = supplierAccounts.isNotEmpty
-                              ? supplierAccounts.first['id'] as int
-                              : null;
-
-                          // Find the cash box account
-                          int? cashBoxAccountId;
-                          if (selectedCashBoxId != null) {
-                            final cbData = await locator<CashBoxService>().getCashBoxById(selectedCashBoxId!);
-                            if (cbData != null) {
-                              cashBoxAccountId = cbData['linked_account_id'] as int?;
-                            }
-                          }
-
-                          final voucherMap = {
-                            'voucher_number': voucherNumber,
-                            'voucher_type': voucherType,
-                            'date': now.toIso8601String(),
-                            'description': descriptionController.text.trim().isEmpty
-                                ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${supplier.name}'
-                                : descriptionController.text.trim(),
-                            'currency': selectedCurrency,
-                            'total_amount': amount,
-                            'cash_box_id': selectedCashBoxId,
-                            'supplier_id': supplier.id,
-                            'is_posted': 1,
-                            'created_at': now.toIso8601String(),
-                            'updated_at': now.toIso8601String(),
-                          };
-
-                          List<Map<String, dynamic>> items = [];
-
-                          if (voucherType == 'payment') {
-                            // Payment to supplier: Debit supplier (decrease liability), Credit cash box
-                            if (supplierAccountId != null) {
-                              items.add({
-                                'account_id': supplierAccountId,
-                                'debit': amount,
-                                'credit': 0.0,
-                                'description': 'سند صرف إلى ${supplier.name}',
-                              });
-                            }
-                            if (cashBoxAccountId != null) {
-                              items.add({
-                                'account_id': cashBoxAccountId,
-                                'debit': 0.0,
-                                'credit': amount,
-                                'description': 'سند صرف إلى ${supplier.name}',
-                              });
-                            }
-                          } else {
-                            // Receipt from supplier: Debit cash box, Credit supplier (increase liability)
-                            if (cashBoxAccountId != null) {
-                              items.add({
-                                'account_id': cashBoxAccountId,
-                                'debit': amount,
-                                'credit': 0.0,
-                                'description': 'سند قبض من ${supplier.name}',
-                              });
-                            }
-                            if (supplierAccountId != null) {
-                              items.add({
-                                'account_id': supplierAccountId,
-                                'debit': 0.0,
-                                'credit': amount,
-                                'description': 'سند قبض من ${supplier.name}',
-                              });
-                            }
-                          }
-
-                          if (items.isNotEmpty) {
-                            await locator<CashBoxService>().insertVoucher(voucherMap, items);
-                          }
-
-                          // NOTE: Supplier balance is already updated by CashBoxService.insertVoucher()
-                          // which now uses EntityBalanceHelper with correct balance_type-aware logic.
-                          // No additional balance update needed here.
-
-                          if (context.mounted) {
-                            Navigator.pop(dialogContext);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(voucherType == 'receipt' ? 'تم إنشاء سند القبض بنجاح' : 'تم إنشاء سند الصرف بنجاح'),
-                                backgroundColor: AppColors.success,
-                              ),
+                            await autoMappingService.createReceiptPaymentVoucher(
+                              voucherType: voucherType,
+                              entityType: VoucherAutoMappingService.entitySupplier,
+                              entityId: supplier.id ?? 0,
+                              cashBoxId: selectedCashBoxId,
+                              amount: amount,
+                              currency: selectedCurrency,
+                              date: dateStr,
+                              description: descriptionController.text.trim().isEmpty
+                                  ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${supplier.name}'
+                                  : descriptionController.text.trim(),
                             );
-                            _loadData();
+
+                            if (context.mounted) {
+                              Navigator.pop(dialogContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(voucherType == 'receipt' ? 'تم إنشاء سند القبض بنجاح' : 'تم إنشاء سند الصرف بنجاح'),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                              _loadData();
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              final msg = e.toString().replaceFirst('Exception: ', '');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(msg.isNotEmpty ? msg : 'حدث خطأ أثناء الحفظ'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                            setDialogState(() => isSaving = false);
                           }
                         },
                   child: isSaving

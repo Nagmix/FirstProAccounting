@@ -182,29 +182,11 @@ class CashBoxService {
                  - MoneyHelper.readCalculatedMoney(obByRef.first['total_credit']);
     }
 
-    // 11b. Fallback: if no reference_id match, search by account code (legacy)
-    if (obBalance.abs() < 0.005) {
-      final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
-      final cashBanksAccount = await db.query(
-        'accounts',
-        where: 'account_code = ? AND currency = ?',
-        whereArgs: [(1100 + codeOffset).toString(), currency],
-        limit: 1,
-      );
-      if (cashBanksAccount.isNotEmpty) {
-        final accountId = cashBanksAccount.first['id'] as int;
-        final obTransactions = await db.rawQuery('''
-          SELECT
-            COALESCE(SUM(debit), 0) AS total_debit,
-            COALESCE(SUM(credit), 0) AS total_credit
-          FROM transactions
-          WHERE account_id = ? AND reference_type = 'opening_balance'
-        ''', [accountId]);
-        final totalDebit = MoneyHelper.readCalculatedMoney(obTransactions.first['total_debit']);
-        final totalCredit = MoneyHelper.readCalculatedMoney(obTransactions.first['total_credit']);
-        obBalance = totalDebit - totalCredit;
-      }
-    }
+    // 11b. Fallback: if no reference_id match, skip legacy fallback for per-cash-box
+    //     balance computation. The old approach searched ALL opening_balance
+    //     transactions on the 1100 account without filtering by cash_box_id,
+    //     which incorrectly attributed other cash boxes' opening balances
+    //     to this cash box. Only reference_id-based matching is reliable.
 
     balance += obBalance;
 
@@ -317,7 +299,7 @@ class CashBoxService {
       LEFT JOIN cash_boxes from_cb ON ct.from_cash_box_id = from_cb.id
       LEFT JOIN cash_boxes to_cb ON ct.to_cash_box_id = to_cb.id
       WHERE (ct.from_cash_box_id = ? OR ct.to_cash_box_id = ?) $transferFilter
-      ORDER BY ct.date ASC, ct.id ASC
+      ORDER BY ct.created_at ASC, ct.id ASC
     ''', transferArgs);
 
     for (final t in transfers) {
@@ -482,7 +464,10 @@ class CashBoxService {
         final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
         final description = ob['description'] as String? ?? 'رصيد افتتاحي';
 
-        // For cash accounts: debit = cash in (له), credit = cash out (عليه)
+        // For cash accounts (1100, ASSET/debit-nature):
+        // Accounting: debit = asset increase = cash in, credit = asset decrease = cash out
+        // Safe's perspective: cash in = له (credit), cash out = عليه (debit)
+        // So we must swap: accounting debit → display credit (له), accounting credit → display debit (عليه)
         movements.add({
           'id': 'ob_${ob['id']}',
           'date': dateStr,
@@ -492,57 +477,17 @@ class CashBoxService {
           'icon': Icons.account_balance_wallet,
           'color': AppColors.accentBlue,
           'description': description,
-          'debit': credit > 0 ? credit : 0.0, // credit on cash account = cash out = عليه
-          'credit': debit > 0 ? debit : 0.0,  // debit on cash account = cash in = له
+          'debit': credit > 0 ? credit : 0.0,  // credit on cash account = cash out = عليه
+          'credit': debit > 0 ? debit : 0.0,   // debit on cash account = cash in = له
           'currency': obCurrency,
           'source': 'opening_balance',
           'voucher_type': null,
         });
       }
 
-      // Fallback: also check for legacy opening balance entries without reference_id
-      // by looking at the Cash & Banks account for this currency
-      if (obMovements.isEmpty) {
-        final resolvedCurrency = currency ?? 'YER';
-        final codeOffset = resolvedCurrency == 'SAR' ? 1 : (resolvedCurrency == 'USD' ? 2 : 0);
-        final cashBanksAccount = await db.query(
-          'accounts',
-          where: 'account_code = ? AND currency = ?',
-          whereArgs: [(1100 + codeOffset).toString(), resolvedCurrency],
-          limit: 1,
-        );
-        if (cashBanksAccount.isNotEmpty) {
-          final accountId = cashBanksAccount.first['id'] as int;
-          final legacyOb = await db.rawQuery('''
-            SELECT * FROM transactions
-            WHERE account_id = ? AND reference_type = 'opening_balance'
-            ORDER BY date ASC
-          ''', [accountId]);
-
-          for (final ob in legacyOb) {
-            final debit = MoneyHelper.readMoney(ob['debit']);
-            final credit = MoneyHelper.readMoney(ob['credit']);
-            final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
-            final description = ob['description'] as String? ?? 'رصيد افتتاحي';
-
-            movements.add({
-              'id': 'ob_${ob['id']}',
-              'date': dateStr,
-              'type': 'opening_balance',
-              'type_ar': 'رصيد افتتاحي',
-              'filter_key': 'opening_balance',
-              'icon': Icons.account_balance_wallet,
-              'color': AppColors.accentBlue,
-              'description': description,
-              'debit': credit > 0 ? credit : 0.0,
-              'credit': debit > 0 ? debit : 0.0,
-              'currency': resolvedCurrency,
-              'source': 'opening_balance',
-              'voucher_type': null,
-            });
-          }
-        }
-      }
+      // No legacy fallback for per-cash-box movements — the old approach
+      // found ALL opening_balance transactions on the 1100 account without
+      // filtering by cash_box_id, which showed other cash boxes' entries here.
     }
 
     // Sort by date ascending
@@ -1109,8 +1054,12 @@ class CashBoxService {
     final journalId = generateUniqueJournalId();
     final referenceId = cashBoxId != null ? 'cash_box_$cashBoxId' : null;
 
-    if (balanceType == 'debit') {
-      // Debit Cash & Banks, Credit Opening Balance Equity
+    // Cash & Banks (1100) is an ASSET account (debit nature).
+    // From the user's perspective:
+    //   له (credit) = the safe HAS money = cash in = Debit Cash & Banks (asset increase)
+    //   عليه (debit) = the safe OWES money = cash out = Credit Cash & Banks (asset decrease)
+    if (balanceType == 'credit') {
+      // له — Safe has money: Debit Cash & Banks, Credit Opening Balance Equity
       await db.insert('transactions', {
         'account_id': linkedAccountId,
         'journal_id': journalId,
@@ -1136,7 +1085,7 @@ class CashBoxService {
       await _dbHelper.journal.updateAccountBalance(linkedAccountId, openingBalance, isDebit: true);
       await _dbHelper.journal.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: false);
     } else {
-      // Credit Cash & Banks, Debit Opening Balance Equity
+      // عليه — Safe owes money: Credit Cash & Banks, Debit Opening Balance Equity
       await db.insert('transactions', {
         'account_id': linkedAccountId,
         'journal_id': journalId,
