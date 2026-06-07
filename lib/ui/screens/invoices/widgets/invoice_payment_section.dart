@@ -835,17 +835,15 @@ class InvoicePaymentSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Cash box dropdown
+        // Cash box dropdown — show only name (cash boxes are currency-agnostic)
         _buildModernDropdown<int>(
           value: selectedCashBoxId,
           label: 'الصندوق *',
           icon: Icons.account_balance_wallet_rounded,
           items: cashBoxes.map((cb) {
-            final balance = MoneyHelper.readMoney(cb['balance']);
-            final bt = cb['balance_type'] as String? ?? 'credit';
             return DropdownMenuItem<int>(
               value: cb['id'] as int,
-              child: Text('${cb['name']} (${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'})', style: const TextStyle(fontSize: 12)),
+              child: Text('${cb['name']}', style: const TextStyle(fontSize: 12)),
             );
           }).toList(),
           onChanged: onCashBoxChanged,

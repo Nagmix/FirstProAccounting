@@ -535,7 +535,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
         const DropdownMenuItem<int?>(value: null, child: Text('بدون صندوق')),
         ..._cashBoxes.map((cb) => DropdownMenuItem<int?>(
               value: (cb['id'] as num?)?.toInt(),
-              child: Text('${cb['name']} (${cb['currency'] ?? 'YER'})'),
+              child: Text('${cb['name']}'),
             )),
       ],
       onChanged: (val) => setState(() => _selectedCashBoxId = val),

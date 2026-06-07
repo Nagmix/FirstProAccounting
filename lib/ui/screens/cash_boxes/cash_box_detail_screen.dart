@@ -2,29 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../core/services/bluetooth_printer_service.dart';
-import '../../../core/utils/account_statement_pdf_generator.dart';
-import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/customer_repository.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
-import '../../../data/models/customer_model.dart';
-import '../settings/bluetooth_printer_settings_screen.dart';
+import '../../../data/datasources/services/journal_service.dart';
+import '../../../data/models/cash_box_model.dart';
 
-/// Customer Detail / Ledger Screen
-/// Displays all financial movements for a specific customer with
+/// Cash Box Detail / Ledger Screen
+/// Displays all financial movements for a specific cash box with
 /// filtering, statistics, and voucher creation capabilities.
-class CustomerDetailScreen extends StatefulWidget {
-  final Customer customer;
+class CashBoxDetailScreen extends StatefulWidget {
+  final CashBox cashBox;
+  final String? initialCurrency; // pre-selected currency from list screen
 
-  const CustomerDetailScreen({super.key, required this.customer});
+  const CashBoxDetailScreen({super.key, required this.cashBox, this.initialCurrency});
 
   @override
-  State<CustomerDetailScreen> createState() => _CustomerDetailScreenState();
+  State<CashBoxDetailScreen> createState() => _CashBoxDetailScreenState();
 }
 
-class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
+class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _allMovements = [];
   List<Map<String, dynamic>> _filteredMovements = [];
@@ -39,25 +36,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   double _totalCredit = 0.0;
   double _netBalance = 0.0;
 
-  // Customer data (refreshable)
-  Customer? _freshCustomer;
-
-  // Cash boxes for voucher dialog
-  List<Map<String, dynamic>> _cashBoxes = [];
+  // Cash box data (refreshable)
+  CashBox? _freshCashBox;
 
   static const List<_FilterTab> _filterTabs = [
-    _FilterTab(key: 'all', label: 'جميع الحركات والفواتير'),
+    _FilterTab(key: 'all', label: 'جميع الحركات'),
     _FilterTab(key: 'debit', label: 'عليه'),
     _FilterTab(key: 'credit', label: 'له'),
-    _FilterTab(key: 'payment_voucher', label: 'سند صرف'),
     _FilterTab(key: 'receipt_voucher', label: 'سند قبض'),
-    _FilterTab(key: 'general_entry', label: 'قيد عام'),
-    _FilterTab(key: 'outgoing_transfer', label: 'حوالة صادرة'),
-    _FilterTab(key: 'incoming_transfer', label: 'حوالة وارده'),
-    _FilterTab(key: 'sales', label: 'مبيعات فقط'),
-    _FilterTab(key: 'purchases', label: 'مشتريات فقط'),
+    _FilterTab(key: 'payment_voucher', label: 'سند صرف'),
+    _FilterTab(key: 'incoming_transfer', label: 'تحويل وارد'),
+    _FilterTab(key: 'outgoing_transfer', label: 'تحويل صادر'),
+    _FilterTab(key: 'exchange', label: 'صرافة'),
+    _FilterTab(key: 'sales', label: 'مبيعات'),
+    _FilterTab(key: 'purchases', label: 'مشتريات'),
     _FilterTab(key: 'returns', label: 'مرتجع'),
-    _FilterTab(key: 'compound_entry', label: 'قيد متعدد'),
   ];
 
   static const List<MapEntry<String, String>> _currencyOptions = [
@@ -70,21 +63,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _freshCustomer = widget.customer;
+    _freshCashBox = widget.cashBox;
+    _selectedCurrency = widget.initialCurrency;
     _loadData();
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    // Refresh customer data
-    final customerMap = await locator<CustomerRepository>().getCustomerById(widget.customer.id!);
-    if (customerMap != null) {
-      _freshCustomer = Customer.fromMap(customerMap);
+    // Refresh cash box data
+    final cashBoxMap = await locator<CashBoxService>().getCashBoxById(widget.cashBox.id!);
+    if (cashBoxMap != null) {
+      _freshCashBox = CashBox.fromMap(cashBoxMap);
     }
-
-    // Load cash boxes
-    _cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
 
     // Load all movements
     await _loadMovements();
@@ -93,197 +84,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   }
 
   Future<void> _loadMovements() async {
-    final customerId = widget.customer.id!;
-    final customerRepo = locator<CustomerRepository>();
-    final movements = <Map<String, dynamic>>[];
-
-    // 1. Load invoices for this customer
-    final invoices = await customerRepo.getCustomerInvoices(customerId);
-
-    for (final inv in invoices) {
-      final type = inv['type'] as String? ?? 'sale';
-      final isReturn = (inv['is_return'] as int? ?? 0) == 1;
-      final total = MoneyHelper.readMoney(inv['total']);
-      final currency = inv['currency'] as String? ?? 'YER';
-      final createdAt = inv['created_at'] as String? ?? DateTime.now().toIso8601String();
-
-      String effectiveType;
-      String typeAr;
-      IconData icon;
-      Color color;
-      double debit = 0.0;
-      double credit = 0.0;
-      String filterKey;
-
-      if (type == 'sale' && !isReturn) {
-        effectiveType = 'sale';
-        typeAr = 'فاتورة مبيعات';
-        icon = Icons.receipt_long;
-        color = AppColors.primary;
-        // Sale invoice: customer owes us → debit (عليه)
-        debit = total;
-        filterKey = 'sales';
-      } else if (type == 'sale' && isReturn) {
-        effectiveType = 'sale_return';
-        typeAr = 'مرتجع مبيعات';
-        icon = Icons.keyboard_return;
-        color = AppColors.warning;
-        // Sale return: we owe customer → credit (له)
-        credit = total;
-        filterKey = 'returns';
-      } else if (type == 'purchase' && !isReturn) {
-        effectiveType = 'purchase';
-        typeAr = 'فاتورة مشتريات';
-        icon = Icons.shopping_cart;
-        color = AppColors.accentOrange;
-        // Purchase invoice: we owe supplier → credit (له)
-        credit = total;
-        filterKey = 'purchases';
-      } else if (type == 'purchase' && isReturn) {
-        effectiveType = 'purchase_return';
-        typeAr = 'مرتجع مشتريات';
-        icon = Icons.keyboard_return;
-        color = AppColors.accentPink;
-        debit = total;
-        filterKey = 'returns';
-      } else {
-        effectiveType = type;
-        typeAr = 'فاتورة';
-        icon = Icons.receipt;
-        color = AppColors.textSecondary;
-        debit = total;
-        filterKey = 'all';
-      }
-
-      final remaining = MoneyHelper.readMoney(inv['remaining']);
-      final desc = '$typeAr - ${inv['id'] ?? ''}${remaining > 0 ? ' (متبقي: ${remaining.toStringAsFixed(2)})' : ''}';
-
-      movements.add({
-        'id': inv['id'],
-        'date': createdAt,
-        'type': effectiveType,
-        'type_ar': typeAr,
-        'filter_key': filterKey,
-        'icon': icon,
-        'color': color,
-        'description': desc,
-        'debit': debit,
-        'credit': credit,
-        'currency': currency,
-        'source': 'invoice',
-        'voucher_type': null,
-      });
-    }
-
-    // 2. Load vouchers linked to this customer via customer_id column
-    // Primary: vouchers with customer_id matching this customer
-    // Fallback: vouchers with NULL customer_id but items referencing customer accounts
-    final voucherRows = await customerRepo.getCustomerVouchers(customerId);
-
-    // Backward compatibility: find vouchers with NULL customer_id that reference
-    // this customer's receivable account through voucher items
-    final customerCurrency = _freshCustomer?.currency ?? widget.customer.currency ?? 'YER';
-    final customerAccounts = await customerRepo.getCustomerReceivableAccounts(customerCurrency);
-    final customerAccountIds = customerAccounts.map((a) => a['id']).toList();
-
-    if (customerAccountIds.isNotEmpty) {
-      final unlinkedVouchers = await customerRepo.getUnlinkedVouchers();
-      for (final v in unlinkedVouchers) {
-        final voucherId = v['id'] as int?;
-        if (voucherId == null) continue;
-        final items = await locator<CashBoxService>().getVoucherItems(voucherId);
-        for (final item in items) {
-          final accountId = item['account_id'] as int?;
-          if (accountId != null && customerAccountIds.contains(accountId)) {
-            // Check if description contains this customer's name for specificity
-            final desc = v['description'] as String? ?? '';
-            final customerName = _freshCustomer?.name ?? widget.customer.name;
-            if (desc.contains(customerName)) {
-              voucherRows.add(v);
-            }
-            break;
-          }
-        }
-      }
-    }
-
-    for (final v in voucherRows) {
-      final voucherType = v['voucher_type'] as String? ?? '';
-      final totalAmount = MoneyHelper.readMoney(v['total_amount']);
-      final currency = v['currency'] as String? ?? 'YER';
-      final dateStr = v['date'] as String? ?? v['created_at'] as String? ?? DateTime.now().toIso8601String();
-
-      String typeAr;
-      IconData icon;
-      Color color;
-      double debit = 0.0;
-      double credit = 0.0;
-      String filterKey;
-
-      switch (voucherType) {
-        case 'receipt':
-          typeAr = 'سند قبض';
-          icon = Icons.assignment_turned_in;
-          color = AppColors.success;
-          // Receipt: we receive money from customer → credit (له decreases)
-          credit = totalAmount;
-          filterKey = 'receipt_voucher';
-          break;
-        case 'payment':
-          typeAr = 'سند صرف';
-          icon = Icons.assignment_return;
-          color = AppColors.error;
-          // Payment: we pay money to customer → debit (عليه decreases)
-          debit = totalAmount;
-          filterKey = 'payment_voucher';
-          break;
-        case 'settlement':
-          typeAr = 'قيد عام';
-          icon = Icons.balance;
-          color = AppColors.info;
-          credit = totalAmount;
-          filterKey = 'general_entry';
-          break;
-        case 'compound':
-          typeAr = 'قيد متعدد';
-          icon = Icons.dynamic_feed;
-          color = AppColors.accentBlue;
-          debit = totalAmount;
-          filterKey = 'compound_entry';
-          break;
-        default:
-          typeAr = 'سند';
-          icon = Icons.description;
-          color = AppColors.textSecondary;
-          debit = totalAmount;
-          filterKey = 'all';
-      }
-
-      final description = v['description'] as String? ?? '$typeAr - ${v['voucher_number'] ?? ''}';
-
-      movements.add({
-        'id': 'v_${v['id']}',
-        'date': dateStr,
-        'type': voucherType,
-        'type_ar': typeAr,
-        'filter_key': filterKey,
-        'icon': icon,
-        'color': color,
-        'description': description,
-        'debit': debit,
-        'credit': credit,
-        'currency': currency,
-        'source': 'voucher',
-        'voucher_type': voucherType,
-      });
-    }
-
-    // Sort by date ascending for running balance
-    movements.sort((a, b) {
-      final dateA = a['date'] as String;
-      final dateB = b['date'] as String;
-      return dateA.compareTo(dateB);
-    });
+    final cashBoxId = widget.cashBox.id!;
+    final movements = await locator<CashBoxService>().getCashBoxMovements(
+      cashBoxId,
+      currency: _selectedCurrency,
+    );
 
     _allMovements = movements;
     _applyFilters();
@@ -303,7 +108,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       filtered = filtered.where((m) => m['filter_key'] == filterKey).toList();
     }
 
-    // Apply currency filter
+    // Apply currency filter (additional check on top of what getCashBoxMovements does)
     if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
       filtered = filtered.where((m) => m['currency'] == _selectedCurrency).toList();
     }
@@ -316,18 +121,18 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           final date = DateTime.parse(dateStr);
           return !date.isBefore(_dateRange!.start) && !date.isAfter(_dateRange!.end.add(const Duration(days: 1)));
         } catch (e) {
-          debugPrint('CustomerDetailScreen._applyFilters: $e');
+          debugPrint('CashBoxDetailScreen._applyFilters: $e');
           return true;
         }
       }).toList();
     }
 
-    // Calculate opening balance: the customer's stored balance minus the sum
+    // Calculate opening balance: the cash box's stored balance minus the sum
     // of all tracked movements. This captures any initial balance set when the
-    // customer was created that doesn't have a corresponding transaction.
-    final customer = _freshCustomer ?? widget.customer;
+    // cash box was created that doesn't have a corresponding transaction.
+    final cashBox = _freshCashBox ?? widget.cashBox;
     double openingBalance = 0.0;
-    if (customer.balance != 0.0) {
+    if (cashBox.balance != 0.0) {
       double allDebit = 0.0;
       double allCredit = 0.0;
       for (final m in _allMovements) {
@@ -335,11 +140,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         allCredit += MoneyHelper.readMoney(m['credit']);
       }
       // Running balance convention: positive = credit (له), negative = debit (عليه)
-      final customerBalance = customer.balanceType == 'credit'
-          ? customer.balance
-          : -customer.balance;
+      final cashBoxBalance = cashBox.balanceType == 'credit'
+          ? cashBox.balance
+          : -cashBox.balance;
       final movementBalance = allCredit - allDebit;
-      openingBalance = customerBalance - movementBalance;
+      openingBalance = cashBoxBalance - movementBalance;
     }
 
     // Calculate running balance and totals
@@ -394,12 +199,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     _applyFilters();
   }
 
+  // ── Currency symbol helper ──────────────────────────────────────
+  String _currencySymbol(String? code) {
+    switch (code) {
+      case 'SAR': return 'ر.س';
+      case 'USD': return r'$';
+      case 'YER': default: return 'ر.ي';
+    }
+  }
+
   // ── Add Voucher Dialog ──────────────────────────────────────────
   Future<void> _showAddVoucherDialog(String voucherType) async {
     final amountController = TextEditingController();
     final descriptionController = TextEditingController();
-    int? selectedCashBoxId;
-    String selectedCurrency = _freshCustomer?.currency ?? 'YER';
+    String selectedCurrency = _selectedCurrency ?? _freshCashBox?.currency ?? 'YER';
     bool isSaving = false;
 
     await showDialog(
@@ -413,13 +226,17 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Customer name (read-only)
+                    // Cash box name (read-only)
                     InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'العميل',
-                        prefixIcon: Icon(Icons.person),
+                      decoration: InputDecoration(
+                        labelText: 'الصندوق',
+                        prefixIcon: Icon(
+                          _freshCashBox?.isBank ?? false
+                              ? Icons.account_balance
+                              : Icons.account_balance_wallet,
+                        ),
                       ),
-                      child: Text(_freshCustomer?.name ?? ''),
+                      child: Text(_freshCashBox?.name ?? ''),
                     ),
                     const SizedBox(height: 14),
 
@@ -456,25 +273,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Cash Box
-                    DropdownButtonFormField<int?>(
-                      value: selectedCashBoxId,
-                      decoration: const InputDecoration(
-                        labelText: 'الصندوق',
-                        prefixIcon: Icon(Icons.account_balance_wallet),
-                      ),
-                      items: _cashBoxes.map((cb) {
-                        return DropdownMenuItem<int?>(
-                          value: cb['id'] as int?,
-                          child: Text('${cb['name']}'),
-                        );
-                      }).toList(),
-                      onChanged: (v) {
-                        setDialogState(() => selectedCashBoxId = v);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-
                     // Description
                     TextFormField(
                       controller: descriptionController,
@@ -506,21 +304,33 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           setDialogState(() => isSaving = true);
 
                           final now = DateTime.now();
-                          final voucherNumber = await locator<CashBoxService>().getNextVoucherNumber(voucherType);
+                          final cashBoxService = locator<CashBoxService>();
+                          final voucherNumber = await cashBoxService.getNextVoucherNumber(voucherType);
 
-                          // Find the customer's account
-                          final customerAccounts = await locator<CustomerRepository>().getCustomerReceivableAccounts(selectedCurrency);
-                          final customerAccountId = customerAccounts.isNotEmpty
-                              ? customerAccounts.first['id'] as int
-                              : null;
+                          // Resolve the Cash & Banks account for the selected currency
+                          final codeOffset = selectedCurrency == 'SAR' ? 1 : (selectedCurrency == 'USD' ? 2 : 0);
+                          final cashBanksCode = (1100 + codeOffset).toString();
+                          final journalService = locator<JournalService>();
+                          final cashBanksAccount = await journalService.getAccountByCodeAndCurrency(
+                            cashBanksCode, selectedCurrency,
+                          );
+                          final cashAccountId = cashBanksAccount?['id'] as int?;
 
-                          // Find the cash box account
-                          int? cashBoxAccountId;
-                          if (selectedCashBoxId != null) {
-                            final cbData = await locator<CashBoxService>().getCashBoxById(selectedCashBoxId!);
-                            if (cbData != null) {
-                              cashBoxAccountId = cbData['linked_account_id'] as int?;
+                          // Resolve the Opening Balance Equity account as contra account
+                          final obCode = (2901 + codeOffset).toString();
+                          final obAccount = await journalService.getAccountByCodeAndCurrency(
+                            obCode, selectedCurrency,
+                          );
+                          final obAccountId = obAccount?['id'] as int?;
+
+                          if (cashAccountId == null) {
+                            setDialogState(() => isSaving = false);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('لم يتم العثور على حساب الصناديق للعملة المحددة'), backgroundColor: AppColors.error),
+                              );
                             }
+                            return;
                           }
 
                           final voucherMap = {
@@ -528,12 +338,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                             'voucher_type': voucherType,
                             'date': now.toIso8601String(),
                             'description': descriptionController.text.trim().isEmpty
-                                ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCustomer?.name}'
+                                ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}'
                                 : descriptionController.text.trim(),
                             'currency': selectedCurrency,
                             'total_amount': amount,
-                            'cash_box_id': selectedCashBoxId,
-                            'customer_id': _freshCustomer?.id,
+                            'cash_box_id': widget.cashBox.id,
                             'is_posted': 1,
                             'created_at': now.toIso8601String(),
                             'updated_at': now.toIso8601String(),
@@ -542,89 +351,41 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           List<Map<String, dynamic>> items = [];
 
                           if (voucherType == 'receipt') {
-                            // Receipt: Debit cash box, Credit customer account
-                            if (cashBoxAccountId != null) {
+                            // Receipt: Debit Cash & Banks (cash in), Credit contra account
+                            items.add({
+                              'account_id': cashAccountId,
+                              'debit': amount,
+                              'credit': 0.0,
+                              'description': 'سند قبض - ${_freshCashBox?.name}',
+                            });
+                            if (obAccountId != null) {
                               items.add({
-                                'account_id': cashBoxAccountId,
-                                'debit': amount,
-                                'credit': 0.0,
-                                'description': 'سند قبض من ${_freshCustomer?.name}',
-                              });
-                            }
-                            if (customerAccountId != null) {
-                              items.add({
-                                'account_id': customerAccountId,
+                                'account_id': obAccountId,
                                 'debit': 0.0,
                                 'credit': amount,
-                                'description': 'سند قبض من ${_freshCustomer?.name}',
+                                'description': 'سند قبض - ${_freshCashBox?.name}',
                               });
                             }
                           } else {
-                            // Payment: Debit customer account, Credit cash box
-                            if (customerAccountId != null) {
+                            // Payment: Debit contra account, Credit Cash & Banks (cash out)
+                            if (obAccountId != null) {
                               items.add({
-                                'account_id': customerAccountId,
+                                'account_id': obAccountId,
                                 'debit': amount,
                                 'credit': 0.0,
-                                'description': 'سند صرف إلى ${_freshCustomer?.name}',
+                                'description': 'سند صرف - ${_freshCashBox?.name}',
                               });
                             }
-                            if (cashBoxAccountId != null) {
-                              items.add({
-                                'account_id': cashBoxAccountId,
-                                'debit': 0.0,
-                                'credit': amount,
-                                'description': 'سند صرف إلى ${_freshCustomer?.name}',
-                              });
-                            }
+                            items.add({
+                              'account_id': cashAccountId,
+                              'debit': 0.0,
+                              'credit': amount,
+                              'description': 'سند صرف - ${_freshCashBox?.name}',
+                            });
                           }
 
                           if (items.isNotEmpty) {
-                            await locator<CashBoxService>().insertVoucher(voucherMap, items);
-                          }
-
-                          // Update customer balance
-                          if (_freshCustomer?.id != null) {
-                            final currentBalance = _freshCustomer?.balance ?? 0.0;
-                            final currentType = _freshCustomer?.balanceType ?? 'credit';
-                            double newBalance;
-                            if (voucherType == 'receipt') {
-                              // Receipt from customer reduces what they owe us
-                              if (currentType == 'debit') {
-                                newBalance = currentBalance - amount;
-                                final newType = newBalance < 0 ? 'credit' : 'debit';
-                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
-                                  'balance': newBalance.abs(),
-                                  'balance_type': newType,
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              } else {
-                                newBalance = currentBalance + amount;
-                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
-                                  'balance': newBalance,
-                                  'balance_type': 'credit',
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              }
-                            } else {
-                              // Payment to customer increases what they owe us
-                              if (currentType == 'debit') {
-                                newBalance = currentBalance + amount;
-                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
-                                  'balance': newBalance,
-                                  'balance_type': 'debit',
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              } else {
-                                newBalance = currentBalance - amount;
-                                final newType = newBalance < 0 ? 'debit' : 'credit';
-                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
-                                  'balance': newBalance.abs(),
-                                  'balance_type': newType,
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              }
-                            }
+                            await cashBoxService.insertVoucher(voucherMap, items);
                           }
 
                           if (context.mounted) {
@@ -652,203 +413,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     descriptionController.dispose();
   }
 
-  // ── Print / Export ─────────────────────────────────────────────
-  void _printReport() {
-    // Show print options bottom sheet
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('خيارات الطباعة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
-                ),
-                title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: const Text('إنشاء ملف PDF لكشف الحساب'),
-                trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _generatePdfStatement();
-                },
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),
-                ),
-                title: const Text('طباعة حرارية بلوتوث', style: TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: const Text('طباعة كشف حساب على طابعة حرارية'),
-                trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await _printBluetoothStatement();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Generate PDF account statement for the customer.
-  Future<void> _generatePdfStatement() async {
-    final customer = _freshCustomer ?? widget.customer;
-    try {
-      await AccountStatementPdfGenerator.printAccountStatement(
-        entityName: customer.name,
-        entityType: 'customer',
-        movements: _filteredMovements,
-        totalDebit: _totalDebit,
-        totalCredit: _totalCredit,
-        netBalance: _netBalance,
-        balanceLabel: _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
-        phone: customer.phone,
-        currency: customer.currency ?? 'YER',
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء إنشاء كشف الحساب'), backgroundColor: AppColors.error),
-        );
-      }
-    }
-  }
-
-  /// Print customer statement via Bluetooth thermal printer.
-  Future<void> _printBluetoothStatement() async {
-    final printerService = BluetoothPrinterService.instance;
-    final customer = _freshCustomer ?? widget.customer;
-
-    if (!printerService.isConnected) {
-      final connected = await printerService.autoConnect();
-      if (!connected) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
-              backgroundColor: AppColors.warning,
-              action: SnackBarAction(
-                label: 'الإعدادات',
-                textColor: Colors.white,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const BluetoothPrinterSettingsScreen()),
-                  );
-                },
-              ),
-            ),
-          );
-        }
-        return;
-      }
-    }
-
-    try {
-      await printerService.printCustomerStatement({
-        'name': customer.name,
-        'balance': customer.balance,
-        'balance_type': customer.balanceType,
-        'currency': customer.currency,
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم إرسال كشف الحساب للطابعة الحرارية'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } on PrinterException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: AppColors.error),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
-        );
-      }
-    }
-  }
-
-  void _exportToExcel() async {
-    final customer = _freshCustomer ?? widget.customer;
-    try {
-      await ExcelExporter.exportAccountStatementToExcel(
-        entityName: customer.name,
-        entityType: 'عميل',
-        movements: _filteredMovements,
-        totalDebit: _totalDebit,
-        totalCredit: _totalCredit,
-        netBalance: _netBalance,
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error),
-        );
-      }
-    }
-  }
-
-  // ── Currency symbol helper ──────────────────────────────────────
-  String _currencySymbol(String? code) {
-    switch (code) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return r'$';
-      case 'YER': default: return 'ر.ي';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final customer = _freshCustomer ?? widget.customer;
-    final isDebit = customer.balanceType == 'debit';
-    final balanceDisplay = customer.balance.abs().toStringAsFixed(2);
+    final cashBox = _freshCashBox ?? widget.cashBox;
+    final isDebit = cashBox.balanceType == 'debit';
+    final balanceDisplay = cashBox.balance.abs().toStringAsFixed(2);
     // ignore: unused_local_variable
-    final balanceColor = isDebit ? AppColors.error : (customer.balance > 0 ? AppColors.success : AppColors.textSecondary);
+    final balanceColor = isDebit ? AppColors.error : (cashBox.balance > 0 ? AppColors.success : AppColors.textSecondary);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(customer.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.print),
-            tooltip: 'طباعة',
-            onPressed: _printReport,
-          ),
-          IconButton(
-            icon: const Icon(Icons.file_download),
-            tooltip: 'تصدير إكسل',
-            onPressed: _exportToExcel,
-          ),
-        ],
+        title: Text(cashBox.name),
       ),
       body: Column(
         children: [
@@ -874,13 +451,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       CircleAvatar(
                         radius: 28,
                         backgroundColor: Colors.white.withOpacity(0.2),
-                        child: Text(
-                          customer.name.isNotEmpty ? customer.name[0] : '?',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 22,
-                          ),
+                        child: Icon(
+                          cashBox.isBank ? Icons.account_balance : Icons.account_balance_wallet,
+                          color: Colors.white,
+                          size: 24,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -889,7 +463,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              customer.name,
+                              cashBox.name,
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
@@ -897,19 +471,35 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (customer.phone != null && customer.phone!.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.phone, size: 14, color: Colors.white70),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    cashBox.typeAr,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (cashBox.isBank && cashBox.bankName != null && cashBox.bankName!.isNotEmpty) ...[
+                                  const Icon(Icons.business, size: 12, color: Colors.white70),
                                   const SizedBox(width: 4),
                                   Text(
-                                    customer.phone!,
+                                    cashBox.bankName!,
                                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                                   ),
                                 ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -918,7 +508,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '$balanceDisplay ${_currencySymbol(customer.currency)}',
+                            '$balanceDisplay ${_currencySymbol(cashBox.currency)}',
                             style: theme.textTheme.titleLarge?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
@@ -932,7 +522,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              isDebit ? 'عليه' : (customer.balance > 0 ? 'له' : 'متساوي'),
+                              isDebit ? 'عليه' : (cashBox.balance > 0 ? 'له' : 'متساوي'),
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
                             ),
                           ),
@@ -942,6 +532,44 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+
+          // ── Action Buttons Row ────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: isLight ? AppColors.surface : AppColors.darkSurface,
+            child: Row(
+              children: [
+                // سند قبض (Receipt Voucher)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddVoucherDialog('receipt'),
+                    icon: const Icon(Icons.assignment_turned_in, size: 18),
+                    label: const Text('سند قبض'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.success,
+                      side: const BorderSide(color: AppColors.success),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // سند صرف (Payment Voucher)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddVoucherDialog('payment'),
+                    icon: const Icon(Icons.assignment_return, size: 18),
+                    label: const Text('سند صرف'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -1042,7 +670,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     }).toList(),
                     onChanged: (v) {
                       setState(() => _selectedCurrency = (v?.isEmpty ?? true) ? null : v);
-                      _applyFilters();
+                      _loadData(); // Reload movements with new currency filter
                     },
                   ),
                 ),
@@ -1059,7 +687,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.receipt_long, size: 64, color: AppColors.textHint.withOpacity(0.3)),
+                            Icon(Icons.account_balance_wallet, size: 64, color: AppColors.textHint.withOpacity(0.3)),
                             const SizedBox(height: 16),
                             Text('لا توجد حركات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
                           ],
@@ -1075,15 +703,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       ),
           ),
         ],
-      ),
-
-      // ── Add Voucher FAB ────────────────────────────────────────
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showVoucherTypeChooser(),
-        icon: const Icon(Icons.add_card),
-        label: const Text('إضافة سند'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
       ),
 
       // ── Bottom Statistics Bar ──────────────────────────────────
@@ -1122,10 +741,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   ),
                 ),
                 Container(width: 1, height: 32, color: AppColors.divider),
-                // الرصيد (net)
+                // الرصيد (net) with له/عليه label
                 Expanded(
                   child: _StatItem(
-                    label: 'الرصيد',
+                    label: _netBalance >= 0 ? 'له' : 'عليه',
                     value: _netBalance.abs().toStringAsFixed(2),
                     color: _netBalance >= 0 ? AppColors.success : AppColors.error,
                   ),
@@ -1135,62 +754,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  void _showVoucherTypeChooser() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('إضافة سند', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 20),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.assignment_turned_in, color: AppColors.success),
-                  ),
-                  title: const Text('سند قبض', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('استلام مبلغ من العميل'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showAddVoucherDialog('receipt');
-                  },
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.assignment_return, color: AppColors.error),
-                  ),
-                  title: const Text('سند صرف', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('دفع مبلغ للعميل'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showAddVoucherDialog('payment');
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }
@@ -1232,7 +795,7 @@ class _MovementCard extends StatelessWidget {
       final date = DateTime.parse(dateStr);
       formattedDate = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     } catch (e) {
-      debugPrint('CustomerDetailScreen._buildMovementCard: $e');
+      debugPrint('CashBoxDetailScreen._MovementCard: $e');
       formattedDate = dateStr;
     }
 

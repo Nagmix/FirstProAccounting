@@ -296,11 +296,8 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
     final employee = _freshEmployee ?? widget.employee;
     final employeeCurrency = employee['currency'] as String? ?? 'YER';
 
-    // Filter cash boxes by currency
-    final filteredCashBoxes = _cashBoxes.where((cb) {
-      final cbCurrency = cb['currency'] as String? ?? 'YER';
-      return cbCurrency == employeeCurrency;
-    }).toList();
+    // Cash boxes are currency-agnostic — show all, user picks the one they want
+    final filteredCashBoxes = _cashBoxes;
 
     await showDialog(
       context: context,
@@ -356,7 +353,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
                       items: filteredCashBoxes.map((cb) {
                         return DropdownMenuItem<int?>(
                           value: cb['id'] as int?,
-                          child: Text('${cb['name']} (${cb['currency'] ?? 'YER'})'),
+                          child: Text('${cb['name']}'),
                         );
                       }).toList(),
                       onChanged: (v) {

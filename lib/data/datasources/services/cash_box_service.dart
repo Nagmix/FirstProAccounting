@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
@@ -74,6 +76,375 @@ class CashBoxService {
       )
       ORDER BY cb.type ASC, cb.name ASC
     ''', [currency]);
+  }
+
+  /// Calculate the balance of a specific cash box for a given currency
+  /// by summing all financial movements (vouchers, transfers, exchanges,
+  /// invoices) in that currency.
+  ///
+  /// Cash boxes are currency-agnostic, so a single cash box can have
+  /// balances in multiple currencies. This method computes the balance
+  /// for one specific currency.
+  Future<double> getCashBoxBalanceForCurrency(int cashBoxId, String currency) async {
+    final db = await _db;
+    double balance = 0.0;
+
+    // 1. Receipt vouchers (cash in) for this cash box in this currency
+    final receipts = await db.rawQuery('''
+      SELECT COALESCE(SUM(total_amount), 0) AS total FROM vouchers
+      WHERE cash_box_id = ? AND voucher_type = 'receipt' AND currency = ?
+    ''', [cashBoxId, currency]);
+    balance += MoneyHelper.readCalculatedMoney(receipts.first['total']);
+
+    // 2. Payment vouchers (cash out) for this cash box in this currency
+    final payments = await db.rawQuery('''
+      SELECT COALESCE(SUM(total_amount), 0) AS total FROM vouchers
+      WHERE cash_box_id = ? AND voucher_type = 'payment' AND currency = ?
+    ''', [cashBoxId, currency]);
+    balance -= MoneyHelper.readCalculatedMoney(payments.first['total']);
+
+    // 3. Incoming transfers for this cash box in this currency
+    final inTransfers = await db.rawQuery('''
+      SELECT COALESCE(SUM(amount), 0) AS total FROM cash_transfers
+      WHERE to_cash_box_id = ? AND currency = ?
+    ''', [cashBoxId, currency]);
+    balance += MoneyHelper.readCalculatedMoney(inTransfers.first['total']);
+
+    // 4. Outgoing transfers from this cash box in this currency
+    final outTransfers = await db.rawQuery('''
+      SELECT COALESCE(SUM(amount), 0) AS total FROM cash_transfers
+      WHERE from_cash_box_id = ? AND currency = ?
+    ''', [cashBoxId, currency]);
+    balance -= MoneyHelper.readCalculatedMoney(outTransfers.first['total']);
+
+    // 5. Currency exchanges - incoming (to_amount in to_currency)
+    final inExchanges = await db.rawQuery('''
+      SELECT COALESCE(SUM(to_amount), 0) AS total FROM currency_exchanges
+      WHERE to_cash_box_id = ? AND to_currency = ?
+    ''', [cashBoxId, currency]);
+    balance += MoneyHelper.readCalculatedMoney(inExchanges.first['total']);
+
+    // 6. Currency exchanges - outgoing (from_amount in from_currency)
+    final outExchanges = await db.rawQuery('''
+      SELECT COALESCE(SUM(from_amount), 0) AS total FROM currency_exchanges
+      WHERE from_cash_box_id = ? AND from_currency = ?
+    ''', [cashBoxId, currency]);
+    balance -= MoneyHelper.readCalculatedMoney(outExchanges.first['total']);
+
+    // 7. Sales invoices (cash in) - paid_amount for this cash box in this currency
+    final salesPaid = await db.rawQuery('''
+      SELECT COALESCE(SUM(paid_amount), 0) AS total FROM invoices
+      WHERE cash_box_id = ? AND type = 'sale' AND currency = ? AND (is_return = 0 OR is_return IS NULL)
+    ''', [cashBoxId, currency]);
+    balance += MoneyHelper.readCalculatedMoney(salesPaid.first['total']);
+
+    // 8. Purchase invoices (cash out) - paid_amount for this cash box in this currency
+    final purchasePaid = await db.rawQuery('''
+      SELECT COALESCE(SUM(paid_amount), 0) AS total FROM invoices
+      WHERE cash_box_id = ? AND type = 'purchase' AND currency = ? AND (is_return = 0 OR is_return IS NULL)
+    ''', [cashBoxId, currency]);
+    balance -= MoneyHelper.readCalculatedMoney(purchasePaid.first['total']);
+
+    // 9. Sales return (cash out)
+    final salesReturnPaid = await db.rawQuery('''
+      SELECT COALESCE(SUM(paid_amount), 0) AS total FROM invoices
+      WHERE cash_box_id = ? AND type = 'sale' AND currency = ? AND is_return = 1
+    ''', [cashBoxId, currency]);
+    balance -= MoneyHelper.readCalculatedMoney(salesReturnPaid.first['total']);
+
+    // 10. Purchase return (cash in)
+    final purchaseReturnPaid = await db.rawQuery('''
+      SELECT COALESCE(SUM(paid_amount), 0) AS total FROM invoices
+      WHERE cash_box_id = ? AND type = 'purchase' AND currency = ? AND is_return = 1
+    ''', [cashBoxId, currency]);
+    balance += MoneyHelper.readCalculatedMoney(purchaseReturnPaid.first['total']);
+
+    // 11. Opening balance transactions against Cash & Banks account in this currency
+    //     that reference this cash box via description
+    final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+    final cashBanksAccount = await db.query(
+      'accounts',
+      where: 'account_code = ? AND currency = ?',
+      whereArgs: [(1100 + codeOffset).toString(), currency],
+      limit: 1,
+    );
+    if (cashBanksAccount.isNotEmpty) {
+      final accountId = cashBanksAccount.first['id'] as int;
+      final obTransactions = await db.rawQuery('''
+        SELECT 
+          COALESCE(SUM(debit), 0) AS total_debit,
+          COALESCE(SUM(credit), 0) AS total_credit
+        FROM transactions
+        WHERE account_id = ? AND reference_type = 'opening_balance'
+      ''', [accountId]);
+      final totalDebit = MoneyHelper.readCalculatedMoney(obTransactions.first['total_debit']);
+      final totalCredit = MoneyHelper.readCalculatedMoney(obTransactions.first['total_credit']);
+      // Debit on cash account = increase (cash in), Credit = decrease (cash out)
+      balance += totalDebit - totalCredit;
+    }
+
+    return balance;
+  }
+
+  /// Get all financial movements for a specific cash box, optionally
+  /// filtered by currency. Returns a list of movement maps suitable
+  /// for display in a detail/ledger screen.
+  Future<List<Map<String, dynamic>>> getCashBoxMovements(
+    int cashBoxId, {
+    String? currency,
+  }) async {
+    final db = await _db;
+    final movements = <Map<String, dynamic>>[];
+
+    // 1. Vouchers linked to this cash box
+    final voucherFilter = currency != null
+        ? 'AND v.currency = ?'
+        : '';
+    final voucherArgs = currency != null
+        ? [cashBoxId, currency]
+        : [cashBoxId];
+    final vouchers = await db.rawQuery('''
+      SELECT v.* FROM vouchers v
+      WHERE v.cash_box_id = ? $voucherFilter
+      ORDER BY v.date ASC, v.id ASC
+    ''', voucherArgs);
+
+    for (final v in vouchers) {
+      final voucherType = v['voucher_type'] as String? ?? '';
+      final totalAmount = MoneyHelper.readMoney(v['total_amount']);
+      final curr = v['currency'] as String? ?? 'YER';
+      final dateStr = v['date'] as String? ?? v['created_at'] as String? ?? DateTime.now().toIso8601String();
+
+      String typeAr;
+      IconData icon;
+      Color color;
+      double debit = 0.0;
+      double credit = 0.0;
+      String filterKey;
+
+      switch (voucherType) {
+        case 'receipt':
+          typeAr = 'سند قبض';
+          icon = Icons.assignment_turned_in;
+          color = AppColors.success;
+          credit = totalAmount; // Cash in = له
+          filterKey = 'receipt_voucher';
+          break;
+        case 'payment':
+          typeAr = 'سند صرف';
+          icon = Icons.assignment_return;
+          color = AppColors.error;
+          debit = totalAmount; // Cash out = عليه
+          filterKey = 'payment_voucher';
+          break;
+        case 'settlement':
+          typeAr = 'قيد تسوية';
+          icon = Icons.balance;
+          color = AppColors.info;
+          credit = totalAmount;
+          filterKey = 'settlement';
+          break;
+        case 'compound':
+          typeAr = 'قيد متعدد';
+          icon = Icons.dynamic_feed;
+          color = AppColors.accentBlue;
+          debit = totalAmount;
+          filterKey = 'compound_entry';
+          break;
+        default:
+          typeAr = 'سند';
+          icon = Icons.description;
+          color = AppColors.textSecondary;
+          debit = totalAmount;
+          filterKey = 'all';
+      }
+
+      final description = v['description'] as String? ?? '$typeAr - ${v['voucher_number'] ?? ''}';
+
+      movements.add({
+        'id': 'v_${v['id']}',
+        'date': dateStr,
+        'type': voucherType,
+        'type_ar': typeAr,
+        'filter_key': filterKey,
+        'icon': icon,
+        'color': color,
+        'description': description,
+        'debit': debit,
+        'credit': credit,
+        'currency': curr,
+        'source': 'voucher',
+        'voucher_type': voucherType,
+      });
+    }
+
+    // 2. Cash transfers involving this cash box
+    final transferFilter = currency != null ? 'AND ct.currency = ?' : '';
+    final transferArgs = currency != null
+        ? [cashBoxId, currency, cashBoxId, currency]
+        : [cashBoxId, cashBoxId];
+
+    final transfers = await db.rawQuery('''
+      SELECT ct.*,
+        from_cb.name AS from_cash_box_name,
+        to_cb.name AS to_cash_box_name
+      FROM cash_transfers ct
+      LEFT JOIN cash_boxes from_cb ON ct.from_cash_box_id = from_cb.id
+      LEFT JOIN cash_boxes to_cb ON ct.to_cash_box_id = to_cb.id
+      WHERE (ct.from_cash_box_id = ? OR ct.to_cash_box_id = ?) $transferFilter
+      ORDER BY ct.date ASC, ct.id ASC
+    ''', transferArgs);
+
+    for (final t in transfers) {
+      final amount = MoneyHelper.readMoney(t['amount']);
+      final curr = t['currency'] as String? ?? 'YER';
+      final dateStr = t['date'] as String? ?? t['created_at'] as String? ?? DateTime.now().toIso8601String();
+      final isOutgoing = t['from_cash_box_id'] == cashBoxId;
+      final fromName = t['from_cash_box_name'] as String? ?? '';
+      final toName = t['to_cash_box_name'] as String? ?? '';
+
+      movements.add({
+        'id': 't_${t['id']}',
+        'date': dateStr,
+        'type': isOutgoing ? 'outgoing_transfer' : 'incoming_transfer',
+        'type_ar': isOutgoing ? 'تحويل صادر' : 'تحويل وارد',
+        'filter_key': isOutgoing ? 'outgoing_transfer' : 'incoming_transfer',
+        'icon': isOutgoing ? Icons.outbox : Icons.inbox,
+        'color': isOutgoing ? AppColors.warning : AppColors.accentBlue,
+        'description': isOutgoing
+            ? 'تحويل إلى $toName'
+            : 'تحويل من $fromName',
+        'debit': isOutgoing ? amount : 0.0,   // outgoing = عليه (debit)
+        'credit': isOutgoing ? 0.0 : amount,  // incoming = له (credit)
+        'currency': curr,
+        'source': 'transfer',
+        'voucher_type': null,
+      });
+    }
+
+    // 3. Currency exchanges involving this cash box
+    final exchangeFilter = currency != null ? 'AND (ce.from_currency = ? OR ce.to_currency = ?)' : '';
+    final exchangeArgs = currency != null
+        ? [cashBoxId, cashBoxId, currency, currency]
+        : [cashBoxId, cashBoxId];
+
+    final exchanges = await db.rawQuery('''
+      SELECT ce.*,
+        from_cb.name AS from_cash_box_name,
+        to_cb.name AS to_cash_box_name
+      FROM currency_exchanges ce
+      LEFT JOIN cash_boxes from_cb ON ce.from_cash_box_id = from_cb.id
+      LEFT JOIN cash_boxes to_cb ON ce.to_cash_box_id = to_cb.id
+      WHERE (ce.from_cash_box_id = ? OR ce.to_cash_box_id = ?) $exchangeFilter
+      ORDER BY ce.date ASC, ce.id ASC
+    ''', exchangeArgs);
+
+    for (final e in exchanges) {
+      final fromAmount = MoneyHelper.readMoney(e['from_amount']);
+      final toAmount = MoneyHelper.readMoney(e['to_amount']);
+      final fromCurrency = e['from_currency'] as String? ?? 'YER';
+      final toCurrency = e['to_currency'] as String? ?? 'YER';
+      final dateStr = e['date'] as String? ?? e['created_at'] as String? ?? DateTime.now().toIso8601String();
+      final isSource = e['from_cash_box_id'] == cashBoxId;
+
+      // Only include if the exchange involves our selected currency
+      if (currency != null) {
+        if (isSource && fromCurrency != currency) continue;
+        if (!isSource && toCurrency != currency) continue;
+      }
+
+      final amount = isSource ? fromAmount : toAmount;
+      final curr = isSource ? fromCurrency : toCurrency;
+
+      movements.add({
+        'id': 'e_${e['id']}',
+        'date': dateStr,
+        'type': isSource ? 'exchange_out' : 'exchange_in',
+        'type_ar': isSource ? 'صرافة (صادر)' : 'صرافة (وارد)',
+        'filter_key': 'exchange',
+        'icon': Icons.currency_exchange,
+        'color': AppColors.accentOrange,
+        'description': isSource
+            ? 'صرافة: $fromCurrency → $toCurrency'
+            : 'صرافة: $fromCurrency → $toCurrency',
+        'debit': isSource ? amount : 0.0,
+        'credit': isSource ? 0.0 : amount,
+        'currency': curr,
+        'source': 'exchange',
+        'voucher_type': null,
+      });
+    }
+
+    // 4. Invoices linked to this cash box
+    final invoiceFilter = currency != null ? 'AND i.currency = ?' : '';
+    final invoiceArgs = currency != null
+        ? [cashBoxId, currency]
+        : [cashBoxId];
+
+    final invoices = await db.rawQuery('''
+      SELECT i.* FROM invoices i
+      WHERE i.cash_box_id = ? $invoiceFilter
+      ORDER BY i.date ASC, i.id ASC
+    ''', invoiceArgs);
+
+    for (final inv in invoices) {
+      final type = inv['type'] as String? ?? 'sale';
+      final isReturn = (inv['is_return'] as int? ?? 0) == 1;
+      final paidAmount = MoneyHelper.readMoney(inv['paid_amount']);
+      final curr = inv['currency'] as String? ?? 'YER';
+      final dateStr = inv['created_at'] as String? ?? DateTime.now().toIso8601String();
+
+      String typeAr;
+      String filterKey;
+      double debit = 0.0;
+      double credit = 0.0;
+
+      if (type == 'sale' && !isReturn) {
+        typeAr = 'فاتورة مبيعات';
+        filterKey = 'sales';
+        credit = paidAmount; // Cash in = له
+      } else if (type == 'sale' && isReturn) {
+        typeAr = 'مرتجع مبيعات';
+        filterKey = 'returns';
+        debit = paidAmount; // Cash out = عليه
+      } else if (type == 'purchase' && !isReturn) {
+        typeAr = 'فاتورة مشتريات';
+        filterKey = 'purchases';
+        debit = paidAmount; // Cash out = عليه
+      } else {
+        typeAr = 'مرتجع مشتريات';
+        filterKey = 'returns';
+        credit = paidAmount; // Cash in = له
+      }
+
+      movements.add({
+        'id': 'i_${inv['id']}',
+        'date': dateStr,
+        'type': type,
+        'type_ar': typeAr,
+        'filter_key': filterKey,
+        'icon': type == 'sale' ? Icons.receipt_long : Icons.shopping_cart,
+        'color': type == 'sale' ? AppColors.primary : AppColors.accentOrange,
+        'description': '$typeAr - ${inv['invoice_number'] ?? inv['id'] ?? ''}',
+        'debit': debit,
+        'credit': credit,
+        'currency': curr,
+        'source': 'invoice',
+        'voucher_type': null,
+      });
+    }
+
+    // Sort by date ascending
+    movements.sort((a, b) {
+      final dateA = a['date'] as String;
+      final dateB = b['date'] as String;
+      final cmp = dateA.compareTo(dateB);
+      if (cmp != 0) return cmp;
+      // Secondary sort by id for stable ordering
+      return (a['id'].toString()).compareTo(b['id'].toString());
+    });
+
+    return movements;
   }
 
   // ══════════════════════════════════════════════════════════════

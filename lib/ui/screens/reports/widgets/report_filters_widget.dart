@@ -520,7 +520,7 @@ class _CashBoxDropdown extends StatelessWidget {
           value: value,
           items: snap.data!.map((cb) => DropdownMenuItem<int>(
             value: cb['id'] as int,
-            child: Text('${cb['name']} (${cb['currency']})', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+            child: Text('${cb['name']}', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
           )).toList(),
           onChanged: onChanged,
           hint: 'اختر الصندوق',

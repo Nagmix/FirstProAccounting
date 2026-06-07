@@ -441,7 +441,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                       items: _cashBoxes.map((cb) {
                         return DropdownMenuItem<int?>(
                           value: cb['id'] as int?,
-                          child: Text('${cb['name']} (${cb['currency'] ?? 'YER'})'),
+                          child: Text('${cb['name']}'),
                         );
                       }).toList(),
                       onChanged: (v) {

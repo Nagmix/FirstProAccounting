@@ -29,8 +29,10 @@ class EmployeeRepository {
         employeeData['balance_type'] as String? ?? 'credit';
     final employeeName = employeeData['name'] as String? ?? '';
 
-    // Ensure currency and account_id are NOT permanently set on the employee
-    employeeData['currency'] = null;
+    // Currency is only for opening balance; the employee is currency-agnostic.
+    // However, the DB column is NOT NULL, so we keep the opening-balance currency
+    // as the stored default. It does NOT permanently bind the employee to that currency.
+    // account_id is NOT permanently set on the employee.
     employeeData['account_id'] = null;
 
     // Insert employee (convert money fields to cents)

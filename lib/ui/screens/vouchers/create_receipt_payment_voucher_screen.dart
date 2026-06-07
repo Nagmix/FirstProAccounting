@@ -193,10 +193,9 @@ class _CreateReceiptPaymentVoucherScreenState
   //  Cash Box Filtering
   // ════════════════════════════════════════════════════════════════
 
+  // Cash boxes are currency-agnostic — show all boxes, don't filter by currency
   List<Map<String, dynamic>> get _filteredCashBoxes {
-    return _cashBoxes
-        .where((cb) => cb['currency'] == _selectedCurrency)
-        .toList();
+    return _cashBoxes;
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -359,7 +358,8 @@ class _CreateReceiptPaymentVoucherScreenState
 
   String _formatCashBoxBalance(Map<String, dynamic> cb) {
     final balance = MoneyHelper.readMoney(cb['balance']);
-    final symbol = _getCurrencySymbol(cb['currency'] as String? ?? 'YER');
+    // Cash box is currency-agnostic; use selected currency symbol for display
+    final symbol = _getCurrencySymbol(_selectedCurrency);
     return '${CurrencyFormatter.formatValue(balance)} $symbol';
   }
 
