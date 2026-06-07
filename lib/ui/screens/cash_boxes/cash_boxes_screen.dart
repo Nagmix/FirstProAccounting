@@ -171,15 +171,40 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
   Future<void> _deleteCashBox(CashBox cashBox) async {
     final confirmed = await DeleteHelper.showDeleteConfirmation(
       context: context,
-      entityType: 'الصندوق',
-      entityName: cashBox.name,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
+        title: const Text('حذف الصندوق'),
+        content: Text('هل أنت متأكد من حذف "${cashBox.name}"؟\nسيتم تعطيل الصندوق إذا لم تكن هناك سجلات مرتبطة.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
     );
-    if (confirmed) {
-      await locator<CashBoxService>().deleteCashBox(cashBox.id!);
-      if (mounted) {
-        DeleteHelper.showDeleteSuccess(context, 'الصندوق', cashBox.name);
+    if (confirmed == true) {
+      try {
+        await locator<CashBoxService>().deleteCashBox(cashBox.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تم تعطيل "${cashBox.name}"'), backgroundColor: AppColors.success),
+          );
+        }
+        _loadCashBoxes();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', '')),
+              backgroundColor: AppColors.error,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
       }
-      _loadCashBoxes();
     }
   }
 

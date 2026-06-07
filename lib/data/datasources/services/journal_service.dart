@@ -23,40 +23,50 @@ class JournalService {
   ///
   /// [isDebit] = true means this is a debit entry (increase for debit-balance accounts).
   /// [isDebit] = false means this is a credit entry (increase for credit-balance accounts).
+  ///
+  /// **Fix (7.3):** Uses an atomic SQL UPDATE with CASE expressions instead of
+  /// the previous read-then-write pattern, eliminating the race condition where
+  /// two concurrent operations could read the same stale balance and both write
+  /// based on it, causing one update to be lost.
+  ///
+  /// The logic is embedded entirely in SQL:
+  ///   - Credit-balance accounts: credit increases (+amount), debit decreases (-amount)
+  ///   - Debit-balance accounts:  debit increases (+amount), credit decreases (-amount)
   Future<void> updateAccountBalance(
     int accountId,
     double amount, {
     required bool isDebit,
   }) async {
     final db = await _db;
-    final account = await db.query(
-      'accounts',
-      where: 'id = ?',
-      whereArgs: [accountId],
-      limit: 1,
-    );
-    if (account.isNotEmpty) {
-      final currentBalance = MoneyHelper.readMoney(account.first['balance']);
-      final balanceType =
-          account.first['balance_type'] as String? ?? 'credit';
-      double newBalance;
-      if (balanceType == 'credit') {
-        // Credit-balance accounts: credit increases, debit decreases
-        newBalance = isDebit ? currentBalance - amount : currentBalance + amount;
-      } else {
-        // Debit-balance accounts: debit increases, credit decreases
-        newBalance = isDebit ? currentBalance + amount : currentBalance - amount;
-      }
-      await db.update(
-        'accounts',
-        {
-          'balance': MoneyHelper.toCents(newBalance),
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-        where: 'id = ?',
-        whereArgs: [accountId],
-      );
-    }
+    final now = DateTime.now().toIso8601String();
+    final amountCents = MoneyHelper.toCents(amount);
+    // isDebitInt: 1 = debit entry, 0 = credit entry
+    final isDebitInt = isDebit ? 1 : 0;
+
+    // Atomic UPDATE: the delta is computed inside SQL based on balance_type
+    // and the isDebit flag, so no separate SELECT is needed.
+    //   credit + isDebit  → -amount (debit decreases credit accounts)
+    //   credit + !isDebit → +amount (credit increases credit accounts)
+    //   debit  + isDebit  → +amount (debit increases debit accounts)
+    //   debit  + !isDebit → -amount (credit decreases debit accounts)
+    await db.rawUpdate('''
+      UPDATE accounts SET
+        balance = balance + CASE
+          WHEN balance_type = 'credit' AND ? = 1 THEN -?
+          WHEN balance_type = 'credit' AND ? = 0 THEN ?
+          WHEN balance_type = 'debit'  AND ? = 1 THEN ?
+          WHEN balance_type = 'debit'  AND ? = 0 THEN -?
+          ELSE 0
+        END,
+        updated_at = ?
+      WHERE id = ?
+    ''', [
+      isDebitInt, amountCents,
+      isDebitInt, amountCents,
+      isDebitInt, amountCents,
+      isDebitInt, amountCents,
+      now, accountId,
+    ]);
   }
 
   /// Update an account's balance considering its balance_type within a
@@ -66,6 +76,12 @@ class JournalService {
   ///   balance = balance + credit - debit
   /// For debit-balance accounts (ASSET, EXPENSE, COST):
   ///   balance = balance + debit - credit
+  ///
+  /// **Fix (7.3):** Uses an atomic SQL UPDATE with CASE expressions instead of
+  /// the previous read-then-write pattern. Even though this method is already
+  /// called within a `db.transaction()`, the SELECT-then-UPDATE pattern is
+  /// still vulnerable to concurrent reads from other transactions (WAL mode)
+  /// and is unnecessary. The atomic approach is both safer and faster.
   Future<void> updateAccountBalanceWithJournal(
     Transaction txn,
     int accountId,
@@ -73,32 +89,25 @@ class JournalService {
     double credit,
     String now,
   ) async {
-    final account = await txn.query(
-      'accounts',
-      where: 'id = ?',
-      whereArgs: [accountId],
-      limit: 1,
-    );
-    if (account.isNotEmpty) {
-      final currentBalance = MoneyHelper.readMoney(account.first['balance']);
-      final balanceType =
-          account.first['balance_type'] as String? ?? 'credit';
-      double newBalance;
-      if (balanceType == 'credit') {
-        newBalance = currentBalance + credit - debit;
-      } else {
-        newBalance = currentBalance + debit - credit;
-      }
-      await txn.update(
-        'accounts',
-        {
-          'balance': MoneyHelper.toCents(newBalance),
-          'updated_at': now,
-        },
-        where: 'id = ?',
-        whereArgs: [accountId],
-      );
-    }
+    final debitCents = MoneyHelper.toCents(debit);
+    final creditCents = MoneyHelper.toCents(credit);
+    // Net delta in cents for each balance_type:
+    //   credit-balance: +credit - debit  (credit increases, debit decreases)
+    //   debit-balance:  +debit - credit  (debit increases, credit decreases)
+    await txn.rawUpdate('''
+      UPDATE accounts SET
+        balance = balance + CASE
+          WHEN balance_type = 'credit' THEN ? - ?
+          WHEN balance_type = 'debit'  THEN ? - ?
+          ELSE 0
+        END,
+        updated_at = ?
+      WHERE id = ?
+    ''', [
+      creditCents, debitCents,
+      debitCents, creditCents,
+      now, accountId,
+    ]);
   }
 
   // ══════════════════════════════════════════════════════════════

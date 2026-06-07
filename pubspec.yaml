@@ -75,6 +75,9 @@ dev_dependencies:
   # Mocking framework for unit/widget testing
   mockito: ^5.4.5
 
+  # FFI-based SQLite for integration tests (in-memory database)
+  sqflite_common_ffi: ^2.3.4
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

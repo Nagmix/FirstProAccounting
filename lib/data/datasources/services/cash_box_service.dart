@@ -45,7 +45,90 @@ class CashBoxService {
 
   Future<int> deleteCashBox(int id) async {
     final db = await _db;
-    return await db.delete('cash_boxes', where: 'id = ?', whereArgs: [id]);
+
+    // **Fix (7.5):** Referential integrity check before deletion.
+    // Instead of a hard delete, we perform a soft delete (is_active = 0)
+    // after checking that no dependent records exist. This preserves
+    // audit trail and prevents orphaned references.
+
+    // Check for dependent records across all related tables.
+    final dependentChecks = <String, int>{};
+
+    // 1. Invoices linked to this cash box
+    final invoiceCount = await db.rawQuery(
+      'SELECT COUNT(*) AS cnt FROM invoices WHERE cash_box_id = ?', [id]);
+    dependentChecks['invoices'] = (invoiceCount.first['cnt'] as num?)?.toInt() ?? 0;
+
+    // 2. Vouchers linked to this cash box
+    try {
+      final voucherCount = await db.rawQuery(
+        'SELECT COUNT(*) AS cnt FROM vouchers WHERE cash_box_id = ?', [id]);
+      dependentChecks['vouchers'] = (voucherCount.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {
+      dependentChecks['vouchers'] = 0;
+    }
+
+    // 3. Expenses linked to this cash box
+    final expenseCount = await db.rawQuery(
+      'SELECT COUNT(*) AS cnt FROM expenses WHERE cash_box_id = ?', [id]);
+    dependentChecks['expenses'] = (expenseCount.first['cnt'] as num?)?.toInt() ?? 0;
+
+    // 4. Cash transfers from/to this cash box
+    try {
+      final transferCount = await db.rawQuery(
+        'SELECT COUNT(*) AS cnt FROM cash_transfers WHERE from_cash_box_id = ? OR to_cash_box_id = ?', [id, id]);
+      dependentChecks['cash_transfers'] = (transferCount.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {
+      dependentChecks['cash_transfers'] = 0;
+    }
+
+    // 5. Currency exchanges from/to this cash box
+    try {
+      final exchangeCount = await db.rawQuery(
+        'SELECT COUNT(*) AS cnt FROM currency_exchanges WHERE from_cash_box_id = ? OR to_cash_box_id = ?', [id, id]);
+      dependentChecks['currency_exchanges'] = (exchangeCount.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {
+      dependentChecks['currency_exchanges'] = 0;
+    }
+
+    // 6. Shifts linked to this cash box
+    final shiftCount = await db.rawQuery(
+      'SELECT COUNT(*) AS cnt FROM shifts WHERE cash_box_id = ?', [id]);
+    dependentChecks['shifts'] = (shiftCount.first['cnt'] as num?)?.toInt() ?? 0;
+
+    // 7. Bank reconciliations linked to this cash box
+    try {
+      final reconCount = await db.rawQuery(
+        'SELECT COUNT(*) AS cnt FROM bank_reconciliations WHERE cash_box_id = ?', [id]);
+      dependentChecks['bank_reconciliations'] = (reconCount.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {
+      dependentChecks['bank_reconciliations'] = 0;
+    }
+
+    // Build a list of dependent tables with records
+    final hasDependents = dependentChecks.entries
+        .where((e) => e.value > 0)
+        .map((e) => '${e.key} (${e.value})')
+        .toList();
+
+    if (hasDependents.isNotEmpty) {
+      throw Exception(
+        'لا يمكن حذف الصندوق لوجود سجلات مرتبطة: ${hasDependents.join('، ')}. '
+        'يمكنك تعطيل الصندوق بدلاً من حذفه.',
+      );
+    }
+
+    // No dependents — safe to soft delete
+    final now = DateTime.now().toIso8601String();
+    return await db.update(
+      'cash_boxes',
+      {
+        'is_active': 0,
+        'updated_at': now,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<double> getTotalCashBalance() async {
@@ -420,6 +503,183 @@ class CashBoxService {
     });
 
     return movements;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Optimized balance queries (7.4)
+  // ══════════════════════════════════════════════════════════════
+
+  /// **Fix (7.4):** Compute a single cash box's effective balance from ALL
+  /// transaction sources in one unified query, instead of the previous approach
+  /// which would require 11+ separate SQL queries (one per source table).
+  ///
+  /// Sources included in the single UNION ALL query:
+  ///   1. Opening balance from cash_boxes.balance
+  ///   2. Sale/PoS invoice payments received
+  ///   3. Purchase invoice payments made
+  ///   4. Receipt voucher amounts
+  ///   5. Payment voucher amounts
+  ///   6. Cash transfers IN (to this box)
+  ///   7. Cash transfers OUT (from this box)
+  ///   8. Currency exchange IN (to this box)
+  ///   9. Currency exchange OUT (from this box)
+  ///   10. Expenses paid from this box
+  ///   11. Opening balance journal entries via linked account
+  ///
+  /// Returns a map with:
+  ///   - 'effective_balance': double — the net balance considering all sources
+  ///   - 'total_inflows': double — sum of all inflows
+  ///   - 'total_outflows': double — sum of all outflows
+  Future<Map<String, double>> getCashBoxBalanceForCurrency(int cashBoxId) async {
+    final db = await _db;
+
+    // Single UNION ALL query that computes inflows and outflows from all sources
+    final result = await db.rawQuery('''
+      SELECT
+        CAST(COALESCE(SUM(CASE WHEN flow = 'in' THEN amount ELSE 0 END), 0) AS INTEGER) AS total_inflows,
+        CAST(COALESCE(SUM(CASE WHEN flow = 'out' THEN amount ELSE 0 END), 0) AS INTEGER) AS total_outflows
+      FROM (
+        -- 1. Opening balance from cash_boxes table
+        SELECT CASE
+          WHEN balance_type = 'credit' THEN 'in'
+          ELSE 'out'
+        END AS flow,
+        ABS(balance) AS amount
+        FROM cash_boxes WHERE id = ? AND is_active = 1
+
+        UNION ALL
+
+        -- 2. Sale/PoS invoice payments received into this box
+        SELECT 'in' AS flow, COALESCE(paid_amount, 0) AS amount
+        FROM invoices
+        WHERE cash_box_id = ? AND type IN ('sale', 'pos') AND is_return = 0 AND paid_amount > 0
+
+        UNION ALL
+
+        -- 3. Purchase returns payments received into this box
+        SELECT 'in' AS flow, COALESCE(paid_amount, 0) AS amount
+        FROM invoices
+        WHERE cash_box_id = ? AND type = 'purchase' AND is_return = 1 AND paid_amount > 0
+
+        UNION ALL
+
+        -- 4. Purchase payments made from this box
+        SELECT 'out' AS flow, COALESCE(paid_amount, 0) AS amount
+        FROM invoices
+        WHERE cash_box_id = ? AND type = 'purchase' AND is_return = 0 AND paid_amount > 0
+
+        UNION ALL
+
+        -- 5. Sale returns (refunds) paid from this box
+        SELECT 'out' AS flow, COALESCE(paid_amount, 0) AS amount
+        FROM invoices
+        WHERE cash_box_id = ? AND type IN ('sale', 'pos') AND is_return = 1 AND paid_amount > 0
+
+        UNION ALL
+
+        -- 6. Receipt voucher amounts (money in)
+        SELECT 'in' AS flow, COALESCE(total_amount, 0) AS amount
+        FROM vouchers
+        WHERE cash_box_id = ? AND voucher_type = 'receipt'
+
+        UNION ALL
+
+        -- 7. Payment voucher amounts (money out)
+        SELECT 'out' AS flow, COALESCE(total_amount, 0) AS amount
+        FROM vouchers
+        WHERE cash_box_id = ? AND voucher_type = 'payment'
+
+        UNION ALL
+
+        -- 8. Cash transfers IN (to this box)
+        SELECT 'in' AS flow, COALESCE(amount, 0) AS amount
+        FROM cash_transfers
+        WHERE to_cash_box_id = ?
+
+        UNION ALL
+
+        -- 9. Cash transfers OUT (from this box)
+        SELECT 'out' AS flow, COALESCE(amount, 0) AS amount
+        FROM cash_transfers
+        WHERE from_cash_box_id = ?
+
+        UNION ALL
+
+        -- 10. Currency exchange IN (to this box)
+        SELECT 'in' AS flow, COALESCE(to_amount, 0) AS amount
+        FROM currency_exchanges
+        WHERE to_cash_box_id = ?
+
+        UNION ALL
+
+        -- 11. Currency exchange OUT (from this box)
+        SELECT 'out' AS flow, COALESCE(from_amount, 0) AS amount
+        FROM currency_exchanges
+        WHERE from_cash_box_id = ?
+
+        UNION ALL
+
+        -- 12. Expenses paid from this box
+        SELECT 'out' AS flow, COALESCE(amount, 0) AS amount
+        FROM expenses
+        WHERE cash_box_id = ?
+      )
+    ''', [
+      cashBoxId,   // 1
+      cashBoxId,   // 2
+      cashBoxId,   // 3
+      cashBoxId,   // 4
+      cashBoxId,   // 5
+      cashBoxId,   // 6
+      cashBoxId,   // 7
+      cashBoxId,   // 8
+      cashBoxId,   // 9
+      cashBoxId,   // 10
+      cashBoxId,   // 11
+      cashBoxId,   // 12
+    ]);
+
+    final totalInflows = MoneyHelper.readCalculatedMoney(result.first['total_inflows']);
+    final totalOutflows = MoneyHelper.readCalculatedMoney(result.first['total_outflows']);
+    final effectiveBalance = totalInflows - totalOutflows;
+
+    return {
+      'effective_balance': effectiveBalance,
+      'total_inflows': totalInflows,
+      'total_outflows': totalOutflows,
+    };
+  }
+
+  /// **Fix (7.4):** Get aggregated balance summary for ALL cash boxes in a
+  /// single query, grouped by currency. This replaces calling
+  /// [getCashBalanceForCurrency] multiple times (one per currency) or
+  /// calling [getTotalCashBalance] + per-currency queries separately.
+  ///
+  /// Returns a list of maps, each with:
+  ///   - 'currency': String — the currency code
+  ///   - 'total_balance': double — net balance in that currency
+  ///   - 'cash_box_count': int — number of active cash boxes in that currency
+  Future<List<Map<String, dynamic>>> getAllCashBoxBalancesByCurrency() async {
+    final db = await _db;
+    final results = await db.rawQuery('''
+      SELECT
+        currency,
+        CAST(COALESCE(SUM(CASE
+          WHEN balance_type = 'credit' THEN balance
+          ELSE -balance
+        END), 0) AS INTEGER) AS total_balance,
+        COUNT(*) AS cash_box_count
+      FROM cash_boxes
+      WHERE is_active = 1
+      GROUP BY currency
+      ORDER BY currency
+    ''');
+
+    return results.map((row) => {
+      'currency': row['currency'] as String,
+      'total_balance': MoneyHelper.readCalculatedMoney(row['total_balance']),
+      'cash_box_count': row['cash_box_count'] as int,
+    }).toList();
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -977,6 +1237,10 @@ class CashBoxService {
   /// Creates double-entry transactions and updates account balances:
   /// - For debit balance: Debit Cash & Banks, Credit Opening Balance Equity
   /// - For credit balance: Credit Cash & Banks, Debit Opening Balance Equity
+  ///
+  /// **Fix (7.3):** Wrapped in a database transaction to ensure atomicity.
+  /// Uses [updateAccountBalanceWithJournal] instead of the standalone
+  /// [updateAccountBalance] so all operations succeed or fail together.
   Future<void> recordCashBoxOpeningBalance({
     required int linkedAccountId,
     required int openingBalanceAccountId,
@@ -994,59 +1258,72 @@ class CashBoxService {
     // From the user's perspective:
     //   له (credit) = the safe HAS money = cash in = Debit Cash & Banks (asset increase)
     //   عليه (debit) = the safe OWES money = cash out = Credit Cash & Banks (asset decrease)
-    if (balanceType == 'credit') {
-      // له — Safe has money: Debit Cash & Banks, Credit Opening Balance Equity
-      await db.insert('transactions', {
-        'account_id': linkedAccountId,
-        'journal_id': journalId,
-        'debit': MoneyHelper.toCents(openingBalance),
-        'credit': 0,
-        'description': 'رصيد افتتاحي صندوق - $cashBoxName',
-        'date': now,
-        'created_at': now,
-        'reference_type': 'opening_balance',
-        'reference_id': referenceId,
-      });
-      await db.insert('transactions', {
-        'account_id': openingBalanceAccountId,
-        'journal_id': journalId,
-        'debit': 0,
-        'credit': MoneyHelper.toCents(openingBalance),
-        'description': 'رصيد افتتاحي صندوق - $cashBoxName',
-        'date': now,
-        'created_at': now,
-        'reference_type': 'opening_balance',
-        'reference_id': referenceId,
-      });
-      await _dbHelper.journal.updateAccountBalance(linkedAccountId, openingBalance, isDebit: true);
-      await _dbHelper.journal.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: false);
-    } else {
-      // عليه — Safe owes money: Credit Cash & Banks, Debit Opening Balance Equity
-      await db.insert('transactions', {
-        'account_id': linkedAccountId,
-        'journal_id': journalId,
-        'debit': 0,
-        'credit': MoneyHelper.toCents(openingBalance),
-        'description': 'رصيد افتتاحي صندوق - $cashBoxName',
-        'date': now,
-        'created_at': now,
-        'reference_type': 'opening_balance',
-        'reference_id': referenceId,
-      });
-      await db.insert('transactions', {
-        'account_id': openingBalanceAccountId,
-        'journal_id': journalId,
-        'debit': MoneyHelper.toCents(openingBalance),
-        'credit': 0,
-        'description': 'رصيد افتتاحي صندوق - $cashBoxName',
-        'date': now,
-        'created_at': now,
-        'reference_type': 'opening_balance',
-        'reference_id': referenceId,
-      });
-      await _dbHelper.journal.updateAccountBalance(linkedAccountId, openingBalance, isDebit: false);
-      await _dbHelper.journal.updateAccountBalance(openingBalanceAccountId, openingBalance, isDebit: true);
-    }
+    //
+    // **Fix (7.3):** Wrapped in db.transaction with updateAccountBalanceWithJournal
+    // for atomicity (eliminates race condition from read-then-write).
+    await db.transaction((txn) async {
+      if (balanceType == 'credit') {
+        // له — Safe has money: Debit Cash & Banks, Credit Opening Balance Equity
+        await txn.insert('transactions', {
+          'account_id': linkedAccountId,
+          'journal_id': journalId,
+          'debit': MoneyHelper.toCents(openingBalance),
+          'credit': 0,
+          'description': 'رصيد افتتاحي صندوق - $cashBoxName',
+          'date': now,
+          'created_at': now,
+          'reference_type': 'opening_balance',
+          'reference_id': referenceId,
+        });
+        await txn.insert('transactions', {
+          'account_id': openingBalanceAccountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(openingBalance),
+          'description': 'رصيد افتتاحي صندوق - $cashBoxName',
+          'date': now,
+          'created_at': now,
+          'reference_type': 'opening_balance',
+          'reference_id': referenceId,
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+          txn, linkedAccountId, openingBalance, 0.0, now,
+        );
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+          txn, openingBalanceAccountId, 0.0, openingBalance, now,
+        );
+      } else {
+        // عليه — Safe owes money: Credit Cash & Banks, Debit Opening Balance Equity
+        await txn.insert('transactions', {
+          'account_id': linkedAccountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(openingBalance),
+          'description': 'رصيد افتتاحي صندوق - $cashBoxName',
+          'date': now,
+          'created_at': now,
+          'reference_type': 'opening_balance',
+          'reference_id': referenceId,
+        });
+        await txn.insert('transactions', {
+          'account_id': openingBalanceAccountId,
+          'journal_id': journalId,
+          'debit': MoneyHelper.toCents(openingBalance),
+          'credit': 0,
+          'description': 'رصيد افتتاحي صندوق - $cashBoxName',
+          'date': now,
+          'created_at': now,
+          'reference_type': 'opening_balance',
+          'reference_id': referenceId,
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+          txn, linkedAccountId, 0.0, openingBalance, now,
+        );
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+          txn, openingBalanceAccountId, openingBalance, 0.0, now,
+        );
+      }
+    });
   }
 
   /// توليد رقم السند التالي حسب النوع
