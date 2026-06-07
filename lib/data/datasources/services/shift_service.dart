@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/entity_balance_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/journal_id_helper.dart';
 import '../database_helper.dart';
@@ -664,29 +665,37 @@ class ShiftService {
         // The main journal entries and cash box update above already account for transport correctly.
         // No separate transport journal entries are needed here to avoid double-counting.
 
-        // ── C-03 + M-03: تحديث رصيد العميل/المورد مع دعم الدفعات الجزئية ──
+        // ── C-03 + M-03: Update customer/supplier balance with balance_type-aware logic ──
         if (invoice['customer_id'] != null) {
+          final customerId = invoice['customer_id'] as int;
           final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'pos' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-          // C-02/M-03: الدفع الجزئي — المتبقي يُضاف لرصيد العميل
           final customerAmount = isPartialCash ? effectiveRemaining : (paymentMechanism == 'credit' ? total : 0.0);
           if (customerAmount.abs() >= 0.005) {
             if (isDebit) {
-              await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
+              await EntityBalanceHelper.customerSaleOnCredit(
+                txn: txn, customerId: customerId, amount: customerAmount, now: now,
+              );
             } else {
-              await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoice['customer_id']]);
+              await EntityBalanceHelper.customerSaleReturn(
+                txn: txn, customerId: customerId, amount: customerAmount, now: now,
+              );
             }
           }
         }
 
         if (invoice['supplier_id'] != null) {
+          final supplierId = invoice['supplier_id'] as int;
           final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-          // C-02/M-03: الدفع الجزئي — المتبقي يُضاف لرصيد المورد
           final supplierAmount = isPartialCash ? effectiveRemaining : (paymentMechanism == 'credit' ? total : 0.0);
           if (supplierAmount.abs() >= 0.005) {
             if (isCreditToSupplier) {
-              await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
+              await EntityBalanceHelper.supplierPurchaseOnCredit(
+                txn: txn, supplierId: supplierId, amount: supplierAmount, now: now,
+              );
             } else {
-              await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoice['supplier_id']]);
+              await EntityBalanceHelper.supplierPurchaseReturn(
+                txn: txn, supplierId: supplierId, amount: supplierAmount, now: now,
+              );
             }
           }
         }

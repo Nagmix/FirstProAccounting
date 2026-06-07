@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/entity_balance_helper.dart';
 import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../models/invoice_model.dart';
@@ -1086,51 +1087,65 @@ class InvoiceRepository {
       // so that postShiftInvoices() won't re-process it.
       await txn.update('invoices', {'is_posted': 1}, where: 'id = ?', whereArgs: [invoiceMap['id']]);
 
-      // Update customer/supplier balance
+      // ── Update customer/supplier balance with balance_type-aware logic ──
       // For full cash payments: entity balance should NOT change (they already paid in full)
       // For partial cash: only the remaining unpaid amount affects entity balance
       // For credit: entity owes the full amount (total already includes transport)
+      //
+      // Accounting direction convention:
+      //   Customer: Sale on credit → debit effect (عليه, they owe us more)
+      //   Customer: Sale return → credit effect (له, we owe them more)
+      //   Supplier: Purchase on credit → credit effect (له, we owe them more)
+      //   Supplier: Purchase return → debit effect (عليه, they owe us more)
       if (invoiceMap['customer_id'] != null) {
-        final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
+        final customerId = invoiceMap['customer_id'] as int;
+        final isSaleDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
         double customerAmount;
         if (paymentMechanism == 'cash' && !isPartialCash) {
-          // Full cash payment: entity balance should NOT change (already paid)
           customerAmount = 0;
         } else if (isPartialCash && !isReturn) {
-          // Partial cash: only the remaining amount is owed by the customer
           customerAmount = remainingAmount;
         } else {
-          // Credit mechanism: entity owes the full amount (total already includes transport)
           customerAmount = total;
         }
-        if (isDebit) {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoiceMap['customer_id']]);
-        } else {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerAmount), now, invoiceMap['customer_id']]);
+        if (customerAmount.abs() >= 0.005) {
+          if (isSaleDebit) {
+            // Sale: customer owes us more → debit effect
+            await EntityBalanceHelper.customerSaleOnCredit(
+              txn: txn, customerId: customerId, amount: customerAmount, now: now,
+            );
+          } else {
+            // Return: we owe customer more → credit effect
+            await EntityBalanceHelper.customerSaleReturn(
+              txn: txn, customerId: customerId, amount: customerAmount, now: now,
+            );
+          }
         }
       }
 
-      // Supplier balance logic:
-      // For full cash payments: entity balance should NOT change (they already paid in full)
-      // For partial cash: only the remaining unpaid amount affects entity balance
-      // For credit: entity is owed the full amount (total already includes transport)
       if (invoiceMap['supplier_id'] != null) {
-        final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
+        final supplierId = invoiceMap['supplier_id'] as int;
+        final isPurchaseCredit = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
         double supplierAmount;
         if (paymentMechanism == 'cash' && !isPartialCash) {
-          // Full cash payment: entity balance should NOT change (already paid)
           supplierAmount = 0;
         } else if (isPartialCash && !isReturn) {
-          // Partial cash: only the remaining amount is owed to the supplier
           supplierAmount = remainingAmount;
         } else {
-          // Credit mechanism: entity is owed the full amount (total already includes transport)
           supplierAmount = total;
         }
-        if (isCreditToSupplier) {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoiceMap['supplier_id']]);
-        } else {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierAmount), now, invoiceMap['supplier_id']]);
+        if (supplierAmount.abs() >= 0.005) {
+          if (isPurchaseCredit) {
+            // Purchase: we owe supplier more → credit effect
+            await EntityBalanceHelper.supplierPurchaseOnCredit(
+              txn: txn, supplierId: supplierId, amount: supplierAmount, now: now,
+            );
+          } else {
+            // Return: supplier owes us more → debit effect
+            await EntityBalanceHelper.supplierPurchaseReturn(
+              txn: txn, supplierId: supplierId, amount: supplierAmount, now: now,
+            );
+          }
         }
       }
 
@@ -1412,14 +1427,18 @@ class InvoiceRepository {
         }
       }
 
-      // 6. Update customer balance (customer owes less after payment)
+      // 6. Update customer balance (customer owes less after payment → credit effect)
       if (customerId != null) {
-        await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, customerId]);
+        await EntityBalanceHelper.customerReceipt(
+          txn: txn, customerId: customerId, amount: paymentAmount, now: now,
+        );
       }
 
-      // 7. Update supplier balance (we owe less after payment)
+      // 7. Update supplier balance (we owe less after payment → debit effect)
       if (supplierId != null) {
-        await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, supplierId]);
+        await EntityBalanceHelper.supplierPayment(
+          txn: txn, supplierId: supplierId, amount: paymentAmount, now: now,
+        );
       }
 
       // 8. Update cash box balance
@@ -1767,45 +1786,58 @@ class InvoiceRepository {
       // NOTE: Transport charges are already included in `total`, so the main reversal entries above
       // already handle transport correctly. No separate transport reversal is needed.
 
-      // 4. Reverse customer/supplier balance
+      // 4. Reverse customer/supplier balance with balance_type-aware logic
       // Must mirror the save logic: full cash = no balance change, partial cash = only remaining, credit = total
+      // REVERSAL means the OPPOSITE direction: if original was debit effect, reversal is credit effect
       if (invoice['customer_id'] != null) {
+        final customerId = invoice['customer_id'] as int;
         final wasDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
         double customerReversalAmount;
         if (paymentMechanism == 'cash' && !isPartialCash) {
-          // Full cash payment: original save set customerAmount = 0, so reversal is also 0
           customerReversalAmount = 0;
         } else if (isPartialCash && !isReturn) {
-          // Partial cash: original save set customerAmount = remainingAmount
           customerReversalAmount = remainingAmount;
         } else {
-          // Credit mechanism: original save set customerAmount = total (already includes transport)
           customerReversalAmount = total;
         }
-        if (wasDebit) {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerReversalAmount), now, invoice['customer_id']]);
-        } else {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(customerReversalAmount), now, invoice['customer_id']]);
+        if (customerReversalAmount.abs() >= 0.005) {
+          if (wasDebit) {
+            // Original was debit (sale) → reversal is credit (return)
+            await EntityBalanceHelper.customerSaleReturn(
+              txn: txn, customerId: customerId, amount: customerReversalAmount, now: now,
+            );
+          } else {
+            // Original was credit (return) → reversal is debit (sale)
+            await EntityBalanceHelper.customerSaleOnCredit(
+              txn: txn, customerId: customerId, amount: customerReversalAmount, now: now,
+            );
+          }
         }
       }
 
       if (invoice['supplier_id'] != null) {
+        final supplierId = invoice['supplier_id'] as int;
         final wasCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
         double supplierReversalAmount;
         if (paymentMechanism == 'cash' && !isPartialCash) {
-          // Full cash payment: original save set supplierAmount = 0, so reversal is also 0
           supplierReversalAmount = 0;
         } else if (isPartialCash && !isReturn) {
-          // Partial cash: original save set supplierAmount = remainingAmount
           supplierReversalAmount = remainingAmount;
         } else {
-          // Credit mechanism: original save set supplierAmount = total (already includes transport)
           supplierReversalAmount = total;
         }
-        if (wasCreditToSupplier) {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierReversalAmount), now, invoice['supplier_id']]);
-        } else {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(supplierReversalAmount), now, invoice['supplier_id']]);
+        if (supplierReversalAmount.abs() >= 0.005) {
+          if (wasCreditToSupplier) {
+            // Original was credit (purchase) → reversal is debit (return)
+            await EntityBalanceHelper.supplierPurchaseReturn(
+              txn: txn, supplierId: supplierId, amount: supplierReversalAmount, now: now,
+            );
+          } else {
+            // Original was debit (return) → reversal is credit (purchase)
+            await EntityBalanceHelper.supplierPurchaseOnCredit(
+              txn: txn, supplierId: supplierId, amount: supplierReversalAmount, now: now,
+            );
+          }
         }
       }
 

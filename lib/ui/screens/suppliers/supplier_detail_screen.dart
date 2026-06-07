@@ -240,6 +240,9 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
   }
 
   /// Computes net position for the supplier from all movements.
+  /// The stored supplier.balance already includes all changes, so we should NOT
+  /// add it again on top of movements (that would double-count).
+  /// Instead, we compute net position purely from movements.
   double _computeNetPosition() {
     double creditTotal = 0;
     double debitTotal = 0;
@@ -252,14 +255,6 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
       } else {
         debitTotal += amount;
       }
-    }
-
-    // Also include the opening balance
-    final openingBalance = widget.supplier.balance;
-    if (widget.supplier.balanceType == 'credit') {
-      creditTotal += openingBalance;
-    } else {
-      debitTotal += openingBalance;
     }
 
     return creditTotal - debitTotal;
@@ -558,49 +553,9 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen>
                             await locator<CashBoxService>().insertVoucher(voucherMap, items);
                           }
 
-                          // Update supplier balance
-                          if (supplier.id != null) {
-                            final currentBalance = supplier.balance;
-                            final currentType = supplier.balanceType;
-                            double newBalance;
-                            if (voucherType == 'payment') {
-                              // Payment to supplier reduces what we owe them
-                              if (currentType == 'credit') {
-                                newBalance = currentBalance - amount;
-                                final newType = newBalance < 0 ? 'debit' : 'credit';
-                                await locator<SupplierRepository>().updateSupplier(supplier.id!, {
-                                  'balance': newBalance.abs(),
-                                  'balance_type': newType,
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              } else {
-                                newBalance = currentBalance + amount;
-                                await locator<SupplierRepository>().updateSupplier(supplier.id!, {
-                                  'balance': newBalance,
-                                  'balance_type': 'debit',
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              }
-                            } else {
-                              // Receipt from supplier increases what they owe us
-                              if (currentType == 'debit') {
-                                newBalance = currentBalance - amount;
-                                final newType = newBalance < 0 ? 'credit' : 'debit';
-                                await locator<SupplierRepository>().updateSupplier(supplier.id!, {
-                                  'balance': newBalance.abs(),
-                                  'balance_type': newType,
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              } else {
-                                newBalance = currentBalance + amount;
-                                await locator<SupplierRepository>().updateSupplier(supplier.id!, {
-                                  'balance': newBalance,
-                                  'balance_type': 'credit',
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              }
-                            }
-                          }
+                          // NOTE: Supplier balance is already updated by CashBoxService.insertVoucher()
+                          // which now uses EntityBalanceHelper with correct balance_type-aware logic.
+                          // No additional balance update needed here.
 
                           if (context.mounted) {
                             Navigator.pop(dialogContext);

@@ -278,6 +278,45 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       });
     }
 
+    // ── Add Opening Balance as first movement ──
+    // The opening balance is a real accounting entry that should appear
+    // in the transaction list just like any other movement.
+    final customer = _freshCustomer ?? widget.customer;
+    if (customer.balance != 0.0 || (customer.currency?.isNotEmpty ?? false)) {
+      // Check if there's an opening balance by comparing stored balance with movements
+      double allDebit = 0.0;
+      double allCredit = 0.0;
+      for (final m in movements) {
+        allDebit += MoneyHelper.readMoney(m['debit']);
+        allCredit += MoneyHelper.readMoney(m['credit']);
+      }
+      // Signed balance: positive = credit (له), negative = debit (عليه)
+      final customerSignedBalance = customer.balanceType == 'credit' ? customer.balance : -customer.balance;
+      final movementBalance = allCredit - allDebit;
+      final openingAmount = customerSignedBalance - movementBalance;
+
+      if (openingAmount.abs() >= 0.005) {
+        // There IS an opening balance that isn't covered by movements
+        final obCurrency = customer.currency ?? 'YER';
+        final isCredit = openingAmount > 0;
+        movements.insert(0, {
+          'id': 'opening_balance',
+          'date': customer.createdAt ?? DateTime.now().toIso8601String(),
+          'type': 'opening_balance',
+          'type_ar': 'رصيد افتتاحي',
+          'filter_key': 'all',
+          'icon': Icons.account_balance_wallet,
+          'color': AppColors.accentBlue,
+          'description': 'رصيد افتتاحي (${isCredit ? "له" : "عليه"})',
+          'debit': isCredit ? 0.0 : openingAmount.abs(),
+          'credit': isCredit ? openingAmount.abs() : 0.0,
+          'currency': obCurrency,
+          'source': 'opening_balance',
+          'voucher_type': null,
+        });
+      }
+    }
+
     // Sort by date ascending for running balance
     movements.sort((a, b) {
       final dateA = a['date'] as String;
@@ -322,28 +361,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       }).toList();
     }
 
-    // Calculate opening balance: the customer's stored balance minus the sum
-    // of all tracked movements. This captures any initial balance set when the
-    // customer was created that doesn't have a corresponding transaction.
-    final customer = _freshCustomer ?? widget.customer;
-    double openingBalance = 0.0;
-    if (customer.balance != 0.0) {
-      double allDebit = 0.0;
-      double allCredit = 0.0;
-      for (final m in _allMovements) {
-        allDebit += MoneyHelper.readMoney(m['debit']);
-        allCredit += MoneyHelper.readMoney(m['credit']);
-      }
-      // Running balance convention: positive = credit (له), negative = debit (عليه)
-      final customerBalance = customer.balanceType == 'credit'
-          ? customer.balance
-          : -customer.balance;
-      final movementBalance = allCredit - allDebit;
-      openingBalance = customerBalance - movementBalance;
-    }
-
-    // Calculate running balance and totals
-    double runningBalance = openingBalance;
+    // Calculate running balance
+    // Convention: positive = credit (له), negative = debit (عليه)
+    // Opening balance is now included as the first movement, so we start from 0
+    double runningBalance = 0.0;
     double totalDebit = 0.0;
     double totalCredit = 0.0;
 
@@ -360,7 +381,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       _filteredMovements = filtered;
       _totalDebit = totalDebit;
       _totalCredit = totalCredit;
-      _netBalance = openingBalance + totalCredit - totalDebit;
+      _netBalance = runningBalance;
     });
   }
 
@@ -583,49 +604,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                             await locator<CashBoxService>().insertVoucher(voucherMap, items);
                           }
 
-                          // Update customer balance
-                          if (_freshCustomer?.id != null) {
-                            final currentBalance = _freshCustomer?.balance ?? 0.0;
-                            final currentType = _freshCustomer?.balanceType ?? 'credit';
-                            double newBalance;
-                            if (voucherType == 'receipt') {
-                              // Receipt from customer reduces what they owe us
-                              if (currentType == 'debit') {
-                                newBalance = currentBalance - amount;
-                                final newType = newBalance < 0 ? 'credit' : 'debit';
-                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
-                                  'balance': newBalance.abs(),
-                                  'balance_type': newType,
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              } else {
-                                newBalance = currentBalance + amount;
-                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
-                                  'balance': newBalance,
-                                  'balance_type': 'credit',
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              }
-                            } else {
-                              // Payment to customer increases what they owe us
-                              if (currentType == 'debit') {
-                                newBalance = currentBalance + amount;
-                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
-                                  'balance': newBalance,
-                                  'balance_type': 'debit',
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              } else {
-                                newBalance = currentBalance - amount;
-                                final newType = newBalance < 0 ? 'debit' : 'credit';
-                                await locator<CustomerRepository>().updateCustomer(_freshCustomer!.id!, {
-                                  'balance': newBalance.abs(),
-                                  'balance_type': newType,
-                                  'updated_at': now.toIso8601String(),
-                                });
-                              }
-                            }
-                          }
+                          // NOTE: Customer balance is already updated by CashBoxService.insertVoucher()
+                          // which now uses EntityBalanceHelper with correct balance_type-aware logic.
+                          // No additional balance update needed here.
 
                           if (context.mounted) {
                             Navigator.pop(dialogContext);

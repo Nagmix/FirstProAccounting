@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/entity_balance_helper.dart';
 import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
@@ -823,26 +824,32 @@ class CashBoxService {
       final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
       final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
 
-      // ── M-07: تحديث رصيد العميل/المورد حسب المبدأ المحاسبي الصحيح ──
-      // رصيد العميل = ما عليه لنا (ذمم مدينة) → قبض: ينقص (سدد)، صرف: يزيد (أعطيناه سلفة/مبلغ يصبح ديناً عليه)
-      // رصيد المورد = ما علينا له (ذمم دائنة) → صرف: ينقص (سددنا)، قبض: يزيد (أعطانا سلفة/مبلغ يصبح ديناً لنا عليه)
+      // ── Update customer/supplier balance with balance_type-aware logic ──
+      // Receipt from customer: reduces what they owe us (credit effect)
+      // Payment to customer: increases what they owe us (debit effect)
+      // Payment to supplier: reduces what we owe them (debit effect)
+      // Receipt from supplier: increases what they owe us (debit effect)
       if (customerId != null && totalAmount > 0) {
         if (voucherType == 'receipt') {
-          // سند قبض من عميل: العميل سدد دينه → رصيده ينقص
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
+          await EntityBalanceHelper.customerReceipt(
+            txn: txn, customerId: customerId as int, amount: totalAmount, now: now,
+          );
         } else if (voucherType == 'payment') {
-          // سند صرف لعميل: دفعنا للعميل مبلغ → يصبح ديناً عليه → رصيده يزيد
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
+          await EntityBalanceHelper.customerPayment(
+            txn: txn, customerId: customerId as int, amount: totalAmount, now: now,
+          );
         }
       }
 
       if (supplierId != null && totalAmount > 0) {
         if (voucherType == 'payment') {
-          // سند صرف لمورد: سددنا ديننا للمورد → رصيده ينقص (ما علينا يقل)
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
+          await EntityBalanceHelper.supplierPayment(
+            txn: txn, supplierId: supplierId as int, amount: totalAmount, now: now,
+          );
         } else if (voucherType == 'receipt') {
-          // سند قبض من مورد: المورد دفع لنا مبلغ → يصبح ديناً لنا عليه → رصيده يزيد (ما علينا يزيد)
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
+          await EntityBalanceHelper.supplierReceipt(
+            txn: txn, supplierId: supplierId as int, amount: totalAmount, now: now,
+          );
         }
       }
     });
@@ -929,25 +936,34 @@ class CashBoxService {
         }
       }
 
-      // ── M-07: عكس تأثير رصيد العميل/المورد (عكس العملية الأصلية) ──
-      final customerId = voucherData['customer_id'];
-      final supplierId = voucherData['supplier_id'];
-      if (customerId != null && totalAmount > 0) {
-        // عكس العملية الأصلية:
-        // قبض (كان ينقص) → الآن يزيد | صرف (كان يزيد) → الآن ينقص
+      // ── Reverse customer/supplier balance with balance_type-aware logic ──
+      // REVERSAL: opposite of original operation
+      final voucherCustomerId = voucherData['customer_id'];
+      final voucherSupplierId = voucherData['supplier_id'];
+      if (voucherCustomerId != null && totalAmount > 0) {
         if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
+          // Original receipt: credit effect → reversal is debit effect
+          await EntityBalanceHelper.customerPayment(
+            txn: txn, customerId: voucherCustomerId as int, amount: totalAmount, now: now,
+          );
         } else if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE customers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, customerId]);
+          // Original payment: debit effect → reversal is credit effect
+          await EntityBalanceHelper.customerReceipt(
+            txn: txn, customerId: voucherCustomerId as int, amount: totalAmount, now: now,
+          );
         }
       }
-      if (supplierId != null && totalAmount > 0) {
-        // عكس العملية الأصلية:
-        // صرف (كان ينقص) → الآن يزيد | قبض (كان يزيد) → الآن ينقص
+      if (voucherSupplierId != null && totalAmount > 0) {
         if (voucherType == 'payment') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
+          // Original payment: debit effect → reversal is credit effect
+          await EntityBalanceHelper.supplierPurchaseOnCredit(
+            txn: txn, supplierId: voucherSupplierId as int, amount: totalAmount, now: now,
+          );
         } else if (voucherType == 'receipt') {
-          await txn.rawUpdate('UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(totalAmount), now, supplierId]);
+          // Original receipt: debit effect → reversal is credit effect
+          await EntityBalanceHelper.supplierPurchaseReturn(
+            txn: txn, supplierId: voucherSupplierId as int, amount: totalAmount, now: now,
+          );
         }
       }
 

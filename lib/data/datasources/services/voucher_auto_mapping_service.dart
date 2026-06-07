@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../core/utils/entity_balance_helper.dart';
 import '../../../core/utils/journal_id_helper.dart';
 import '../../../core/utils/money_helper.dart';
 import '../database_helper.dart';
@@ -758,70 +759,43 @@ class VoucherAutoMappingService {
         return;
     }
 
-    // سند قبض من عميل: العميل سدد → رصيده ينقص
-    // سند صرف لعميل: دفعنا للعميل → رصيده يزيد
-    // سند صرف لمورد: سددنا ديننا → رصيده ينقص
-    // سند قبض من مورد: المورد دفع لنا → رصيده يزيد
+    // ── Update entity balance with balance_type-aware logic ──
+    // Receipt from customer: credit effect (reduces what they owe)
+    // Payment to customer: debit effect (increases what they owe)
+    // Payment to supplier: debit effect (reduces what we owe)
+    // Receipt from supplier: debit effect (increases what they owe us)
     if (entityType == entityCustomer) {
       if (voucherType == 'receipt') {
-        await txn.rawUpdate(
-            'UPDATE $tableName SET balance = balance - ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(amount), now, entityId]);
+        await EntityBalanceHelper.customerReceipt(
+          txn: txn, customerId: entityId, amount: amount, now: now,
+        );
       } else {
-        await txn.rawUpdate(
-            'UPDATE $tableName SET balance = balance + ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(amount), now, entityId]);
+        await EntityBalanceHelper.customerPayment(
+          txn: txn, customerId: entityId, amount: amount, now: now,
+        );
       }
     } else if (entityType == entitySupplier) {
       if (voucherType == 'payment') {
-        await txn.rawUpdate(
-            'UPDATE $tableName SET balance = balance - ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(amount), now, entityId]);
+        await EntityBalanceHelper.supplierPayment(
+          txn: txn, supplierId: entityId, amount: amount, now: now,
+        );
       } else {
-        await txn.rawUpdate(
-            'UPDATE $tableName SET balance = balance + ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(amount), now, entityId]);
+        await EntityBalanceHelper.supplierReceipt(
+          txn: txn, supplierId: entityId, amount: amount, now: now,
+        );
       }
     } else if (entityType == entityEmployee) {
-      // الموظف: قبض = له (credit)، صرف = عليه (debit)
-      final empRows = await txn.query(tableName,
-          where: 'id = ?', whereArgs: [entityId], limit: 1);
-      if (empRows.isEmpty) return;
-
-      final currentBalance = MoneyHelper.readMoney(empRows.first['balance']);
-      final currentType =
-          empRows.first['balance_type'] as String? ?? 'credit';
-
-      double newBalance;
-      String newType;
-
       if (voucherType == 'receipt') {
-        // سند قبض: المبلغ له (credit - يزيد ما له)
-        if (currentType == 'credit') {
-          newBalance = currentBalance + amount;
-          newType = 'credit';
-        } else {
-          newBalance = currentBalance - amount;
-          newType = newBalance < 0 ? 'credit' : 'debit';
-          newBalance = newBalance.abs();
-        }
+        // Receipt for employee: credit effect (increases what we owe them)
+        await EntityBalanceHelper.applyEmployeeBalanceChange(
+          txn: txn, employeeId: entityId, creditEffect: amount, debitEffect: 0, now: now,
+        );
       } else {
-        // سند صرف: المبلغ عليه (debit - يزيد ما عليه)
-        if (currentType == 'debit') {
-          newBalance = currentBalance + amount;
-          newType = 'debit';
-        } else {
-          newBalance = currentBalance - amount;
-          newType = newBalance < 0 ? 'debit' : 'credit';
-          newBalance = newBalance.abs();
-        }
+        // Payment to employee: debit effect (increases what they owe us)
+        await EntityBalanceHelper.applyEmployeeBalanceChange(
+          txn: txn, employeeId: entityId, creditEffect: 0, debitEffect: amount, now: now,
+        );
       }
-
-      await txn.update(tableName, {
-        'balance': MoneyHelper.toCents(newBalance),
-        'balance_type': newType,
-        'updated_at': now,
-      }, where: 'id = ?', whereArgs: [entityId]);
     }
   }
 
@@ -855,83 +829,56 @@ class VoucherAutoMappingService {
     required bool isSource,
     required String now,
   }) async {
-    String tableName;
-    switch (entityType) {
-      case entityCustomer:
-        tableName = 'customers';
-        break;
-      case entitySupplier:
-        tableName = 'suppliers';
-        break;
-      case entityEmployee:
-        tableName = 'employees';
-        break;
-      default:
-        return; // المصروفات لا تحتاج تحديث رصيد
-    }
+    // General entry: "from" gives value (credit effect), "to" receives value (debit effect)
+    //
+    // For customers:
+    //   Source (from) customer gives value → credit effect (they pay us → reduces what they owe)
+    //   Destination (to) customer receives value → debit effect (we pay them → they owe us more)
+    //
+    // For suppliers:
+    //   Source (from) supplier gives value → debit effect (they pay us → reduces what we owe)
+    //   Destination (to) supplier receives value → credit effect (we pay them → we owe more)
+    //
+    // For employees:
+    //   Source (from) employee gives value → credit effect (they earn more)
+    //   Destination (to) employee receives value → debit effect (they owe more)
 
     if (entityType == entityCustomer) {
-      // "من" عميل (دائن - يعطي) → رصيده ينقص
-      // "إلى" عميل (مدين - يستقبل) → رصيده يزيد
       if (isSource) {
-        await txn.rawUpdate(
-            'UPDATE $tableName SET balance = balance - ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(amount), now, entityId]);
+        // "From" customer: credit effect (reduces what they owe us)
+        await EntityBalanceHelper.customerReceipt(
+          txn: txn, customerId: entityId, amount: amount, now: now,
+        );
       } else {
-        await txn.rawUpdate(
-            'UPDATE $tableName SET balance = balance + ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(amount), now, entityId]);
+        // "To" customer: debit effect (increases what they owe us)
+        await EntityBalanceHelper.customerPayment(
+          txn: txn, customerId: entityId, amount: amount, now: now,
+        );
       }
     } else if (entityType == entitySupplier) {
-      // "من" مورد (دائن) → رصيده يزيد (ما علينا يزيد)
-      // "إلى" مورد (مدين) → رصيده ينقص (ما علينا يقل)
       if (isSource) {
-        await txn.rawUpdate(
-            'UPDATE $tableName SET balance = balance + ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(amount), now, entityId]);
+        // "From" supplier: debit effect (reduces what we owe them)
+        await EntityBalanceHelper.supplierPayment(
+          txn: txn, supplierId: entityId, amount: amount, now: now,
+        );
       } else {
-        await txn.rawUpdate(
-            'UPDATE $tableName SET balance = balance - ?, updated_at = ? WHERE id = ?',
-            [MoneyHelper.toCents(amount), now, entityId]);
+        // "To" supplier: credit effect (increases what we owe them)
+        await EntityBalanceHelper.supplierPurchaseOnCredit(
+          txn: txn, supplierId: entityId, amount: amount, now: now,
+        );
       }
     } else if (entityType == entityEmployee) {
-      final rows = await txn.query(tableName,
-          where: 'id = ?', whereArgs: [entityId], limit: 1);
-      if (rows.isEmpty) return;
-
-      final currentBalance = MoneyHelper.readMoney(rows.first['balance']);
-      final currentType = rows.first['balance_type'] as String? ?? 'credit';
-
-      double newBalance;
-      String newType;
-
       if (isSource) {
-        // "من" موظف (دائن - يعطي) → ما له يزيد
-        if (currentType == 'credit') {
-          newBalance = currentBalance + amount;
-          newType = 'credit';
-        } else {
-          newBalance = currentBalance - amount;
-          newType = newBalance < 0 ? 'credit' : 'debit';
-          newBalance = newBalance.abs();
-        }
+        // "From" employee: credit effect (increases what we owe them)
+        await EntityBalanceHelper.applyEmployeeBalanceChange(
+          txn: txn, employeeId: entityId, creditEffect: amount, debitEffect: 0, now: now,
+        );
       } else {
-        // "إلى" موظف (مدين - يستقبل) → ما عليه يزيد
-        if (currentType == 'debit') {
-          newBalance = currentBalance + amount;
-          newType = 'debit';
-        } else {
-          newBalance = currentBalance - amount;
-          newType = newBalance < 0 ? 'debit' : 'credit';
-          newBalance = newBalance.abs();
-        }
+        // "To" employee: debit effect (increases what they owe us)
+        await EntityBalanceHelper.applyEmployeeBalanceChange(
+          txn: txn, employeeId: entityId, creditEffect: 0, debitEffect: amount, now: now,
+        );
       }
-
-      await txn.update(tableName, {
-        'balance': MoneyHelper.toCents(newBalance),
-        'balance_type': newType,
-        'updated_at': now,
-      }, where: 'id = ?', whereArgs: [entityId]);
     }
   }
 
