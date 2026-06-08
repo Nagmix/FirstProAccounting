@@ -294,7 +294,7 @@ void main() {
       final map = {
         'name': 'Test',
         'balance': 1000.0,
-        'opening_balance': 500.0,
+        'debt_ceiling': 500.0,
         'non_money_field': 'hello',
       };
 
@@ -305,7 +305,7 @@ void main() {
 
       expect(converted['name'], 'Test');
       expect(converted['balance'], 100000); // 1000.0 * 100
-      expect(converted['opening_balance'], 50000); // 500.0 * 100
+      expect(converted['debt_ceiling'], 50000); // 500.0 * 100
       expect(converted['non_money_field'], 'hello');
     });
   });
