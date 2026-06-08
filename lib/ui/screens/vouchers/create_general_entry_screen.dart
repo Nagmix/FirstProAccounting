@@ -500,19 +500,48 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
       );
 
       if (mounted) {
-        context.showSuccessSnackBar('تم حفظ القيد العام بنجاح');
-        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حفظ القيد العام بنجاح'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _clearForm();
       }
     } catch (e) {
       if (mounted) {
         final message = e.toString().contains('لم يتم العثور')
             ? e.toString().replaceAll('Exception: ', '')
             : 'حدث خطأ أثناء الحفظ';
-        context.showErrorSnackBar(message);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  /// Clear the form after successful save to prepare for next entry.
+  void _clearForm() {
+    _fromAmountController.clear();
+    _toAmountController.clear();
+    _descriptionController.clear();
+    _fromSearchController.clear();
+    _toSearchController.clear();
+    setState(() {
+      _fromEntity = null;
+      _toEntity = null;
+      _selectedDate = DateTime.now();
+      _fromEntityTypeFilter = 'all';
+      _toEntityTypeFilter = 'all';
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════

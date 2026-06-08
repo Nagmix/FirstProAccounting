@@ -295,16 +295,46 @@ class _CreateSettlementVoucherScreenState
       await locator<VoucherRepository>().saveVoucherWithJournalEntry(voucherMap, items);
 
       if (mounted) {
-        context.showSuccessSnackBar('تم حفظ سند التسوية بنجاح');
-        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حفظ سند التسوية بنجاح'),
+            backgroundColor: AppColors.info,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _clearForm();
       }
     } catch (e) {
       if (mounted) {
-        context.showErrorSnackBar('حدث خطأ أثناء الحفظ: ${e.toString()}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ أثناء الحفظ: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  /// Clear the form after successful save to prepare for next entry.
+  void _clearForm() {
+    _descriptionController.clear();
+    _searchController.clear();
+    _amountController.clear();
+    for (final item in _lineItems) {
+      item.debitController.clear();
+      item.creditController.clear();
+      item.descriptionController.clear();
+    }
+    setState(() {
+      _debitAccountId = null;
+      _creditAccountId = null;
+      _selectedDate = DateTime.now();
+    });
   }
 
   @override

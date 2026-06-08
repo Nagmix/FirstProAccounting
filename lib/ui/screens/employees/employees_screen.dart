@@ -967,6 +967,29 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                     alignLabelWithHint: true,
                   ),
                 ),
+                const SizedBox(height: 24),
+
+                // ── Save Button (visible at bottom of form) ────────────
+                FilledButton.icon(
+                  onPressed: _isSaving ? null : _save,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check, size: 20),
+                  label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

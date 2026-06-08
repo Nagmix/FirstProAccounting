@@ -303,19 +303,48 @@ class _CreateReceiptPaymentVoucherScreenState
       );
 
       if (mounted) {
-        context.showSuccessSnackBar(
-          _isReceipt ? 'تم حفظ سند القبض بنجاح' : 'تم حفظ سند الصرف بنجاح',
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isReceipt ? 'تم حفظ سند القبض بنجاح' : 'تم حفظ سند الصرف بنجاح',
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-        Navigator.pop(context, true);
+        // Clear form for next voucher entry instead of popping
+        _clearForm();
       }
     } catch (e) {
       if (mounted) {
         final msg = e.toString().replaceFirst('Exception: ', '');
-        context.showErrorSnackBar(msg.isNotEmpty ? msg : 'حدث خطأ أثناء الحفظ');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg.isNotEmpty ? msg : 'حدث خطأ أثناء الحفظ'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  /// Clear the form after successful save to prepare for next voucher entry.
+  void _clearForm() {
+    _descriptionController.clear();
+    _amountController.clear();
+    _entitySearchController.clear();
+    setState(() {
+      _selectedEntity = null;
+      _selectedCashBoxId = null;
+      _selectedDate = DateTime.now();
+      _selectedEntityFilter = 'all';
+    });
+    _applyEntityFilter();
   }
 
   // ════════════════════════════════════════════════════════════════
