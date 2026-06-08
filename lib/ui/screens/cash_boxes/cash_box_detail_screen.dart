@@ -962,30 +962,39 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 ),
                 const SizedBox(width: 6),
                 // Sort order toggle
-                Container(
-                  height: 40,
-                  width: 40,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: _sortDescending ? AppColors.primary : AppColors.border),
+                Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    onTap: () {
+                      setState(() => _sortDescending = !_sortDescending);
+                      _applyFilters();
+                    },
                     borderRadius: BorderRadius.circular(10),
-                    color: _sortDescending ? AppColors.primary.withOpacity(0.08) : null,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() => _sortDescending = !_sortDescending);
-                        _applyFilters();
-                      },
-                      borderRadius: BorderRadius.circular(10),
-                      child: Tooltip(
-                        message: _sortDescending ? 'ترتيب تنازلي' : 'ترتيب تصاعدي',
-                        child: Icon(
-                          _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
-                          size: 16,
-                          color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: _sortDescending ? AppColors.primary : AppColors.border),
+                        borderRadius: BorderRadius.circular(10),
+                        color: _sortDescending ? AppColors.primary.withOpacity(0.08) : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                            size: 14,
+                            color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _sortDescending ? 'تنازلي' : 'تصاعدي',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
