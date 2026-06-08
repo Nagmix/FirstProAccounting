@@ -128,14 +128,27 @@ class CustomerRepository {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
 
-    // B-04: Create journal entry for balance change when updating customer
+    // Strip the virtual key before updating so SQLite doesn't try to
+    // write to a non-existent column.
+    final updateMap = Map<String, dynamic>.from(customerMap)
+      ..remove('opening_balance_currency');
+
+    // B-04: Create journal entry for balance change when updating customer.
+    // Run the entire update (journal entries + customer row) inside a
+    // single transaction to guarantee data integrity.
     final oldCustomer = await getCustomerById(id);
     if (oldCustomer != null && customerMap.containsKey('balance')) {
       final oldBalance = MoneyHelper.readMoney(oldCustomer['balance']);
       final newBalance = MoneyHelper.readMoney(customerMap['balance']);
-      final balanceDiff = newBalance - oldBalance;
+      final oldBalanceType = oldCustomer['balance_type'] as String? ?? 'credit';
+      final newBalanceType = customerMap['balance_type'] as String? ?? oldBalanceType;
 
-      if (balanceDiff.abs() >= 0.005) {
+      // Convert to signed values: credit (له) = positive, debit (عليه) = negative
+      final oldSigned = oldBalanceType == 'credit' ? oldBalance : -oldBalance;
+      final newSigned = newBalanceType == 'credit' ? newBalance : -newBalance;
+      final signedDiff = newSigned - oldSigned;
+
+      if (signedDiff.abs() >= 0.005) {
         // Use opening_balance_currency if provided (new multi-currency flow),
         // otherwise fall back to the stored currency (legacy), then 'YER'.
         final customerCurrency = customerMap['opening_balance_currency'] as String?
@@ -152,13 +165,27 @@ class CustomerRepository {
         final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
 
         if (customersAccountId != null && openingBalanceAccountId != null) {
-          await db.transaction((txn) async {
-            if (balanceDiff > 0) {
-              // Balance increased: Debit Customers, Credit Opening Balance
+          // Wrap both journal entries AND the customer row update in one
+          // transaction so that a failure in either rolls everything back.
+          return await db.transaction((txn) async {
+            if (signedDiff > 0) {
+              // Signed balance increased (more credit/له or less debit/عليه):
+              // Credit Customers account, Debit Opening Balance Equity
               await txn.insert('transactions', {
                 'account_id': customersAccountId,
                 'journal_id': journalId,
-                'debit': MoneyHelper.toCents(balanceDiff),
+                'debit': 0,
+                'credit': MoneyHelper.toCents(signedDiff),
+                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
+                'date': now,
+                'created_at': now,
+                'reference_type': 'opening_balance',
+                'reference_id': 'customer_$id',
+              });
+              await txn.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(signedDiff),
                 'credit': 0,
                 'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
                 'date': now,
@@ -166,35 +193,14 @@ class CustomerRepository {
                 'reference_type': 'opening_balance',
                 'reference_id': 'customer_$id',
               });
-              await txn.insert('transactions', {
-                'account_id': openingBalanceAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(balanceDiff),
-                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
-                'date': now,
-                'created_at': now,
-                'reference_type': 'opening_balance',
-                'reference_id': 'customer_$id',
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, balanceDiff, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, balanceDiff, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, signedDiff, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, signedDiff, 0.0, now);
             } else {
-              // Balance decreased: Credit Customers, Debit Opening Balance
-              final absDiff = balanceDiff.abs();
+              // Signed balance decreased (more debit/عليه or less credit/له):
+              // Debit Customers account, Credit Opening Balance Equity
+              final absDiff = signedDiff.abs();
               await txn.insert('transactions', {
                 'account_id': customersAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(absDiff),
-                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
-                'date': now,
-                'created_at': now,
-                'reference_type': 'opening_balance',
-                'reference_id': 'customer_$id',
-              });
-              await txn.insert('transactions', {
-                'account_id': openingBalanceAccountId,
                 'journal_id': journalId,
                 'debit': MoneyHelper.toCents(absDiff),
                 'credit': 0,
@@ -204,18 +210,29 @@ class CustomerRepository {
                 'reference_type': 'opening_balance',
                 'reference_id': 'customer_$id',
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, absDiff, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, absDiff, 0.0, now);
+              await txn.insert('transactions', {
+                'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(absDiff),
+                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
+                'date': now,
+                'created_at': now,
+                'reference_type': 'opening_balance',
+                'reference_id': 'customer_$id',
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, absDiff, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, absDiff, now);
             }
+
+            // Update the customer row INSIDE the same transaction
+            return await txn.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
           });
         }
       }
     }
 
-    // Strip the virtual key before updating so SQLite doesn't try to
-    // write to a non-existent column.
-    final updateMap = Map<String, dynamic>.from(customerMap)
-      ..remove('opening_balance_currency');
+    // No balance change (or no journal entries needed) — simple update
     return await db.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
   }
 
@@ -231,6 +248,24 @@ class CustomerRepository {
     final vchRefs = await db.query('vouchers', where: 'customer_id = ?', whereArgs: [id], limit: 1);
     if (vchRefs.isNotEmpty) {
       return 0;
+    }
+    // Check if customer is referenced in quotations
+    try {
+      final quotRefs = await db.query('quotations', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+      if (quotRefs.isNotEmpty) {
+        return 0;
+      }
+    } catch (_) {
+      // quotations table may not exist in older schemas
+    }
+    // Check if customer is referenced in sales orders
+    try {
+      final orderRefs = await db.query('sales_orders', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+      if (orderRefs.isNotEmpty) {
+        return 0;
+      }
+    } catch (_) {
+      // sales_orders table may not exist in older schemas
     }
     // Before deleting, reverse opening balance transactions to keep
     // account balances consistent. The transactions themselves are

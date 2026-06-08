@@ -20,6 +20,7 @@ import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 import '../../../data/models/customer_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
+import 'edit_customer_sheet.dart';
 
 /// Customer Detail / Ledger Screen — Modern Professional Design
 /// Displays all financial movements for a specific customer with
@@ -224,6 +225,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           case 'payment':
             typeAr = 'سند صرف'; icon = Icons.assignment_return; color = AppColors.error;
             debit = totalAmount; filterKey = 'payment_voucher'; break;
+          case 'outgoing_transfer':
+            typeAr = 'حوالة صادرة'; icon = Icons.send; color = AppColors.warning;
+            debit = totalAmount; filterKey = 'outgoing_transfer'; break;
+          case 'incoming_transfer':
+            typeAr = 'حوالة وارده'; icon = Icons.download; color = AppColors.info;
+            credit = totalAmount; filterKey = 'incoming_transfer'; break;
           case 'settlement':
           case 'compound':
             // For settlement/compound vouchers, the debit/credit direction
@@ -732,6 +739,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
   }
 
+  // ── Edit Customer ──────────────────────────────────────────────
+  Future<void> _showEditCustomerSheet() async {
+    final customer = _freshCustomer ?? widget.customer;
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => EditCustomerSheet(customer: customer),
+    );
+    // If the edit was successful, reload data
+    if (result == true) {
+      _loadData();
+    }
+  }
+
   String _currencySymbol(String? code) {
     switch (code) { case 'SAR': return 'ر.س'; case 'USD': return r'$'; case 'YER': default: return 'ر.ي'; }
   }
@@ -741,7 +763,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
     final customer = _freshCustomer ?? widget.customer;
-    final isDebit = customer.balanceType == 'debit';
+    // Use the computed net balance for the selected currency instead of
+    // the stored single-currency balance/balance_type fields.
+    final isDebit = _netBalance < 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -846,7 +870,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     child: Column(
                       children: [
                         Text(
-                          '${customer.balance.abs().toStringAsFixed(2)} ${_currencySymbol(customer.currency)}',
+                          '${_netBalance.abs().toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
                           style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 2),
@@ -856,7 +880,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                             color: (isDebit ? AppColors.error : AppColors.success).withOpacity(0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(isDebit ? 'عليه' : (customer.balance > 0 ? 'له' : 'متساوي'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
+                          child: Text(isDebit ? 'عليه' : (_netBalance > 0 ? 'له' : 'متساوي'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
                         ),
                       ],
                     ),
@@ -1095,6 +1119,18 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     label: const Text('سند صرف', style: TextStyle(fontSize: 12)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.error, side: const BorderSide(color: AppColors.error),
+                      padding: const EdgeInsets.symmetric(vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _showEditCustomerSheet,
+                    icon: const Icon(Icons.edit, size: 16),
+                    label: const Text('تعديل', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary, side: const BorderSide(color: AppColors.primary),
                       padding: const EdgeInsets.symmetric(vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),

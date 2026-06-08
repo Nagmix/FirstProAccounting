@@ -1007,8 +1007,31 @@ class ReportService {
 
   /// ديون العملاء — returns all customers with positive balances.
   /// Values are raw DB integers (cents).
-  Future<List<Map<String, dynamic>>> getCustomerBalancesReport() async {
+  Future<List<Map<String, dynamic>>> getCustomerBalancesReport({String? currency}) async {
     final customers = await _dbHelper.customers.getAllCustomers();
+    // When a specific currency is requested, use the computed per-currency
+    // balance instead of the stored single-currency balance field, because
+    // the customer is multi-currency and the stored balance only reflects
+    // one currency's opening balance.
+    if (currency != null && currency.isNotEmpty) {
+      final result = <Map<String, dynamic>>[];
+      for (final c in customers) {
+        final id = c['id'] as int?;
+        if (id == null) continue;
+        final computedBalance = await _dbHelper.customers.getCustomerBalanceForCurrency(id, currency);
+        if (computedBalance.abs() >= 0.005) {
+          result.add({
+            'name': c['name'],
+            'balance': MoneyHelper.toCents(computedBalance.abs()),
+            'balance_type': computedBalance >= 0 ? 'credit' : 'debit',
+            'currency': currency,
+            'phone': c['phone'],
+            'debt_ceiling': c['debt_ceiling'],
+          });
+        }
+      }
+      return result;
+    }
     return customers
         .where((c) => (c['balance'] as num?)?.toInt() != 0)
         .map((c) => {
@@ -1374,11 +1397,23 @@ class ReportService {
   }) async {
     final db = await _db;
 
-    // Try to find the customer's receivable account
+    // Find the customer's receivable account by code (12xx) and currency.
+    // This is more reliable than searching by name, which breaks if the
+    // account name does not exactly match the customer name.
+    final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+    final accountCode = '${1200 + codeOffset}';
     var acctRes = await db.rawQuery(
-      "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1",
-      [customerName, customerCurrency],
+      "SELECT id FROM accounts WHERE account_code=? AND currency=? AND is_active=1 LIMIT 1",
+      [accountCode, customerCurrency],
     );
+
+    // Fallback to name-based search for legacy data
+    if (acctRes.isEmpty) {
+      acctRes = await db.rawQuery(
+        "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1",
+        [customerName, customerCurrency],
+      );
+    }
     if (acctRes.isEmpty && customerName.isNotEmpty) {
       acctRes = await db.rawQuery(
         "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
