@@ -20,6 +20,7 @@ class AccountLedgerScreen extends StatefulWidget {
 class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoading = true;
+  bool _hasError = false;
   DateTime? _fromDate;
   DateTime? _toDate;
 
@@ -64,22 +65,31 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
 
   Future<void> _loadTransactions() async {
     setState(() => _isLoading = true);
-    if (widget.account.id != null) {
-      final maps = await locator<JournalService>().getTransactionsByAccount(widget.account.id!);
-      // Sort by date ascending, then by id for stable ordering
-      maps.sort((a, b) {
-        final dateA = a['date'] as String? ?? a['created_at'] as String? ?? '';
-        final dateB = b['date'] as String? ?? b['created_at'] as String? ?? '';
-        final cmp = dateA.compareTo(dateB);
-        if (cmp != 0) return cmp;
-        return (a['id'].toString()).compareTo(b['id'].toString());
-      });
-      setState(() {
-        _transactions = maps;
-        _isLoading = false;
-      });
-    } else {
-      setState(() => _isLoading = false);
+    try {
+      if (widget.account.id != null) {
+        final maps = await locator<JournalService>()
+            .getTransactionsByAccount(widget.account.id!)
+            .timeout(const Duration(seconds: 10));
+        // Sort by date ascending, then by id for stable ordering
+        maps.sort((a, b) {
+          final dateA = a['date'] as String? ?? a['created_at'] as String? ?? '';
+          final dateB = b['date'] as String? ?? b['created_at'] as String? ?? '';
+          final cmp = dateA.compareTo(dateB);
+          if (cmp != 0) return cmp;
+          return (a['id'].toString()).compareTo(b['id'].toString());
+        });
+        if (mounted) {
+          setState(() {
+            _transactions = maps;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint('AccountLedgerScreen._loadTransactions: $e');
+      if (mounted) setState(() { _isLoading = false; _hasError = true; });
     }
   }
 
@@ -174,14 +184,15 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     }
 
     // Running balance is always computed from ascending (chronological) order
-    final runningMap = <int, double>{};
+    // Build a map from transaction id to running balance for O(1) lookup
+    final runningById = <dynamic, double>{};
     double running = openingBalance;
     for (int i = 0; i < filteredTx.length; i++) {
       final tx = filteredTx[i];
       final debit = MoneyHelper.readMoney(tx['debit']);
       final credit = MoneyHelper.readMoney(tx['credit']);
       running += debit - credit;
-      runningMap[i] = running;
+      runningById[tx['id']] = running;
     }
 
     return Directionality(
@@ -199,6 +210,23 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
+            : _hasError
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                        const SizedBox(height: 16),
+                        Text('حدث خطأ أثناء تحميل البيانات', style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _loadTransactions,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('إعادة المحاولة'),
+                        ),
+                      ],
+                    ),
+                  )
             : RefreshIndicator(
                 onRefresh: _loadTransactions,
                 child: CustomScrollView(
@@ -247,10 +275,8 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
                             final tx = displayTx[index];
-                            // Find the index in the ascending (filteredTx) list
-                            // to get the correct running balance
-                            final ascIdx = filteredTx.indexOf(tx);
-                            final running = ascIdx >= 0 ? (runningMap[ascIdx] ?? 0.0) : 0.0;
+                            // Look up running balance by transaction id
+                            final running = runningById[tx['id']] ?? 0.0;
                             return _TransactionCard(
                               transaction: tx,
                               runningBalance: running,
