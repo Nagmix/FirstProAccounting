@@ -297,28 +297,20 @@ class SupplierRepository {
   /// Returns transaction rows with account currency info.
   Future<List<Map<String, dynamic>>> getSupplierOpeningBalanceTransactions(int supplierId) async {
     final db = await _db;
-    // First try: search by reference_id (new data with 'supplier_{id}')
-    final byRef = await db.rawQuery('''
+    // Search by reference_id — each supplier's opening balance is tagged
+    // with reference_id = 'supplier_{id}' at creation time.
+    // The old fallback query that searched by description pattern without
+    // filtering by reference_id was returning ALL suppliers' opening
+    // balance entries for any supplier that had none of its own.
+    return await db.rawQuery('''
       SELECT t.*, a.currency AS account_currency
       FROM transactions t
       INNER JOIN accounts a ON t.account_id = a.id
       WHERE t.reference_type = 'opening_balance'
         AND t.reference_id = ?
         AND a.account_code LIKE '21%'
-    ''', ['supplier_$supplierId']);
-    
-    if (byRef.isNotEmpty) return byRef;
-    
-    // Fallback: search by description pattern (legacy data without reference_id)
-    return await db.rawQuery('''
-      SELECT t.*, a.currency AS account_currency
-      FROM transactions t
-      INNER JOIN accounts a ON t.account_id = a.id
-      WHERE t.reference_type = 'opening_balance'
-        AND a.account_code LIKE '21%'
-        AND t.description LIKE 'رصيد افتتاحي مورد%'
       ORDER BY t.date ASC
-    ''');
+    ''', ['supplier_$supplierId']);
   }
 
   /// التحقق من تجاوز سقف الدين للمورد
