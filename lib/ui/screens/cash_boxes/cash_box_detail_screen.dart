@@ -127,6 +127,15 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       currency: _selectedCurrency,
     );
 
+    // Sort by date ascending, then by id for stable ordering
+    movements.sort((a, b) {
+      final dateA = a['date'] as String? ?? '';
+      final dateB = b['date'] as String? ?? '';
+      final cmp = dateA.compareTo(dateB);
+      if (cmp != 0) return cmp;
+      return (a['id'].toString()).compareTo(b['id'].toString());
+    });
+
     // Calculate running balance per currency
     final currencyRunBal = <String, double>{};
     for (final m in movements) {
@@ -210,14 +219,22 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       filtered = filtered.reversed.toList();
     }
 
-    // Recalculate running balance for filtered movements
-    final currencyRunBal = <String, double>{};
+    // Preserve running balance from full calculation (_allMovements)
+    // instead of recalculating from filtered subset.
+    // The running balance must reflect the true cumulative position at each
+    // point in time, including transactions that are hidden by filters.
+    final allBalances = <String, double>{};
+    for (final m in _allMovements) {
+      final mId = m['id'] as String?;
+      if (mId != null) {
+        allBalances[mId] = MoneyHelper.readMoney(m['running_balance']);
+      }
+    }
     for (final m in filtered) {
-      final currency = m['currency'] as String? ?? 'YER';
-      final debit = MoneyHelper.readMoney(m['debit']);
-      final credit = MoneyHelper.readMoney(m['credit']);
-      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
-      m['running_balance'] = currencyRunBal[currency];
+      final mId = m['id'] as String?;
+      if (mId != null && allBalances.containsKey(mId)) {
+        m['running_balance'] = allBalances[mId];
+      }
     }
 
     // Calculate totals from filtered movements

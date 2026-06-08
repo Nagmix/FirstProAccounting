@@ -339,7 +339,12 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
       debugPrint('SupplierDetailScreen._loadMovements [opening_balance]: $e');
     }
 
-    movements.sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
+    // Sort by date ascending, then by id for stable ordering
+    movements.sort((a, b) {
+      final cmp = (a['date'] as String).compareTo(b['date'] as String);
+      if (cmp != 0) return cmp;
+      return (a['id'].toString()).compareTo(b['id'].toString());
+    });
 
     // Calculate running balance for ALL movements chronologically, per currency
     final currencyRunBal = <String, double>{};

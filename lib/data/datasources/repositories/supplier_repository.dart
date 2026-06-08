@@ -458,11 +458,13 @@ class SupplierRepository {
       });
     }
 
-    // Sort by date descending
+    // Sort by date ascending, then by id for stable ordering
     movements.sort((a, b) {
       final dateA = a['_sort_date'] as String? ?? '';
       final dateB = b['_sort_date'] as String? ?? '';
-      return dateB.compareTo(dateA);
+      final cmp = dateA.compareTo(dateB);
+      if (cmp != 0) return cmp;
+      return (a['id'].toString()).compareTo(b['id'].toString());
     });
 
     return movements;

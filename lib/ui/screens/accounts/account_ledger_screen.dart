@@ -23,6 +23,9 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   DateTime? _fromDate;
   DateTime? _toDate;
 
+  // Sort order: false=ascending (oldest first), true=descending (newest first)
+  bool _sortDescending = false;
+
   /// Get the correct currency symbol for this account's currency.
   /// This ensures balances are displayed with the proper symbol
   /// (e.g., ر.س for SAR accounts, $ for USD) instead of always using
@@ -63,6 +66,14 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     setState(() => _isLoading = true);
     if (widget.account.id != null) {
       final maps = await locator<JournalService>().getTransactionsByAccount(widget.account.id!);
+      // Sort by date ascending, then by id for stable ordering
+      maps.sort((a, b) {
+        final dateA = a['date'] as String? ?? a['created_at'] as String? ?? '';
+        final dateB = b['date'] as String? ?? b['created_at'] as String? ?? '';
+        final cmp = dateA.compareTo(dateB);
+        if (cmp != 0) return cmp;
+        return (a['id'].toString()).compareTo(b['id'].toString());
+      });
       setState(() {
         _transactions = maps;
         _isLoading = false;
@@ -126,6 +137,9 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
 
     final filteredTx = _filteredTransactions;
 
+    // Apply sort order for display
+    final displayTx = _sortDescending ? filteredTx.reversed.toList() : filteredTx;
+
     // Compute summary totals (always from ALL transactions for correct running balance)
     double totalDebit = 0;
     double totalCredit = 0;
@@ -135,7 +149,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     }
     final netBalance = totalDebit - totalCredit;
 
-    // Compute running balances
+    // Compute running balances from ascending-order data
     // Start from opening balance so final running balance matches account's current balance
     // When date filter is active, compute opening balance for the filtered set
     double openingBalance;
@@ -158,22 +172,16 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
         sum + (MoneyHelper.readMoney(tx['debit'])) - (MoneyHelper.readMoney(tx['credit'])))))
         + preFilterDebit - preFilterCredit;
     }
-    final runningBalances = <double>[];
+
+    // Running balance is always computed from ascending (chronological) order
+    final runningMap = <int, double>{};
     double running = openingBalance;
-    // Transactions are ordered date DESC, so reverse for running balance
-    final reversed = filteredTx.reversed.toList();
-    for (final tx in reversed) {
+    for (int i = 0; i < filteredTx.length; i++) {
+      final tx = filteredTx[i];
       final debit = MoneyHelper.readMoney(tx['debit']);
       final credit = MoneyHelper.readMoney(tx['credit']);
       running += debit - credit;
-      runningBalances.add(running);
-    }
-    // Map back: index in original list -> running balance
-    // original index i corresponds to reversed index (len - 1 - i)
-    final runningMap = <int, double>{};
-    for (int i = 0; i < filteredTx.length; i++) {
-      final revIdx = filteredTx.length - 1 - i;
-      runningMap[i] = runningBalances[revIdx];
+      runningMap[i] = running;
     }
 
     return Directionality(
@@ -181,6 +189,13 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text('دفتر حساب: ${widget.account.nameAr}'),
+          actions: [
+            IconButton(
+              icon: Icon(_sortDescending ? Icons.arrow_downward : Icons.arrow_upward),
+              tooltip: _sortDescending ? 'ترتيب تنازلي' : 'ترتيب تصاعدي',
+              onPressed: () => setState(() => _sortDescending = !_sortDescending),
+            ),
+          ],
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -222,7 +237,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                     ),
 
                     // ── Transactions List or Empty State ───────────
-                    if (filteredTx.isEmpty)
+                    if (displayTx.isEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: _EmptyState(color: color),
@@ -231,17 +246,20 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                       SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            final tx = filteredTx[index];
-                            final running = runningMap[index] ?? 0.0;
+                            final tx = displayTx[index];
+                            // Find the index in the ascending (filteredTx) list
+                            // to get the correct running balance
+                            final ascIdx = filteredTx.indexOf(tx);
+                            final running = ascIdx >= 0 ? (runningMap[ascIdx] ?? 0.0) : 0.0;
                             return _TransactionCard(
                               transaction: tx,
                               runningBalance: running,
                               isDark: isDark,
-                              isLast: index == filteredTx.length - 1,
+                              isLast: index == displayTx.length - 1,
                               currencySymbol: _currencySymbol,
                             );
                           },
-                          childCount: filteredTx.length,
+                          childCount: displayTx.length,
                         ),
                       ),
 

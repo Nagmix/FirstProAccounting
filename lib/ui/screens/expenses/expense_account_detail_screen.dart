@@ -112,7 +112,7 @@ class _ExpenseAccountDetailScreenState
     final expenses = await locator<ExpenseRepository>()
         .getExpensesBySubAccountId(_subAccountId);
 
-    // Sort by date ascending for running balance
+    // Sort by date ascending, then by id for stable ordering
     expenses.sort((a, b) {
       final dateA = a['expense_date'] as String? ??
           a['created_at'] as String? ??
@@ -120,8 +120,23 @@ class _ExpenseAccountDetailScreenState
       final dateB = b['expense_date'] as String? ??
           b['created_at'] as String? ??
           '';
-      return dateA.compareTo(dateB);
+      final cmp = dateA.compareTo(dateB);
+      if (cmp != 0) return cmp;
+      return (a['id'].toString()).compareTo(b['id'].toString());
     });
+
+    // Calculate running balance for ALL expenses chronologically
+    double runningBalance = 0.0;
+    for (final e in expenses) {
+      final amount = MoneyHelper.readMoney(e['amount']);
+      final operationType = e['operation_type'] as String? ?? 'صرف';
+      if (operationType == 'صرف') {
+        runningBalance += amount;
+      } else {
+        runningBalance -= amount;
+      }
+      e['running_balance'] = runningBalance;
+    }
 
     _allExpenses = expenses;
     _applyFilters();
@@ -166,8 +181,23 @@ class _ExpenseAccountDetailScreenState
       }).toList();
     }
 
-    // Calculate running balance and totals
-    double runningBalance = 0.0;
+    // Preserve running balance from full calculation (_allExpenses)
+    // instead of recalculating from filtered subset.
+    final allBalances = <String, double>{};
+    for (final e in _allExpenses) {
+      final eId = e['id'] as String?;
+      if (eId != null) {
+        allBalances[eId] = MoneyHelper.readMoney(e['running_balance']);
+      }
+    }
+    for (final e in filtered) {
+      final eId = e['id'] as String?;
+      if (eId != null && allBalances.containsKey(eId)) {
+        e['running_balance'] = allBalances[eId];
+      }
+    }
+
+    // Calculate totals from filtered expenses
     double totalDebit = 0.0;
     double totalCredit = 0.0;
 
@@ -177,19 +207,32 @@ class _ExpenseAccountDetailScreenState
 
       if (operationType == 'صرف') {
         totalDebit += amount;
-        runningBalance += amount; // expense increases balance
       } else {
         totalCredit += amount;
-        runningBalance -= amount; // receipt decreases balance
       }
-      e['running_balance'] = runningBalance;
+    }
+
+    // Net balance from ALL expenses for the selected currency
+    double netBalance = 0.0;
+    for (final e in _allExpenses) {
+      if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
+        final eCurrency = e['currency'] as String? ?? 'YER';
+        if (eCurrency != _selectedCurrency) continue;
+      }
+      final amount = MoneyHelper.readMoney(e['amount']);
+      final operationType = e['operation_type'] as String? ?? 'صرف';
+      if (operationType == 'صرف') {
+        netBalance += amount;
+      } else {
+        netBalance -= amount;
+      }
     }
 
     setState(() {
       _filteredExpenses = filtered;
       _totalDebit = totalDebit;
       _totalCredit = totalCredit;
-      _netBalance = runningBalance;
+      _netBalance = netBalance;
     });
   }
 

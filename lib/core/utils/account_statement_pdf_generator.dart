@@ -86,6 +86,16 @@ class AccountStatementPdfGenerator {
     final currencySymbol = currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
     final titleAr = entityType == 'customer' ? 'كشف حساب عميل' : 'كشف حساب مورد';
 
+    // Sort movements ascending by date for correct running balance in PDF
+    final sortedMovements = List<Map<String, dynamic>>.from(movements);
+    sortedMovements.sort((a, b) {
+      final dateA = a['date'] as String? ?? '';
+      final dateB = b['date'] as String? ?? '';
+      final cmp = dateA.compareTo(dateB);
+      if (cmp != 0) return cmp;
+      return (a['id'].toString()).compareTo(b['id'].toString());
+    });
+
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(
         base: arabicFont ?? pw.Font.helvetica(),
@@ -127,7 +137,7 @@ class AccountStatementPdfGenerator {
           pw.SizedBox(height: 16),
 
           // ── Movements table ──
-          _buildMovementsTable(movements, currencySymbol, arabicFont),
+          _buildMovementsTable(sortedMovements, currencySymbol, arabicFont),
           pw.SizedBox(height: 16),
 
           // ── Summary ──

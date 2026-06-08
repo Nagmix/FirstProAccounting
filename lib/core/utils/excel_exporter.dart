@@ -132,11 +132,21 @@ class ExcelExporter {
     final headers = ['التاريخ', 'البيان', 'عليه', 'له', 'الرصيد'];
     _addHeaders(sheet, headers);
 
+    // Sort movements ascending by date for correct running balance in export
+    final sortedMovements = List<Map<String, dynamic>>.from(movements);
+    sortedMovements.sort((a, b) {
+      final dateA = a['date'] as String? ?? '';
+      final dateB = b['date'] as String? ?? '';
+      final cmp = dateA.compareTo(dateB);
+      if (cmp != 0) return cmp;
+      return (a['id'].toString()).compareTo(b['id'].toString());
+    });
+
     double runningBalance = 0;
 
     // البيانات
-    for (var i = 0; i < movements.length; i++) {
-      final m = movements[i];
+    for (var i = 0; i < sortedMovements.length; i++) {
+      final m = sortedMovements[i];
       final row = i + 2;
       final dateStr = m['date'] as String? ?? '';
       final description = m['description'] as String? ?? (m['type_ar'] as String? ?? '');
@@ -152,7 +162,7 @@ class ExcelExporter {
     }
 
     // صف الإجماليات
-    final totalRow = movements.length + 2;
+    final totalRow = sortedMovements.length + 2;
     sheet.cell(CellIndex.indexByString('A$totalRow')).value = TextCellValue('');
     sheet.cell(CellIndex.indexByString('B$totalRow')).value = TextCellValue('الإجمالي');
     sheet.cell(CellIndex.indexByString('C$totalRow')).value = DoubleCellValue(totalDebit);
