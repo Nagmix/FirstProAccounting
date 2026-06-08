@@ -547,36 +547,36 @@ class _VouchersScreenState extends State<VouchersScreen>
   }
 
   Future<void> _navigateToCreateReceiptPayment({required bool isReceipt}) async {
-    final result = await Navigator.push<Map<String, dynamic>>(
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => CreateReceiptPaymentVoucherScreen(isReceipt: isReceipt),
       ),
     );
-    if (!mounted) return;
-    if (result == true) _loadData();
+    // Always refresh list when returning from create screen
+    if (mounted) _loadData();
   }
 
   Future<void> _navigateToCreateGeneralEntry() async {
-    final result = await Navigator.push<Map<String, dynamic>>(
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => const CreateGeneralEntryScreen(),
       ),
     );
-    if (!mounted) return;
-    if (result == true) _loadData();
+    // Always refresh list when returning from create screen
+    if (mounted) _loadData();
   }
 
   Future<void> _navigateToCreateSettlement({required bool isCompound}) async {
-    final result = await Navigator.push<Map<String, dynamic>>(
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => CreateSettlementVoucherScreen(isCompound: isCompound),
       ),
     );
-    if (!mounted) return;
-    if (result == true) _loadData();
+    // Always refresh list when returning from create screen
+    if (mounted) _loadData();
   }
 
   @override

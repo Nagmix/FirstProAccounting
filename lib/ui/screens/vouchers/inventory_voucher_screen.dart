@@ -69,11 +69,12 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
   }
 
   Future<void> _navigateToCreate() async {
-    final result = await Navigator.push<Map<String, dynamic>>(
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => const CreateInventoryVoucherScreen()),
     );
-    if (result == true) _loadData();
+    // Always refresh list when returning from create screen
+    if (mounted) _loadData();
   }
 
   Future<void> _navigateToDetail(int voucherId) async {

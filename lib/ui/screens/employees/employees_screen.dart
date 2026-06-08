@@ -175,7 +175,6 @@ class _EmployeesScreenState extends State<EmployeesScreen>
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
       builder: (context) => AddEmployeeSheet(employee: employee),
     );
     _loadEmployees();
