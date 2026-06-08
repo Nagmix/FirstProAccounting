@@ -180,9 +180,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     try {
       final voucherRows = await customerRepo.getCustomerVouchers(customerId);
 
-      final customerCurrency = _freshCustomer?.currency ?? widget.customer.currency ?? 'YER';
-      final customerAccounts = await customerRepo.getCustomerReceivableAccounts(customerCurrency);
-      final customerAccountIds = customerAccounts.map((a) => a['id']).toList();
+      // Discover unlinked vouchers across ALL currencies (customer is
+      // multi-currency, so we must check receivable accounts for all).
+      final allCustomerAccounts = await customerRepo.getCustomerReceivableAccountsAllCurrencies();
+      final customerAccountIds = allCustomerAccounts.map((a) => a['id']).toList();
 
       if (customerAccountIds.isNotEmpty) {
         final unlinkedVouchers = await customerRepo.getUnlinkedVouchers();
@@ -224,11 +225,32 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             typeAr = 'سند صرف'; icon = Icons.assignment_return; color = AppColors.error;
             debit = totalAmount; filterKey = 'payment_voucher'; break;
           case 'settlement':
-            typeAr = 'قيد عام'; icon = Icons.balance; color = AppColors.info;
-            credit = totalAmount; filterKey = 'general_entry'; break;
           case 'compound':
-            typeAr = 'قيد متعدد'; icon = Icons.dynamic_feed; color = AppColors.accentBlue;
-            debit = totalAmount; filterKey = 'compound_entry'; break;
+            // For settlement/compound vouchers, the debit/credit direction
+            // depends on the voucher_items. Look up the actual effect on the
+            // customer's receivable account (code 12xx).
+            typeAr = voucherType == 'settlement' ? 'قيد عام' : 'قيد متعدد';
+            icon = voucherType == 'settlement' ? Icons.balance : Icons.dynamic_feed;
+            color = voucherType == 'settlement' ? AppColors.info : AppColors.accentBlue;
+            filterKey = voucherType == 'settlement' ? 'general_entry' : 'compound_entry';
+            // Determine direction from voucher_items
+            final vId = v['id'];
+            try {
+              final vItems = await locator<CashBoxService>().getVoucherItems(vId as int);
+              for (final vi in vItems) {
+                final viAccountId = vi['account_id'] as int?;
+                if (viAccountId != null && customerAccountIds.contains(viAccountId)) {
+                  final viDebit = MoneyHelper.readMoney(vi['debit']);
+                  final viCredit = MoneyHelper.readMoney(vi['credit']);
+                  debit += viDebit;
+                  credit += viCredit;
+                }
+              }
+            } catch (_) {
+              // Fallback: assume credit (له) as default direction
+              credit = totalAmount;
+            }
+            break;
           default:
             typeAr = 'سند'; icon = Icons.description; color = AppColors.textSecondary;
             debit = totalAmount; filterKey = 'all';

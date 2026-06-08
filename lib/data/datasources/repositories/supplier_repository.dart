@@ -215,12 +215,78 @@ class SupplierRepository {
   Future<int> deleteSupplier(int id) async {
     final db = await _db;
     // Check if supplier is referenced in invoices
-    final refs = await db.query('invoices', where: 'supplier_id = ?', whereArgs: [id], limit: 1);
-    if (refs.isNotEmpty) {
-      // Soft-delete not supported by schema — just prevent deletion
+    final invRefs = await db.query('invoices', where: 'supplier_id = ?', whereArgs: [id], limit: 1);
+    if (invRefs.isNotEmpty) {
       return 0;
     }
+    // Check if supplier is referenced in vouchers
+    final vchRefs = await db.query('vouchers', where: 'supplier_id = ?', whereArgs: [id], limit: 1);
+    if (vchRefs.isNotEmpty) {
+      return 0;
+    }
+    // Reverse opening balance transactions before deletion
+    await _reverseOpeningBalanceOnDelete(db, id);
     return await db.delete('suppliers', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Reverse the accounting effect of a supplier's opening balance transactions
+  /// so that deleting the supplier doesn't leave orphaned balance changes.
+  Future<void> _reverseOpeningBalanceOnDelete(Database db, int supplierId) async {
+    final referenceId = 'supplier_$supplierId';
+    final obTxns = await db.query(
+      'transactions',
+      where: 'reference_type = ? AND reference_id = ?',
+      whereArgs: ['opening_balance', referenceId],
+    );
+    if (obTxns.isEmpty) return;
+
+    final now = DateTime.now().toIso8601String();
+    final journalId = generateUniqueJournalId();
+
+    final accountNet = <int, double>{};
+    for (final txn in obTxns) {
+      final accountId = txn['account_id'] as int;
+      final debit = MoneyHelper.readMoney(txn['debit']);
+      final credit = MoneyHelper.readMoney(txn['credit']);
+      accountNet[accountId] = (accountNet[accountId] ?? 0.0) + (credit - debit);
+    }
+
+    await db.transaction((txn) async {
+      for (final entry in accountNet.entries) {
+        final accountId = entry.key;
+        final netCredit = entry.value;
+        if (netCredit.abs() < 0.005) continue;
+
+        if (netCredit > 0) {
+          await txn.insert('transactions', {
+            'account_id': accountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(netCredit),
+            'credit': 0,
+            'description': 'عكس قيد افتتاحي مورد محذوف - ID:$supplierId',
+            'date': now,
+            'created_at': now,
+            'reference_type': 'opening_balance_reversal',
+            'reference_id': referenceId,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, netCredit, 0.0, now);
+        } else {
+          final absAmount = netCredit.abs();
+          await txn.insert('transactions', {
+            'account_id': accountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(absAmount),
+            'description': 'عكس قيد افتتاحي مورد محذوف - ID:$supplierId',
+            'date': now,
+            'created_at': now,
+            'reference_type': 'opening_balance_reversal',
+            'reference_id': referenceId,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
+        }
+      }
+    });
   }
 
   /// Get all invoices for a specific supplier.
@@ -323,7 +389,12 @@ class SupplierRepository {
     if (debtCeiling <= 0) return false;
 
     final currentBalance = MoneyHelper.readMoney(supplier.first['balance']);
-    return (currentBalance + additionalAmount) > debtCeiling;
+    final balanceType = supplier.first['balance_type'] as String? ?? 'credit';
+    // Only credit balance (له) counts as debt we owe the supplier.
+    // Debit balance (عليه) means the supplier owes us.
+    final signedBalance = balanceType == 'credit' ? currentBalance : -currentBalance;
+    final effectiveDebt = signedBalance > 0 ? signedBalance : 0.0;
+    return (effectiveDebt + additionalAmount) > debtCeiling;
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -372,22 +443,33 @@ class SupplierRepository {
       }
     }
 
-    // 3. Vouchers
-    final vouchers = await db.rawQuery('''
-      SELECT voucher_type, total_amount FROM vouchers
-      WHERE supplier_id = ? AND currency = ?
+    // 3. Vouchers — use voucher_items joined with the supplier's
+    //    payable account (code 21xx) to determine the actual
+    //    debit/credit effect regardless of voucher type.
+    //    This correctly handles settlement, compound, and transfer
+    //    vouchers where the supplier account may be on either side.
+    final voucherNet = await db.rawQuery('''
+      SELECT COALESCE(SUM(vi.credit), 0) - COALESCE(SUM(vi.debit), 0) AS net
+      FROM vouchers v
+      INNER JOIN voucher_items vi ON v.id = vi.voucher_id
+      INNER JOIN accounts a ON vi.account_id = a.id
+      WHERE v.supplier_id = ?
+        AND v.currency = ?
+        AND a.account_code LIKE '21%'
     ''', [supplierId, currency]);
-    for (final v in vouchers) {
-      final vType = v['voucher_type'] as String? ?? '';
-      final amount = MoneyHelper.readMoney(v['total_amount']);
-      if (vType == 'payment') {
-        balance -= amount; // Payment = debit (عليه)
-      } else if (vType == 'receipt') {
-        balance += amount; // Receipt = credit (له)
-      }
-    }
+    balance += MoneyHelper.readCalculatedMoney(voucherNet.first['net']);
 
     return balance;
+  }
+
+  /// جلب حسابات الموردين لجميع العملات — find supplier payable accounts
+  /// across all supported currencies.
+  Future<List<Map<String, dynamic>>> getSupplierPayableAccountsAllCurrencies() async {
+    final db = await _db;
+    return await db.rawQuery(
+      "SELECT id, currency FROM accounts WHERE name_ar LIKE ? AND account_type = 'LIABILITY' AND account_code LIKE '21%'",
+      ['%الموردين%'],
+    );
   }
 
   /// جلب حسابات الموردين — find supplier payable accounts by currency.

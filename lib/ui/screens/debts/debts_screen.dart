@@ -31,6 +31,11 @@ class _DebtsScreenState extends State<DebtsScreen>
   List<Map<String, dynamic>> _liabilityAccounts = [];
   bool _isLoading = true;
 
+  // ── Computed currency balances ──────────────────────────────────────
+  Map<int, double> _customerCurrencyBalances = {};
+  Map<int, double> _supplierCurrencyBalances = {};
+  bool _isBalancesLoading = false;
+
   // ── Filters ───────────────────────────────────────────────────────
   String _selectedCurrency = 'الكل';
   final _searchController = TextEditingController();
@@ -78,41 +83,107 @@ class _DebtsScreenState extends State<DebtsScreen>
       _liabilityAccounts = liabilityAccounts;
       _isLoading = false;
     });
+
+    _loadCurrencyBalances();
+  }
+
+  // ── Currency balance loading (computed per-currency) ──────────────
+  Future<void> _loadCurrencyBalances() async {
+    if (_selectedCurrency == 'الكل') return; // No specific currency selected, use stored balances
+    setState(() => _isBalancesLoading = true);
+
+    final customerRepo = locator<CustomerRepository>();
+    final supplierRepo = locator<SupplierRepository>();
+
+    final newCustomerBalances = <int, double>{};
+    final newSupplierBalances = <int, double>{};
+
+    final customerFutures = _allCustomers.map((c) async {
+      final id = c['id'] as int?;
+      if (id != null) {
+        final balance = await customerRepo.getCustomerBalanceForCurrency(id, _selectedCurrency);
+        return MapEntry(id, balance);
+      }
+      return null;
+    });
+    final customerResults = await Future.wait(customerFutures);
+    for (final entry in customerResults) {
+      if (entry != null) newCustomerBalances[entry.key] = entry.value;
+    }
+
+    final supplierFutures = _allSuppliers.map((s) async {
+      final id = s['id'] as int?;
+      if (id != null) {
+        final balance = await supplierRepo.getSupplierBalanceForCurrency(id, _selectedCurrency);
+        return MapEntry(id, balance);
+      }
+      return null;
+    });
+    final supplierResults = await Future.wait(supplierFutures);
+    for (final entry in supplierResults) {
+      if (entry != null) newSupplierBalances[entry.key] = entry.value;
+    }
+
+    if (mounted) {
+      setState(() {
+        _customerCurrencyBalances = newCustomerBalances;
+        _supplierCurrencyBalances = newSupplierBalances;
+        _isBalancesLoading = false;
+      });
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════
   //  ACCOUNTING LOGIC
   // ═══════════════════════════════════════════════════════════════════
 
-  /// Customers with debit balance (balance_type = 'debit' && balance > 0)
-  /// means the customer owes the business money (receivable / ديون العملاء)
+  /// Customers with debit balance (عليه) — customer owes the business money.
+  /// When a specific currency is selected, uses the computed balance from
+  /// getCustomerBalanceForCurrency (which accounts for all voucher types).
+  /// When "الكل" is selected, falls back to stored balance_type/balance.
   List<Map<String, dynamic>> get _debtCustomers {
     return _allCustomers.where((c) {
+      final id = c['id'] as int?;
+      final matchesSearch = _searchQuery.isEmpty ||
+          ((c['name'] as String? ?? '').contains(_searchQuery) ||
+              (c['phone'] as String? ?? '').contains(_searchQuery));
+      if (!matchesSearch) return false;
+
+      if (_selectedCurrency != 'الكل' && id != null) {
+        // Use computed balance for the selected currency
+        final computedBalance = _customerCurrencyBalances[id] ?? 0.0;
+        return computedBalance < 0; // Negative = debit (عليه) = customer owes us
+      }
+      // Fallback: use stored balance
       final balance = MoneyHelper.readMoney(c['balance']);
       final balanceType = c['balance_type'] as String? ?? 'credit';
       final matchesCurrency = _selectedCurrency == 'الكل' ||
           (c['currency'] as String? ?? 'YER') == _selectedCurrency;
-      final matchesSearch = _searchQuery.isEmpty ||
-          ((c['name'] as String? ?? '').contains(_searchQuery) ||
-              (c['phone'] as String? ?? '').contains(_searchQuery));
-      return balance > 0 && balanceType == 'debit' && matchesCurrency && matchesSearch;
+      return balance > 0 && balanceType == 'debit' && matchesCurrency;
     }).toList();
   }
 
-  /// Suppliers with credit balance (balance_type = 'credit' && balance > 0)
-  /// means the business owes the supplier money (payable / ديون صاحب العمل)
-  /// In double-entry: supplier is a LIABILITY account, credit balance = business owes supplier
+  /// Suppliers with credit balance (له) — business owes the supplier money.
+  /// When a specific currency is selected, uses the computed balance.
   List<Map<String, dynamic>> get _debtSuppliers {
     return _allSuppliers.where((s) {
+      final id = s['id'] as int?;
+      final matchesSearch = _searchQuery.isEmpty ||
+          ((s['name'] as String? ?? '').contains(_searchQuery) ||
+              (s['phone'] as String? ?? '').contains(_searchQuery));
+      if (!matchesSearch) return false;
+
+      if (_selectedCurrency != 'الكل' && id != null) {
+        // Use computed balance for the selected currency
+        final computedBalance = _supplierCurrencyBalances[id] ?? 0.0;
+        return computedBalance > 0; // Positive = credit (له) = we owe supplier
+      }
+      // Fallback: use stored balance
       final balance = MoneyHelper.readMoney(s['balance']);
       final balanceType = s['balance_type'] as String? ?? 'credit';
       final matchesCurrency = _selectedCurrency == 'الكل' ||
           (s['currency'] as String? ?? 'YER') == _selectedCurrency;
-      final matchesSearch = _searchQuery.isEmpty ||
-          ((s['name'] as String? ?? '').contains(_searchQuery) ||
-              (s['phone'] as String? ?? '').contains(_searchQuery));
-      // Credit balance on supplier = business owes money to supplier (debt)
-      return balance > 0 && balanceType == 'credit' && matchesCurrency && matchesSearch;
+      return balance > 0 && balanceType == 'credit' && matchesCurrency;
     }).toList();
   }
 
@@ -132,9 +203,17 @@ class _DebtsScreenState extends State<DebtsScreen>
   Map<String, double> get _customerDebtTotals {
     final totals = <String, double>{};
     for (final c in _debtCustomers) {
-      final currency = c['currency'] as String? ?? 'YER';
-      final balance = MoneyHelper.readMoney(c['balance']);
-      totals[currency] = (totals[currency] ?? 0.0) + balance;
+      final id = c['id'] as int?;
+      if (_selectedCurrency != 'الكل' && id != null) {
+        final computedBalance = _customerCurrencyBalances[id] ?? 0.0;
+        if (computedBalance < 0) {
+          totals[_selectedCurrency] = (totals[_selectedCurrency] ?? 0.0) + computedBalance.abs();
+        }
+      } else {
+        final currency = c['currency'] as String? ?? 'YER';
+        final balance = MoneyHelper.readMoney(c['balance']);
+        totals[currency] = (totals[currency] ?? 0.0) + balance;
+      }
     }
     return totals;
   }
@@ -143,9 +222,17 @@ class _DebtsScreenState extends State<DebtsScreen>
   Map<String, double> get _businessDebtTotals {
     final totals = <String, double>{};
     for (final s in _debtSuppliers) {
-      final currency = s['currency'] as String? ?? 'YER';
-      final balance = MoneyHelper.readMoney(s['balance']);
-      totals[currency] = (totals[currency] ?? 0.0) + balance;
+      final id = s['id'] as int?;
+      if (_selectedCurrency != 'الكل' && id != null) {
+        final computedBalance = _supplierCurrencyBalances[id] ?? 0.0;
+        if (computedBalance > 0) {
+          totals[_selectedCurrency] = (totals[_selectedCurrency] ?? 0.0) + computedBalance;
+        }
+      } else {
+        final currency = s['currency'] as String? ?? 'YER';
+        final balance = MoneyHelper.readMoney(s['balance']);
+        totals[currency] = (totals[currency] ?? 0.0) + balance;
+      }
     }
     for (final a in _debtExpenseAccounts) {
       final currency = a['currency'] as String? ?? 'YER';
@@ -296,7 +383,10 @@ class _DebtsScreenState extends State<DebtsScreen>
 
   Widget _buildFilterChip(String label, bool isSelected) {
     return InkWell(
-      onTap: () => setState(() => _selectedCurrency = label),
+      onTap: () {
+        setState(() => _selectedCurrency = label);
+        _loadCurrencyBalances();
+      },
       borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
         duration: AppConstants.animationDurationShort,

@@ -185,10 +185,10 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
     try {
       final voucherRows = await supplierRepo.getSupplierVouchers(supplierId);
 
-      // Also find unlinked vouchers that touch supplier accounts
-      final supplierCurrency = _freshSupplier?.currency ?? widget.supplier.currency;
-      final supplierAccounts = await supplierRepo.getSupplierPayableAccounts(supplierCurrency);
-      final supplierAccountIds = supplierAccounts.map((a) => a['id']).toList();
+      // Discover unlinked vouchers across ALL currencies (supplier is
+      // multi-currency, so we must check payable accounts for all).
+      final allSupplierAccounts = await supplierRepo.getSupplierPayableAccountsAllCurrencies();
+      final supplierAccountIds = allSupplierAccounts.map((a) => a['id']).toList();
 
       if (supplierAccountIds.isNotEmpty) {
         // Get all vouchers without a supplier_id
@@ -239,11 +239,31 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
             typeAr = 'سند صرف'; icon = Icons.assignment_return; color = AppColors.error;
             debit = totalAmount; filterKey = 'payment_voucher'; break;
           case 'settlement':
-            typeAr = 'قيد عام'; icon = Icons.balance; color = AppColors.info;
-            credit = totalAmount; filterKey = 'general_entry'; break;
           case 'compound':
-            typeAr = 'قيد متعدد'; icon = Icons.dynamic_feed; color = AppColors.accentBlue;
-            debit = totalAmount; filterKey = 'compound_entry'; break;
+            // For settlement/compound vouchers, the debit/credit direction
+            // depends on the voucher_items. Look up the actual effect on the
+            // supplier's payable account (code 21xx).
+            typeAr = voucherType == 'settlement' ? 'قيد عام' : 'قيد متعدد';
+            icon = voucherType == 'settlement' ? Icons.balance : Icons.dynamic_feed;
+            color = voucherType == 'settlement' ? AppColors.info : AppColors.accentBlue;
+            filterKey = voucherType == 'settlement' ? 'general_entry' : 'compound_entry';
+            // Determine direction from voucher_items
+            final vId = v['id'];
+            try {
+              final vItems = await locator<CashBoxService>().getVoucherItems(vId as int);
+              for (final vi in vItems) {
+                final viAccountId = vi['account_id'] as int?;
+                if (viAccountId != null && supplierAccountIds.contains(viAccountId)) {
+                  final viDebit = MoneyHelper.readMoney(vi['debit']);
+                  final viCredit = MoneyHelper.readMoney(vi['credit']);
+                  debit += viDebit;
+                  credit += viCredit;
+                }
+              }
+            } catch (_) {
+              credit = totalAmount;
+            }
+            break;
           case 'outgoing_transfer':
             typeAr = 'حوالة صادرة'; icon = Icons.send; color = AppColors.secondary;
             debit = totalAmount; filterKey = 'outgoing_transfer'; break;

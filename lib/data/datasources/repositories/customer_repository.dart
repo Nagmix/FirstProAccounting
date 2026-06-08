@@ -222,12 +222,87 @@ class CustomerRepository {
   Future<int> deleteCustomer(int id) async {
     final db = await _db;
     // Check if customer is referenced in invoices
-    final refs = await db.query('invoices', where: 'customer_id = ?', whereArgs: [id], limit: 1);
-    if (refs.isNotEmpty) {
+    final invRefs = await db.query('invoices', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+    if (invRefs.isNotEmpty) {
       // Soft-delete not supported by schema — just prevent deletion
       return 0;
     }
+    // Check if customer is referenced in vouchers
+    final vchRefs = await db.query('vouchers', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+    if (vchRefs.isNotEmpty) {
+      return 0;
+    }
+    // Before deleting, reverse opening balance transactions to keep
+    // account balances consistent. The transactions themselves are
+    // left in place (audit trail) but their effect is neutralized.
+    await _reverseOpeningBalanceOnDelete(db, id);
     return await db.delete('customers', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Reverse the accounting effect of a customer's opening balance transactions
+  /// so that deleting the customer doesn't leave orphaned balance changes.
+  Future<void> _reverseOpeningBalanceOnDelete(Database db, int customerId) async {
+    final referenceId = 'customer_$customerId';
+    // Find all opening balance transactions for this customer
+    final obTxns = await db.query(
+      'transactions',
+      where: 'reference_type = ? AND reference_id = ?',
+      whereArgs: ['opening_balance', referenceId],
+    );
+    if (obTxns.isEmpty) return;
+
+    final now = DateTime.now().toIso8601String();
+    final journalId = generateUniqueJournalId();
+
+    // Group by account_id and reverse the net effect
+    final accountNet = <int, double>{};
+    for (final txn in obTxns) {
+      final accountId = txn['account_id'] as int;
+      final debit = MoneyHelper.readMoney(txn['debit']);
+      final credit = MoneyHelper.readMoney(txn['credit']);
+      // Net signed change per account: credit - debit (from the original entry)
+      accountNet[accountId] = (accountNet[accountId] ?? 0.0) + (credit - debit);
+    }
+
+    // Create reversing entries
+    await db.transaction((txn) async {
+      for (final entry in accountNet.entries) {
+        final accountId = entry.key;
+        final netCredit = entry.value; // positive = original was credit, negative = original was debit
+        if (netCredit.abs() < 0.005) continue;
+
+        if (netCredit > 0) {
+          // Original was credit → reverse with debit
+          await txn.insert('transactions', {
+            'account_id': accountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(netCredit),
+            'credit': 0,
+            'description': 'عكس قيد افتتاحي عميل محذوف - ID:$customerId',
+            'date': now,
+            'created_at': now,
+            'reference_type': 'opening_balance_reversal',
+            'reference_id': referenceId,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, netCredit, 0.0, now);
+        } else {
+          // Original was debit → reverse with credit
+          final absAmount = netCredit.abs();
+          await txn.insert('transactions', {
+            'account_id': accountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(absAmount),
+            'description': 'عكس قيد افتتاحي عميل محذوف - ID:$customerId',
+            'date': now,
+            'created_at': now,
+            'reference_type': 'opening_balance_reversal',
+            'reference_id': referenceId,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
+        }
+      }
+    });
   }
 
   Future<int> getCustomerCount() async {
@@ -245,7 +320,13 @@ class CustomerRepository {
     if (debtCeiling <= 0) return false; // لا يوجد سقف محدد
 
     final currentBalance = MoneyHelper.readMoney(customer.first['balance']);
-    return (currentBalance + additionalAmount) > debtCeiling;
+    final balanceType = customer.first['balance_type'] as String? ?? 'credit';
+    // Only debit balance (عليه) counts as debt that the customer owes us.
+    // Credit balance (له) means we owe the customer, so it reduces their debt.
+    final signedBalance = balanceType == 'debit' ? currentBalance : -currentBalance;
+    // signedBalance > 0 means customer owes us; < 0 means we owe customer
+    final effectiveDebt = signedBalance > 0 ? signedBalance : 0.0;
+    return (effectiveDebt + additionalAmount) > debtCeiling;
   }
 
   Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) async {
@@ -347,8 +428,21 @@ class CustomerRepository {
     );
   }
 
+  /// جلب حسابات العملاء لجميع العملات — find customer receivable accounts
+  /// across all supported currencies.
+  Future<List<Map<String, dynamic>>> getCustomerReceivableAccountsAllCurrencies() async {
+    final db = await _db;
+    return await db.rawQuery(
+      "SELECT id, currency FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET' AND account_code LIKE '12%'",
+      ['%العملاء%'],
+    );
+  }
+
   /// Calculate the balance of a specific customer for a given currency
   /// by summing all financial movements in that currency.
+  /// Uses voucher_items to determine debit/credit effect for ALL voucher
+  /// types (receipt, payment, settlement, compound, transfers), not just
+  /// receipt and payment.
   Future<double> getCustomerBalanceForCurrency(int customerId, String currency) async {
     final db = await _db;
     double balance = 0.0;
@@ -385,20 +479,21 @@ class CustomerRepository {
       }
     }
 
-    // 3. Vouchers
-    final vouchers = await db.rawQuery('''
-      SELECT voucher_type, total_amount FROM vouchers
-      WHERE customer_id = ? AND currency = ?
+    // 3. Vouchers — use voucher_items joined with the customer's
+    //    receivable account (code 12xx) to determine the actual
+    //    debit/credit effect regardless of voucher type.
+    //    This correctly handles settlement, compound, and transfer
+    //    vouchers where the customer account may be on either side.
+    final voucherNet = await db.rawQuery('''
+      SELECT COALESCE(SUM(vi.credit), 0) - COALESCE(SUM(vi.debit), 0) AS net
+      FROM vouchers v
+      INNER JOIN voucher_items vi ON v.id = vi.voucher_id
+      INNER JOIN accounts a ON vi.account_id = a.id
+      WHERE v.customer_id = ?
+        AND v.currency = ?
+        AND a.account_code LIKE '12%'
     ''', [customerId, currency]);
-    for (final v in vouchers) {
-      final vType = v['voucher_type'] as String? ?? '';
-      final amount = MoneyHelper.readMoney(v['total_amount']);
-      if (vType == 'receipt') {
-        balance += amount; // Receipt = credit (له)
-      } else if (vType == 'payment') {
-        balance -= amount; // Payment = debit (عليه)
-      }
-    }
+    balance += MoneyHelper.readCalculatedMoney(voucherNet.first['net']);
 
     return balance;
   }
