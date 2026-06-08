@@ -261,7 +261,7 @@ class SupplierRepository {
     Transaction txn,
     int suppliersAccountId,
     int openingBalanceAccountId,
-    String journalId,
+    int journalId,
     double amount,
     bool isDebitSupplier,
     String description,

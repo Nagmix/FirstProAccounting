@@ -269,7 +269,7 @@ class CustomerRepository {
     Transaction txn,
     int customersAccountId,
     int openingBalanceAccountId,
-    String journalId,
+    int journalId,
     double amount,
     bool isDebitCustomer,
     String description,
