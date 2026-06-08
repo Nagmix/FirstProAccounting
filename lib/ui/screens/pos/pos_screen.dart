@@ -1172,7 +1172,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // ── التحقق من سقف الدين للعميل عند البيع الآجل ──
     if (primaryMethod == 'credit' && _vm.selectedCustomerId != null) {
-      final isOverCeiling = await locator<CustomerRepository>().isCustomerOverDebtCeiling(_vm.selectedCustomerId!, _vm.total);
+      final isOverCeiling = await locator<CustomerRepository>().isCustomerOverDebtCeiling(_vm.selectedCustomerId!, _vm.total, currency: _vm.selectedCurrency);
       if (isOverCeiling) {
         if (mounted) {
           context.showErrorSnackBar('تجاوز سقف الدين! لا يمكن إتمام البيع الآجل لهذا العميل');

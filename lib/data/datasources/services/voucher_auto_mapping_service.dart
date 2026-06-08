@@ -469,6 +469,8 @@ class VoucherAutoMappingService {
         'description': autoDescription,
         'date': date,
         'created_at': now,
+        'reference_type': voucherType,
+        'reference_id': 'voucher_$voucherId',
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, debitAccountId, amount, 0.0, now);
@@ -482,6 +484,8 @@ class VoucherAutoMappingService {
         'description': autoDescription,
         'date': date,
         'created_at': now,
+        'reference_type': voucherType,
+        'reference_id': 'voucher_$voucherId',
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, creditAccountId, 0.0, amount, now);
@@ -644,6 +648,8 @@ class VoucherAutoMappingService {
         'description': autoDescription,
         'date': date,
         'created_at': now,
+        'reference_type': 'settlement',
+        'reference_id': 'voucher_$voucherId',
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, toAccount, toAmount, 0.0, now);
@@ -657,6 +663,8 @@ class VoucherAutoMappingService {
         'description': autoDescription,
         'date': date,
         'created_at': now,
+        'reference_type': 'settlement',
+        'reference_id': 'voucher_$voucherId',
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, fromAccount, 0.0, fromAmount, now);
@@ -925,6 +933,8 @@ class VoucherAutoMappingService {
         'description': 'مكسب فروقات صرف - قيد عام',
         'date': date,
         'created_at': now,
+        'reference_type': 'exchange_difference',
+        'reference_id': journalId,
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, exchangeAccountId, 0.0, difference, now);
@@ -938,6 +948,8 @@ class VoucherAutoMappingService {
         'description': 'خسارة فروقات صرف - قيد عام',
         'date': date,
         'created_at': now,
+        'reference_type': 'exchange_difference',
+        'reference_id': journalId,
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, exchangeAccountId, difference, 0.0, now);

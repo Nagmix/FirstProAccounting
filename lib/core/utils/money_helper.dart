@@ -163,12 +163,15 @@ class MoneyHelper {
     'amount',
   ];
 
+  // Note: 'opening_balance' removed (not a column in customers table).
   static const customerMoneyFields = [
-    'balance', 'opening_balance', 'debt_ceiling',
+    'balance', 'debt_ceiling',
   ];
 
+  // Fix: 'opening_balance' removed (not a column in suppliers table).
+  // Fix: 'debt_ceiling' added (it IS a money column stored in cents).
   static const supplierMoneyFields = [
-    'balance', 'opening_balance',
+    'balance', 'debt_ceiling',
   ];
 
   static const cashBoxMoneyFields = [

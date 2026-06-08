@@ -785,8 +785,20 @@ class _DebtsScreenState extends State<DebtsScreen>
   Widget _buildSupplierDebtCard(ThemeData theme, Map<String, dynamic> supplier) {
     final name = supplier['name'] as String? ?? 'بدون اسم';
     final phone = supplier['phone'] as String? ?? '';
-    final balance = MoneyHelper.readMoney(supplier['balance']);
-    final currency = supplier['currency'] as String? ?? 'YER';
+    final id = supplier['id'] as int?;
+    // Use computed balance when a specific currency is selected,
+    // otherwise fall back to stored single-currency balance.
+    double balance;
+    String currency;
+    if (_selectedCurrency != 'الكل' && id != null) {
+      balance = _supplierCurrencyBalances[id] ?? 0.0;
+      currency = _selectedCurrency;
+    } else {
+      balance = MoneyHelper.readMoney(supplier['balance']);
+      currency = supplier['currency'] as String? ?? 'YER';
+    }
+    // Ensure positive display (only credit/له suppliers are shown)
+    final displayBalance = balance.abs();
 
     return Card(
       elevation: 0,
@@ -865,7 +877,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    CurrencyFormatter.formatValue(balance),
+                    CurrencyFormatter.formatValue(displayBalance),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColors.warning,

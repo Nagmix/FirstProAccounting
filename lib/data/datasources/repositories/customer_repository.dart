@@ -151,89 +151,165 @@ class CustomerRepository {
       if (signedDiff.abs() >= 0.005) {
         // Use opening_balance_currency if provided (new multi-currency flow),
         // otherwise fall back to the stored currency (legacy), then 'YER'.
-        final customerCurrency = customerMap['opening_balance_currency'] as String?
+        final newCurrency = customerMap['opening_balance_currency'] as String?
             ?? customerMap['currency'] as String?
             ?? oldCustomer['currency'] as String?
             ?? 'YER';
-        final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+        final oldCurrency = oldCustomer['currency'] as String? ?? 'YER';
+
+        // ── Handle currency change ──
+        // When the opening balance currency changes, we must:
+        // 1. Reverse the FULL old signed balance in the OLD currency's accounts
+        // 2. Create the FULL new signed balance in the NEW currency's accounts
+        // Otherwise, the old currency's accounts retain stale entries.
+        final currencyChanged = newCurrency != oldCurrency;
+
+        if (currencyChanged) {
+          // Step 1: Reverse old opening balance in old currency
+          final oldCodeOffset = oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
+          final oldCustomersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + oldCodeOffset).toString(), oldCurrency], limit: 1);
+          final oldOpeningBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + oldCodeOffset).toString(), oldCurrency], limit: 1);
+          final oldCustomersAccountId = oldCustomersAccount.isNotEmpty ? oldCustomersAccount.first['id'] as int : null;
+          final oldOpeningBalanceAccountId = oldOpeningBalanceAccount.isNotEmpty ? oldOpeningBalanceAccount.first['id'] as int : null;
+
+          // Step 2: Create new opening balance in new currency
+          final newCodeOffset = newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
+          final newCustomersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + newCodeOffset).toString(), newCurrency], limit: 1);
+          final newOpeningBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + newCodeOffset).toString(), newCurrency], limit: 1);
+          final newCustomersAccountId = newCustomersAccount.isNotEmpty ? newCustomersAccount.first['id'] as int : null;
+          final newOpeningBalanceAccountId = newOpeningBalanceAccount.isNotEmpty ? newOpeningBalanceAccount.first['id'] as int : null;
+
+          if (oldCustomersAccountId == null || oldOpeningBalanceAccountId == null) {
+            // Old currency accounts missing — skip reversal but continue with new
+            // (the old entries may have been manually removed or never created)
+          }
+          if (newCustomersAccountId == null || newOpeningBalanceAccountId == null) {
+            // New currency accounts missing — cannot create new entries
+            updateMap.remove('balance');
+            updateMap.remove('balance_type');
+            await db.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
+            throw Exception('لم يتم العثور على حساب العملاء (1200) أو حساب الرصيد الافتتاحي (2901) بعملة $newCurrency في شجرة الحسابات. لا يمكن تعديل الرصيد بدون قيود محاسبية.');
+          }
+
+          return await db.transaction((txn) async {
+            // Reverse old signed balance in old currency
+            if (oldCustomersAccountId != null && oldOpeningBalanceAccountId != null && oldSigned.abs() >= 0.005) {
+              final reverseJournalId = generateUniqueJournalId();
+              if (oldSigned > 0) {
+                // Old was credit → reverse with debit on customer, credit on OB
+                await _insertOpeningBalanceEntry(txn, oldCustomersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned, true, 'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+              } else {
+                // Old was debit → reverse with credit on customer, debit on OB
+                await _insertOpeningBalanceEntry(txn, oldCustomersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned.abs(), false, 'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+              }
+            }
+
+            // Create new signed balance in new currency
+            if (newSigned.abs() >= 0.005) {
+              final newJournalId = generateUniqueJournalId();
+              if (newSigned > 0) {
+                // New is credit (له)
+                await _insertOpeningBalanceEntry(txn, newCustomersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned, false, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+              } else {
+                // New is debit (عليه)
+                await _insertOpeningBalanceEntry(txn, newCustomersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+              }
+            }
+
+            return await txn.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
+          });
+        }
+
+        // ── Same currency — simple adjustment ──
+        final codeOffset = newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
         final journalId = generateUniqueJournalId();
 
-        final customersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), customerCurrency], limit: 1);
-        final openingBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), customerCurrency], limit: 1);
+        final customersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), newCurrency], limit: 1);
+        final openingBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), newCurrency], limit: 1);
 
         final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
         final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
 
         if (customersAccountId != null && openingBalanceAccountId != null) {
-          // Wrap both journal entries AND the customer row update in one
-          // transaction so that a failure in either rolls everything back.
           return await db.transaction((txn) async {
             if (signedDiff > 0) {
               // Signed balance increased (more credit/له or less debit/عليه):
               // Credit Customers account, Debit Opening Balance Equity
-              await txn.insert('transactions', {
-                'account_id': customersAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(signedDiff),
-                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
-                'date': now,
-                'created_at': now,
-                'reference_type': 'opening_balance',
-                'reference_id': 'customer_$id',
-              });
-              await txn.insert('transactions', {
-                'account_id': openingBalanceAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(signedDiff),
-                'credit': 0,
-                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
-                'date': now,
-                'created_at': now,
-                'reference_type': 'opening_balance',
-                'reference_id': 'customer_$id',
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, signedDiff, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, signedDiff, 0.0, now);
+              await _insertOpeningBalanceEntry(txn, customersAccountId, openingBalanceAccountId, journalId, signedDiff, false, 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
             } else {
               // Signed balance decreased (more debit/عليه or less credit/له):
               // Debit Customers account, Credit Opening Balance Equity
-              final absDiff = signedDiff.abs();
-              await txn.insert('transactions', {
-                'account_id': customersAccountId,
-                'journal_id': journalId,
-                'debit': MoneyHelper.toCents(absDiff),
-                'credit': 0,
-                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
-                'date': now,
-                'created_at': now,
-                'reference_type': 'opening_balance',
-                'reference_id': 'customer_$id',
-              });
-              await txn.insert('transactions', {
-                'account_id': openingBalanceAccountId,
-                'journal_id': journalId,
-                'debit': 0,
-                'credit': MoneyHelper.toCents(absDiff),
-                'description': 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
-                'date': now,
-                'created_at': now,
-                'reference_type': 'opening_balance',
-                'reference_id': 'customer_$id',
-              });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, absDiff, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, absDiff, now);
+              await _insertOpeningBalanceEntry(txn, customersAccountId, openingBalanceAccountId, journalId, signedDiff.abs(), true, 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
             }
 
-            // Update the customer row INSIDE the same transaction
             return await txn.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
           });
+        } else {
+          // Balance changed but required accounts not found in chart of accounts.
+          // Do NOT silently update the stored balance without journal entries —
+          // that would break accounting integrity (computed balance from
+          // getCustomerBalanceForCurrency would diverge from stored balance).
+          // Instead, strip balance fields from the update so only non-balance
+          // fields are saved, and throw a descriptive error.
+          updateMap.remove('balance');
+          updateMap.remove('balance_type');
+          await db.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
+          throw Exception('لم يتم العثور على حساب العملاء (1200) أو حساب الرصيد الافتتاحي (2901) بعملة $newCurrency في شجرة الحسابات. لا يمكن تعديل الرصيد بدون قيود محاسبية. يرجى التأكد من إعداد الحسابات.');
         }
       }
     }
 
     // No balance change (or no journal entries needed) — simple update
     return await db.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Helper: Insert a pair of opening balance journal entries.
+  /// [isDebitCustomer] true = Debit Customer / Credit OB, false = Credit Customer / Debit OB
+  Future<void> _insertOpeningBalanceEntry(
+    Transaction txn,
+    int customersAccountId,
+    int openingBalanceAccountId,
+    String journalId,
+    double amount,
+    bool isDebitCustomer,
+    String description,
+    String now,
+    int customerId,
+  ) async {
+    await txn.insert('transactions', {
+      'account_id': customersAccountId,
+      'journal_id': journalId,
+      'debit': isDebitCustomer ? MoneyHelper.toCents(amount) : 0,
+      'credit': isDebitCustomer ? 0 : MoneyHelper.toCents(amount),
+      'description': description,
+      'date': now,
+      'created_at': now,
+      'reference_type': 'opening_balance',
+      'reference_id': 'customer_$customerId',
+    });
+    await txn.insert('transactions', {
+      'account_id': openingBalanceAccountId,
+      'journal_id': journalId,
+      'debit': isDebitCustomer ? 0 : MoneyHelper.toCents(amount),
+      'credit': isDebitCustomer ? MoneyHelper.toCents(amount) : 0,
+      'description': description,
+      'date': now,
+      'created_at': now,
+      'reference_type': 'opening_balance',
+      'reference_id': 'customer_$customerId',
+    });
+    await _dbHelper.journal.updateAccountBalanceWithJournal(
+      txn, customersAccountId,
+      isDebitCustomer ? amount : 0.0,
+      isDebitCustomer ? 0.0 : amount,
+      now,
+    );
+    await _dbHelper.journal.updateAccountBalanceWithJournal(
+      txn, openingBalanceAccountId,
+      isDebitCustomer ? 0.0 : amount,
+      isDebitCustomer ? amount : 0.0,
+      now,
+    );
   }
 
   Future<int> deleteCustomer(int id) async {
@@ -270,16 +346,21 @@ class CustomerRepository {
     // Before deleting, reverse opening balance transactions to keep
     // account balances consistent. The transactions themselves are
     // left in place (audit trail) but their effect is neutralized.
-    await _reverseOpeningBalanceOnDelete(db, id);
-    return await db.delete('customers', where: 'id = ?', whereArgs: [id]);
+    // Wrap reversal + deletion in a single transaction so that a crash
+    // between the two cannot leave the books in an inconsistent state.
+    return await db.transaction((txn) async {
+      await _reverseOpeningBalanceOnDeleteTxn(txn, id);
+      return await txn.delete('customers', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   /// Reverse the accounting effect of a customer's opening balance transactions
   /// so that deleting the customer doesn't leave orphaned balance changes.
-  Future<void> _reverseOpeningBalanceOnDelete(Database db, int customerId) async {
+  /// This version works inside an existing transaction (for atomicity with deletion).
+  Future<void> _reverseOpeningBalanceOnDeleteTxn(Transaction txn, int customerId) async {
     final referenceId = 'customer_$customerId';
     // Find all opening balance transactions for this customer
-    final obTxns = await db.query(
+    final obTxns = await txn.query(
       'transactions',
       where: 'reference_type = ? AND reference_id = ?',
       whereArgs: ['opening_balance', referenceId],
@@ -291,52 +372,57 @@ class CustomerRepository {
 
     // Group by account_id and reverse the net effect
     final accountNet = <int, double>{};
-    for (final txn in obTxns) {
-      final accountId = txn['account_id'] as int;
-      final debit = MoneyHelper.readMoney(txn['debit']);
-      final credit = MoneyHelper.readMoney(txn['credit']);
+    for (final t in obTxns) {
+      final accountId = t['account_id'] as int;
+      final debit = MoneyHelper.readMoney(t['debit']);
+      final credit = MoneyHelper.readMoney(t['credit']);
       // Net signed change per account: credit - debit (from the original entry)
       accountNet[accountId] = (accountNet[accountId] ?? 0.0) + (credit - debit);
     }
 
     // Create reversing entries
-    await db.transaction((txn) async {
-      for (final entry in accountNet.entries) {
-        final accountId = entry.key;
-        final netCredit = entry.value; // positive = original was credit, negative = original was debit
-        if (netCredit.abs() < 0.005) continue;
+    for (final entry in accountNet.entries) {
+      final accountId = entry.key;
+      final netCredit = entry.value; // positive = original was credit, negative = original was debit
+      if (netCredit.abs() < 0.005) continue;
 
-        if (netCredit > 0) {
-          // Original was credit → reverse with debit
-          await txn.insert('transactions', {
-            'account_id': accountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(netCredit),
-            'credit': 0,
-            'description': 'عكس قيد افتتاحي عميل محذوف - ID:$customerId',
-            'date': now,
-            'created_at': now,
-            'reference_type': 'opening_balance_reversal',
-            'reference_id': referenceId,
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, netCredit, 0.0, now);
-        } else {
-          // Original was debit → reverse with credit
-          final absAmount = netCredit.abs();
-          await txn.insert('transactions', {
-            'account_id': accountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(absAmount),
-            'description': 'عكس قيد افتتاحي عميل محذوف - ID:$customerId',
-            'date': now,
-            'created_at': now,
-            'reference_type': 'opening_balance_reversal',
-            'reference_id': referenceId,
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
-        }
+      if (netCredit > 0) {
+        // Original was credit → reverse with debit
+        await txn.insert('transactions', {
+          'account_id': accountId,
+          'journal_id': journalId,
+          'debit': MoneyHelper.toCents(netCredit),
+          'credit': 0,
+          'description': 'عكس قيد افتتاحي عميل محذوف - ID:$customerId',
+          'date': now,
+          'created_at': now,
+          'reference_type': 'opening_balance_reversal',
+          'reference_id': referenceId,
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, netCredit, 0.0, now);
+      } else {
+        // Original was debit → reverse with credit
+        final absAmount = netCredit.abs();
+        await txn.insert('transactions', {
+          'account_id': accountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(absAmount),
+          'description': 'عكس قيد افتتاحي عميل محذوف - ID:$customerId',
+          'date': now,
+          'created_at': now,
+          'reference_type': 'opening_balance_reversal',
+          'reference_id': referenceId,
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
       }
+    }
+  }
+
+  /// Legacy version kept for backward compatibility — wraps in its own transaction.
+  Future<void> _reverseOpeningBalanceOnDelete(Database db, int customerId) async {
+    await db.transaction((txn) async {
+      await _reverseOpeningBalanceOnDeleteTxn(txn, customerId);
     });
   }
 
@@ -346,7 +432,7 @@ class CustomerRepository {
     return (result.first['cnt'] as num?)?.toInt() ?? 0;
   }
 
-  Future<bool> isCustomerOverDebtCeiling(int customerId, double additionalAmount) async {
+  Future<bool> isCustomerOverDebtCeiling(int customerId, double additionalAmount, {String? currency}) async {
     final db = await _db;
     final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId], limit: 1);
     if (customer.isEmpty) return false;
@@ -354,13 +440,22 @@ class CustomerRepository {
     final debtCeiling = MoneyHelper.readMoney(customer.first['debt_ceiling']);
     if (debtCeiling <= 0) return false; // لا يوجد سقف محدد
 
-    final currentBalance = MoneyHelper.readMoney(customer.first['balance']);
-    final balanceType = customer.first['balance_type'] as String? ?? 'credit';
-    // Only debit balance (عليه) counts as debt that the customer owes us.
-    // Credit balance (له) means we owe the customer, so it reduces their debt.
-    final signedBalance = balanceType == 'debit' ? currentBalance : -currentBalance;
-    // signedBalance > 0 means customer owes us; < 0 means we owe customer
-    final effectiveDebt = signedBalance > 0 ? signedBalance : 0.0;
+    double effectiveDebt;
+    if (currency != null && currency.isNotEmpty) {
+      // Use computed balance for the specific currency — accurate for multi-currency
+      final signedBalance = await getCustomerBalanceForCurrency(customerId, currency);
+      // Negative signedBalance means debit (عليه) — customer owes us
+      effectiveDebt = signedBalance < 0 ? signedBalance.abs() : 0.0;
+    } else {
+      // Fallback: use stored single-currency balance
+      final currentBalance = MoneyHelper.readMoney(customer.first['balance']);
+      final balanceType = customer.first['balance_type'] as String? ?? 'credit';
+      // Only debit balance (عليه) counts as debt that the customer owes us.
+      // Credit balance (له) means we owe the customer, so it reduces their debt.
+      final signedBalance = balanceType == 'debit' ? currentBalance : -currentBalance;
+      // signedBalance > 0 means customer owes us; < 0 means we owe customer
+      effectiveDebt = signedBalance > 0 ? signedBalance : 0.0;
+    }
     return (effectiveDebt + additionalAmount) > debtCeiling;
   }
 

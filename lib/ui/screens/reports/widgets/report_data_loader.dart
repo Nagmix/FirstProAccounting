@@ -465,7 +465,8 @@ class ReportDataLoader {
     final rows = txs.map((tx) {
       final debit = MoneyHelper.readMoney(tx['debit']);
       final credit = MoneyHelper.readMoney(tx['credit']);
-      running += (debit - credit);
+      // Liability account (suppliers): credit - debit → positive = we owe supplier (له)
+      running += (credit - debit);
       totalDebit += debit;
       totalCredit += credit;
       return {
@@ -645,12 +646,16 @@ class ReportDataLoader {
       final suppliers = await locator<SupplierRepository>().getAllSuppliers();
       for (final s in suppliers) {
         final balance = MoneyHelper.readMoney(s['balance']);
-        if (balance > 0) {
-          totalBalance += balance;
+        final balanceType = s['balance_type'] as String? ?? 'credit';
+        // Only show suppliers WE owe (credit/له) — "ديون الموردين" means
+        // our debts TO suppliers, not suppliers who owe us (debit/عليه).
+        final signedBalance = balanceType == 'credit' ? balance : -balance;
+        if (signedBalance > 0) {
+          totalBalance += signedBalance;
           rows.add({
             'الاسم': s['name'] as String? ?? '',
-            'الرصيد': balance,
-            'نوع الرصيد': (s['balance_type'] as String? ?? 'debit') == 'debit' ? 'عليه (لنا)' : 'له (علينا)',
+            'الرصيد': signedBalance,
+            'نوع الرصيد': 'له (علينا)',
             'العملة': s['currency'] as String? ?? 'YER',
             'الهاتف': s['phone'] as String? ?? '',
             'سقف الدين': MoneyHelper.readMoney(s['debt_ceiling']),

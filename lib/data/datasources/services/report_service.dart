@@ -965,10 +965,12 @@ class ReportService {
 
   // ── 5. Supplier Movement (Supplier Statement) ─────────────────
 
-  /// كشف حساب مورد — finds the supplier's payable account and returns
-  /// its transactions. Returns empty list if no linked account is found.
-  /// The `supplierName` and `supplierCurrency` must be provided by the
-  /// caller (typically from `getAllSuppliers()`).
+  /// كشف حساب مورد — returns transactions for this specific supplier
+  /// using reference_type/reference_id linking (same approach as
+  /// getSupplierOpeningBalanceTransactions) plus vouchers and invoices
+  /// linked by supplier_id. This avoids the old name-based account lookup
+  /// which was returning ALL suppliers' transactions because suppliers
+  /// share the same general payable account (code 21xx).
   Future<List<Map<String, dynamic>>> getSupplierMovementReport({
     required int supplierId,
     required String supplierName,
@@ -977,30 +979,58 @@ class ReportService {
     DateTime? dateTo,
   }) async {
     final db = await _db;
+    final referenceId = 'supplier_$supplierId';
+    final args = <dynamic>[];
+    final conditions = <String>[];
 
-    // Try exact name match first, then LIKE fallback
-    var acctRes = await db.rawQuery(
-      "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1",
-      [supplierName, supplierCurrency],
-    );
-    if (acctRes.isEmpty && supplierName.isNotEmpty) {
-      acctRes = await db.rawQuery(
-        "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
-        ['%$supplierName%', '%$supplierName%', supplierCurrency],
-      );
-    }
-    if (acctRes.isEmpty) return [];
+    // 1. Opening balance transactions linked by reference_id
+    conditions.add('(t.reference_type = ? AND t.reference_id = ?)');
+    args.addAll(['opening_balance', referenceId]);
 
-    final accountId = acctRes.first['id'] as int;
-    final args = <dynamic>[accountId];
+    // 2. Opening balance reversal transactions (so they net out)
+    conditions.add('(t.reference_type = ? AND t.reference_id = ?)');
+    args.addAll(['opening_balance_reversal', referenceId]);
+
+    // 3. Voucher transactions linked by voucher → supplier_id
+    conditions.add('(t.reference_type IN (?, ?, ?, ?) AND t.reference_id IN (SELECT ?||v.id FROM vouchers v WHERE v.supplier_id = ?))');
+    args.addAll(['receipt', 'payment', 'settlement', 'compound', 'voucher_', supplierId]);
+
+    // 4. Purchase/purchase_return invoice transactions linked by
+    //    account 21xx (supplier payable) + invoice's supplier_id.
+    //    Invoice journal entries use reference_type = 'purchase' or
+    //    'purchase_return' with reference_id = invoice UUID, which
+    //    cannot be matched by the supplier_$id pattern. Instead, we
+    //    join through the invoices table to find transactions affecting
+    //    the supplier's payable account for this supplier's invoices.
+    conditions.add('''(
+      t.reference_type IN ('purchase', 'purchase_return')
+      AND t.account_id IN (
+        SELECT a2.id FROM accounts a2 WHERE a2.account_code LIKE '21%' AND a2.currency = ?
+      )
+      AND EXISTS (
+        SELECT 1 FROM invoices i
+        WHERE i.supplier_id = ?
+          AND i.currency = ?
+          AND t.reference_id = i.id
+      )
+    )''');
+    args.addAll([supplierCurrency, supplierId, supplierCurrency]);
+
+    // Date filter
     final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
     args.addAll(dateArgs);
 
-    return await db.rawQuery(
-      "SELECT t.date, t.description, t.debit, t.credit, t.created_at "
-      "FROM transactions t WHERE t.account_id=?$df ORDER BY t.date ASC, t.created_at ASC",
-      args,
-    );
+    // Also filter by supplier's currency through the account
+    return await db.rawQuery('''
+      SELECT t.date, t.description, t.debit, t.credit, t.created_at, a.currency
+      FROM transactions t
+      INNER JOIN accounts a ON t.account_id = a.id
+      WHERE (${conditions.join(' OR ')})
+        AND a.account_code LIKE '21%'
+        AND a.currency = ?
+        $df
+      ORDER BY t.date ASC, t.created_at ASC
+    ''', [...args, supplierCurrency]);
   }
 
   // ── 6. Customer Balances ──────────────────────────────────────
@@ -1049,8 +1079,30 @@ class ReportService {
 
   /// ديون الموردين — returns all suppliers with positive balances.
   /// Values are raw DB integers (cents).
-  Future<List<Map<String, dynamic>>> getSupplierBalancesReport() async {
+  /// When a specific currency is requested, uses the computed per-currency
+  /// balance (like the customer version) instead of the stored single-currency
+  /// balance, because suppliers are multi-currency.
+  Future<List<Map<String, dynamic>>> getSupplierBalancesReport({String? currency}) async {
     final suppliers = await _dbHelper.suppliers.getAllSuppliers();
+    if (currency != null && currency.isNotEmpty) {
+      final result = <Map<String, dynamic>>[];
+      for (final s in suppliers) {
+        final id = s['id'] as int?;
+        if (id == null) continue;
+        final computedBalance = await _dbHelper.suppliers.getSupplierBalanceForCurrency(id, currency);
+        if (computedBalance.abs() >= 0.005) {
+          result.add({
+            'name': s['name'],
+            'balance': MoneyHelper.toCents(computedBalance.abs()),
+            'balance_type': computedBalance >= 0 ? 'credit' : 'debit',
+            'currency': currency,
+            'phone': s['phone'],
+            'debt_ceiling': s['debt_ceiling'],
+          });
+        }
+      }
+      return result;
+    }
     return suppliers
         .where((s) => (s['balance'] as num?)?.toInt() != 0)
         .map((s) => {

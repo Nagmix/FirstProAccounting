@@ -50,8 +50,10 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       _balanceController.text = s.balance > 0 ? s.balance.toStringAsFixed(2) : '';
       _balanceType = s.balanceType;
       // Currency is no longer tied to supplier permanently.
-      // Default to YER for the opening balance entry.
-      _currency = 'YER';
+      // When editing, default to the supplier's stored currency since
+      // that's likely the currency of the existing opening balance.
+      // When adding new, default to YER.
+      _currency = s.currency.isNotEmpty ? s.currency : 'YER';
       _debtCeilingController.text = s.debtCeiling > 0 ? s.debtCeiling.toStringAsFixed(2) : '';
       _contactMethod = s.contactMethod ?? 'whatsapp';
       _notesController.text = s.notes ?? '';

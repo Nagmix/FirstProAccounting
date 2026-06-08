@@ -1651,7 +1651,7 @@ class InvoiceRepository {
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, paymentAmount, now);
         }
-      } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
+      } else if (invoiceType == 'purchase') {
         // Purchase: we are paying supplier → Debit supplier, Credit cash
         if (suppliersAccountId != null) {
           await txn.insert('transactions', {
@@ -1677,6 +1677,33 @@ class InvoiceRepository {
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, paymentAmount, now);
         }
+      } else if (invoiceType == 'purchase_return') {
+        // Purchase return: supplier is paying us (refund for returned goods)
+        // Debit cash (money comes in), Credit supplier (liability increases back)
+        if (cashBanksAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': cashBanksAccountId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(paymentAmount),
+            'credit': 0,
+            'description': 'استرداد دفعة مرتجع مشتريات - $invoiceId',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, paymentAmount, 0.0, now);
+        }
+        if (suppliersAccountId != null) {
+          await txn.insert('transactions', {
+            'account_id': suppliersAccountId,
+            'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(paymentAmount),
+            'description': 'استرداد دفعة مرتجع مشتريات - $invoiceId',
+            'date': now,
+            'created_at': now,
+          });
+          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, paymentAmount, now);
+        }
       }
 
       // 6. Update customer balance (customer owes less after payment → credit effect)
@@ -1686,19 +1713,30 @@ class InvoiceRepository {
         );
       }
 
-      // 7. Update supplier balance (we owe less after payment → debit effect)
+      // 7. Update supplier balance
+      // Purchase invoice: we pay the supplier → debit effect (reduces what we owe)
+      // Purchase return: supplier pays us → credit effect (increases what we owe / reduces debit balance)
       if (supplierId != null) {
-        await EntityBalanceHelper.supplierPayment(
-          txn: txn, supplierId: supplierId, amount: paymentAmount, now: now,
-        );
+        if (invoiceType == 'purchase_return') {
+          await EntityBalanceHelper.supplierReceipt(
+            txn: txn, supplierId: supplierId, amount: paymentAmount, now: now,
+          );
+        } else {
+          await EntityBalanceHelper.supplierPayment(
+            txn: txn, supplierId: supplierId, amount: paymentAmount, now: now,
+          );
+        }
       }
 
       // 8. Update cash box balance
-      if (invoiceType == 'sale' || invoiceType == 'sale_return') {
-        // Sale: cash comes in
+      // Sale: customer pays us → cash IN
+      // Sale return: we refund the customer → cash OUT
+      // Purchase: we pay the supplier → cash OUT
+      // Purchase return: supplier refunds us → cash IN
+      final isCashIn = invoiceType == 'sale' || invoiceType == 'purchase_return';
+      if (isCashIn) {
         await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, cashBoxId]);
       } else {
-        // Purchase: cash goes out
         await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(paymentAmount), now, cashBoxId]);
       }
     });

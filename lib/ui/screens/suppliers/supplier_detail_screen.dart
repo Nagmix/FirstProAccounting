@@ -20,6 +20,7 @@ import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 import '../../../data/models/supplier_model.dart';
 import '../settings/bluetooth_printer_settings_screen.dart';
+import 'add_supplier_sheet.dart';
 
 /// Supplier Detail / Ledger Screen — Modern Professional Design
 /// Displays all financial movements for a specific supplier with
@@ -309,8 +310,12 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
 
       // Fallback for legacy data
       if (obTransactions.isEmpty && (supplier.balance != 0.0 || supplier.currency.isNotEmpty)) {
+        // Only sum movements in the supplier's stored currency to avoid
+        // mixing different currencies (multi-currency environment).
         double allDebit = 0.0, allCredit = 0.0;
         for (final m in movements) {
+          final mCurrency = m['currency'] as String? ?? 'YER';
+          if (mCurrency != supplier.currency) continue; // Skip other currencies
           allDebit += MoneyHelper.readMoney(m['debit']);
           allCredit += MoneyHelper.readMoney(m['credit']);
         }
@@ -706,7 +711,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
         entityName: supplier.name, entityType: 'supplier', movements: _filteredMovements,
         totalDebit: _totalDebit, totalCredit: _totalCredit, netBalance: _netBalance,
         balanceLabel: _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
-        phone: supplier.phone, currency: supplier.currency,
+        phone: supplier.phone, currency: _selectedCurrency ?? supplier.currency,
       );
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء إنشاء كشف الحساب'), backgroundColor: AppColors.error));
@@ -730,7 +735,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
       }
     }
     try {
-      await printerService.printCustomerStatement({'name': supplier.name, 'balance': _netBalance.abs(), 'balance_type': _netBalance >= 0 ? 'credit' : 'debit', 'currency': supplier.currency});
+      await printerService.printCustomerStatement({'name': supplier.name, 'balance': _netBalance.abs(), 'balance_type': _netBalance >= 0 ? 'credit' : 'debit', 'currency': _selectedCurrency ?? supplier.currency});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال كشف الحساب للطابعة الحرارية'), backgroundColor: AppColors.success));
     } on PrinterException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: AppColors.error));
@@ -760,11 +765,48 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
     final supplier = _freshSupplier ?? widget.supplier;
-    final isDebit = supplier.balanceType == 'debit';
+    // Use the dynamic computed net balance for the header instead of
+    // the static stored balance — suppliers are multi-currency and
+    // the computed balance per currency is the source of truth.
+    final headerBalance = _netBalance;
+    final headerIsDebit = headerBalance < 0;
+    final headerBalanceAbs = headerBalance.abs();
+    final headerCurrency = _selectedCurrency ?? supplier.currency;
 
     return Scaffold(
       appBar: AppBar(
         actions: [
+          // Edit button
+          Container(
+            margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
+            child: Material(
+              color: AppColors.accentBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: () async {
+                  await showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    builder: (context) => AddSupplierSheet(supplier: supplier),
+                  );
+                  if (mounted) _loadData();
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_rounded, size: 18, color: AppColors.accentBlue),
+                      const SizedBox(width: 4),
+                      Text('تعديل', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.accentBlue)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           // Modern print button
           Container(
             margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
@@ -865,17 +907,17 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                     child: Column(
                       children: [
                         Text(
-                          '${supplier.balance.abs().toStringAsFixed(2)} ${_currencySymbol(supplier.currency)}',
+                          '${CurrencyFormatter.formatValue(headerBalanceAbs)} ${_currencySymbol(headerCurrency)}',
                           style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 2),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: (isDebit ? AppColors.error : AppColors.success).withOpacity(0.9),
+                            color: (headerIsDebit ? AppColors.error : (headerBalance > 0 ? AppColors.success : AppColors.textHint)).withOpacity(0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(isDebit ? 'عليه' : (supplier.balance > 0 ? 'له' : 'متساوي'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
+                          child: Text(headerIsDebit ? 'عليه' : (headerBalance > 0 ? 'له' : 'متساوي'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
                         ),
                       ],
                     ),
@@ -1190,7 +1232,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                         )),
                         const SizedBox(height: 4),
                         Text(
-                          '${_totalCredit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          '${CurrencyFormatter.formatValue(_totalCredit)} ${_currencySymbol(_selectedCurrency)}',
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w900, color: AppColors.success, fontSize: 13,
                           ),
@@ -1220,7 +1262,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                         )),
                         const SizedBox(height: 4),
                         Text(
-                          '${_totalDebit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          '${CurrencyFormatter.formatValue(_totalDebit)} ${_currencySymbol(_selectedCurrency)}',
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w900, color: AppColors.error, fontSize: 13,
                           ),
@@ -1273,7 +1315,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${_netBalance.abs().toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
+                          '${CurrencyFormatter.formatValue(_netBalance.abs())} ${_currencySymbol(_selectedCurrency)}',
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w900,
                             color: _netBalance >= 0 ? AppColors.success : AppColors.error,
@@ -1733,14 +1775,14 @@ class _MovementCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (debit > 0)
-                  Text('${debit.toStringAsFixed(2)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w700))
+                  Text('${CurrencyFormatter.formatValue(debit)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w700))
                 else if (credit > 0)
-                  Text('${credit.toStringAsFixed(2)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700))
+                  Text('${CurrencyFormatter.formatValue(credit)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700))
                 else
                   Text('0.00 $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
                 const SizedBox(height: 2),
                 Text(
-                  '${runningBalance.abs().toStringAsFixed(2)}',
+                  '${CurrencyFormatter.formatValue(runningBalance.abs())} $currencySymbol',
                   style: theme.textTheme.labelSmall?.copyWith(color: balanceColor, fontWeight: FontWeight.w600),
                 ),
               ],
