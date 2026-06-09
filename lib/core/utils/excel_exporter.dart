@@ -133,16 +133,13 @@ class ExcelExporter {
     _addHeaders(sheet, headers);
 
     // Sort movements ascending by date+time for correct running balance in export.
-    // Primary: date, Secondary: created_at (actual timestamp), Final: id for stability.
     final sortedMovements = List<Map<String, dynamic>>.from(movements);
     sortedMovements.sort((a, b) {
       final dateA = a['date'] as String? ?? '';
       final dateB = b['date'] as String? ?? '';
       final cmp = dateA.compareTo(dateB);
       if (cmp != 0) return cmp;
-      final createdCmp = ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
-      if (createdCmp != 0) return createdCmp;
-      return (a['id'].toString()).compareTo(b['id'].toString());
+      return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
     });
 
     double runningBalance = 0;

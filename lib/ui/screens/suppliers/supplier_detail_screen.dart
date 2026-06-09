@@ -344,13 +344,10 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
     }
 
     // Sort by date+time ascending (oldest first).
-    // Primary: date, Secondary: created_at (actual timestamp), Final: id for stability.
     movements.sort((a, b) {
       final cmp = (a['date'] as String).compareTo(b['date'] as String);
       if (cmp != 0) return cmp;
-      final createdCmp = ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
-      if (createdCmp != 0) return createdCmp;
-      return (a['id'].toString()).compareTo(b['id'].toString());
+      return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
     });
 
     // Calculate running balance for ALL movements chronologically, per currency

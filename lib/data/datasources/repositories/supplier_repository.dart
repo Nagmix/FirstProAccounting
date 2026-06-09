@@ -459,15 +459,12 @@ class SupplierRepository {
     }
 
     // Sort by date+time ascending (oldest first).
-    // Primary: _sort_date, Secondary: created_at (actual timestamp), Final: id for stability.
     movements.sort((a, b) {
       final dateA = a['_sort_date'] as String? ?? '';
       final dateB = b['_sort_date'] as String? ?? '';
       final cmp = dateA.compareTo(dateB);
       if (cmp != 0) return cmp;
-      final createdCmp = ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
-      if (createdCmp != 0) return createdCmp;
-      return (a['id'].toString()).compareTo(b['id'].toString());
+      return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
     });
 
     return movements;
