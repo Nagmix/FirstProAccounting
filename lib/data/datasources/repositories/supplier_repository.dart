@@ -458,12 +458,31 @@ class SupplierRepository {
       });
     }
 
-    // Sort by date ascending, then by id for stable ordering
+    // Sort by date ascending, then by created_at for proper interleaving,
+    // then by source priority, then by id for stable ordering.
+    int sourcePriority(String? source) {
+      switch (source) {
+        case 'opening_balance': return 0;
+        case 'invoice': return 1;
+        case 'voucher': return 2;
+        default: return 3;
+      }
+    }
     movements.sort((a, b) {
       final dateA = a['_sort_date'] as String? ?? '';
       final dateB = b['_sort_date'] as String? ?? '';
       final cmp = dateA.compareTo(dateB);
       if (cmp != 0) return cmp;
+      // Secondary: created_at ascending
+      final createdA = (a['created_at'] as String?) ?? '';
+      final createdB = (b['created_at'] as String?) ?? '';
+      final createdCmp = createdA.compareTo(createdB);
+      if (createdCmp != 0) return createdCmp;
+      // Tertiary: source type priority
+      final pA = sourcePriority(a['_source'] as String?);
+      final pB = sourcePriority(b['_source'] as String?);
+      if (pA != pB) return pA.compareTo(pB);
+      // Final: id for stable ordering within same source type
       return (a['id'].toString()).compareTo(b['id'].toString());
     });
 

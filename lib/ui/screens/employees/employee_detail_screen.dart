@@ -177,6 +177,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
             'currency': currency,
             'source': 'transaction',
             'voucher_type': null,
+            'created_at': txn['created_at'] as String? ?? dateStr,
           });
         }
       } catch (e) {
@@ -238,6 +239,7 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
           'currency': currency,
           'source': 'voucher',
           'voucher_type': voucherType,
+          'created_at': v['created_at'] as String? ?? dateStr,
         });
       }
     } catch (e) {
@@ -269,16 +271,39 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
           'currency': obCurrency,
           'source': 'opening_balance',
           'voucher_type': null,
+          'created_at': ob['created_at'] as String? ?? dateStr,
         });
       }
     } catch (e) {
       debugPrint('EmployeeDetailScreen._loadMovements [opening_balance]: $e');
     }
 
-    // Sort by date ascending, then by id for stable ordering
+    // Sort by date ascending, then by created_at for proper interleaving
+    // of different source types, then by source priority (opening_balance
+    // first on same timestamp), then by id for stable ordering.
+    int sourcePriority(String? source) {
+      switch (source) {
+        case 'opening_balance': return 0;
+        case 'invoice': return 1;
+        case 'transaction': return 2;
+        case 'voucher': return 3;
+        default: return 4;
+      }
+    }
     movements.sort((a, b) {
+      // Primary: date ascending
       final cmp = (a['date'] as String).compareTo(b['date'] as String);
       if (cmp != 0) return cmp;
+      // Secondary: created_at ascending (actual creation timestamp)
+      final createdA = (a['created_at'] as String?) ?? '';
+      final createdB = (b['created_at'] as String?) ?? '';
+      final createdCmp = createdA.compareTo(createdB);
+      if (createdCmp != 0) return createdCmp;
+      // Tertiary: source type priority (opening_balance → transaction → voucher)
+      final pA = sourcePriority(a['source'] as String?);
+      final pB = sourcePriority(b['source'] as String?);
+      if (pA != pB) return pA.compareTo(pB);
+      // Final: id for stable ordering within same source type
       return (a['id'].toString()).compareTo(b['id'].toString());
     });
 

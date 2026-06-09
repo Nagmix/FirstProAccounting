@@ -171,6 +171,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           'filter_key': filterKey, 'icon': icon, 'color': color, 'description': desc,
           'debit': debit, 'credit': credit, 'currency': currency,
           'source': 'invoice', 'voucher_type': null,
+          'created_at': inv['created_at'] as String? ?? createdAt,
         });
       }
     } catch (e) {
@@ -269,6 +270,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           'filter_key': filterKey, 'icon': icon, 'color': color, 'description': description,
           'debit': debit, 'credit': credit, 'currency': currency,
           'source': 'voucher', 'voucher_type': voucherType,
+          'created_at': v['created_at'] as String? ?? dateStr,
         });
       }
     } catch (e) {
@@ -292,6 +294,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           'filter_key': 'opening_balance', 'icon': Icons.account_balance_wallet, 'color': AppColors.accentBlue,
           'description': description, 'debit': debit, 'credit': credit, 'currency': obCurrency,
           'source': 'opening_balance', 'voucher_type': null,
+          'created_at': ob['created_at'] as String? ?? dateStr,
         });
       }
 
@@ -315,6 +318,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             'description': 'رصيد افتتاحي (${isCredit ? "له" : "عليه"})',
             'debit': isCredit ? 0.0 : openingAmount.abs(), 'credit': isCredit ? openingAmount.abs() : 0.0,
             'currency': obCurrency, 'source': 'opening_balance', 'voucher_type': null,
+            'created_at': customer.createdAt ?? DateTime.now().toIso8601String(),
           });
         }
       }
@@ -322,10 +326,32 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       debugPrint('CustomerDetailScreen._loadMovements [opening_balance]: $e');
     }
 
-    // Sort by date ascending, then by id for stable ordering
+    // Sort by date ascending, then by created_at for proper interleaving
+    // of different source types, then by source priority (opening_balance
+    // first on same timestamp), then by id for stable ordering.
+    int sourcePriority(String? source) {
+      switch (source) {
+        case 'opening_balance': return 0;
+        case 'invoice': return 1;
+        case 'transaction': return 2;
+        case 'voucher': return 3;
+        default: return 4;
+      }
+    }
     movements.sort((a, b) {
+      // Primary: date ascending
       final cmp = (a['date'] as String).compareTo(b['date'] as String);
       if (cmp != 0) return cmp;
+      // Secondary: created_at ascending (actual creation timestamp)
+      final createdA = (a['created_at'] as String?) ?? '';
+      final createdB = (b['created_at'] as String?) ?? '';
+      final createdCmp = createdA.compareTo(createdB);
+      if (createdCmp != 0) return createdCmp;
+      // Tertiary: source type priority (opening_balance → invoice → voucher)
+      final pA = sourcePriority(a['source'] as String?);
+      final pB = sourcePriority(b['source'] as String?);
+      if (pA != pB) return pA.compareTo(pB);
+      // Final: id for stable ordering within same source type
       return (a['id'].toString()).compareTo(b['id'].toString());
     });
 

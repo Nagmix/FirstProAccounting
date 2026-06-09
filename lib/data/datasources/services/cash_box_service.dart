@@ -336,6 +336,7 @@ class CashBoxService {
           'id': 'v_${v['id']}', 'date': dateStr, 'type': voucherType, 'type_ar': typeAr,
           'filter_key': filterKey, 'icon': icon, 'color': color, 'description': description,
           'debit': debit, 'credit': credit, 'currency': curr, 'source': 'voucher', 'voucher_type': voucherType,
+          'created_at': v['created_at'] as String? ?? dateStr,
         });
       }
     } catch (e) {
@@ -373,6 +374,7 @@ class CashBoxService {
           'description': isOutgoing ? 'تحويل إلى $toName' : 'تحويل من $fromName',
           'debit': isOutgoing ? amount : 0.0, 'credit': isOutgoing ? 0.0 : amount,
           'currency': curr, 'source': 'transfer', 'voucher_type': null,
+          'created_at': t['created_at'] as String? ?? dateStr,
         });
       }
     } catch (e) {
@@ -415,6 +417,7 @@ class CashBoxService {
           'description': 'صرافة: $fromCurrency → $toCurrency',
           'debit': isSource ? amount : 0.0, 'credit': isSource ? 0.0 : amount,
           'currency': curr, 'source': 'exchange', 'voucher_type': null,
+          'created_at': e['created_at'] as String? ?? dateStr,
         });
       }
     } catch (e) {
@@ -461,6 +464,7 @@ class CashBoxService {
           'color': isSaleOrPos ? AppColors.primary : AppColors.secondary,
           'description': '$typeAr - ${inv['invoice_number'] ?? inv['id'] ?? ''}',
           'debit': debit, 'credit': credit, 'currency': curr, 'source': 'invoice', 'voucher_type': null,
+          'created_at': inv['created_at'] as String? ?? dateStr,
         });
       }
     } catch (e) {
@@ -494,18 +498,40 @@ class CashBoxService {
           'debit': credit > 0 ? credit : 0.0,
           'credit': debit > 0 ? debit : 0.0,
           'currency': obCurrency, 'source': 'opening_balance', 'voucher_type': null,
+          'created_at': ob['created_at'] as String? ?? dateStr,
         });
       }
     } catch (e) {
       debugPrint('CashBoxService.getCashBoxMovements [opening_balance]: $e');
     }
 
-    // Sort by date ascending
+    // Sort by date ascending, then by created_at for proper interleaving
+    // of different source types, then by source priority, then by id.
+    int sourcePriority(String? source) {
+      switch (source) {
+        case 'opening_balance': return 0;
+        case 'invoice': return 1;
+        case 'voucher': return 2;
+        case 'transfer': return 3;
+        case 'exchange': return 4;
+        default: return 5;
+      }
+    }
     movements.sort((a, b) {
       final dateA = a['date'] as String;
       final dateB = b['date'] as String;
       final cmp = dateA.compareTo(dateB);
       if (cmp != 0) return cmp;
+      // Secondary: created_at ascending (actual creation timestamp)
+      final createdA = (a['created_at'] as String?) ?? '';
+      final createdB = (b['created_at'] as String?) ?? '';
+      final createdCmp = createdA.compareTo(createdB);
+      if (createdCmp != 0) return createdCmp;
+      // Tertiary: source type priority
+      final pA = sourcePriority(a['source'] as String?);
+      final pB = sourcePriority(b['source'] as String?);
+      if (pA != pB) return pA.compareTo(pB);
+      // Final: id for stable ordering within same source type
       return (a['id'].toString()).compareTo(b['id'].toString());
     });
 

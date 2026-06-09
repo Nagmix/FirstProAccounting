@@ -70,12 +70,16 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
         final maps = await locator<JournalService>()
             .getTransactionsByAccount(widget.account.id!)
             .timeout(const Duration(seconds: 10));
-        // Sort by date ascending, then by id for stable ordering
+        // Sort by date ascending, then by created_at, then by id for stable ordering
         maps.sort((a, b) {
           final dateA = a['date'] as String? ?? a['created_at'] as String? ?? '';
           final dateB = b['date'] as String? ?? b['created_at'] as String? ?? '';
           final cmp = dateA.compareTo(dateB);
           if (cmp != 0) return cmp;
+          final createdA = (a['created_at'] as String?) ?? '';
+          final createdB = (b['created_at'] as String?) ?? '';
+          final createdCmp = createdA.compareTo(createdB);
+          if (createdCmp != 0) return createdCmp;
           return (a['id'].toString()).compareTo(b['id'].toString());
         });
         if (mounted) {
