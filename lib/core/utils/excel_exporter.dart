@@ -132,32 +132,16 @@ class ExcelExporter {
     final headers = ['التاريخ', 'البيان', 'عليه', 'له', 'الرصيد'];
     _addHeaders(sheet, headers);
 
-    // Sort movements ascending by date for correct running balance in export
-    // Use created_at as secondary sort to properly interleave different sources
+    // Sort movements ascending by date+time for correct running balance in export.
+    // Primary: date, Secondary: created_at (actual timestamp), Final: id for stability.
     final sortedMovements = List<Map<String, dynamic>>.from(movements);
-    int sourcePriority(String? source) {
-      switch (source) {
-        case 'opening_balance': return 0;
-        case 'invoice': return 1;
-        case 'transaction': return 2;
-        case 'voucher': return 3;
-        case 'transfer': return 4;
-        case 'exchange': return 5;
-        default: return 6;
-      }
-    }
     sortedMovements.sort((a, b) {
       final dateA = a['date'] as String? ?? '';
       final dateB = b['date'] as String? ?? '';
       final cmp = dateA.compareTo(dateB);
       if (cmp != 0) return cmp;
-      final createdA = (a['created_at'] as String?) ?? '';
-      final createdB = (b['created_at'] as String?) ?? '';
-      final createdCmp = createdA.compareTo(createdB);
+      final createdCmp = ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
       if (createdCmp != 0) return createdCmp;
-      final pA = sourcePriority(a['source'] as String?);
-      final pB = sourcePriority(b['source'] as String?);
-      if (pA != pB) return pA.compareTo(pB);
       return (a['id'].toString()).compareTo(b['id'].toString());
     });
 
