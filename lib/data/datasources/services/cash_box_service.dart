@@ -142,7 +142,9 @@ class CashBoxService {
   Future<double> getCashBalanceForCurrency(String currency) async {
     final db = await _db;
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(balance), 0) AS total FROM cash_boxes WHERE currency = ?",
+      "SELECT CAST(COALESCE(SUM(CASE "
+      "WHEN balance_type = 'credit' THEN balance ELSE -balance END), 0) AS INTEGER) AS total "
+      "FROM cash_boxes WHERE currency = ? AND is_active = 1",
       [currency],
     );
     return MoneyHelper.readCalculatedMoney(result.first['total']);
@@ -437,21 +439,26 @@ class CashBoxService {
         final dateStr = inv['created_at'] as String? ?? DateTime.now().toIso8601String();
 
         String typeAr; String filterKey; double debit = 0.0; double credit = 0.0;
-        if (type == 'sale' && !isReturn) {
-          typeAr = 'فاتورة مبيعات'; filterKey = 'sales'; credit = paidAmount;
-        } else if (type == 'sale' && isReturn) {
-          typeAr = 'مرتجع مبيعات'; filterKey = 'returns'; debit = paidAmount;
+        final isSaleOrPos = type == 'sale' || type == 'pos';
+        if (isSaleOrPos && !isReturn) {
+          typeAr = type == 'pos' ? 'فاتورة نقطة بيع' : 'فاتورة مبيعات';
+          filterKey = 'sales'; credit = paidAmount;
+        } else if (isSaleOrPos && isReturn) {
+          typeAr = type == 'pos' ? 'مرتجع نقطة بيع' : 'مرتجع مبيعات';
+          filterKey = 'returns'; debit = paidAmount;
         } else if (type == 'purchase' && !isReturn) {
           typeAr = 'فاتورة مشتريات'; filterKey = 'purchases'; debit = paidAmount;
-        } else {
+        } else if (type == 'purchase' && isReturn) {
           typeAr = 'مرتجع مشتريات'; filterKey = 'returns'; credit = paidAmount;
+        } else {
+          typeAr = 'فاتورة'; filterKey = 'sales'; credit = paidAmount;
         }
 
         movements.add({
           'id': 'i_${inv['id']}', 'date': dateStr, 'type': type, 'type_ar': typeAr,
           'filter_key': filterKey,
-          'icon': type == 'sale' ? Icons.receipt_long : Icons.shopping_cart,
-          'color': type == 'sale' ? AppColors.primary : AppColors.secondary,
+          'icon': isSaleOrPos ? Icons.receipt_long : Icons.shopping_cart,
+          'color': isSaleOrPos ? AppColors.primary : AppColors.secondary,
           'description': '$typeAr - ${inv['invoice_number'] ?? inv['id'] ?? ''}',
           'debit': debit, 'credit': credit, 'currency': curr, 'source': 'invoice', 'voucher_type': null,
         });

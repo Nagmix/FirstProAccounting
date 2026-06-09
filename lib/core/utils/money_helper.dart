@@ -187,6 +187,7 @@ class MoneyHelper {
 
   static const shiftMoneyFields = [
     'opening_amount', 'total_sales', 'total_returns', 'total_discounts', 'closing_amount',
+    'expected_amount', 'difference',
   ];
 
   static const transactionMoneyFields = [

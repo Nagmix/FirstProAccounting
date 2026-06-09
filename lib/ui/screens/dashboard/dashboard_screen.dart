@@ -703,8 +703,28 @@ class _DashboardScreenState extends State<DashboardScreen>
             final date = DateTime.tryParse(invoice['created_at'] as String? ?? '') ?? DateTime.now();
             final statusStr = invoice['status'] as String? ?? 'pending';
             final invoiceType = invoice['type'] as String? ?? 'sale';
+            final isReturn = (invoice['is_return'] as int? ?? 0) == 1;
             final isSale = invoiceType.contains('sale') || invoiceType == 'pos';
             final isPaid = statusStr.toLowerCase() == 'paid';
+
+            // Determine type label
+            String typeLabel;
+            if (invoiceType == 'pos' && !isReturn) {
+              typeLabel = 'نقطة بيع';
+            } else if (invoiceType == 'pos' && isReturn) {
+              typeLabel = 'مرتجع نقطة بيع';
+            } else if (invoiceType == 'sale' && !isReturn) {
+              typeLabel = 'فاتورة مبيعات';
+            } else if (invoiceType == 'sale' && isReturn) {
+              typeLabel = 'مرتجع مبيعات';
+            } else if (invoiceType == 'purchase' && !isReturn) {
+              typeLabel = 'فاتورة مشتريات';
+            } else if (invoiceType == 'purchase' && isReturn) {
+              typeLabel = 'مرتجع مشتريات';
+            } else {
+              typeLabel = 'فاتورة';
+            }
+            final journalId = invoice['id']?.toString() ?? '';
 
             return AnimatedEntry(
               delay: Duration(milliseconds: 60 * index),
@@ -713,10 +733,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                 entityName: entityName,
                 amount: amount,
                 date: date,
-                isSale: isSale,
+                isSale: isSale && !isReturn,
                 isPaid: isPaid,
                 isDark: isDark,
-                onTap: () {},
+                typeLabel: typeLabel,
+                journalId: journalId,
+                onTap: () {
+                  final invoiceId = invoice['id'] as String?;
+                  if (invoiceId != null) {
+                    AppRouter.pushInvoiceDetail(context, invoiceId);
+                  }
+                },
               ),
             );
           }
@@ -910,6 +937,8 @@ class _ProfessionalTransactionTile extends StatelessWidget {
     required this.isPaid,
     required this.isDark,
     required this.onTap,
+    this.typeLabel = '',
+    this.journalId = '',
   });
 
   final String entityName;
@@ -919,6 +948,8 @@ class _ProfessionalTransactionTile extends StatelessWidget {
   final bool isPaid;
   final bool isDark;
   final VoidCallback onTap;
+  final String typeLabel;
+  final String journalId;
 
   @override
   Widget build(BuildContext context) {
@@ -937,6 +968,14 @@ class _ProfessionalTransactionTile extends StatelessWidget {
         ? const Color(0xFF22C55E).withOpacity(0.1)
         : const Color(0xFFF97316).withOpacity(0.1);
     final statusColor = isPaid ? const Color(0xFF22C55E) : const Color(0xFFF97316);
+
+    // Build subtitle with type label and journal ID
+    final subtitleParts = <String>[];
+    if (typeLabel.isNotEmpty) subtitleParts.add(typeLabel);
+    if (journalId.isNotEmpty) subtitleParts.add('قيد #$journalId');
+    final subtitle = subtitleParts.isEmpty
+        ? DateFormatter.formatDate(date)
+        : '${subtitleParts.join(' • ')} • ${DateFormatter.formatDate(date)}';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
@@ -968,7 +1007,7 @@ class _ProfessionalTransactionTile extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              // Entity name + date
+              // Entity name + subtitle with details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -982,11 +1021,13 @@ class _ProfessionalTransactionTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      DateFormatter.formatDate(date),
+                      subtitle,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary,
                         fontWeight: FontWeight.w400,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

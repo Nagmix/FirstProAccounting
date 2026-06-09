@@ -74,6 +74,7 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
       final debtCeiling =
           double.tryParse(_debtCeilingController.text.trim()) ?? 0.0;
 
+      final now = DateTime.now().toIso8601String();
       final data = {
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim().isEmpty
@@ -88,12 +89,14 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
             ? null
             : _notesController.text.trim(),
         'is_active': 1,
+        'updated_at': now,
       };
 
       if (_isEditing) {
         final id = widget.existingSubAccount!['id'] as int;
         await repo.updateSubAccount(id, data);
       } else {
+        data['created_at'] = now;
         await repo.insertSubAccount(data);
       }
 

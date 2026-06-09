@@ -93,8 +93,9 @@ class ExpenseRepository {
   Future<double> getTotalExpensesForDateRange(String currency, String startStr, String endStr) async {
     final db = await _db;
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(amount), 0) AS total FROM expenses "
-      "WHERE currency = ? AND expense_date >= ? AND expense_date < ?",
+      "SELECT CAST(COALESCE(SUM(amount_base), 0) AS INTEGER) AS total FROM expenses "
+      "WHERE currency = ? AND expense_date >= ? AND expense_date < ? "
+      "AND operation_type = 'صرف'",
       [currency, startStr, endStr],
     );
     return MoneyHelper.readCalculatedMoney(result.first['total']);

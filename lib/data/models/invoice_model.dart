@@ -69,7 +69,7 @@ class Invoice {
 
   String get effectiveType {
     if (isReturn) {
-      if (type == 'sale') return 'sale_return';
+      if (type == 'sale' || type == 'pos') return 'sale_return';
       if (type == 'purchase') return 'purchase_return';
     }
     return type;

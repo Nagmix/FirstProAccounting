@@ -2224,7 +2224,7 @@ class InvoiceRepository {
   Future<double> getTotalPurchasesForDateRange(String currency, String startStr, String endStr) async {
     final db = await _db;
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(total), 0) AS total FROM invoices "
+      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS total FROM invoices "
       "WHERE type = 'purchase' AND is_return = 0 AND currency = ? "
       "AND created_at >= ? AND created_at < ?",
       [currency, startStr, endStr],
