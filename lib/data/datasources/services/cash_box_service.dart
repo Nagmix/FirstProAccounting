@@ -435,30 +435,52 @@ class CashBoxService {
       ''', invoiceArgs);
 
       for (final inv in invoices) {
-        final type = inv['type'] as String? ?? 'sale';
-        final isReturn = (inv['is_return'] as int? ?? 0) == 1;
+        // FIX Bug 1: Use robust type detection that handles both stored types
+        // (e.g. 'pos', 'sale', 'purchase') AND effective types
+        // (e.g. 'sale_return', 'purchase_return').
+        // Also handle is_return as num (not just int) to avoid type-cast failures.
+        final rawType = inv['type'] as String? ?? 'sale';
+        final rawIsReturn = inv['is_return'];
+        final isReturn = (rawIsReturn is num ? rawIsReturn.toInt() : (rawIsReturn as int? ?? 0)) == 1;
+
+        // Normalize: determine the base type and whether this is a return
+        // 'sale_return' / 'purchase_return' are effective types that may be
+        // stored directly in the type column by some code paths.
+        String baseType;
+        bool effectiveIsReturn;
+        if (rawType == 'sale_return') {
+          baseType = 'sale';
+          effectiveIsReturn = true;
+        } else if (rawType == 'purchase_return') {
+          baseType = 'purchase';
+          effectiveIsReturn = true;
+        } else {
+          baseType = rawType;
+          effectiveIsReturn = isReturn;
+        }
+
         final paidAmount = MoneyHelper.readMoney(inv['paid_amount']);
         final curr = inv['currency'] as String? ?? 'YER';
         final dateStr = inv['created_at'] as String? ?? DateTime.now().toIso8601String();
 
         String typeAr; String filterKey; double debit = 0.0; double credit = 0.0;
-        final isSaleOrPos = type == 'sale' || type == 'pos';
-        if (isSaleOrPos && !isReturn) {
-          typeAr = type == 'pos' ? 'فاتورة نقطة بيع' : 'فاتورة مبيعات';
+        final isSaleOrPos = baseType == 'sale' || baseType == 'pos';
+        if (isSaleOrPos && !effectiveIsReturn) {
+          typeAr = baseType == 'pos' ? 'فاتورة نقطة بيع' : 'فاتورة مبيعات';
           filterKey = 'sales'; credit = paidAmount;
-        } else if (isSaleOrPos && isReturn) {
-          typeAr = type == 'pos' ? 'مرتجع نقطة بيع' : 'مرتجع مبيعات';
+        } else if (isSaleOrPos && effectiveIsReturn) {
+          typeAr = baseType == 'pos' ? 'مرتجع نقطة بيع' : 'مرتجع مبيعات';
           filterKey = 'returns'; debit = paidAmount;
-        } else if (type == 'purchase' && !isReturn) {
+        } else if (baseType == 'purchase' && !effectiveIsReturn) {
           typeAr = 'فاتورة مشتريات'; filterKey = 'purchases'; debit = paidAmount;
-        } else if (type == 'purchase' && isReturn) {
+        } else if (baseType == 'purchase' && effectiveIsReturn) {
           typeAr = 'مرتجع مشتريات'; filterKey = 'returns'; credit = paidAmount;
         } else {
           typeAr = 'فاتورة'; filterKey = 'sales'; credit = paidAmount;
         }
 
         movements.add({
-          'id': 'i_${inv['id']}', 'date': dateStr, 'type': type, 'type_ar': typeAr,
+          'id': 'i_${inv['id']}', 'date': dateStr, 'type': rawType, 'type_ar': typeAr,
           'filter_key': filterKey,
           'icon': isSaleOrPos ? Icons.receipt_long : Icons.shopping_cart,
           'color': isSaleOrPos ? AppColors.primary : AppColors.secondary,

@@ -70,13 +70,16 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
         final maps = await locator<JournalService>()
             .getTransactionsByAccount(widget.account.id!)
             .timeout(const Duration(seconds: 10));
-        // Sort by date+time ascending (oldest first).
+
+        // FIX Bug 4: The sort function used `as String?` which throws a
+        // TypeError when the DB returns date/created_at as a non-String type
+        // (e.g. int). Use a safe string conversion instead.
         maps.sort((a, b) {
-          final dateA = a['date'] as String? ?? a['created_at'] as String? ?? '';
-          final dateB = b['date'] as String? ?? b['created_at'] as String? ?? '';
+          final dateA = _safeString(a['date']) ?? _safeString(a['created_at']) ?? '';
+          final dateB = _safeString(b['date']) ?? _safeString(b['created_at']) ?? '';
           final cmp = dateA.compareTo(dateB);
           if (cmp != 0) return cmp;
-          return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
+          return (_safeString(a['created_at']) ?? '').compareTo(_safeString(b['created_at']) ?? '');
         });
         if (mounted) {
           setState(() {
@@ -91,6 +94,16 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
       debugPrint('AccountLedgerScreen._loadTransactions: $e');
       if (mounted) setState(() { _isLoading = false; _hasError = true; });
     }
+  }
+
+  /// Safely convert a dynamic value to a String.
+  /// Handles int, double, String, and null values without throwing.
+  /// This prevents TypeErrors when DB columns contain unexpected types.
+  String? _safeString(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is int || value is double) return value.toString();
+    return value.toString();
   }
 
   List<Map<String, dynamic>> get _filteredTransactions {

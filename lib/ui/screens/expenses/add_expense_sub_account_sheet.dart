@@ -71,11 +71,16 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
 
     try {
       final repo = locator<ExpenseSubAccountRepository>();
-      final debtCeiling =
+      // FIX Bug 3: Ensure debt_ceiling is always a valid double.
+      // When the controller text is empty or contains non-numeric characters,
+      // double.tryParse returns null — default to 0.0.
+      // Also guard against NaN / Infinity which can cause DB insert failures.
+      double debtCeiling =
           double.tryParse(_debtCeilingController.text.trim()) ?? 0.0;
+      if (debtCeiling.isNaN || debtCeiling.isInfinite) debtCeiling = 0.0;
 
       final now = DateTime.now().toIso8601String();
-      final data = {
+      final data = <String, dynamic>{
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim().isEmpty
             ? null
@@ -90,13 +95,19 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
             : _notesController.text.trim(),
         'is_active': 1,
         'updated_at': now,
+        // FIX Bug 3: Always include created_at, even for updates (DB will
+        // keep the original value for updates since we don't overwrite it).
+        // For inserts this satisfies the NOT NULL constraint.
+        'created_at': now,
       };
 
       if (_isEditing) {
         final id = widget.existingSubAccount!['id'] as int;
+        // Remove created_at for updates — we don't want to overwrite the original
+        data.remove('created_at');
         await repo.updateSubAccount(id, data);
       } else {
-        data['created_at'] = now;
+        // created_at already included in data map above
         await repo.insertSubAccount(data);
       }
 

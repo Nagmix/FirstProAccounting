@@ -124,13 +124,15 @@ class MoneyHelper {
       if (value is double) {
         result[field] = toCents(value);
       } else if (value is int) {
-        // Already an int — could be already in cents or a raw int.
-        // If the int came from the UI (e.g. a num field), we need to
-        // convert it. We detect this by checking if it's a "small" value
-        // that looks like it hasn't been scaled yet.
-        // Heuristic: if < 100000, it's likely a raw value, not cents.
-        // But this is unreliable, so we only convert doubles.
-        // Ints are assumed to already be in cents (e.g. from readMoney).
+        // FIX: Convert int values to cents too.
+        // Previously, ints were assumed to already be in cents, but this caused
+        // a critical bug: when a UI form passes an integer-valued amount (e.g., 500
+        // instead of 500.0), the value would be stored as 500 (human-readable)
+        // instead of 50000 (cents). Then readMoney(500) would divide by 100 = 5.00,
+        // making 500 riyals display as 5.00 riyals.
+        // Since readMoney() always returns a double, legitimate cents-as-int values
+        // should never appear in a UI-originated map.
+        result[field] = toCents(value.toDouble());
       } else if (value is num && value.toDouble() != value.toInt()) {
         // num with decimal part — convert
         result[field] = toCents(value.toDouble());

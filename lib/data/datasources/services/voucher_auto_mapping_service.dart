@@ -715,6 +715,11 @@ class VoucherAutoMappingService {
   }
 
   /// تحديث رصيد الصندوق
+  /// Uses signed-balance convention (same as EntityBalanceHelper) to correctly
+  /// flip balance_type when the balance crosses zero.
+  ///
+  /// Convention: credit (له) = +balance, debit (عليه) = -balance
+  /// Cash boxes are normally credit (positive = cash available).
   Future<void> _updateCashBoxBalance(
     Transaction txn,
     int cashBoxId,
@@ -731,19 +736,19 @@ class VoucherAutoMappingService {
         cashBox.first['balance_type'] as String? ?? 'credit';
     final isCashIn = voucherType == 'receipt';
 
-    double newBalance;
-    if (balanceType == 'credit') {
-      newBalance = isCashIn
-          ? currentBalance + amount
-          : currentBalance - amount;
-    } else {
-      newBalance = isCashIn
-          ? currentBalance - amount
-          : currentBalance + amount;
-    }
+    // Convert to signed value: credit = +balance, debit = -balance
+    double signedBalance = balanceType == 'credit' ? currentBalance : -currentBalance;
+
+    // Apply change: cash in increases credit (+), cash out decreases credit (-)
+    signedBalance += isCashIn ? amount : -amount;
+
+    // Convert back to magnitude + direction
+    final newBalance = signedBalance.abs();
+    final newType = signedBalance >= 0 ? 'credit' : 'debit';
 
     await txn.update('cash_boxes', {
       'balance': MoneyHelper.toCents(newBalance),
+      'balance_type': newType,
       'updated_at': now,
     }, where: 'id = ?', whereArgs: [cashBoxId]);
   }

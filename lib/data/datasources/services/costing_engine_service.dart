@@ -10,7 +10,10 @@ class CostingEngineService {
 
   Future<Database> get _db => _dbHelper.database;
 
-  /// Create a new cost layer when inventory is purchased
+  /// Create a new cost layer when inventory is purchased.
+  ///
+  /// Validates that quantity and unitCost are positive before creating the layer.
+  /// Zero or negative values would produce incorrect COGS calculations.
   Future<void> createCostLayer({
     required int productId,
     int? warehouseId,
@@ -19,6 +22,12 @@ class CostingEngineService {
     String? referenceType,
     String? referenceId,
   }) async {
+    if (quantity <= 0.001) {
+      throw Exception('Cannot create cost layer with zero or negative quantity: $quantity');
+    }
+    if (unitCost <= 0) {
+      throw Exception('Cannot create cost layer with zero or negative unit cost: $unitCost');
+    }
     final db = await _db;
     final layer = InventoryCostLayer(
       productId: productId,
@@ -35,12 +44,18 @@ class CostingEngineService {
 
   /// Calculate COGS for a sale, consuming cost layers per the product's costing method.
   /// Returns the total COGS amount and creates movement_cost_allocations.
+  ///
+  /// ⚠️ This method does NOT wrap its operations in a database transaction.
+  /// Prefer [calculateCOGSInTransaction] which accepts an existing [Transaction]
+  /// to guarantee atomicity. This method should only be used for read-only
+  /// scenarios or when the caller manages the transaction externally.
   Future<double> calculateCOGS({
     required int productId,
     required double baseQuantity,
     required String invoiceId,
     int? warehouseId,
   }) async {
+    if (baseQuantity <= 0.001) return 0.0;
     final db = await _db;
 
     // Get product's costing method
@@ -144,6 +159,7 @@ class CostingEngineService {
       required double baseQuantity,
       required String invoiceId,
       required int codeOffset}) async {
+    if (baseQuantity <= 0.001) return 0.0;
     // Get product's costing method
     final productRow = await txn.query('products',
         columns: ['costing_method', 'average_cost', 'cost_price'],

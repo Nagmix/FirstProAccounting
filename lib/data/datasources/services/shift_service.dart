@@ -185,6 +185,8 @@ class ShiftService {
                 'description': 'فاتورة مبيعات - مرتجع - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
             }
@@ -197,6 +199,8 @@ class ShiftService {
                 'description': 'فاتورة مبيعات - مرتجع - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
             }
@@ -211,6 +215,8 @@ class ShiftService {
                 'description': 'فاتورة مبيعات (مدفوع) - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, effectivePaid, 0.0, now);
             }
@@ -223,6 +229,8 @@ class ShiftService {
                 'description': 'فاتورة مبيعات (آجل) - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, effectiveRemaining, 0.0, now);
             }
@@ -235,6 +243,8 @@ class ShiftService {
                 'description': 'فاتورة مبيعات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
             }
@@ -250,6 +260,8 @@ class ShiftService {
                 'description': 'فاتورة مبيعات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
             }
@@ -262,6 +274,8 @@ class ShiftService {
                 'description': 'فاتورة مبيعات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
             }
@@ -285,6 +299,8 @@ class ShiftService {
                 'description': 'فاتورة مشتريات - مرتجع - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
             }
@@ -297,6 +313,8 @@ class ShiftService {
                 'description': 'تخفيض مخزون مرتجع مشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, returnInvAccountId, 0.0, total, now);
             }
@@ -311,6 +329,8 @@ class ShiftService {
                 'description': 'فاتورة مشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
             }
@@ -323,6 +343,8 @@ class ShiftService {
                 'description': 'فاتورة مشتريات (مدفوع) - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, effectivePaid, now);
             }
@@ -335,6 +357,8 @@ class ShiftService {
                 'description': 'فاتورة مشتريات (آجل) - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, effectiveRemaining, now);
             }
@@ -349,6 +373,8 @@ class ShiftService {
                 'description': 'فاتورة مشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
             }
@@ -362,6 +388,8 @@ class ShiftService {
                 'description': 'فاتورة مشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
             }
@@ -381,6 +409,8 @@ class ShiftService {
                 'description': 'ضريبة قيمة مضافة مبيعات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, taxAmount, 0.0, now);
             }
@@ -392,6 +422,8 @@ class ShiftService {
               'description': 'ضريبة قيمة مضافة مستحقة - $invoiceId',
               'date': now,
               'created_at': now,
+              'reference_type': invoiceType,
+              'reference_id': invoiceId,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
           } else if ((invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') && isReturn) {
@@ -404,6 +436,8 @@ class ShiftService {
               'description': 'عكس ضريبة مرتجع مبيعات - $invoiceId',
               'date': now,
               'created_at': now,
+              'reference_type': invoiceType,
+              'reference_id': invoiceId,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, taxAmount, 0.0, now);
             if (salesAccountId != null) {
@@ -415,6 +449,8 @@ class ShiftService {
                 'description': 'عكس ضريبة مرتجع مبيعات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, taxAmount, now);
             }
@@ -428,6 +464,8 @@ class ShiftService {
               'description': 'ضريبة قيمة مضافة مشتريات - $invoiceId',
               'date': now,
               'created_at': now,
+              'reference_type': invoiceType,
+              'reference_id': invoiceId,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, taxAmount, 0.0, now);
             if (purchasesAccountId != null) {
@@ -439,6 +477,8 @@ class ShiftService {
                 'description': 'ضريبة قيمة مضافة مشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, taxAmount, now);
             }
@@ -453,6 +493,8 @@ class ShiftService {
                 'description': 'عكس ضريبة مرتجع مشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, taxAmount, 0.0, now);
             }
@@ -464,6 +506,8 @@ class ShiftService {
               'description': 'عكس ضريبة مرتجع مشتريات - $invoiceId',
               'date': now,
               'created_at': now,
+              'reference_type': invoiceType,
+              'reference_id': invoiceId,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
           }
@@ -546,6 +590,8 @@ class ShiftService {
                 'description': 'تكلفة بضاعة مباعة - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
@@ -555,6 +601,8 @@ class ShiftService {
                 'description': 'تخفيض مخزون - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
@@ -567,6 +615,8 @@ class ShiftService {
                 'description': 'إعادة مخزون مرتجع - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await txn.insert('transactions', {
                 'account_id': cogsAccountId,
@@ -576,6 +626,8 @@ class ShiftService {
                 'description': 'عكس تكلفة بضاعة مرتجعة - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
@@ -641,6 +693,8 @@ class ShiftService {
                 'description': 'إضافة مخزون مشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await txn.insert('transactions', {
                 'account_id': purchAccountId,
@@ -650,6 +704,8 @@ class ShiftService {
                 'description': 'تحويل من حساب المشتريات - $invoiceId',
                 'date': now,
                 'created_at': now,
+                'reference_type': invoiceType,
+                'reference_id': invoiceId,
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccountId, totalPurchaseCost, 0.0, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchAccountId, 0.0, totalPurchaseCost, now);

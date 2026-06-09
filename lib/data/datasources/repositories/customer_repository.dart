@@ -459,15 +459,30 @@ class CustomerRepository {
     return (effectiveDebt + additionalAmount) > debtCeiling;
   }
 
+  /// Get top customer balances, separated by currency.
+  ///
+  /// FIX: Previous version ordered by raw `balance` across all currencies,
+  /// which incorrectly compared YER cents against USD cents against SAR cents.
+  /// Now returns results grouped by currency, ordered within each currency.
   Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) async {
     final db = await _db;
-    return await db.rawQuery('''
-      SELECT name, balance, balance_type, currency
-      FROM customers
-      WHERE balance > 0
-      ORDER BY balance DESC
-      LIMIT ?
-    ''', [limit]);
+    // Get distinct currencies first
+    final currencies = await db.rawQuery(
+      'SELECT DISTINCT currency FROM customers WHERE balance > 0 AND currency IS NOT NULL',
+    );
+    final results = <Map<String, dynamic>>[];
+    for (final cur in currencies) {
+      final currency = cur['currency'] as String? ?? 'YER';
+      final rows = await db.rawQuery('''
+        SELECT name, balance, balance_type, currency
+        FROM customers
+        WHERE balance > 0 AND currency = ?
+        ORDER BY balance DESC
+        LIMIT ?
+      ''', [currency, limit]);
+      results.addAll(rows);
+    }
+    return results;
   }
 
   // ══════════════════════════════════════════════════════════════

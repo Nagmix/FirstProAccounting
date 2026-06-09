@@ -799,7 +799,12 @@ class ReportService {
           "SELECT CAST(COALESCE(SUM(t.credit) - SUM(t.debit), 0) AS INTEGER) AS manual_rev "
           "FROM transactions t "
           "WHERE t.account_id = ?$acctDf "
-          "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('invoice', 'pos_sale'))",
+          // FIX: Exclude ALL invoice-related reference types, not just 'invoice'/'pos_sale'.
+          // The invoice_repository uses 'sale','pos','purchase','sale_return','purchase_return'.
+          // postShiftInvoices now also sets reference_type to the invoiceType.
+          // Including reference_type IS NULL was causing double-counting for
+          // transactions created before the reference_type fix was applied.
+          "AND t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
           revArgs,
         );
         manualRevenue += (revRes2.first['manual_rev'] as int? ?? 0);
@@ -819,7 +824,7 @@ class ReportService {
           "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_exp "
           "FROM transactions t "
           "WHERE t.account_id = ?$acctDf "
-          "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('expense', 'invoice'))",
+          "AND t.reference_type NOT IN ('expense', 'invoice', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
           expArgs,
         );
         manualExpenses += (expRes2.first['manual_exp'] as int? ?? 0);
@@ -839,7 +844,7 @@ class ReportService {
           "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_cogs "
           "FROM transactions t "
           "WHERE t.account_id = ?$acctDf "
-          "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('invoice', 'pos_sale'))",
+          "AND t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
           cogsArgs,
         );
         manualCogs += (cogsRes2.first['manual_cogs'] as int? ?? 0);

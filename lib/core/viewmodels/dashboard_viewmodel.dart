@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../di/service_locator.dart';
+import '../utils/money_helper.dart';
 import '../../data/datasources/repositories/invoice_repository.dart';
 import '../../data/datasources/repositories/product_repository.dart';
 import '../../data/datasources/repositories/customer_repository.dart';
@@ -7,6 +8,7 @@ import '../../data/datasources/repositories/expense_repository.dart';
 import '../../data/datasources/repositories/reference_data_repository.dart';
 import '../../data/datasources/services/report_service.dart';
 import '../../data/datasources/services/cash_box_service.dart';
+import '../../data/datasources/services/journal_service.dart';
 
 
 /// ViewModel for Dashboard — manages dashboard data loading and refresh.
@@ -22,6 +24,7 @@ class DashboardViewModel extends ChangeNotifier {
   final ReferenceDataRepository _refData = locator<ReferenceDataRepository>();
   final ReportService _reportService = locator<ReportService>();
   final CashBoxService _cashBoxService = locator<CashBoxService>();
+  final JournalService _journalService = locator<JournalService>();
 
   // ── Dashboard state ──
   double todaySales = 0.0;
@@ -37,6 +40,8 @@ class DashboardViewModel extends ChangeNotifier {
   int productCount = 0;
   int customerCount = 0;
 
+  /// Recent transactions — now includes invoices AND other transaction types
+  /// (vouchers, expenses) with operation type and journal entry number.
   List<Map<String, dynamic>> recentTransactions = [];
   List<Map<String, dynamic>> recentInvoices = [];
   List<Map<String, dynamic>> topProducts = [];
@@ -111,6 +116,11 @@ class DashboardViewModel extends ChangeNotifier {
       final allInvoices = await _invoiceRepo.getAllInvoices();
       invoiceCount = allInvoices.length;
 
+      // ── FIX Bug 2: Build recentTransactions with operation type and journal ID ──
+      // Previously recentTransactions was never populated and the dashboard
+      // only showed invoices with no operation-type detail or journal entry number.
+      await _loadRecentTransactions(currency);
+
       _errorMessage = null;
     } catch (e) {
       _errorMessage = 'حدث خطأ أثناء تحميل البيانات';
@@ -119,5 +129,106 @@ class DashboardViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Load recent transactions from multiple sources (invoices, vouchers, expenses)
+  /// and merge them into a unified chronological list with operation type
+  /// and journal entry number.
+  Future<void> _loadRecentTransactions(String currency) async {
+    final transactions = <Map<String, dynamic>>[];
+
+    // 1. Recent invoices
+    try {
+      final invoices = await _invoiceRepo.getRecentInvoices(limit: 10);
+      for (final inv in invoices) {
+        final type = inv['type'] as String? ?? 'sale';
+        final isReturn = (inv['is_return'] as num?)?.toInt() == 1;
+        String opType;
+        if ((type == 'sale' || type == 'pos') && !isReturn) {
+          opType = type == 'pos' ? 'نقطة بيع' : 'فاتورة مبيعات';
+        } else if ((type == 'sale' || type == 'pos') && isReturn) {
+          opType = type == 'pos' ? 'مرتجع نقطة بيع' : 'مرتجع مبيعات';
+        } else if (type == 'purchase' && !isReturn) {
+          opType = 'فاتورة مشتريات';
+        } else if (type == 'purchase' || type == 'purchase_return') {
+          opType = 'مرتجع مشتريات';
+        } else {
+          opType = 'فاتورة';
+        }
+        transactions.add({
+          'id': inv['id'],
+          'date': inv['created_at'] as String? ?? '',
+          'amount': MoneyHelper.readMoney(inv['total']),
+          'entity_name': inv['entity_name'] ?? '—',
+          'operation_type': opType,
+          'source': 'invoice',
+        });
+      }
+    } catch (e) {
+      debugPrint('DashboardViewModel._loadRecentTransactions [invoices]: $e');
+    }
+
+    // 2. Recent vouchers (receipt/payment)
+    try {
+      final db = await locator<JournalService>()._db;
+      final vouchers = await db.query(
+        'vouchers',
+        orderBy: 'created_at DESC',
+        limit: 5,
+      );
+      for (final v in vouchers) {
+        final vType = v['voucher_type'] as String? ?? '';
+        String opType;
+        if (vType == 'receipt') {
+          opType = 'سند قبض';
+        } else if (vType == 'payment') {
+          opType = 'سند صرف';
+        } else if (vType == 'settlement') {
+          opType = 'قيد تسوية';
+        } else {
+          opType = 'سند';
+        }
+        transactions.add({
+          'id': 'v_${v['id']}',
+          'date': v['created_at'] as String? ?? v['date'] as String? ?? '',
+          'amount': MoneyHelper.readMoney(v['total_amount']),
+          'entity_name': v['description'] as String? ?? opType,
+          'operation_type': opType,
+          'journal_id': v['voucher_number'] as String? ?? '',
+          'source': 'voucher',
+        });
+      }
+    } catch (e) {
+      debugPrint('DashboardViewModel._loadRecentTransactions [vouchers]: $e');
+    }
+
+    // 3. Recent expenses
+    try {
+      final expenses = await _expenseRepo.getAllExpenses();
+      final recentExpenses = expenses.take(5).toList();
+      for (final exp in recentExpenses) {
+        final opTypeRaw = exp['operation_type'] as String? ?? 'صرف';
+        final opType = opTypeRaw == 'صرف' ? 'مصروف (صرف)' : 'مصروف (قبض)';
+        transactions.add({
+          'id': 'e_${exp['id']}',
+          'date': exp['expense_date'] as String? ?? exp['created_at'] as String? ?? '',
+          'amount': MoneyHelper.readMoney(exp['amount']),
+          'entity_name': exp['title'] as String? ?? 'مصروف',
+          'operation_type': opType,
+          'source': 'expense',
+        });
+      }
+    } catch (e) {
+      debugPrint('DashboardViewModel._loadRecentTransactions [expenses]: $e');
+    }
+
+    // Sort all transactions by date descending (newest first)
+    transactions.sort((a, b) {
+      final dateA = a['date'] as String? ?? '';
+      final dateB = b['date'] as String? ?? '';
+      return dateB.compareTo(dateA);
+    });
+
+    recentTransactions = transactions.take(10).toList();
   }
 }
