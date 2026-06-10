@@ -52,8 +52,8 @@ class CustomBottomBar extends StatelessWidget {
                       boxShadow: [
                         BoxShadow(
                           color: isDark
-                              ? Colors.black.withOpacity(0.3)
-                              : AppColors.primary.withOpacity(0.08),
+                              ? Colors.black.withValues(alpha: 0.3)
+                              : AppColors.primary.withValues(alpha: 0.08),
                           offset: const Offset(0, -4),
                           blurRadius: 16,
                           spreadRadius: 0,
@@ -178,7 +178,7 @@ class CenterFabButton extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.4),
+              color: AppColors.primary.withValues(alpha: 0.4),
               offset: const Offset(0, 6),
               blurRadius: 14,
             ),

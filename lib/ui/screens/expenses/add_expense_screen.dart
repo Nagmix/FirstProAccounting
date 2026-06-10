@@ -409,7 +409,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         border: Border.all(color: context.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -423,7 +423,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: (iconColor ?? AppColors.primary).withOpacity(0.1),
+                  color: (iconColor ?? AppColors.primary).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child:
@@ -572,14 +572,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.primary.withOpacity(0.06),
-                  AppColors.primaryLight.withOpacity(0.04),
+                  AppColors.primary.withValues(alpha: 0.06),
+                  AppColors.primaryLight.withValues(alpha: 0.04),
                 ],
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
               ),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -656,7 +656,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: _operationType == 'صرف'
-                          ? AppColors.error.withOpacity(0.08)
+                          ? AppColors.error.withValues(alpha: 0.08)
                           : context.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -712,7 +712,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: _operationType == 'قبض'
-                          ? AppColors.success.withOpacity(0.08)
+                          ? AppColors.success.withValues(alpha: 0.08)
                           : context.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -997,7 +997,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         color: context.surfaceColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, -2),
           ),

@@ -452,7 +452,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
           leading: Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -528,7 +528,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -593,7 +593,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.account_tree, size: 64, color: AppColors.textHint.withOpacity(0.5)),
+            Icon(Icons.account_tree, size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text('لا توجد حسابات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
           ],
@@ -700,7 +700,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         leading: Container(
           width: 36, height: 36,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -766,7 +766,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               padding: EdgeInsets.only(left: 16.0 + (depth + 1) * 20.0, right: 16, top: 4, bottom: 4),
               child: Row(
                 children: [
-                  Icon(Icons.subdirectory_arrow_left, size: 18, color: color.withOpacity(0.6)),
+                  Icon(Icons.subdirectory_arrow_left, size: 18, color: color.withValues(alpha: 0.6)),
                   const SizedBox(width: 8),
                   Text('عرض أستاذ الحساب',
                       style: theme.textTheme.bodySmall?.copyWith(

@@ -176,7 +176,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                       setState(() => _selectedType = opt.$1);
                       _generateCode();
                     },
-                    selectedColor: AppColors.primary.withOpacity(0.15),
+                    selectedColor: AppColors.primary.withValues(alpha: 0.15),
                   );
                 }).toList(),
               ),

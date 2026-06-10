@@ -215,9 +215,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.04),
+        color: AppColors.primary.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -265,7 +265,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant.withOpacity(0.5),
+        color: AppColors.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
       ),
       child: TabBar(
@@ -493,9 +493,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.06),
+                    color: AppColors.success.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.success.withOpacity(0.2)),
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -503,7 +503,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.12),
+                          color: AppColors.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.receipt_long, color: AppColors.success, size: 24),
@@ -537,9 +537,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.info.withOpacity(0.06),
+                    color: AppColors.info.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                    border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -547,7 +547,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: AppColors.info.withOpacity(0.12),
+                          color: AppColors.info.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.shopping_cart, color: AppColors.info, size: 24),
@@ -679,7 +679,7 @@ class _MiniStatItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(value, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: color), textAlign: TextAlign.center),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 9, color: color.withOpacity(0.7)), textAlign: TextAlign.center),
+        Text(label, style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.7)), textAlign: TextAlign.center),
       ],
     );
   }
@@ -743,7 +743,7 @@ class _InvoiceCard extends StatelessWidget {
         color: context.surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isReturn ? AppColors.warning.withOpacity(0.3) : AppColors.border.withOpacity(0.5),
+          color: isReturn ? AppColors.warning.withValues(alpha: 0.3) : AppColors.border.withValues(alpha: 0.5),
           width: isReturn ? 1.5 : 0.5,
         ),
       ),
@@ -807,7 +807,7 @@ class _InvoiceCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant.withOpacity(0.3),
+                  color: AppColors.surfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -825,7 +825,7 @@ class _InvoiceCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.08),
+                          color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -859,7 +859,7 @@ class _InvoiceCard extends StatelessWidget {
     return Container(
       width: 40,
       height: 40,
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
       child: Icon(icon, color: color, size: 20),
     );
   }
@@ -868,7 +868,7 @@ class _InvoiceCard extends StatelessWidget {
     final label = invoiceTypeAr(type);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
       child: Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color), overflow: TextOverflow.ellipsis),
     );
   }
@@ -878,7 +878,7 @@ class _InvoiceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: (isCash ? AppColors.success : AppColors.secondary).withOpacity(0.08),
+        color: (isCash ? AppColors.success : AppColors.secondary).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

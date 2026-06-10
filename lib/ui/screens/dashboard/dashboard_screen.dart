@@ -251,7 +251,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF4F6AF0).withOpacity(0.25),
+                          color: const Color(0xFF4F6AF0).withValues(alpha: 0.25),
                           offset: const Offset(0, 3), blurRadius: 10,
                         ),
                       ],
@@ -349,11 +349,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF1A1145).withOpacity(isDark ? 0.3 : 0.45),
+              color: const Color(0xFF1A1145).withValues(alpha: isDark ? 0.3 : 0.45),
               offset: const Offset(0, 10), blurRadius: 32,
             ),
             BoxShadow(
-              color: const Color(0xFF0F1B3D).withOpacity(isDark ? 0.15 : 0.25),
+              color: const Color(0xFF0F1B3D).withValues(alpha: isDark ? 0.15 : 0.25),
               offset: const Offset(0, 4), blurRadius: 16,
             ),
           ],
@@ -361,15 +361,15 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Stack(
           children: [
             // Decorative shapes
-            Positioned(left: -30, top: -30, child: Container(width: 120, height: 120, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.04)))),
-            Positioned(right: -20, bottom: -40, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.03)))),
+            Positioned(left: -30, top: -30, child: Container(width: 120, height: 120, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.04)))),
+            Positioned(right: -20, bottom: -40, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.03)))),
             // Sparkle decorations
-            Positioned(right: 60, top: 30, child: _SparkleIcon(size: 14, color: Colors.white.withOpacity(0.2))),
-            Positioned(left: 80, top: 60, child: _SparkleIcon(size: 10, color: Colors.white.withOpacity(0.12))),
-            Positioned(right: 30, top: 80, child: _SparkleIcon(size: 8, color: Colors.white.withOpacity(0.15))),
+            Positioned(right: 60, top: 30, child: _SparkleIcon(size: 14, color: Colors.white.withValues(alpha: 0.2))),
+            Positioned(left: 80, top: 60, child: _SparkleIcon(size: 10, color: Colors.white.withValues(alpha: 0.12))),
+            Positioned(right: 30, top: 80, child: _SparkleIcon(size: 8, color: Colors.white.withValues(alpha: 0.15))),
             // Mini chart
             Positioned(left: 20, bottom: 16, right: 20,
-              child: SizedBox(height: 45, child: CustomPaint(painter: _MiniChartPainter(progress: _chartDrawController, lineColor: Colors.white.withOpacity(0.25), fillColor: Colors.white.withOpacity(0.06)))),
+              child: SizedBox(height: 45, child: CustomPaint(painter: _MiniChartPainter(progress: _chartDrawController, lineColor: Colors.white.withValues(alpha: 0.25), fillColor: Colors.white.withValues(alpha: 0.06)))),
             ),
             // Content
             Padding(
@@ -386,27 +386,27 @@ class _DashboardScreenState extends State<DashboardScreen>
                         children: [
                           Container(
                             width: 30, height: 30,
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(9)),
-                            child: Icon(Icons.sell_rounded, color: Colors.white.withOpacity(0.9), size: 16),
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
+                            child: Icon(Icons.sell_rounded, color: Colors.white.withValues(alpha: 0.9), size: 16),
                           ),
                           const SizedBox(width: 10),
                           Text('إجمالي مبيعات اليوم',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.w600, letterSpacing: 0.2)),
                         ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [Colors.white.withOpacity(0.12), Colors.white.withOpacity(0.06)]),
+                          gradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.12), Colors.white.withValues(alpha: 0.06)]),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.receipt_long_rounded, color: Colors.white.withOpacity(0.7), size: 13),
+                          Icon(Icons.receipt_long_rounded, color: Colors.white.withValues(alpha: 0.7), size: 13),
                           const SizedBox(width: 4),
                           Text('${_viewModel.todayInvoiceCount}', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                           const SizedBox(width: 3),
-                          Text('فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withOpacity(0.6))),
+                          Text('فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.6))),
                         ]),
                       ),
                     ],
@@ -426,9 +426,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: isTrendUp ? const Color(0xFF4ADE80).withOpacity(0.15) : const Color(0xFFFCA5A5).withOpacity(0.1),
+                            color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.15) : const Color(0xFFFCA5A5).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isTrendUp ? const Color(0xFF4ADE80).withOpacity(0.2) : const Color(0xFFFCA5A5).withOpacity(0.15)),
+                            border: Border.all(color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.2) : const Color(0xFFFCA5A5).withValues(alpha: 0.15)),
                           ),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             Icon(isTrendUp ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), size: 13),
@@ -443,9 +443,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF60A5FA).withOpacity(0.12),
+                            color: const Color(0xFF60A5FA).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF60A5FA).withOpacity(0.15)),
+                            border: Border.all(color: const Color(0xFF60A5FA).withValues(alpha: 0.15)),
                           ),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             Icon(Icons.analytics_outlined, color: const Color(0xFF60A5FA), size: 13),
@@ -454,7 +454,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ]),
                         ),
                       const Spacer(),
-                      Text(isTrendUp ? 'أكثر من أمس' : 'أقل من أمس', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withOpacity(0.5), fontWeight: FontWeight.w400)),
+                      Text(isTrendUp ? 'أكثر من أمس' : 'أقل من أمس', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.5), fontWeight: FontWeight.w400)),
                     ],
                   ),
                 ],
@@ -589,7 +589,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   decoration: BoxDecoration(
                     color: isActive
                         ? const Color(0xFF4F6AF0)
-                        : (isDark ? AppColors.darkTextTertiary : AppColors.textTertiary).withOpacity(0.25),
+                        : (isDark ? AppColors.darkTextTertiary : AppColors.textTertiary).withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -639,7 +639,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4F6AF0).withOpacity(0.08),
+                  color: const Color(0xFF4F6AF0).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -681,8 +681,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: Column(children: [
               Container(
                 width: 72, height: 72,
-                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.06), shape: BoxShape.circle),
-                child: Icon(Icons.receipt_long_rounded, size: 32, color: AppColors.primary.withOpacity(0.5)),
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.06), shape: BoxShape.circle),
+                child: Icon(Icons.receipt_long_rounded, size: 32, color: AppColors.primary.withValues(alpha: 0.5)),
               ),
               const SizedBox(height: 16),
               Text('لا توجد معاملات بعد',
@@ -759,7 +759,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)], begin: Alignment.centerRight, end: Alignment.centerLeft),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
-                    BoxShadow(color: const Color(0xFF4F6AF0).withOpacity(0.25), offset: const Offset(0, 4), blurRadius: 12),
+                    BoxShadow(color: const Color(0xFF4F6AF0).withValues(alpha: 0.25), offset: const Offset(0, 4), blurRadius: 12),
                   ],
                 ),
                 child: Material(
@@ -833,7 +833,7 @@ class _HeaderActionIcon extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withOpacity(0.04), offset: const Offset(0, 2), blurRadius: 8)],
+        boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), offset: const Offset(0, 2), blurRadius: 8)],
       ),
       child: Material(
         color: Colors.transparent,
@@ -865,7 +865,7 @@ class _GridActionCard extends StatelessWidget {
     if (item.icon == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final effectiveBg = item.bgColor ?? item.color.withOpacity(0.1);
+    final effectiveBg = item.bgColor ?? item.color.withValues(alpha: 0.1);
 
     return SizedBox(
       height: _kCardHeight,
@@ -878,7 +878,7 @@ class _GridActionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: isDark ? Colors.black.withOpacity(0.12) : Colors.black.withOpacity(0.03),
+                color: isDark ? Colors.black.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
                 offset: const Offset(0, 2), blurRadius: 6,
               ),
             ],
@@ -888,8 +888,8 @@ class _GridActionCard extends StatelessWidget {
             child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(16),
-              splashColor: item.color.withOpacity(0.1),
-              highlightColor: item.color.withOpacity(0.05),
+              splashColor: item.color.withValues(alpha: 0.1),
+              highlightColor: item.color.withValues(alpha: 0.05),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                 child: Column(
@@ -899,7 +899,7 @@ class _GridActionCard extends StatelessWidget {
                     Container(
                       width: 36, height: 36,
                       decoration: BoxDecoration(
-                        color: isDark ? item.color.withOpacity(0.12) : effectiveBg,
+                        color: isDark ? item.color.withValues(alpha: 0.12) : effectiveBg,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(item.icon, color: item.color, size: 18),
@@ -959,15 +959,15 @@ class _ProfessionalTransactionTile extends StatelessWidget {
     // Icon and colors based on type
     final icon = isSale ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
     final iconBgColor = isSale
-        ? const Color(0xFF22C55E).withOpacity(isDark ? 0.15 : 0.1)
-        : const Color(0xFFEF4444).withOpacity(isDark ? 0.15 : 0.1);
+        ? const Color(0xFF22C55E).withValues(alpha: isDark ? 0.15 : 0.1)
+        : const Color(0xFFEF4444).withValues(alpha: isDark ? 0.15 : 0.1);
     final iconColor = isSale ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
 
     // Status
     final statusLabel = isPaid ? 'مدفوعة' : 'غير مدفوعة';
     final statusBgColor = isPaid
-        ? const Color(0xFF22C55E).withOpacity(0.1)
-        : const Color(0xFFF97316).withOpacity(0.1);
+        ? const Color(0xFF22C55E).withValues(alpha: 0.1)
+        : const Color(0xFFF97316).withValues(alpha: 0.1);
     final statusColor = isPaid ? const Color(0xFF22C55E) : const Color(0xFFF97316);
 
     // Build subtitle with type label and journal ID
@@ -990,7 +990,7 @@ class _ProfessionalTransactionTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: isDark ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0.03),
+                color: isDark ? Colors.black.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.03),
                 offset: const Offset(0, 2), blurRadius: 8,
               ),
             ],

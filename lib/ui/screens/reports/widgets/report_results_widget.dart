@@ -152,10 +152,10 @@ class _EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
+                color: color.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 40, color: color.withOpacity(0.5)),
+              child: Icon(icon, size: 40, color: color.withValues(alpha: 0.5)),
             ),
             const SizedBox(height: 16),
             Text(title, style: TextStyle(
@@ -163,7 +163,7 @@ class _EmptyState extends StatelessWidget {
             )),
             const SizedBox(height: 4),
             Text(subtitle, style: TextStyle(
-              fontSize: 13, color: color.withOpacity(0.6),
+              fontSize: 13, color: color.withValues(alpha: 0.6),
             ), textAlign: TextAlign.center),
           ],
         ),
@@ -215,7 +215,7 @@ class _ShimmerLoading extends StatelessWidget {
           width: width,
           height: height,
           decoration: BoxDecoration(
-            color: base.withOpacity(0.3 + value * 0.4),
+            color: base.withValues(alpha: 0.3 + value * 0.4),
             borderRadius: BorderRadius.circular(8),
           ),
         );
@@ -287,8 +287,8 @@ class _KPICard extends StatelessWidget {
       cardIcon = Icons.analytics_outlined;
     }
 
-    final bgColor = cardColor.withOpacity(isDark ? 0.2 : 0.08);
-    final borderColor = cardColor.withOpacity(isDark ? 0.4 : 0.3);
+    final bgColor = cardColor.withValues(alpha: isDark ? 0.2 : 0.08);
+    final borderColor = cardColor.withValues(alpha: isDark ? 0.4 : 0.3);
 
     return Container(
       width: 150,
@@ -433,7 +433,7 @@ class _SortableDataTable extends StatelessWidget {
             sortColumnIndex: sortColumnIndex,
             sortAscending: sortAscending,
             headingRowColor: WidgetStateProperty.all(
-              AppColors.primary.withOpacity(isDark ? 0.15 : 0.08),
+              AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
             ),
             headingTextStyle: theme.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 11,

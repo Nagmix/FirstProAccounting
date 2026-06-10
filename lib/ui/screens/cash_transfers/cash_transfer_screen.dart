@@ -358,7 +358,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -442,7 +442,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.08),
+                    color: AppColors.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -463,7 +463,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.08),
+                    color: AppColors.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -549,10 +549,10 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               child: Center(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: IconButton(
@@ -577,7 +577,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.08),
+                    color: AppColors.success.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -598,7 +598,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.08),
+                    color: AppColors.success.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -688,10 +688,10 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.06),
+                    color: AppColors.error.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: AppColors.error.withOpacity(0.25)),
+                        color: AppColors.error.withValues(alpha: 0.25)),
                   ),
                   child: Row(
                     children: [
@@ -750,7 +750,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -816,13 +816,13 @@ class _CashTransferScreenState extends State<CashTransferScreen>
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isInsufficient
-            ? AppColors.error.withOpacity(0.06)
-            : AppColors.info.withOpacity(0.06),
+            ? AppColors.error.withValues(alpha: 0.06)
+            : AppColors.info.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isInsufficient
-              ? AppColors.error.withOpacity(0.25)
-              : AppColors.info.withOpacity(0.25),
+              ? AppColors.error.withValues(alpha: 0.25)
+              : AppColors.info.withValues(alpha: 0.25),
         ),
       ),
       child: Row(
@@ -927,9 +927,9 @@ class _CashTransferScreenState extends State<CashTransferScreen>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-            color: AppColors.success.withOpacity(0.4)),
+            color: AppColors.success.withValues(alpha: 0.4)),
       ),
-      color: AppColors.success.withOpacity(0.04),
+      color: AppColors.success.withValues(alpha: 0.04),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -942,7 +942,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.12),
+                    color: AppColors.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -964,7 +964,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.12),
+                    color: AppColors.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -984,10 +984,10 @@ class _CashTransferScreenState extends State<CashTransferScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.06),
+                color: AppColors.success.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                    color: AppColors.success.withOpacity(0.15)),
+                    color: AppColors.success.withValues(alpha: 0.15)),
               ),
               child: Row(
                 children: [
@@ -1102,9 +1102,9 @@ class _CashTransferScreenState extends State<CashTransferScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: color.withOpacity(0.25)),
+            border: Border.all(color: color.withValues(alpha: 0.25)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1222,7 +1222,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -1304,11 +1304,11 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.08),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                               color:
-                                  AppColors.primary.withOpacity(0.2)),
+                                  AppColors.primary.withValues(alpha: 0.2)),
                         ),
                         child: Text(
                           '${CurrencyFormatter.format(amount)} $symbol',
@@ -1367,7 +1367,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant.withOpacity(0.5),
+                  color: AppColors.surfaceVariant.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(

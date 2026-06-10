@@ -120,9 +120,9 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.info.withOpacity(0.08),
+                          color: AppColors.info.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                          border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,11 +258,11 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                             color: isDark ? AppColors.darkSurface : AppColors.surface,
                             borderRadius: BorderRadius.circular(14),
                             elevation: 1,
-                            shadowColor: isDark ? Colors.black26 : AppColors.primary.withOpacity(0.06),
+                            shadowColor: isDark ? Colors.black26 : AppColors.primary.withValues(alpha: 0.06),
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(14),
-                                border: isOpen ? Border.all(color: AppColors.info.withOpacity(0.3), width: 1.5) : null,
+                                border: isOpen ? Border.all(color: AppColors.info.withValues(alpha: 0.3), width: 1.5) : null,
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
@@ -275,7 +275,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                                           width: 42,
                                           height: 42,
                                           decoration: BoxDecoration(
-                                            color: isOpen ? AppColors.info.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                                            color: isOpen ? AppColors.info.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(12),
                                           ),
                                           child: Icon(
@@ -309,7 +309,7 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: isOpen ? AppColors.info.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                                            color: isOpen ? AppColors.info.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(

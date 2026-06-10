@@ -85,7 +85,7 @@ class InvoiceItemsSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -112,7 +112,7 @@ class InvoiceItemsSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isDark ? AppColors.darkBorder : AppColors.border,
@@ -126,10 +126,10 @@ class InvoiceItemsSection extends StatelessWidget {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: _accentBlue.withOpacity(0.06),
+                        color: _accentBlue.withValues(alpha: 0.06),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.shopping_cart_outlined, size: 28, color: _accentBlue.withOpacity(0.4)),
+                      child: Icon(Icons.shopping_cart_outlined, size: 28, color: _accentBlue.withValues(alpha: 0.4)),
                     ),
                     const SizedBox(height: 10),
                     Text('لم يتم إضافة أصناف بعد',
@@ -154,7 +154,7 @@ class InvoiceItemsSection extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _accentBlue.withOpacity(0.3)),
+                border: Border.all(color: _accentBlue.withValues(alpha: 0.3)),
               ),
               child: Material(
                 color: Colors.transparent,
@@ -170,7 +170,7 @@ class InvoiceItemsSection extends StatelessWidget {
                           width: 24,
                           height: 24,
                           decoration: BoxDecoration(
-                            color: _accentBlue.withOpacity(0.1),
+                            color: _accentBlue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(7),
                           ),
                           child: const Icon(Icons.add_rounded, size: 16, color: _accentBlue),

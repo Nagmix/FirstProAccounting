@@ -193,7 +193,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
                       children: [
                         Icon(Icons.account_balance,
                             size: 64,
-                            color: AppColors.textHint.withOpacity(0.5)),
+                            color: AppColors.textHint.withValues(alpha: 0.5)),
                         const SizedBox(height: 16),
                         Text('لا توجد تسويات بنكية',
                             style: theme.textTheme.titleMedium?.copyWith(
@@ -245,7 +245,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
                                           horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
                                         color: _statusColor(status)
-                                            .withOpacity(0.1),
+                                            .withValues(alpha: 0.1),
                                         borderRadius:
                                             BorderRadius.circular(20),
                                         border: Border.all(

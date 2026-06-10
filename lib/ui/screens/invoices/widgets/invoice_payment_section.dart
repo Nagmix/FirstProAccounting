@@ -160,7 +160,7 @@ class InvoicePaymentSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -208,7 +208,7 @@ class InvoicePaymentSection extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _accentBlue.withOpacity(0.06),
+                  color: _accentBlue.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -234,12 +234,12 @@ class InvoicePaymentSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.secondary.withOpacity(0.08), AppColors.secondary.withOpacity(0.03)],
+                  colors: [AppColors.secondary.withValues(alpha: 0.08), AppColors.secondary.withValues(alpha: 0.03)],
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
+                border: Border.all(color: AppColors.secondary.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -247,7 +247,7 @@ class InvoicePaymentSection extends StatelessWidget {
                     width: 26,
                     height: 26,
                     decoration: BoxDecoration(
-                      color: AppColors.secondary.withOpacity(0.12),
+                      color: AppColors.secondary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.info_outline_rounded, color: AppColors.secondary, size: 14),
@@ -299,9 +299,9 @@ class InvoicePaymentSection extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.warning.withOpacity(0.08),
+        color: AppColors.warning.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.warning.withOpacity(0.25)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -309,7 +309,7 @@ class InvoicePaymentSection extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: AppColors.warning.withOpacity(0.12),
+              color: AppColors.warning.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 18),
@@ -362,7 +362,7 @@ class InvoicePaymentSection extends StatelessWidget {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
       ),
       items: items,
       onChanged: onChanged,
@@ -380,8 +380,8 @@ class InvoicePaymentSection extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
         decoration: BoxDecoration(
           color: isReturn
-              ? AppColors.error.withOpacity(isDark ? 0.12 : 0.06)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3)),
+              ? AppColors.error.withValues(alpha: isDark ? 0.12 : 0.06)
+              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isReturn ? AppColors.error : (isDark ? AppColors.darkBorder : AppColors.border),
@@ -418,7 +418,7 @@ class InvoicePaymentSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.5),
+        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -461,10 +461,10 @@ class InvoicePaymentSection extends StatelessWidget {
         curve: Curves.fastOutSlowIn,
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(isDark ? 0.2 : 0.1) : Colors.transparent,
+          color: isSelected ? color.withValues(alpha: isDark ? 0.2 : 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
-          border: isSelected ? Border.all(color: color.withOpacity(0.3), width: 1) : null,
-          boxShadow: isSelected ? [BoxShadow(color: color.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))] : null,
+          border: isSelected ? Border.all(color: color.withValues(alpha: 0.3), width: 1) : null,
+          boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2))] : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -502,12 +502,12 @@ class InvoicePaymentSection extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: originalInvoiceId != null
-              ? AppColors.error.withOpacity(isDark ? 0.08 : 0.04)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3)),
+              ? AppColors.error.withValues(alpha: isDark ? 0.08 : 0.04)
+              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: originalInvoiceId != null
-                ? AppColors.error.withOpacity(0.4)
+                ? AppColors.error.withValues(alpha: 0.4)
                 : (isDark ? AppColors.darkBorder : AppColors.border),
             width: originalInvoiceId != null ? 1.5 : 1,
           ),
@@ -518,7 +518,7 @@ class InvoicePaymentSection extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: (originalInvoiceId != null ? AppColors.error : AppColors.textHint).withOpacity(0.1),
+                color: (originalInvoiceId != null ? AppColors.error : AppColors.textHint).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -543,7 +543,7 @@ class InvoicePaymentSection extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.close_rounded, size: 14, color: AppColors.error),
@@ -580,13 +580,13 @@ class InvoicePaymentSection extends StatelessWidget {
             curve: Curves.fastOutSlowIn,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: selected ? m.$4.withOpacity(isDark ? 0.18 : 0.08) : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
+              color: selected ? m.$4.withValues(alpha: isDark ? 0.18 : 0.08) : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: selected ? m.$4 : (isDark ? AppColors.darkBorder : AppColors.border),
                 width: selected ? 1.5 : 1,
               ),
-              boxShadow: selected ? [BoxShadow(color: m.$4.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 2))] : null,
+              boxShadow: selected ? [BoxShadow(color: m.$4.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))] : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -616,12 +616,12 @@ class InvoicePaymentSection extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.success.withOpacity(0.06), AppColors.success.withOpacity(0.02)],
+          colors: [AppColors.success.withValues(alpha: 0.06), AppColors.success.withValues(alpha: 0.02)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.success.withOpacity(0.2)),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,7 +638,7 @@ class InvoicePaymentSection extends StatelessWidget {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.success.withOpacity(0.3)),
+                borderSide: BorderSide(color: AppColors.success.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -666,12 +666,12 @@ class InvoicePaymentSection extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [purpleColor.withOpacity(0.06), purpleColor.withOpacity(0.02)],
+          colors: [purpleColor.withValues(alpha: 0.06), purpleColor.withValues(alpha: 0.02)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: purpleColor.withOpacity(0.2)),
+        border: Border.all(color: purpleColor.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,7 +688,7 @@ class InvoicePaymentSection extends StatelessWidget {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor.withOpacity(0.3)),
+                borderSide: BorderSide(color: purpleColor.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -716,7 +716,7 @@ class InvoicePaymentSection extends StatelessWidget {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor.withOpacity(0.3)),
+                borderSide: BorderSide(color: purpleColor.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -773,7 +773,7 @@ class InvoicePaymentSection extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _accentBlue.withOpacity(0.3)),
+                  border: Border.all(color: _accentBlue.withValues(alpha: 0.3)),
                 ),
                 child: Material(
                   color: Colors.transparent,
@@ -801,7 +801,7 @@ class InvoicePaymentSection extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _accentBlue.withOpacity(0.3)),
+                  border: Border.all(color: _accentBlue.withValues(alpha: 0.3)),
                 ),
                 child: Material(
                   color: Colors.transparent,
@@ -875,7 +875,7 @@ class InvoicePaymentSection extends StatelessWidget {
                   ),
                   disabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.border.withOpacity(0.3)),
+                    borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -883,7 +883,7 @@ class InvoicePaymentSection extends StatelessWidget {
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: autoPay,
-                  fillColor: autoPay ? (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant).withOpacity(0.5) : null,
+                  fillColor: autoPay ? (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant).withValues(alpha: 0.5) : null,
                 ),
                 onChanged: (_) => onPaidChanged(),
               ),
@@ -913,7 +913,7 @@ class InvoicePaymentSection extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 1))],
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 1))],
                         ),
                       ),
                     ),
@@ -936,10 +936,10 @@ class InvoicePaymentSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: remaining > 0.005 ? AppColors.error.withOpacity(0.06) : AppColors.success.withOpacity(0.06),
+              color: remaining > 0.005 ? AppColors.error.withValues(alpha: 0.06) : AppColors.success.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: remaining > 0.005 ? AppColors.error.withOpacity(0.2) : AppColors.success.withOpacity(0.2),
+                color: remaining > 0.005 ? AppColors.error.withValues(alpha: 0.2) : AppColors.success.withValues(alpha: 0.2),
               ),
             ),
             child: Row(

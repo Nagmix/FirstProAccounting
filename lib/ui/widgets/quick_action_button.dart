@@ -68,8 +68,8 @@ class QuickActionButton extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        effectiveColor.withOpacity(0.18),
-                        effectiveColor.withOpacity(0.06),
+                        effectiveColor.withValues(alpha: 0.18),
+                        effectiveColor.withValues(alpha: 0.06),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -117,7 +117,7 @@ class QuickActionButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            effectiveColor.withOpacity(0.10),
+            effectiveColor.withValues(alpha: 0.10),
             isDark ? AppColors.darkSurface : AppColors.surface,
           ],
           begin: Alignment.topRight,
@@ -126,7 +126,7 @@ class QuickActionButton extends StatelessWidget {
         borderRadius: DesignSystem.borderRadius16,
         boxShadow: DesignSystem.cardShadow(isLight: !isDark),
         border: Border.all(
-          color: effectiveColor.withOpacity(0.12),
+          color: effectiveColor.withValues(alpha: 0.12),
           width: 0.5,
         ),
       ),
@@ -147,7 +147,7 @@ class QuickActionButton extends StatelessWidget {
                   child: Container(
                     width: 4,
                     decoration: BoxDecoration(
-                      color: effectiveColor.withOpacity(0.5),
+                      color: effectiveColor.withValues(alpha: 0.5),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(4),
                         bottomLeft: Radius.circular(4),
@@ -172,8 +172,8 @@ class QuickActionButton extends StatelessWidget {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              effectiveColor.withOpacity(0.22),
-                              effectiveColor.withOpacity(0.06),
+                              effectiveColor.withValues(alpha: 0.22),
+                              effectiveColor.withValues(alpha: 0.06),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -181,7 +181,7 @@ class QuickActionButton extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: effectiveColor.withOpacity(0.15),
+                              color: effectiveColor.withValues(alpha: 0.15),
                               offset: const Offset(0, 4),
                               blurRadius: 10,
                             ),

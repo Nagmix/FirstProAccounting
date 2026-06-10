@@ -32,7 +32,7 @@ void showHeldOrdersDialog(BuildContext context, PosViewModel vm, VoidCallback on
               final total = order.items.fold(0.0, (s, i) => s + i.total);
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: AppColors.secondary.withOpacity(0.15),
+                  backgroundColor: AppColors.secondary.withValues(alpha: 0.15),
                   child: Text('${idx + 1}'),
                 ),
                 title: Text(

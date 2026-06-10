@@ -30,15 +30,15 @@ class PosShiftInfoBar extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.success.withOpacity(0.06),
-            AppColors.success.withOpacity(0.12),
+            AppColors.success.withValues(alpha: 0.06),
+            AppColors.success.withValues(alpha: 0.12),
           ],
           begin: Alignment.centerRight,
           end: Alignment.centerLeft,
         ),
         border: Border(
           bottom: BorderSide(
-            color: AppColors.success.withOpacity(0.25),
+            color: AppColors.success.withValues(alpha: 0.25),
           ),
         ),
       ),
@@ -57,7 +57,7 @@ class PosShiftInfoBar extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.success.withOpacity(0.5),
+                      color: AppColors.success.withValues(alpha: 0.5),
                       blurRadius: 6,
                       spreadRadius: 1,
                     ),
@@ -177,7 +177,7 @@ class PosShiftInfoBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          border: Border.all(color: color.withOpacity(0.4)),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(

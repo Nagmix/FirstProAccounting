@@ -83,9 +83,9 @@ class ProductBarcodesStep extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: AppColors.infoLight.withOpacity(0.5),
+            color: AppColors.infoLight.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.info.withOpacity(0.2)),
+            border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -110,11 +110,11 @@ class ProductBarcodesStep extends StatelessWidget {
               child: Column(
                 children: [
                   Icon(Icons.qr_code,
-                      size: 40, color: AppColors.textTertiary.withOpacity(0.4)),
+                      size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
                   const SizedBox(height: 8),
                   Text('لا توجد وحدات أخرى',
                       style: TextStyle(
-                          color: AppColors.textTertiary.withOpacity(0.6))),
+                          color: AppColors.textTertiary.withValues(alpha: 0.6))),
                   const SizedBox(height: 4),
                   Text('أضف وحدات أكبر في خطوة الوحدات أولاً',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(

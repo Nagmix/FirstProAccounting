@@ -140,7 +140,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: _colorForType(type).withOpacity(0.15),
+                          backgroundColor: _colorForType(type).withValues(alpha: 0.15),
                           child: Icon(
                             _iconForType(type),
                             color: _colorForType(type),

@@ -94,7 +94,7 @@ Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) a
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: isSelected
-                              ? AppColors.primary.withOpacity(0.15)
+                              ? AppColors.primary.withValues(alpha: 0.15)
                               : AppColors.surfaceVariant,
                           child: Icon(
                             isSelected ? Icons.check : Icons.person,

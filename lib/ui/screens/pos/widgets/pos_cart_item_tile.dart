@@ -39,7 +39,7 @@ class PosCartItemTile extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: AppColors.border.withOpacity(0.5)),
+          side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -92,7 +92,7 @@ class PosCartItemTile extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(

@@ -61,7 +61,7 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.12),
+                      color: AppColors.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.lock_open, color: AppColors.success, size: 24),

@@ -75,10 +75,10 @@ class ProductBasicDataStep extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.06),
+                color: AppColors.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   style: BorderStyle.solid,
                 ),
               ),
@@ -93,7 +93,7 @@ class ProductBasicDataStep extends StatelessWidget {
                         errorBuilder: (_, __, ___) => Icon(
                           Icons.image,
                           size: 40,
-                          color: AppColors.primary.withOpacity(0.4),
+                          color: AppColors.primary.withValues(alpha: 0.4),
                         ),
                       ),
                     )
@@ -102,12 +102,12 @@ class ProductBasicDataStep extends StatelessWidget {
                       children: [
                         Icon(Icons.camera_alt,
                             size: 32,
-                            color: AppColors.primary.withOpacity(0.5)),
+                            color: AppColors.primary.withValues(alpha: 0.5)),
                         const SizedBox(height: 6),
                         Text('صورة الصنف',
                             style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.primary.withOpacity(0.7))),
+                                color: AppColors.primary.withValues(alpha: 0.7))),
                       ],
                     ),
             ),

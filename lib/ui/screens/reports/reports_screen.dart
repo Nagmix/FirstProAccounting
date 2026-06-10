@@ -293,7 +293,7 @@ class _ReportsScreenState extends State<ReportsScreen>
         indicatorColor: AppColors.secondary,
         indicatorWeight: 3,
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.white.withOpacity(0.6),
+        unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
         tabAlignment: TabAlignment.start,

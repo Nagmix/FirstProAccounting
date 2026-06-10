@@ -28,7 +28,7 @@ void showPrintOptionsDialog(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
@@ -46,7 +46,7 @@ void showPrintOptionsDialog(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.accentBlue.withOpacity(0.1),
+                    color: AppColors.accentBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.bluetooth, color: AppColors.accentBlue),

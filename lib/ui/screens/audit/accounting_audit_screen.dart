@@ -174,13 +174,13 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: _isBalanced
-              ? [AppColors.success.withOpacity(0.1), AppColors.successLight.withOpacity(0.05)]
-              : [AppColors.error.withOpacity(0.1), AppColors.errorLight.withOpacity(0.05)],
+              ? [AppColors.success.withValues(alpha: 0.1), AppColors.successLight.withValues(alpha: 0.05)]
+              : [AppColors.error.withValues(alpha: 0.1), AppColors.errorLight.withValues(alpha: 0.05)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -188,7 +188,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 32),
@@ -215,7 +215,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -272,7 +272,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.06),
+          color: color.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -312,7 +312,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.06),
+              color: AppColors.primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -335,7 +335,7 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.divider.withOpacity(0.3))),
+                border: Border(bottom: BorderSide(color: AppColors.divider.withValues(alpha: 0.3))),
               ),
               child: Row(
                 children: [
@@ -437,9 +437,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.warning.withOpacity(0.04),
+        color: AppColors.warning.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -492,9 +492,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.04),
+        color: AppColors.error.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -547,9 +547,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.04),
+        color: AppColors.error.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,9 +603,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.06),
+        color: AppColors.success.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.success.withOpacity(0.2)),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [

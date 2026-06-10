@@ -208,9 +208,9 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.info.withOpacity(0.08),
+                        color: AppColors.info.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         children: [
@@ -314,10 +314,10 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                         rowBgColor = Colors.transparent;
                       } else if (isPositive) {
                         varianceColor = AppColors.success;
-                        rowBgColor = AppColors.successLight.withOpacity(isDark ? 0.1 : 0.4);
+                        rowBgColor = AppColors.successLight.withValues(alpha: isDark ? 0.1 : 0.4);
                       } else {
                         varianceColor = AppColors.error;
-                        rowBgColor = AppColors.errorLight.withOpacity(isDark ? 0.1 : 0.4);
+                        rowBgColor = AppColors.errorLight.withValues(alpha: isDark ? 0.1 : 0.4);
                       }
 
                       return Container(
@@ -325,7 +325,7 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                         decoration: BoxDecoration(
                           color: rowBgColor,
                           border: Border(
-                            bottom: BorderSide(color: AppColors.divider.withOpacity(0.3), width: 0.5),
+                            bottom: BorderSide(color: AppColors.divider.withValues(alpha: 0.3), width: 0.5),
                           ),
                         ),
                         child: Row(
@@ -381,9 +381,9 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.08),
+                          color: AppColors.warning.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
@@ -595,9 +595,9 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.info.withOpacity(0.08),
+                        color: AppColors.info.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -678,8 +678,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 3),
                         color: isMatch
-                            ? AppColors.successLight.withOpacity(isDark ? 0.15 : 1.0)
-                            : (difference < 0 ? AppColors.errorLight.withOpacity(isDark ? 0.15 : 1.0) : AppColors.warningLight.withOpacity(isDark ? 0.15 : 1.0)),
+                            ? AppColors.successLight.withValues(alpha: isDark ? 0.15 : 1.0)
+                            : (difference < 0 ? AppColors.errorLight.withValues(alpha: isDark ? 0.15 : 1.0) : AppColors.warningLight.withValues(alpha: isDark ? 0.15 : 1.0)),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           child: Row(
@@ -842,7 +842,7 @@ class _SummaryChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -880,7 +880,7 @@ class _DialogSummaryChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -929,7 +929,7 @@ class _SessionCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: (isCompleted ? AppColors.success : AppColors.warning).withOpacity(0.1),
+                color: (isCompleted ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -960,7 +960,7 @@ class _SessionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: (isCompleted ? AppColors.success : AppColors.warning).withOpacity(0.1),
+                color: (isCompleted ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(

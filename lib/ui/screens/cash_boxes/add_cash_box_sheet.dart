@@ -268,9 +268,9 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.06),
+                    color: AppColors.primary.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     children: [
@@ -325,9 +325,9 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.08),
+                    color: AppColors.warning.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -381,9 +381,9 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.08),
+                    color: AppColors.warning.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -410,9 +410,9 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.06),
+                    color: AppColors.primary.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     children: [

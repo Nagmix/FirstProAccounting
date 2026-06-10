@@ -78,7 +78,7 @@ Future<void> showXReport(BuildContext context, PosViewModel vm) async {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppColors.info.withOpacity(0.12),
+                    color: AppColors.info.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.bar_chart, color: AppColors.info, size: 24),
@@ -104,9 +104,9 @@ Future<void> showXReport(BuildContext context, PosViewModel vm) async {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.06),
+                color: AppColors.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
@@ -192,7 +192,7 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.12),
+                      color: AppColors.error.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.logout, color: AppColors.error, size: 24),
@@ -222,9 +222,9 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.06),
+                  color: AppColors.primary.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
                 child: reportRow(context, 'المتوقع في الصندوق', CurrencyFormatter.format(expectedAmount),
                     valueColor: AppColors.primary, isBold: true),

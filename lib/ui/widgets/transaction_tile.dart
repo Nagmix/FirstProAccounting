@@ -42,8 +42,8 @@ class TransactionTile extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.1)
-                : AppColors.primary.withOpacity(0.04),
+                ? Colors.black.withValues(alpha: 0.1)
+                : AppColors.primary.withValues(alpha: 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -65,8 +65,8 @@ class TransactionTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        color.withOpacity(0.15),
-                        color.withOpacity(0.05),
+                        color.withValues(alpha: 0.15),
+                        color.withValues(alpha: 0.05),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -138,7 +138,7 @@ class TransactionTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

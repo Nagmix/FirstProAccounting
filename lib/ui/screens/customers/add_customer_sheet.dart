@@ -204,8 +204,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.04),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+                    color: AppColors.primary.withValues(alpha: 0.04),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -261,7 +261,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: _balanceType == 'credit' ? AppColors.success.withOpacity(0.1) : Colors.transparent,
+                                        color: _balanceType == 'credit' ? AppColors.success.withValues(alpha: 0.1) : Colors.transparent,
                                         borderRadius: const BorderRadius.only(topRight: Radius.circular(9), bottomRight: Radius.circular(9)),
                                       ),
                                       child: Text(
@@ -281,7 +281,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: _balanceType == 'debit' ? AppColors.error.withOpacity(0.1) : Colors.transparent,
+                                        color: _balanceType == 'debit' ? AppColors.error.withValues(alpha: 0.1) : Colors.transparent,
                                         borderRadius: const BorderRadius.only(topLeft: Radius.circular(9), bottomLeft: Radius.circular(9)),
                                       ),
                                       child: Text(
@@ -306,9 +306,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.08),
+                          color: Colors.amber.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.withOpacity(0.25)),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.25)),
                         ),
                         child: Row(
                           children: [

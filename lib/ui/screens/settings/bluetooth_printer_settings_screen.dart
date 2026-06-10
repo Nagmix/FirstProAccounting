@@ -284,7 +284,7 @@ class _BluetoothPrinterSettingsScreenState
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(isConnected ? 0.2 : 0.1),
+                  color: Colors.white.withValues(alpha: isConnected ? 0.2 : 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -341,9 +341,9 @@ class _BluetoothPrinterSettingsScreenState
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.warning.withOpacity(0.08),
+        color: AppColors.warning.withValues(alpha: 0.08),
         borderRadius: DesignSystem.borderRadius16,
-        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -437,12 +437,12 @@ class _BluetoothPrinterSettingsScreenState
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primary.withOpacity(0.08)
+                        ? AppColors.primary.withValues(alpha: 0.08)
                         : (isDark ? AppColors.darkSurface : AppColors.surface),
                     borderRadius: DesignSystem.borderRadius12,
                     border: Border.all(
                       color: isSelected
-                          ? AppColors.primary.withOpacity(0.3)
+                          ? AppColors.primary.withValues(alpha: 0.3)
                           : (isDark ? AppColors.darkBorder : AppColors.border),
                     ),
                   ),
@@ -453,7 +453,7 @@ class _BluetoothPrinterSettingsScreenState
                         height: 42,
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.primary.withOpacity(0.1)
+                              ? AppColors.primary.withValues(alpha: 0.1)
                               : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -491,7 +491,7 @@ class _BluetoothPrinterSettingsScreenState
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.1),
+                            color: AppColors.success.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(

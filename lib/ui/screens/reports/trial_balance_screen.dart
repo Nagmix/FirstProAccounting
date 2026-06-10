@@ -225,9 +225,9 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -285,9 +285,9 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.06),
+          color: AppColors.primary.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -317,12 +317,12 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            isBalanced ? AppColors.success.withOpacity(0.08) : AppColors.error.withOpacity(0.08),
-            isBalanced ? AppColors.success.withOpacity(0.03) : AppColors.error.withOpacity(0.03),
+            isBalanced ? AppColors.success.withValues(alpha: 0.08) : AppColors.error.withValues(alpha: 0.08),
+            isBalanced ? AppColors.success.withValues(alpha: 0.03) : AppColors.error.withValues(alpha: 0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (isBalanced ? AppColors.success : AppColors.error).withOpacity(0.2)),
+        border: Border.all(color: (isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -335,7 +335,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (isBalanced ? AppColors.success : AppColors.error).withOpacity(0.1),
+                  color: (isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -385,7 +385,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.06),
+              color: AppColors.primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
@@ -403,9 +403,9 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Column(
         children: [
@@ -449,7 +449,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.balance, size: 48, color: AppColors.textHint.withOpacity(0.5)),
+                    Icon(Icons.balance, size: 48, color: AppColors.textHint.withValues(alpha: 0.5)),
                     const SizedBox(height: 8),
                     Text('لا توجد حسابات ذات أرصدة', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
                   ],
@@ -460,7 +460,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                headingRowColor: MaterialStateProperty.all(AppColors.primary.withOpacity(0.08)),
+                headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.08)),
                 dataRowMinHeight: 44,
                 dataRowMaxHeight: 52,
                 columns: [
@@ -477,7 +477,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
                     DataCell(Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _accountTypeColor(account['account_type'] as String? ?? '').withOpacity(0.1),
+                        color: _accountTypeColor(account['account_type'] as String? ?? '').withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -511,7 +511,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
                   ])),
                   // Totals row
                   DataRow(
-                    color: MaterialStateProperty.all(AppColors.primary.withOpacity(0.05)),
+                    color: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.05)),
                     cells: [
                       DataCell(Text('الإجمالي', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.primary))),
                       const DataCell(SizedBox.shrink()),

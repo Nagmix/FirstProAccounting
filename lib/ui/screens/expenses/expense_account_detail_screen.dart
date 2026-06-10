@@ -358,7 +358,7 @@ class _ExpenseAccountDetailScreenState
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
+                    color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
@@ -413,7 +413,7 @@ class _ExpenseAccountDetailScreenState
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
+                      color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
@@ -426,7 +426,7 @@ class _ExpenseAccountDetailScreenState
                             color: (isPositive
                                     ? AppColors.success
                                     : AppColors.error)
-                                .withOpacity(0.85),
+                                .withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -737,7 +737,7 @@ class _ExpenseAccountDetailScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -772,7 +772,7 @@ class _ExpenseAccountDetailScreenState
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: (isSarf ? AppColors.error : AppColors.success)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -802,7 +802,7 @@ class _ExpenseAccountDetailScreenState
                   color: (runningBalance >= 0
                           ? AppColors.primary
                           : AppColors.error)
-                      .withOpacity(0.08),
+                      .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -893,7 +893,7 @@ class _ExpenseAccountDetailScreenState
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: (isSarf ? AppColors.error : AppColors.success)
-                      .withOpacity(0.08),
+                      .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -922,7 +922,7 @@ class _ExpenseAccountDetailScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant.withOpacity(0.6),
+                  color: AppColors.surfaceVariant.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -953,7 +953,7 @@ class _ExpenseAccountDetailScreenState
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(

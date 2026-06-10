@@ -25,9 +25,9 @@ class PosBankTransferFields extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.info.withOpacity(0.4)),
+          border: Border.all(color: AppColors.info.withValues(alpha: 0.4)),
           borderRadius: BorderRadius.circular(10),
-          color: AppColors.info.withOpacity(0.04),
+          color: AppColors.info.withValues(alpha: 0.04),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

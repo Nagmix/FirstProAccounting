@@ -418,7 +418,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color:
-                      isSelected ? color.withOpacity(0.15) : Colors.transparent,
+                      isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   border:
                       isSelected ? Border.all(color: color, width: 2) : null,
@@ -524,7 +524,7 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary.withOpacity(0.15)
+                ? AppColors.primary.withValues(alpha: 0.15)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: isSelected
@@ -692,13 +692,13 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isBalanced
-            ? AppColors.success.withOpacity(0.06)
-            : AppColors.error.withOpacity(0.06),
+            ? AppColors.success.withValues(alpha: 0.06)
+            : AppColors.error.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isBalanced
-              ? AppColors.success.withOpacity(0.2)
-              : AppColors.error.withOpacity(0.2),
+              ? AppColors.success.withValues(alpha: 0.2)
+              : AppColors.error.withValues(alpha: 0.2),
         ),
       ),
       child: Column(

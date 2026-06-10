@@ -84,9 +84,9 @@ class ProductAccountingStep extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: AppColors.infoLight.withOpacity(0.5),
+              color: AppColors.infoLight.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -269,9 +269,9 @@ class ProductAccountingStep extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: AppColors.infoLight.withOpacity(0.5),
+              color: AppColors.infoLight.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withOpacity(0.2)),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

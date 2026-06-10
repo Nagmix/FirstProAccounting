@@ -309,7 +309,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           gradient: _primaryGradient,
           boxShadow: [
             BoxShadow(
-              color: _accentBlue.withOpacity(0.25),
+              color: _accentBlue.withValues(alpha: 0.25),
               offset: const Offset(0, 4),
               blurRadius: 16,
             ),
@@ -324,7 +324,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           icon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
@@ -337,7 +337,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           Container(
             width: 32, height: 32,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -361,7 +361,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text('مرتجع',
@@ -376,7 +376,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           icon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.more_horiz, size: 20, color: Colors.white),
@@ -412,12 +412,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           margin: const EdgeInsets.only(left: 8, top: 12, bottom: 12, right: 4),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.white.withOpacity(0.25), Colors.white.withOpacity(0.1)],
+              colors: [Colors.white.withValues(alpha: 0.25), Colors.white.withValues(alpha: 0.1)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
           ),
           child: Material(
             color: Colors.transparent,
@@ -448,7 +448,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         Container(
           width: 30, height: 30,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -484,7 +484,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color: _accentBlue.withOpacity(0.1),
+                  color: _accentBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.link_rounded, color: _accentBlue, size: 18),
@@ -504,10 +504,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         Container(
                           width: 60, height: 60,
                           decoration: BoxDecoration(
-                            color: _accentBlue.withOpacity(0.06),
+                            color: _accentBlue.withValues(alpha: 0.06),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.receipt_long_rounded, size: 28, color: _accentBlue.withOpacity(0.4)),
+                          child: Icon(Icons.receipt_long_rounded, size: 28, color: _accentBlue.withValues(alpha: 0.4)),
                         ),
                         const SizedBox(height: 12),
                         Text('لا توجد فواتير أصلية', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
@@ -531,11 +531,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       return ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         selected: isSelected,
-                        selectedTileColor: _accentBlue.withOpacity(0.06),
+                        selectedTileColor: _accentBlue.withValues(alpha: 0.06),
                         leading: Container(
                           width: 34, height: 34,
                           decoration: BoxDecoration(
-                            color: (isSelected ? _accentBlue : AppColors.textSecondary).withOpacity(0.1),
+                            color: (isSelected ? _accentBlue : AppColors.textSecondary).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -559,7 +559,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                             ? Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: _accentBlue.withOpacity(0.1),
+                                  color: _accentBlue.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(Icons.check_rounded, color: _accentBlue, size: 16),

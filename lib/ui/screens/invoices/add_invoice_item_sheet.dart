@@ -121,7 +121,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.12),
+              color: Colors.black.withValues(alpha: 0.12),
               offset: const Offset(0, -4),
               blurRadius: 16,
             ),
@@ -201,7 +201,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                           icon: Container(
                             width: 30, height: 30,
                             decoration: BoxDecoration(
-                              color: _accentBlue.withOpacity(0.08),
+                              color: _accentBlue.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(Icons.qr_code_scanner_rounded, size: 16, color: _accentBlue),
@@ -230,7 +230,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                         borderSide: const BorderSide(color: _accentBlue, width: 1.5),
                       ),
                       filled: true,
-                      fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+                      fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
                     ),
                     onChanged: (value) => _searchProducts(value),
                   ),
@@ -255,7 +255,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                         border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             offset: const Offset(0, 2),
                             blurRadius: 6,
                           ),
@@ -278,10 +278,10 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                                       Container(
                                         width: 48, height: 48,
                                         decoration: BoxDecoration(
-                                          color: _accentBlue.withOpacity(0.06),
+                                          color: _accentBlue.withValues(alpha: 0.06),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: Icon(Icons.search_off_rounded, size: 24, color: _accentBlue.withOpacity(0.4)),
+                                        child: Icon(Icons.search_off_rounded, size: 24, color: _accentBlue.withValues(alpha: 0.4)),
                                       ),
                                       const SizedBox(height: 8),
                                       Text('لا توجد نتائج', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
@@ -349,16 +349,16 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.info.withOpacity(isDark ? 0.12 : 0.06),
+                          color: AppColors.info.withValues(alpha: isDark ? 0.12 : 0.06),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                          border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           children: [
                             Container(
                               width: 22, height: 22,
                               decoration: BoxDecoration(
-                                color: AppColors.info.withOpacity(0.1),
+                                color: AppColors.info.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Icon(Icons.info_outline_rounded, size: 12, color: AppColors.info),
@@ -394,14 +394,14 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            _accentBlue.withOpacity(isDark ? 0.15 : 0.08),
-                            _accentPurple.withOpacity(isDark ? 0.08 : 0.03),
+                            _accentBlue.withValues(alpha: isDark ? 0.15 : 0.08),
+                            _accentPurple.withValues(alpha: isDark ? 0.08 : 0.03),
                           ],
                           begin: Alignment.centerRight,
                           end: Alignment.centerLeft,
                         ),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _accentBlue.withOpacity(0.15)),
+                        border: Border.all(color: _accentBlue.withValues(alpha: 0.15)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -439,7 +439,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: _accentBlue.withOpacity(0.25),
+                              color: _accentBlue.withValues(alpha: 0.25),
                               offset: const Offset(0, 4),
                               blurRadius: 12,
                             ),
@@ -497,9 +497,9 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? _accentBlue.withOpacity(0.06) : null,
+          color: isSelected ? _accentBlue.withValues(alpha: 0.06) : null,
           borderRadius: BorderRadius.circular(10),
-          border: isSelected ? Border.all(color: _accentBlue.withOpacity(0.2)) : null,
+          border: isSelected ? Border.all(color: _accentBlue.withValues(alpha: 0.2)) : null,
         ),
         child: Row(
           children: [
@@ -551,14 +551,14 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            _accentBlue.withOpacity(isDark ? 0.1 : 0.04),
-            _accentPurple.withOpacity(isDark ? 0.05 : 0.02),
+            _accentBlue.withValues(alpha: isDark ? 0.1 : 0.04),
+            _accentPurple.withValues(alpha: isDark ? 0.05 : 0.02),
           ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _accentBlue.withOpacity(0.15)),
+        border: Border.all(color: _accentBlue.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,7 +568,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
               Container(
                 width: 24, height: 24,
                 decoration: BoxDecoration(
-                  color: _accentBlue.withOpacity(0.1),
+                  color: _accentBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(7),
                 ),
                 child: Icon(Icons.straighten_rounded, size: 14, color: _accentBlue),
@@ -605,7 +605,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? _accentBlue.withOpacity(isDark ? 0.2 : 0.1)
+                        ? _accentBlue.withValues(alpha: isDark ? 0.2 : 0.1)
                         : (isDark ? AppColors.darkSurface : Colors.white),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
@@ -613,7 +613,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                       width: isSelected ? 1.5 : 1,
                     ),
                     boxShadow: isSelected
-                        ? [BoxShadow(color: _accentBlue.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 2))]
+                        ? [BoxShadow(color: _accentBlue.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))]
                         : null,
                   ),
                   child: Row(
@@ -674,7 +674,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
           borderSide: const BorderSide(color: _accentBlue, width: 1.5),
         ),
         filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
       ),
     );
   }

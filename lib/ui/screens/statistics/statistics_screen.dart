@@ -170,7 +170,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -188,7 +188,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: DesignSystem.asymmetricTopRight(large: 50, small: 14),
             ),
             child: Row(
@@ -240,7 +240,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -259,13 +259,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
           // Tab bar
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: TabBar(
               controller: _tabController,
               indicator: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               indicatorSize: TabBarIndicatorSize.tab,
@@ -681,7 +681,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: rankColor.withOpacity(0.12),
+                      color: rankColor.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -781,7 +781,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: AppColors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
@@ -894,7 +894,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.1),
+                      color: iconColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(

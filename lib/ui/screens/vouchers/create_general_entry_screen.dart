@@ -190,7 +190,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
-                        color: AppColors.textHint.withOpacity(0.3),
+                        color: AppColors.textHint.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -225,7 +225,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                             label: Text(filter['label'] as String),
                             avatar: Icon(filter['icon'] as IconData, size: 16),
                             selected: isSelected,
-                            selectedColor: accentColor.withOpacity(0.15),
+                            selectedColor: accentColor.withValues(alpha: 0.15),
                             side: BorderSide(
                               color:
                                   isSelected ? accentColor : AppColors.divider,
@@ -295,7 +295,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                                   Icon(Icons.search_off,
                                       size: 48,
                                       color:
-                                          AppColors.textHint.withOpacity(0.5)),
+                                          AppColors.textHint.withValues(alpha: 0.5)),
                                   const SizedBox(height: 8),
                                   Text(
                                     'لا توجد نتائج',
@@ -352,7 +352,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                                         horizontal: 12, vertical: 10),
                                     decoration: BoxDecoration(
                                       color: isSelected
-                                          ? accentColor.withOpacity(0.08)
+                                          ? accentColor.withValues(alpha: 0.08)
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                       border: isSelected
@@ -360,7 +360,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                                               color: accentColor, width: 1.5)
                                           : Border.all(
                                               color: AppColors.divider
-                                                  .withOpacity(0.5)),
+                                                  .withValues(alpha: 0.5)),
                                     ),
                                     child: Row(
                                       children: [
@@ -404,9 +404,9 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                                             decoration: BoxDecoration(
                                               color: balanceType == 'debit'
                                                   ? AppColors.error
-                                                      .withOpacity(0.08)
+                                                      .withValues(alpha: 0.08)
                                                   : AppColors.success
-                                                      .withOpacity(0.08),
+                                                      .withValues(alpha: 0.08),
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
@@ -471,7 +471,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(icon, size: 18, color: color),
@@ -837,12 +837,12 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: accentColor.withOpacity(0.3),
+          color: accentColor.withValues(alpha: 0.3),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withOpacity(0.06),
+            color: accentColor.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -858,7 +858,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.12),
+                  color: accentColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -912,7 +912,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                     style: TextStyle(fontSize: 11),
                   ),
                   selected: isSelected,
-                  selectedColor: accentColor.withOpacity(0.15),
+                  selectedColor: accentColor.withValues(alpha: 0.15),
                   side: BorderSide(
                     color: isSelected ? accentColor : AppColors.divider,
                     width: isSelected ? 1.5 : 1,
@@ -1007,13 +1007,13 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: hasEntity
-              ? accentColor.withOpacity(0.05)
+              ? accentColor.withValues(alpha: 0.05)
               : (isDark
                   ? AppColors.darkSurfaceVariant
                   : AppColors.surfaceVariant),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: hasEntity ? accentColor.withOpacity(0.3) : AppColors.divider,
+            color: hasEntity ? accentColor.withValues(alpha: 0.3) : AppColors.divider,
           ),
         ),
         child: Row(
@@ -1055,7 +1055,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                               color: (entity['balance_type'] == 'debit'
                                       ? AppColors.error
                                       : AppColors.success)
-                                  .withOpacity(0.08),
+                                  .withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -1166,7 +1166,7 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
           border: Border.all(color: AppColors.divider),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

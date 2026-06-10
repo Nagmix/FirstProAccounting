@@ -55,7 +55,7 @@ class PosPaymentMethodSelector extends StatelessWidget {
         child: OutlinedButton(
           onPressed: () => onMethodChanged(method),
           style: OutlinedButton.styleFrom(
-            backgroundColor: selected ? AppColors.primary.withOpacity(0.1) : null,
+            backgroundColor: selected ? AppColors.primary.withValues(alpha: 0.1) : null,
             side: BorderSide(
               color: selected ? AppColors.primary : AppColors.border,
               width: selected ? 2 : 1,

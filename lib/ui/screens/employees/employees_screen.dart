@@ -222,8 +222,8 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                 selectedCurrency: _selectedCurrency,
                 onSelected: _onCurrencyChanged,
               ),
-              backgroundColor: AppColors.primary.withOpacity(0.08),
-              side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
               padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
@@ -427,12 +427,12 @@ class _EmployeeCard extends StatelessWidget {
         color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLight ? AppColors.border.withOpacity(0.5) : AppColors.darkBorder.withOpacity(0.5),
+          color: isLight ? AppColors.border.withValues(alpha: 0.5) : AppColors.darkBorder.withValues(alpha: 0.5),
           width: 0.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isLight ? 0.04 : 0.2),
+            color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -455,14 +455,14 @@ class _EmployeeCard extends StatelessWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [avatarColor, avatarColor.withOpacity(0.7)],
+                      colors: [avatarColor, avatarColor.withValues(alpha: 0.7)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: avatarColor.withOpacity(0.3),
+                        color: avatarColor.withValues(alpha: 0.3),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -544,14 +544,14 @@ class _EmployeeCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: displayBalance != 0
-                          ? [balanceColor.withOpacity(0.12), balanceColor.withOpacity(0.04)]
-                          : [Colors.grey.withOpacity(0.06), Colors.grey.withOpacity(0.02)],
+                          ? [balanceColor.withValues(alpha: 0.12), balanceColor.withValues(alpha: 0.04)]
+                          : [Colors.grey.withValues(alpha: 0.06), Colors.grey.withValues(alpha: 0.02)],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: displayBalance != 0 ? balanceColor.withOpacity(0.25) : AppColors.border.withOpacity(0.3),
+                      color: displayBalance != 0 ? balanceColor.withValues(alpha: 0.25) : AppColors.border.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -899,7 +899,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                                           const EdgeInsets.symmetric(vertical: 10),
                                       decoration: BoxDecoration(
                                         color: _balanceType == 'credit'
-                                            ? AppColors.success.withOpacity(0.1)
+                                            ? AppColors.success.withValues(alpha: 0.1)
                                             : Colors.transparent,
                                         borderRadius: const BorderRadius.only(
                                             topRight: Radius.circular(9),
@@ -927,7 +927,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                                           const EdgeInsets.symmetric(vertical: 10),
                                       decoration: BoxDecoration(
                                         color: _balanceType == 'debit'
-                                            ? AppColors.error.withOpacity(0.1)
+                                            ? AppColors.error.withValues(alpha: 0.1)
                                             : Colors.transparent,
                                         borderRadius: const BorderRadius.only(
                                             topLeft: Radius.circular(9),

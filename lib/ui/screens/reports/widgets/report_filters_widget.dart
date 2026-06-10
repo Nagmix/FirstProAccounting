@@ -168,7 +168,7 @@ class _DatePresetsRow extends StatelessWidget {
             child: ChoiceChip(
               label: Text(p.$2),
               selected: isSelected,
-              selectedColor: AppColors.primary.withOpacity(0.2),
+              selectedColor: AppColors.primary.withValues(alpha: 0.2),
               backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
               side: BorderSide(
                 color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.border),
@@ -371,9 +371,9 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
+          color: AppColors.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -406,9 +406,9 @@ class _CurrencyDropdown extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -628,9 +628,9 @@ class _FilterDropdown<T> extends StatelessWidget {
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -638,7 +638,7 @@ class _FilterDropdown<T> extends StatelessWidget {
           isDense: true,
           isExpanded: true,
           icon: const Icon(Icons.arrow_drop_down, size: 16),
-          hint: Text(hint, style: TextStyle(fontSize: 11, color: AppColors.primary.withOpacity(0.6))),
+          hint: Text(hint, style: TextStyle(fontSize: 11, color: AppColors.primary.withValues(alpha: 0.6))),
           style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
           items: items,
           onChanged: onChanged,

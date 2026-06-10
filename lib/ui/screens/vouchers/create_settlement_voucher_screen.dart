@@ -458,9 +458,9 @@ class _CreateSettlementVoucherScreenState
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _accentColor.withOpacity(0.08),
+        color: _accentColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _accentColor.withOpacity(0.2)),
+        border: Border.all(color: _accentColor.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -623,7 +623,7 @@ class _CreateSettlementVoucherScreenState
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: _accentColor.withOpacity(0.1),
+              color: _accentColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.swap_vert, color: _accentColor, size: 28),
@@ -714,7 +714,7 @@ class _CreateSettlementVoucherScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(4)),
                 child: Text(typeAr,
                     style: TextStyle(
@@ -860,13 +860,13 @@ class _CreateSettlementVoucherScreenState
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isBalanced
-            ? AppColors.success.withOpacity(0.06)
-            : AppColors.error.withOpacity(0.06),
+            ? AppColors.success.withValues(alpha: 0.06)
+            : AppColors.error.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isBalanced
-              ? AppColors.success.withOpacity(0.2)
-              : AppColors.error.withOpacity(0.2),
+              ? AppColors.success.withValues(alpha: 0.2)
+              : AppColors.error.withValues(alpha: 0.2),
         ),
       ),
       child: Column(

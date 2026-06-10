@@ -175,9 +175,9 @@ class ProductUnitsStep extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: AppColors.infoLight.withOpacity(0.5),
+              color: AppColors.infoLight.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.info.withOpacity(0.2)),
+              border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -203,11 +203,11 @@ class ProductUnitsStep extends StatelessWidget {
               child: Column(
                 children: [
                   Icon(Icons.add_circle_outline,
-                      size: 40, color: AppColors.textTertiary.withOpacity(0.4)),
+                      size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
                   const SizedBox(height: 8),
                   Text('لا توجد تحويلات',
                       style: TextStyle(
-                          color: AppColors.textTertiary.withOpacity(0.6))),
+                          color: AppColors.textTertiary.withValues(alpha: 0.6))),
                   const SizedBox(height: 4),
                   Text('اضغط "إضافة تحويل" لتحديد وحدة أكبر',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -277,7 +277,7 @@ class ProductUnitsStep extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('وحدة بيع افتراضية',
@@ -384,7 +384,7 @@ class ProductUnitsStep extends StatelessWidget {
           // Delete
           IconButton(
             icon: Icon(Icons.delete_outline,
-                size: 20, color: AppColors.error.withOpacity(0.7)),
+                size: 20, color: AppColors.error.withValues(alpha: 0.7)),
             onPressed: () => onRemoveConversionRow(index),
           ),
         ],
@@ -430,7 +430,7 @@ class ProductUnitsStep extends StatelessWidget {
         suffixIcon: autoCost > 0
             ? Tooltip(
                 message: 'محسوب تلقائياً من سعر تكلفة وحدة الشراء',
-                child: Icon(Icons.auto_fix_high, size: 16, color: AppColors.success.withOpacity(0.7)),
+                child: Icon(Icons.auto_fix_high, size: 16, color: AppColors.success.withValues(alpha: 0.7)),
               )
             : null,
       ),

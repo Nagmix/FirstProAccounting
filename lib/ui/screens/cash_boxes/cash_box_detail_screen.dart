@@ -672,7 +672,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.picture_as_pdf,
                       color: AppColors.primary),
@@ -755,7 +755,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
           Container(
             margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
             child: Material(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
               child: InkWell(
                 onTap: _printReport,
@@ -784,7 +784,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
           Container(
             margin: const EdgeInsets.only(left: 4, right: 8, top: 8, bottom: 8),
             child: Material(
-              color: AppColors.success.withOpacity(0.1),
+              color: AppColors.success.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
               child: InkWell(
                 onTap: _exportToExcel,
@@ -836,7 +836,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Center(
@@ -870,7 +870,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -905,9 +905,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       children: [
@@ -925,7 +925,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           decoration: BoxDecoration(
                             color:
                                 (isDebit ? AppColors.error : AppColors.success)
-                                    .withOpacity(0.9),
+                                    .withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -1026,7 +1026,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                             : AppColors.border),
                     borderRadius: BorderRadius.circular(10),
                     color: _selectedFilterIndex > 0
-                        ? AppColors.primary.withOpacity(0.08)
+                        ? AppColors.primary.withValues(alpha: 0.08)
                         : null,
                   ),
                   child: Material(
@@ -1073,7 +1073,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                             : AppColors.border),
                     borderRadius: BorderRadius.circular(10),
                     color: _dateRange != null
-                        ? AppColors.primary.withOpacity(0.08)
+                        ? AppColors.primary.withValues(alpha: 0.08)
                         : null,
                   ),
                   child: Material(
@@ -1163,7 +1163,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                                 : AppColors.border),
                         borderRadius: BorderRadius.circular(10),
                         color: _sortDescending
-                            ? AppColors.primary.withOpacity(0.08)
+                            ? AppColors.primary.withValues(alpha: 0.08)
                             : null,
                       ),
                       child: Row(
@@ -1212,7 +1212,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1293,7 +1293,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           children: [
                             Icon(Icons.account_balance_wallet,
                                 size: 64,
-                                color: AppColors.textHint.withOpacity(0.3)),
+                                color: AppColors.textHint.withValues(alpha: 0.3)),
                             const SizedBox(height: 16),
                             Text('لا توجد حركات',
                                 style: theme.textTheme.titleMedium
@@ -1327,7 +1327,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
           color: isLight ? AppColors.surface : AppColors.darkSurface,
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 offset: const Offset(0, -2),
                 blurRadius: 8)
           ],
@@ -1344,10 +1344,10 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.08),
+                      color: AppColors.success.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppColors.success.withOpacity(0.25), width: 1),
+                          color: AppColors.success.withValues(alpha: 0.25), width: 1),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -1381,10 +1381,10 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.08),
+                      color: AppColors.error.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppColors.error.withOpacity(0.25), width: 1),
+                          color: AppColors.error.withValues(alpha: 0.25), width: 1),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -1421,12 +1421,12 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                       gradient: LinearGradient(
                         colors: _netBalance >= 0
                             ? [
-                                AppColors.success.withOpacity(0.15),
-                                AppColors.success.withOpacity(0.05)
+                                AppColors.success.withValues(alpha: 0.15),
+                                AppColors.success.withValues(alpha: 0.05)
                               ]
                             : [
-                                AppColors.error.withOpacity(0.15),
-                                AppColors.error.withOpacity(0.05)
+                                AppColors.error.withValues(alpha: 0.15),
+                                AppColors.error.withValues(alpha: 0.05)
                               ],
                         begin: Alignment.centerRight,
                         end: Alignment.centerLeft,
@@ -1434,8 +1434,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: _netBalance >= 0
-                            ? AppColors.success.withOpacity(0.4)
-                            : AppColors.error.withOpacity(0.4),
+                            ? AppColors.success.withValues(alpha: 0.4)
+                            : AppColors.error.withValues(alpha: 0.4),
                         width: 1.5,
                       ),
                     ),
@@ -1516,7 +1516,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2))
                 ]
@@ -1603,12 +1603,12 @@ class _MovementCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: isLight
-                ? AppColors.border.withOpacity(0.5)
-                : AppColors.darkBorder.withOpacity(0.5),
+                ? AppColors.border.withValues(alpha: 0.5)
+                : AppColors.darkBorder.withValues(alpha: 0.5),
             width: 0.5),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(isLight ? 0.03 : 0.15),
+              color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
               blurRadius: 4,
               offset: const Offset(0, 1))
         ],
@@ -1622,7 +1622,7 @@ class _MovementCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: color, size: 20),
             ),
@@ -1649,7 +1649,7 @@ class _MovementCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
+                            color: color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4)),
                         child: Text(typeAr,
                             style: theme.textTheme.labelSmall?.copyWith(

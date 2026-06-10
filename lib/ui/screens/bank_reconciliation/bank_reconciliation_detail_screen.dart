@@ -371,7 +371,7 @@ class _BankReconciliationDetailScreenState
                                           horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
                                         color: _statusColor(recon.status)
-                                            .withOpacity(0.1),
+                                            .withValues(alpha: 0.1),
                                         borderRadius:
                                             BorderRadius.circular(20),
                                       ),
@@ -492,7 +492,7 @@ class _BankReconciliationDetailScreenState
                           elevation: 2,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
-                          color: AppColors.primary.withOpacity(0.03),
+                          color: AppColors.primary.withValues(alpha: 0.03),
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(
@@ -599,10 +599,10 @@ class _BankReconciliationDetailScreenState
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.success.withOpacity(0.1),
+                              color: AppColors.success.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                  color: AppColors.success.withOpacity(0.3)),
+                                  color: AppColors.success.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -706,7 +706,7 @@ class _BankReconciliationDetailScreenState
                                     horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: _matchStatusColor(line.matchStatus)
-                                      .withOpacity(0.1),
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(

@@ -539,7 +539,7 @@ class _CreateReceiptPaymentVoucherScreenState
             Icon(
               Icons.error_outline,
               size: 56,
-              color: AppColors.error.withOpacity(0.7),
+              color: AppColors.error.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 16),
             Text(
@@ -628,7 +628,7 @@ class _CreateReceiptPaymentVoucherScreenState
                 : AppColors.surfaceVariant,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: animatedColor.withOpacity(0.3),
+              color: animatedColor.withValues(alpha: 0.3),
               width: 1.5,
             ),
           ),
@@ -644,7 +644,7 @@ class _CreateReceiptPaymentVoucherScreenState
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
                       color: _isReceipt
-                          ? AppColors.success.withOpacity(0.15)
+                          ? AppColors.success.withValues(alpha: 0.15)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: _isReceipt
@@ -689,7 +689,7 @@ class _CreateReceiptPaymentVoucherScreenState
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
                       color: !_isReceipt
-                          ? AppColors.error.withOpacity(0.15)
+                          ? AppColors.error.withValues(alpha: 0.15)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: !_isReceipt
@@ -754,7 +754,7 @@ class _CreateReceiptPaymentVoucherScreenState
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? _typeColor.withOpacity(0.12)
+                    ? _typeColor.withValues(alpha: 0.12)
                     : isDark
                         ? AppColors.darkSurfaceVariant
                         : AppColors.surfaceVariant,
@@ -943,7 +943,7 @@ class _CreateReceiptPaymentVoucherScreenState
                         color: (balanceType == 'debit'
                                 ? AppColors.error
                                 : AppColors.success)
-                            .withOpacity(0.1),
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -991,10 +991,10 @@ class _CreateReceiptPaymentVoucherScreenState
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.warningLight.withOpacity(isDark ? 0.1 : 1.0),
+          color: AppColors.warningLight.withValues(alpha: isDark ? 0.1 : 1.0),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppColors.warning.withOpacity(0.4),
+            color: AppColors.warning.withValues(alpha: 0.4),
           ),
         ),
         child: Row(
@@ -1109,7 +1109,7 @@ class _CreateReceiptPaymentVoucherScreenState
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.1),
+                      color: AppColors.info.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -1287,7 +1287,7 @@ class _CreateReceiptPaymentVoucherScreenState
       decoration: InputDecoration(
         hintText: '0.00',
         hintStyle: TextStyle(
-          color: AppColors.textHint.withOpacity(0.4),
+          color: AppColors.textHint.withValues(alpha: 0.4),
           fontSize: 22,
           fontWeight: FontWeight.w800,
         ),
@@ -1301,7 +1301,7 @@ class _CreateReceiptPaymentVoucherScreenState
                 vertical: 6,
               ),
               decoration: BoxDecoration(
-                color: _typeColor.withOpacity(0.1),
+                color: _typeColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -1381,7 +1381,7 @@ class _CreateReceiptPaymentVoucherScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: buttonColor,
               foregroundColor: Colors.white,
-              disabledBackgroundColor: buttonColor.withOpacity(0.5),
+              disabledBackgroundColor: buttonColor.withValues(alpha: 0.5),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),

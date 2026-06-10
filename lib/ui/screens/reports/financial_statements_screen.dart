@@ -322,9 +322,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: AppColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
@@ -334,7 +334,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: DropdownButtonHideUnderline(
@@ -363,7 +363,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -382,7 +382,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -447,12 +447,12 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            (_netProfit >= 0 ? AppColors.success : AppColors.error).withOpacity(0.08),
-            (_netProfit >= 0 ? AppColors.success : AppColors.error).withOpacity(0.03),
+            (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
+            (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withOpacity(0.2)),
+        border: Border.all(color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -478,9 +478,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withOpacity(0.1),
+              color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withOpacity(0.3)),
+              border: Border.all(color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.3)),
             ),
             child: Column(
               children: [
@@ -509,9 +509,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Column(
         children: [
@@ -529,15 +529,15 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
             width: 40, height: 40,
-            decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
             child: Icon(Icons.calculate, color: color, size: 20),
           ),
           const SizedBox(width: 12),
@@ -560,15 +560,15 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
             width: 40, height: 40,
-            decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
             child: Icon(_netProfit >= 0 ? Icons.trending_up : Icons.trending_down, color: color, size: 20),
           ),
           const SizedBox(width: 12),
@@ -634,12 +634,12 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            (_isBalanced ? AppColors.success : AppColors.error).withOpacity(0.08),
-            (_isBalanced ? AppColors.success : AppColors.error).withOpacity(0.03),
+            (_isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
+            (_isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (_isBalanced ? AppColors.success : AppColors.error).withOpacity(0.2)),
+        border: Border.all(color: (_isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -652,7 +652,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (_isBalanced ? AppColors.success : AppColors.error).withOpacity(0.1),
+                  color: (_isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -695,15 +695,15 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
             width: 40, height: 40,
-            decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
             child: Icon(Icons.account_balance, color: color, size: 20),
           ),
           const SizedBox(width: 12),
@@ -725,9 +725,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: AppColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -771,7 +771,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: (balanced ? AppColors.success : AppColors.error).withOpacity(0.1),
+              color: (balanced ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -829,7 +829,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             children: [
               Container(
                 width: 36, height: 36,
-                decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
                 child: Icon(icon, color: color, size: 18),
               ),
               const SizedBox(width: 10),

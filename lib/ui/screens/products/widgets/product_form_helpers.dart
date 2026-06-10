@@ -243,7 +243,7 @@ class ProductSearchableDropdown extends StatelessWidget {
                                   ? const Icon(Icons.check, color: AppColors.primary)
                                   : null,
                               selected: isSelected,
-                              selectedTileColor: AppColors.primary.withOpacity(0.05),
+                              selectedTileColor: AppColors.primary.withValues(alpha: 0.05),
                               onTap: () {
                                 onChanged?.call(id);
                                 Navigator.of(dialogContext).pop();

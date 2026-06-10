@@ -55,7 +55,7 @@ class SettingsProfileSection extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
               image: businessLogoPath != null
                   ? DecorationImage(image: FileImage(File(businessLogoPath!)), fit: BoxFit.cover)
@@ -142,7 +142,7 @@ class SettingsProfileSection extends StatelessWidget {
                 },
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   backgroundImage: businessLogoPath != null ? FileImage(File(businessLogoPath!)) : null,
                   child: businessLogoPath == null
                       ? const Icon(Icons.add_a_photo, size: 32, color: AppColors.primary)

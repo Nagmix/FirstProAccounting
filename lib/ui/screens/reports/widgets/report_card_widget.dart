@@ -64,7 +64,7 @@ class _ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bgColor = isSelected
-        ? item.color.withOpacity(isDark ? 0.25 : 0.1)
+        ? item.color.withValues(alpha: isDark ? 0.25 : 0.1)
         : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant);
     final borderColor = isSelected ? item.color : (isDark ? AppColors.darkBorder : AppColors.border);
     final iconColor = isSelected ? item.color : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary);
@@ -79,7 +79,7 @@ class _ReportCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
           boxShadow: isSelected
-              ? [BoxShadow(color: item.color.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: item.color.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))]
               : null,
         ),
         padding: const EdgeInsets.all(12),

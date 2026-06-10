@@ -366,7 +366,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                           setState(() => _selectedCategoryIndex = index);
                         },
                         selectedColor:
-                            AppColors.primary.withOpacity(0.12),
+                            AppColors.primary.withValues(alpha: 0.12),
                         checkmarkColor: AppColors.primary,
                         labelStyle: TextStyle(
                           color: selected ? AppColors.primary : null,
@@ -518,13 +518,13 @@ class _ProductCard extends StatelessWidget {
                   width: double.infinity,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.06),
+                    color: AppColors.primary.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.inventory_2,
                     size: 36,
-                    color: AppColors.primary.withOpacity(0.4),
+                    color: AppColors.primary.withValues(alpha: 0.4),
                   ),
                 ),
               ),
@@ -585,7 +585,7 @@ class _ProductCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: stockBgColor.withOpacity(0.5),
+                      color: stockBgColor.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(

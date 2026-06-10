@@ -490,7 +490,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? AppColors.darkDivider : AppColors.divider),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: InkWell(
@@ -504,7 +504,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
               Container(
                 width: 44, height: 44,
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(Icons.shopping_cart, color: statusColor, size: 22),
@@ -527,7 +527,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
+                            color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -1109,9 +1109,9 @@ class _CreatePurchaseOrderFormState extends State<_CreatePurchaseOrderForm> {
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.05),
+                              color: AppColors.primary.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                             ),
                             child: Column(
                               children: [

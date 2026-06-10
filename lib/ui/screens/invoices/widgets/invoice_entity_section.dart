@@ -100,7 +100,7 @@ class InvoiceEntitySection extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -117,7 +117,7 @@ class InvoiceEntitySection extends StatelessWidget {
                 ? Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.08),
+                      color: AppColors.error.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text('مطلوب', style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.w700)),
@@ -131,12 +131,12 @@ class InvoiceEntitySection extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: showEntityDropdown
                       ? _accentBlue
-                      : (selectedEntityId != null ? _accentBlue.withOpacity(0.3) : (isDark ? AppColors.darkBorder : AppColors.border)),
+                      : (selectedEntityId != null ? _accentBlue.withValues(alpha: 0.3) : (isDark ? AppColors.darkBorder : AppColors.border)),
                   width: showEntityDropdown ? 1.5 : 1,
                 ),
               ),
@@ -162,7 +162,7 @@ class InvoiceEntitySection extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.08),
+                          color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.close_rounded, size: 14, color: AppColors.error),
@@ -181,9 +181,9 @@ class InvoiceEntitySection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _accentBlue.withOpacity(0.2)),
+                border: Border.all(color: _accentBlue.withValues(alpha: 0.2)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
@@ -209,7 +209,7 @@ class InvoiceEntitySection extends StatelessWidget {
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
                       ),
                       onChanged: onFilterEntities,
                     ),
@@ -265,7 +265,7 @@ class InvoiceEntitySection extends StatelessWidget {
                           onTap: () => onEntitySelected(entity['id'] as int, entity['type'] as String),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            color: isSelected ? _accentBlue.withOpacity(0.06) : null,
+                            color: isSelected ? _accentBlue.withValues(alpha: 0.06) : null,
                             child: Row(
                               children: [
                                 // Avatar circle for entity
@@ -273,7 +273,7 @@ class InvoiceEntitySection extends StatelessWidget {
                                   width: 32,
                                   height: 32,
                                   decoration: BoxDecoration(
-                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withOpacity(0.1),
+                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Icon(
@@ -295,7 +295,7 @@ class InvoiceEntitySection extends StatelessWidget {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: (bt == 'credit' ? AppColors.success : AppColors.error).withOpacity(0.08),
+                                      color: (bt == 'credit' ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -312,7 +312,7 @@ class InvoiceEntitySection extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withOpacity(0.1),
+                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -381,7 +381,7 @@ class InvoiceEntitySection extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: (isCustomer ? const Color(0xFF22C55E) : const Color(0xFF3B82F6)).withOpacity(0.25),
+            color: (isCustomer ? const Color(0xFF22C55E) : const Color(0xFF3B82F6)).withValues(alpha: 0.25),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

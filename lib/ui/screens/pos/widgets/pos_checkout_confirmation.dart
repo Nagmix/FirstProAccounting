@@ -29,7 +29,7 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
       onTap: () {}, // Absorb background taps – do nothing
       behavior: HitTestBehavior.opaque,
       child: Container(
-        color: Colors.black.withOpacity(0.55),
+        color: Colors.black.withValues(alpha: 0.55),
         child: Center(
           child: Card(
             margin: const EdgeInsets.symmetric(horizontal: 24),

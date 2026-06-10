@@ -69,7 +69,7 @@ class InvoiceSummarySection extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -84,8 +84,8 @@ class InvoiceSummarySection extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  _accentBlue.withOpacity(isDark ? 0.15 : 0.08),
-                  _accentPurple.withOpacity(isDark ? 0.08 : 0.03),
+                  _accentBlue.withValues(alpha: isDark ? 0.15 : 0.08),
+                  _accentPurple.withValues(alpha: isDark ? 0.08 : 0.03),
                 ],
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
@@ -154,7 +154,7 @@ class InvoiceSummarySection extends StatelessWidget {
                             borderSide: const BorderSide(color: _accentBlue, width: 1.5),
                           ),
                           filled: true,
-                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
                         ),
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                         onChanged: (_) => onDiscountChanged(),
@@ -200,7 +200,7 @@ class InvoiceSummarySection extends StatelessWidget {
                             borderSide: const BorderSide(color: _accentBlue, width: 1.5),
                           ),
                           filled: true,
-                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+                          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
                         ),
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                         onChanged: (_) => onTransportChanged(),
@@ -214,7 +214,7 @@ class InvoiceSummarySection extends StatelessWidget {
                   height: 1,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.transparent, _accentBlue.withOpacity(0.2), Colors.transparent],
+                      colors: [Colors.transparent, _accentBlue.withValues(alpha: 0.2), Colors.transparent],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
@@ -227,14 +227,14 @@ class InvoiceSummarySection extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        _accentBlue.withOpacity(isDark ? 0.12 : 0.06),
-                        _accentPurple.withOpacity(isDark ? 0.06 : 0.02),
+                        _accentBlue.withValues(alpha: isDark ? 0.12 : 0.06),
+                        _accentPurple.withValues(alpha: isDark ? 0.06 : 0.02),
                       ],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _accentBlue.withOpacity(0.15)),
+                    border: Border.all(color: _accentBlue.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -254,9 +254,9 @@ class InvoiceSummarySection extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.06),
+                      color: AppColors.info.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                      border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       children: [
@@ -300,7 +300,7 @@ class InvoiceSummarySection extends StatelessWidget {
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     filled: true,
-                    fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withOpacity(0.3),
+                    fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
                   ),
                 ),
               ],

@@ -38,8 +38,8 @@ class EmptyState extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.12),
-                    AppColors.primaryLight.withOpacity(0.04),
+                    AppColors.primary.withValues(alpha: 0.12),
+                    AppColors.primaryLight.withValues(alpha: 0.04),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -49,7 +49,7 @@ class EmptyState extends StatelessWidget {
               child: Icon(
                 icon,
                 size: 44,
-                color: AppColors.primary.withOpacity(0.6),
+                color: AppColors.primary.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 24),

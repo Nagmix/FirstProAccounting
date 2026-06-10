@@ -51,7 +51,7 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: (isCashIn ? AppColors.success : AppColors.error).withOpacity(0.12),
+                    color: (isCashIn ? AppColors.success : AppColors.error).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(

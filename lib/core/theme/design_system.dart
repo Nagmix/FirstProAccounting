@@ -48,8 +48,8 @@ class DesignSystem {
   static List<BoxShadow> cardShadow({bool isLight = true}) => [
     BoxShadow(
       color: isLight
-          ? AppColors.primary.withOpacity(0.06)
-          : Colors.black.withOpacity(0.2),
+          ? AppColors.primary.withValues(alpha: 0.06)
+          : Colors.black.withValues(alpha: 0.2),
       offset: const Offset(0, 4),
       blurRadius: 16,
       spreadRadius: 0,
@@ -59,8 +59,8 @@ class DesignSystem {
   static List<BoxShadow> elevatedShadow({bool isLight = true}) => [
     BoxShadow(
       color: isLight
-          ? AppColors.primary.withOpacity(0.12)
-          : Colors.black.withOpacity(0.3),
+          ? AppColors.primary.withValues(alpha: 0.12)
+          : Colors.black.withValues(alpha: 0.3),
       offset: const Offset(0, 8),
       blurRadius: 24,
       spreadRadius: 0,
@@ -69,7 +69,7 @@ class DesignSystem {
 
   static List<BoxShadow> fabShadow = [
     BoxShadow(
-      color: AppColors.primary.withOpacity(0.4),
+      color: AppColors.primary.withValues(alpha: 0.4),
       offset: const Offset(0, 8),
       blurRadius: 16,
     ),
@@ -142,7 +142,7 @@ class DesignSystem {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.5),
+        color: color.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -161,7 +161,7 @@ class DesignSystem {
       height: height,
       width: width,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -171,7 +171,7 @@ class DesignSystem {
             height: height,
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [
-                color.withOpacity(0.1),
+                color.withValues(alpha: 0.1),
                 color,
               ]),
               borderRadius: BorderRadius.circular(4),

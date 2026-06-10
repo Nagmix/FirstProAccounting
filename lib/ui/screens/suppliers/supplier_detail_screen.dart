@@ -473,7 +473,7 @@ class _SupplierDetailScreenState
       Container(
         margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
         child: Material(
-          color: AppColors.accentBlue.withOpacity(0.1),
+          color: AppColors.accentBlue.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             onTap: () async {

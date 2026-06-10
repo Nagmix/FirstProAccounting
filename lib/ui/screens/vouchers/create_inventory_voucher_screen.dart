@@ -328,7 +328,7 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.add_shopping_cart, size: 48, color: AppColors.textHint.withOpacity(0.5)),
+                    Icon(Icons.add_shopping_cart, size: 48, color: AppColors.textHint.withValues(alpha: 0.5)),
                     const SizedBox(height: 8),
                     Text('لم تتم إضافة منتجات بعد', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
                   ],
@@ -351,7 +351,7 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant.withOpacity(0.3) : AppColors.surfaceVariant.withOpacity(0.5),
+        color: isDark ? AppColors.darkSurfaceVariant.withValues(alpha: 0.3) : AppColors.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
@@ -511,10 +511,10 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary.withOpacity(0.08), AppColors.secondary.withOpacity(0.08)],
+          colors: [AppColors.primary.withValues(alpha: 0.08), AppColors.secondary.withValues(alpha: 0.08)],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -640,7 +640,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.picture_as_pdf,
                       color: AppColors.primary),
@@ -659,7 +659,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                      color: AppColors.accentBlue.withOpacity(0.1),
+                      color: AppColors.accentBlue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.bluetooth,
                       color: AppColors.accentBlue),
@@ -816,7 +816,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2))
                 ]
@@ -877,7 +877,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
@@ -905,7 +905,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -945,9 +945,9 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
@@ -962,7 +962,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: (isDebit ? AppColors.error : AppColors.success)
-                          .withOpacity(0.9),
+                          .withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -1068,7 +1068,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
             decoration: BoxDecoration(
               border: Border.all(color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.border),
               borderRadius: BorderRadius.circular(10),
-              color: _selectedFilterIndex > 0 ? AppColors.primary.withOpacity(0.08) : null,
+              color: _selectedFilterIndex > 0 ? AppColors.primary.withValues(alpha: 0.08) : null,
             ),
             child: Material(
               color: Colors.transparent,
@@ -1103,7 +1103,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
             decoration: BoxDecoration(
               border: Border.all(color: _dateRange != null ? AppColors.primary : AppColors.border),
               borderRadius: BorderRadius.circular(10),
-              color: _dateRange != null ? AppColors.primary.withOpacity(0.08) : null,
+              color: _dateRange != null ? AppColors.primary.withValues(alpha: 0.08) : null,
             ),
             child: Material(
               color: Colors.transparent,
@@ -1180,7 +1180,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 decoration: BoxDecoration(
                   border: Border.all(color: _sortDescending ? AppColors.primary : AppColors.border),
                   borderRadius: BorderRadius.circular(10),
-                  color: _sortDescending ? AppColors.primary.withOpacity(0.08) : null,
+                  color: _sortDescending ? AppColors.primary.withValues(alpha: 0.08) : null,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1224,7 +1224,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
           Text('الفلتر: ', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1310,7 +1310,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
     return Container(
       decoration: BoxDecoration(
         color: isLight ? AppColors.surface : AppColors.darkSurface,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), offset: const Offset(0, -2), blurRadius: 8)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), offset: const Offset(0, -2), blurRadius: 8)],
       ),
       child: SafeArea(
         top: false,
@@ -1323,9 +1323,9 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.08),
+                    color: AppColors.success.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.success.withOpacity(0.25), width: 1),
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.25), width: 1),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -1352,9 +1352,9 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.08),
+                    color: AppColors.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.error.withOpacity(0.25), width: 1),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.25), width: 1),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -1381,9 +1381,9 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
-                    color: balanceColor.withOpacity(0.08),
+                    color: balanceColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: balanceColor.withOpacity(0.25), width: 1),
+                    border: Border.all(color: balanceColor.withValues(alpha: 0.25), width: 1),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -1424,7 +1424,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(entityIcon, size: 64, color: AppColors.textHint.withOpacity(0.3)),
+            Icon(entityIcon, size: 64, color: AppColors.textHint.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text('لا توجد حركات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
           ],
@@ -1474,7 +1474,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
       Container(
         margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
         child: Material(
-          color: AppColors.primary.withOpacity(0.1),
+          color: AppColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             onTap: printReport,
@@ -1503,7 +1503,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
       Container(
         margin: const EdgeInsets.only(left: 4, right: 8, top: 8, bottom: 8),
         child: Material(
-          color: AppColors.success.withOpacity(0.1),
+          color: AppColors.success.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             onTap: exportToExcel,
@@ -1615,7 +1615,7 @@ class _MovementCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 20),

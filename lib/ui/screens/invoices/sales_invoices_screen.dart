@@ -233,7 +233,7 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: AppColors.primary.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -269,7 +269,7 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -484,7 +484,7 @@ class _SalesInvoiceCard extends StatelessWidget {
         color: context.surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isReturn ? AppColors.warning.withOpacity(0.3) : AppColors.border.withOpacity(0.5),
+          color: isReturn ? AppColors.warning.withValues(alpha: 0.3) : AppColors.border.withValues(alpha: 0.5),
           width: isReturn ? 1.5 : 0.5,
         ),
       ),
@@ -503,7 +503,7 @@ class _SalesInvoiceCard extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: (isReturn ? AppColors.warning : AppColors.success).withOpacity(0.1),
+                      color: (isReturn ? AppColors.warning : AppColors.success).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -568,7 +568,7 @@ class _SalesInvoiceCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant.withOpacity(0.3),
+                  color: AppColors.surfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -591,7 +591,7 @@ class _SalesInvoiceCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.08),
+                          color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -622,7 +622,7 @@ class _SalesInvoiceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.08),
+        color: AppColors.success.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.success)),
@@ -634,7 +634,7 @@ class _SalesInvoiceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: (isCash ? AppColors.success : AppColors.secondary).withOpacity(0.08),
+        color: (isCash ? AppColors.success : AppColors.secondary).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

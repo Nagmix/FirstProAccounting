@@ -841,7 +841,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   color: Theme.of(context).scaffoldBackgroundColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 8,
                       offset: const Offset(0, -2),
                     ),
@@ -927,7 +927,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 child: Icon(
                   Icons.arrow_back_ios,
                   size: 14,
-                  color: isCompleted ? AppColors.success : AppColors.textTertiary.withOpacity(0.4),
+                  color: isCompleted ? AppColors.success : AppColors.textTertiary.withValues(alpha: 0.4),
                 ),
               );
             }
@@ -949,7 +949,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   color: isActive
                       ? AppColors.primary
                       : isCompleted
-                          ? AppColors.success.withOpacity(0.1)
+                          ? AppColors.success.withValues(alpha: 0.1)
                           : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
@@ -969,7 +969,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                     else if (isActive)
                       Icon(_steps[i].icon, size: 14, color: Colors.white)
                     else
-                      Icon(_steps[i].icon, size: 14, color: AppColors.textTertiary.withOpacity(0.5)),
+                      Icon(_steps[i].icon, size: 14, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                     const SizedBox(width: 4),
                     Text(
                       _steps[i].title,
@@ -981,7 +981,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                             : isCompleted
                                 ? AppColors.success
                                 : isFuture
-                                    ? AppColors.textTertiary.withOpacity(0.5)
+                                    ? AppColors.textTertiary.withValues(alpha: 0.5)
                                     : AppColors.textSecondary,
                       ),
                     ),
@@ -1399,7 +1399,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               label: const Text('وحدة أساسية'),
                               selected: isBaseUnit,
                               onSelected: (v) => setDialogState(() => isBaseUnit = v),
-                              selectedColor: AppColors.primaryLight.withOpacity(0.2),
+                              selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
                             ),
                           ],
                         ),
@@ -1692,7 +1692,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                               decoration: BoxDecoration(
                                                 color: balanceType == 'credit'
                                                     ? AppColors.success
-                                                        .withOpacity(0.1)
+                                                        .withValues(alpha: 0.1)
                                                     : Colors.transparent,
                                                 borderRadius: const BorderRadius.only(
                                                   topRight: Radius.circular(9),
@@ -1722,7 +1722,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                               decoration: BoxDecoration(
                                                 color: balanceType == 'debit'
                                                     ? AppColors.error
-                                                        .withOpacity(0.1)
+                                                        .withValues(alpha: 0.1)
                                                     : Colors.transparent,
                                                 borderRadius: const BorderRadius.only(
                                                   topLeft: Radius.circular(9),
@@ -1798,7 +1798,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                     decoration: BoxDecoration(
                                       color: contactMethod == 'whatsapp'
                                           ? const Color(0xFF25D366)
-                                              .withOpacity(0.1)
+                                              .withValues(alpha: 0.1)
                                           : Colors.transparent,
                                       borderRadius: const BorderRadius.only(
                                         topRight: Radius.circular(9),
@@ -1839,7 +1839,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
                                       color: contactMethod == 'phone'
-                                          ? AppColors.primary.withOpacity(0.1)
+                                          ? AppColors.primary.withValues(alpha: 0.1)
                                           : Colors.transparent,
                                       borderRadius: const BorderRadius.only(
                                         topLeft: Radius.circular(9),
