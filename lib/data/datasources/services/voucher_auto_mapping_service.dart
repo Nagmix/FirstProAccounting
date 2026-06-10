@@ -779,16 +779,10 @@ class VoucherAutoMappingService {
     String voucherType,
     String now,
   ) async {
-    String tableName;
     switch (entityType) {
       case entityCustomer:
-        tableName = 'customers';
-        break;
       case entitySupplier:
-        tableName = 'suppliers';
-        break;
       case entityEmployee:
-        tableName = 'employees';
         break;
       case entityExpense:
         // المصروفات لا تحتاج تحديث رصيد هنا لأنها تُحدث عبر expense_repository

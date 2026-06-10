@@ -9,7 +9,6 @@ import '../../data/datasources/repositories/expense_repository.dart';
 import '../../data/datasources/repositories/reference_data_repository.dart';
 import '../../data/datasources/services/report_service.dart';
 import '../../data/datasources/services/cash_box_service.dart';
-import '../../data/datasources/services/journal_service.dart';
 
 
 /// ViewModel for Dashboard — manages dashboard data loading and refresh.
@@ -25,7 +24,6 @@ class DashboardViewModel extends ChangeNotifier {
   final ReferenceDataRepository _refData = locator<ReferenceDataRepository>();
   final ReportService _reportService = locator<ReportService>();
   final CashBoxService _cashBoxService = locator<CashBoxService>();
-  final JournalService _journalService = locator<JournalService>();
 
   // ── Dashboard state ──
   double todaySales = 0.0;

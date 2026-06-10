@@ -133,12 +133,14 @@ class _BluetoothPrinterSettingsScreenState
   }
 
   Future<void> _disconnect() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     await _printerService.disconnect();
+    if (!mounted) return;
     setState(() {
       _selectedAddress = null;
       _statusMessage = 'تم قطع الاتصال';
     });
-    ScaffoldMessenger.of(context).showSnackBar(
+    scaffoldMessenger.showSnackBar(
       const SnackBar(
         content: Text('تم قطع الاتصال'),
         backgroundColor: AppColors.info,

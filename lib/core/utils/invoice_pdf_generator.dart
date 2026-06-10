@@ -53,7 +53,7 @@ class InvoicePdfGenerator {
         logoImage = pw.MemoryImage(logoBytes);
       } else if (!hasCustomBusiness) {
         // Use default app logo for users who haven't configured their own
-        final defaultLogoBytes = await rootBundle.load('assets/icons/logo.svg');
+        final _ = await rootBundle.load('assets/icons/logo.svg');
         // SVG can't be used directly in pdf; we'll use a text placeholder
         logoImage = null;
       }

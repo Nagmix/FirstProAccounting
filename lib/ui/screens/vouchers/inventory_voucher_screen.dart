@@ -86,7 +86,6 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
 
   void _showVoucherDetail(Map<String, dynamic> details) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final items = details['items'] as List<Map<String, dynamic>>? ?? [];
     final currency = details['currency'] as String? ?? 'YER';
 

@@ -1434,7 +1434,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
     if (result == true) {
       final now = DateTime.now().toIso8601String();
-      final id = await locator<ReferenceDataRepository>().insertUnit({
+      final _ = await locator<ReferenceDataRepository>().insertUnit({
         'name_ar': nameArController.text.trim(),
         'name_en': nameEnController.text.trim(),
         'abbreviation': abbrController.text.trim(),

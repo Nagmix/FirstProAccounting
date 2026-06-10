@@ -172,6 +172,8 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                         return;
                       }
 
+                      final navigator = Navigator.of(ctx);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
                       try {
                         await locator<ReferenceDataRepository>().insertFiscalYear({
                           'year': selectedYear,
@@ -184,19 +186,17 @@ class _FiscalYearScreenState extends State<FiscalYearScreen> {
                           'updated_at': DateTime.now().toIso8601String(),
                         });
 
-                        if (mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('تم إنشاء السنة المالية بنجاح'), backgroundColor: AppColors.success),
-                          );
-                        }
+                        if (!mounted) return;
+                        navigator.pop();
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(content: Text('تم إنشاء السنة المالية بنجاح'), backgroundColor: AppColors.success),
+                        );
                         _loadFiscalYears();
                       } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('حدث خطأ أثناء الإنشاء'), backgroundColor: AppColors.error),
-                          );
-                        }
+                        if (!mounted) return;
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(content: Text('حدث خطأ أثناء الإنشاء'), backgroundColor: AppColors.error),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),

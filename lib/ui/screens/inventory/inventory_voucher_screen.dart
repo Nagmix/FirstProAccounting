@@ -423,6 +423,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                         });
                       }
 
+                      final navigator = Navigator.of(ctx);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
                       await locator<StockService>().insertInventoryVoucher({
                         'voucher_number': voucherNumber,
                         'warehouse_id': selectedWarehouseId,
@@ -433,8 +435,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                       }, items);
 
                       if (!mounted) return;
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      navigator.pop();
+                      scaffoldMessenger.showSnackBar(
                         const SnackBar(content: Text('تم إنشاء سند الجرد بنجاح'), backgroundColor: AppColors.success),
                       );
                       _loadVouchers();

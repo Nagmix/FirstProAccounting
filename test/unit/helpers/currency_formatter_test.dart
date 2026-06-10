@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
-import 'package:firstpro/core/constants/app_constants.dart';
 
 /// CurrencyFormatter Unit Tests
 /// Tests all formatting, parsing, and display functions

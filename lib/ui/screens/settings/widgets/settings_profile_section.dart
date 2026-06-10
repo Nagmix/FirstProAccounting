@@ -125,6 +125,7 @@ class SettingsProfileSection extends StatelessWidget {
               // ── Logo picker ──
               GestureDetector(
                 onTap: () async {
+                  final navigator = Navigator.of(ctx);
                   final picker = ImagePicker();
                   final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512);
                   if (picked != null) {
@@ -133,7 +134,9 @@ class SettingsProfileSection extends StatelessWidget {
                     final logoDir = p.join(dir.path, 'business_logo${p.extension(picked.path)}');
                     await File(picked.path).copy(logoDir);
                     onProfileUpdated();
-                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (!ctx.mounted) return;
+                    navigator.pop();
+                    if (!parentContext.mounted) return;
                     _showEditProfileDialog(parentContext); // Reopen to reflect new logo
                   }
                 },
@@ -151,9 +154,12 @@ class SettingsProfileSection extends StatelessWidget {
               if (businessLogoPath != null)
                 TextButton(
                   onPressed: () async {
+                    final navigator = Navigator.of(ctx);
                     await saveSetting('business_logo_path', '');
                     onProfileUpdated();
-                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (!ctx.mounted) return;
+                    navigator.pop();
+                    if (!parentContext.mounted) return;
                     _showEditProfileDialog(parentContext);
                   },
                   child: const Text('إزالة الشعار', style: TextStyle(fontSize: 11, color: AppColors.error)),

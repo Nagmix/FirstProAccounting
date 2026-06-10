@@ -248,6 +248,7 @@ class _VouchersScreenState extends State<VouchersScreen>
       enrichedItems.add({...item, 'account_name': accountName});
     }
 
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

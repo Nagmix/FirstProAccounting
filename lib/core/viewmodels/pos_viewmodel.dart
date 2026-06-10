@@ -130,12 +130,16 @@ class PosViewModel extends ChangeNotifier {
 
   double get effectiveDiscount {
     if (_discountType == DiscountType.percentage) {
-      return subtotal * (_orderDiscount / 100);
+      final raw = subtotal * (_orderDiscount / 100);
+      return raw.clamp(0, subtotal); // Prevent discount > subtotal
     }
-    return _orderDiscount;
+    return _orderDiscount.clamp(0, subtotal); // Fixed discount also clamped
   }
 
-  double get tax => (subtotal - effectiveDiscount) * (AppConstants.defaultVatRate / 100);
+  double get tax {
+    final taxableBase = (subtotal - effectiveDiscount).clamp(0.0, double.infinity);
+    return taxableBase * (AppConstants.defaultVatRate / 100);
+  }
   double get total => subtotal - effectiveDiscount + tax;
 
   double get totalPaid => _payments.fold(0.0, (sum, p) => sum + p.amount);
@@ -146,7 +150,13 @@ class PosViewModel extends ChangeNotifier {
   // ── Cart mutations ──
 
   void setOrderDiscount(double value, DiscountType type) {
-    _orderDiscount = value;
+    if (type == DiscountType.percentage && value > 100) {
+      _orderDiscount = 100;
+    } else if (type == DiscountType.fixed && value > subtotal) {
+      _orderDiscount = subtotal;
+    } else {
+      _orderDiscount = value;
+    }
     _discountType = type;
     _syncPaymentsWithTotal();
     notifyListeners();
@@ -309,6 +319,7 @@ class PosViewModel extends ChangeNotifier {
     _payments.clear();
     _activePaymentMethod = 'cash';
     _searchQuery = '';
+    _selectedCategoryId = null;
     notifyListeners();
   }
 

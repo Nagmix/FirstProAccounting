@@ -197,7 +197,7 @@ class ExpenseRepository {
 
       if (isSarf) {
         // صرف (disburse): Debit expense account, Credit cash/bank
-        if (expenseAccId != null && journalAmount > 0) {
+        if (journalAmount > 0) {
           await txn.insert('transactions', {
             'account_id': expenseAccId,
             'journal_id': journalId,
@@ -212,7 +212,7 @@ class ExpenseRepository {
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccId, journalAmount, 0.0, now);
         }
-        if (cashAccountId != null && journalAmount > 0) {
+        if (journalAmount > 0) {
           await txn.insert('transactions', {
             'account_id': cashAccountId,
             'journal_id': journalId,
@@ -231,7 +231,7 @@ class ExpenseRepository {
         // ── A-05: قبض (استرداد مصروف) — خصم من حساب المصروفات الأصلي ──
         // القيد الصحيح: مدين النقدية / دائن حساب المصروفات (تخفيض المصروف)
         // هذا يقلل المصروفات الفعلية بدلاً من إنشاء إيراد وهمي
-        if (cashAccountId != null && journalAmount > 0) {
+        if (journalAmount > 0) {
           await txn.insert('transactions', {
             'account_id': cashAccountId,
             'journal_id': journalId,
@@ -247,7 +247,7 @@ class ExpenseRepository {
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, journalAmount, 0.0, now);
         }
         // Credit the expense account to reduce the expense (reverse of disbursement)
-        if (expenseAccId != null && journalAmount > 0) {
+        if (journalAmount > 0) {
           await txn.insert('transactions', {
             'account_id': expenseAccId,
             'journal_id': journalId,

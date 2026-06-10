@@ -924,6 +924,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       return;
     }
 
+    if (!mounted) return;
     if (availableUnits.length <= 1) {
       // Only base unit - add directly (backwards compatible)
       try {
@@ -1055,89 +1056,6 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _addToCart(Product product) {
-    if (_vm.activeShift == null) {
-      context.showErrorSnackBar('يجب فتح وردية أولاً');
-      return;
-    }
-    // Stock validation – check if enough stock before adding
-    final existingIndex = _vm.cartItems.indexWhere((i) => i.productId == product.id);
-    final requestedQty = existingIndex >= 0 ? _vm.cartItems[existingIndex].quantity + 1 : 1;
-    final availableStock = product.currentStock;
-
-    // Show low stock warning but always allow adding to cart
-    if (availableStock < requestedQty) {
-      if (!product.allowNegative) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تنبيه: المخزون منخفض لـ ${product.nameAr} (${availableStock.toInt()})'),
-            backgroundColor: AppColors.warning,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-
-    _vm.addToCart(product);
-
-    // Expand cart sheet to show the item and action buttons
-    if (_sheetExtent < 0.5) {
-      _sheetController.animateTo(0.5,
-          duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
-    }
-  }
-
-  /// H6: Show low-stock warning dialog; user can proceed or cancel.
-  Future<void> _showLowStockWarning(
-    Product product,
-    int existingIndex,
-    int requestedQty,
-    double availableStock, {
-    Map<String, dynamic>? unitInfo,
-  }) async {
-    final proceed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.warning_amber, color: AppColors.warning),
-              const SizedBox(width: 8),
-              const Text('تحذير المخزون'),
-            ],
-          ),
-          content: Text(
-            'الكمية المتوفرة: ${availableStock.toInt()}، هل تريد المتابعة؟',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.warning,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('متابعة'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (proceed == true) {
-      if (unitInfo != null) {
-        _vm.addToCartDirect(product, unitInfo);
-      } else {
-        _vm.addToCart(product);
-      }
-    }
-  }
-
   /// Edit quantity for a cart item (delegates to extracted dialog)
   void _editQuantity(int index) async {
     await showEditQuantityDialog(context, _vm, index);
@@ -1173,10 +1091,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     // ── التحقق من سقف الدين للعميل عند البيع الآجل ──
     if (primaryMethod == 'credit' && _vm.selectedCustomerId != null) {
       final isOverCeiling = await locator<CustomerRepository>().isCustomerOverDebtCeiling(_vm.selectedCustomerId!, _vm.total, currency: _vm.selectedCurrency);
+      if (!mounted) return;
       if (isOverCeiling) {
-        if (mounted) {
-          context.showErrorSnackBar('تجاوز سقف الدين! لا يمكن إتمام البيع الآجل لهذا العميل');
-        }
+        context.showErrorSnackBar('تجاوز سقف الدين! لا يمكن إتمام البيع الآجل لهذا العميل');
         return;
       }
     }
@@ -1405,6 +1322,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       return;
     }
     await _vm.holdOrder();
+    if (!mounted) return;
     _searchController.clear();
     _isSearching = false;
     _sheetController.animateTo(0.12,

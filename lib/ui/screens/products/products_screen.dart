@@ -245,13 +245,14 @@ class _ProductsScreenState extends State<ProductsScreen>
                                 onPressed: () async {
                                   // Check if any products use this category before deleting
                                   final catId = cat['id'] as int;
+                                  final scaffoldMessenger = ScaffoldMessenger.of(context);
                                   try {
                                     final productsWithCategory = await locator<ProductRepository>().getProductsByCategoryId(catId);
                                     if (productsWithCategory.isNotEmpty) {
                                       final productNames = productsWithCategory.map((p) => p['name_ar'] as String? ?? '').join('، ');
                                       final extra = productsWithCategory.length > 5 ? ' وغيرها...' : '';
                                       if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        scaffoldMessenger.showSnackBar(
                                           SnackBar(
                                             content: Text('لا يمكن حذف التصنيف لأنه مستخدم في الأصناف: $productNames$extra'),
                                             backgroundColor: AppColors.error,

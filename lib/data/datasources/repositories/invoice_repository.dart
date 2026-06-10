@@ -37,7 +37,7 @@ class InvoiceRepository {
   }
 
   /// Save invoice and post journal entries to the chart of accounts.
-  /// [transportCharges] - optional transport charges that generate additional journal entries.
+  /// [transportChargesParam] - optional transport charges that generate additional journal entries.
   /// [deferPosting] - if true, skip journal entries (for POS deferred posting until shift close).
   Future<void> saveInvoiceWithJournalEntries(
     Map<String, dynamic> invoiceMap,
@@ -46,7 +46,7 @@ class InvoiceRepository {
     required String paymentMechanism,
     required bool isReturn,
     int? cashBoxId,
-    double transportCharges = 0.0,
+    double transportChargesParam = 0.0,
     bool deferPosting = false,
     double? paidAmount,
   }) async {
@@ -76,7 +76,9 @@ class InvoiceRepository {
 
       // ── Pre-compute discount & transport for stock distribution and journal entries ──
       final discountAmount = MoneyHelper.readMoney(invoiceMap['discount_amount']);
-      final transportCharges = MoneyHelper.readMoney(invoiceMap['transport_charges']);
+      final transportCharges = MoneyHelper.readMoney(invoiceMap['transport_charges']) > 0
+          ? MoneyHelper.readMoney(invoiceMap['transport_charges'])
+          : transportChargesParam;
 
       for (final item in items) {
         // Enrich item with unit_cost from product's average_cost if not already set
@@ -489,7 +491,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, netRevenueAmount, 0.0, now);
           }
-          if (yerTax.abs() >= 0.005 && vatPayableAccountId != null) {
+          if (yerTax.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': vatPayableAccountId,
               'journal_id': journalId,
@@ -522,7 +524,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, journalTotal, now);
           }
-          if (yerDiscount.abs() >= 0.005 && discountAllowedAccountId != null) {
+          if (yerDiscount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': discountAllowedAccountId,
               'journal_id': journalId,
@@ -578,7 +580,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, journalRemainingAmount, 0.0, now);
           }
-          if (yerDiscount.abs() >= 0.005 && discountAllowedAccountId != null) {
+          if (yerDiscount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': discountAllowedAccountId,
               'journal_id': journalId,
@@ -610,7 +612,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, netRevenueAmount, now);
           }
-          if (yerTax.abs() >= 0.005 && vatPayableAccountId != null) {
+          if (yerTax.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': vatPayableAccountId,
               'journal_id': journalId,
@@ -650,7 +652,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, journalTotal, 0.0, now);
           }
-          if (yerDiscount.abs() >= 0.005 && discountAllowedAccountId != null) {
+          if (yerDiscount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': discountAllowedAccountId,
               'journal_id': journalId,
@@ -682,7 +684,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, netRevenueAmount, now);
           }
-          if (yerTax.abs() >= 0.005 && vatPayableAccountId != null) {
+          if (yerTax.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': vatPayableAccountId,
               'journal_id': journalId,
@@ -724,7 +726,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, journalTotal, 0.0, now);
           }
-          if (yerDiscount.abs() >= 0.005 && discountEarnedAccountId != null) {
+          if (yerDiscount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': discountEarnedAccountId,
               'journal_id': journalId,
@@ -756,7 +758,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, netPurchaseCost, now);
           }
-          if (yerTax.abs() >= 0.005 && vatReceivableAccountId != null) {
+          if (yerTax.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': vatReceivableAccountId,
               'journal_id': journalId,
@@ -796,7 +798,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, netPurchaseCost, 0.0, now);
           }
-          if (yerTax.abs() >= 0.005 && vatReceivableAccountId != null) {
+          if (yerTax.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': vatReceivableAccountId,
               'journal_id': journalId,
@@ -844,7 +846,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, journalRemainingAmount, now);
           }
-          if (yerDiscount.abs() >= 0.005 && discountEarnedAccountId != null) {
+          if (yerDiscount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': discountEarnedAccountId,
               'journal_id': journalId,
@@ -883,7 +885,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, netPurchaseCost, 0.0, now);
           }
-          if (yerTax.abs() >= 0.005 && vatReceivableAccountId != null) {
+          if (yerTax.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': vatReceivableAccountId,
               'journal_id': journalId,
@@ -916,7 +918,7 @@ class InvoiceRepository {
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, journalTotal, now);
           }
-          if (yerDiscount.abs() >= 0.005 && discountEarnedAccountId != null) {
+          if (yerDiscount.abs() >= 0.005) {
             await txn.insert('transactions', {
               'account_id': discountEarnedAccountId,
               'journal_id': journalId,

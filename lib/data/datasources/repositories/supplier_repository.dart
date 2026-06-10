@@ -218,10 +218,10 @@ class SupplierRepository {
               final newJournalId = generateUniqueJournalId();
               if (newSigned > 0) {
                 // New is credit (له)
-                await _insertOpeningBalanceEntry(txn, newSuppliersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned, false, 'رصيد افتتاحي مورد (عملة جديدة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, newCurrency, newExchangeRate);
+                await _insertOpeningBalanceEntry(txn, newSuppliersAccountId, newOpeningBalanceAccountId, newJournalId, newSigned, false, 'رصيد افتتاحي مورد (عملة جديدة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, newCurrency, newExchangeRate);
               } else {
                 // New is debit (عليه)
-                await _insertOpeningBalanceEntry(txn, newSuppliersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي مورد (عملة جديدة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, newCurrency, newExchangeRate);
+                await _insertOpeningBalanceEntry(txn, newSuppliersAccountId, newOpeningBalanceAccountId, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي مورد (عملة جديدة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, newCurrency, newExchangeRate);
               }
             }
 
@@ -432,13 +432,6 @@ class SupplierRepository {
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
       }
     }
-  }
-
-  /// Legacy version kept for backward compatibility — wraps in its own transaction.
-  Future<void> _reverseOpeningBalanceOnDelete(Database db, int supplierId) async {
-    await db.transaction((txn) async {
-      await _reverseOpeningBalanceOnDeleteTxn(txn, supplierId);
-    });
   }
 
   /// Look up the exchange rate for a currency from the currencies table.

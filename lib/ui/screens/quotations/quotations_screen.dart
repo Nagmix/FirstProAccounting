@@ -11,16 +11,9 @@ import '../../../data/datasources/repositories/invoice_repository.dart';
 /// Helper class for quotation line items in the creation form.
 class _QuotationItem {
   int? productId;
-  String productName;
-  double quantity;
-  double unitPrice;
-
-  _QuotationItem({
-    this.productId,
-    this.productName = '',
-    this.quantity = 1.0,
-    this.unitPrice = 0.0,
-  });
+  String productName = '';
+  double quantity = 1.0;
+  double unitPrice = 0.0;
 
   double get total => quantity * unitPrice;
 }
@@ -117,28 +110,6 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
       }).toList();
     }
     setState(() => _filteredQuotations = filtered);
-  }
-
-  Future<void> _deleteQuotation(String id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('حذف عرض السعر'),
-        content: const Text('هل أنت متأكد من حذف عرض السعر هذا؟ لا يمكن التراجع عن هذا الإجراء.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await locator<OrderRepository>().deleteQuotation(id);
-      _loadData();
-    }
   }
 
   Future<void> _changeStatus(String id, String newStatus) async {
@@ -355,12 +326,6 @@ class _QuotationsScreenState extends State<QuotationsScreen> with SingleTickerPr
   }
 
   // ── Create Quotation Dialog ────────────────────────────────────
-
-  static const Map<String, String> _currencyLabels = {
-    'YER': 'ر.ي (ريال يمني)',
-    'SAR': 'ر.س (ريال سعودي)',
-    'USD': '\$ (دولار أمريكي)',
-  };
 
   void _showCreateQuotationDialog() {
     showModalBottomSheet(

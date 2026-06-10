@@ -76,12 +76,6 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
     return product.isNotEmpty ? product.first['name_ar'] as String : '';
   }
 
-  String? _getWarehouseName(int? id) {
-    if (id == null) return '';
-    final warehouse = _warehouses.where((w) => w['id'] == id).toList();
-    return warehouse.isNotEmpty ? warehouse.first['name'] as String : '';
-  }
-
   Future<void> _submitTransfer() async {
     if (_fromWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -118,16 +112,18 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
     // التحقق من الكمية المتاحة
     // Check warehouse-specific stock if source warehouse is selected
     if (_fromWarehouseId != null) {
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
       // Query stock in the specific source warehouse
       final warehouseStock = await locator<ProductRepository>().getProductStockInWarehouse(_selectedProductId!, _fromWarehouseId!);
+      if (!mounted) return;
       if (warehouseStock == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(content: Text('المنتج غير موجود في مخزن المصدر'), backgroundColor: AppColors.warning),
         );
         return;
       }
       if (quantity > warehouseStock) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(content: Text('الكمية المتاحة في المخزن $warehouseStock فقط'), backgroundColor: AppColors.warning),
         );
         return;
@@ -343,7 +339,6 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                   final stock = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
                                   final productWarehouseId = product['warehouse_id'] as int?;
                                   // Show warehouse-specific stock if source warehouse is selected
-                                  final displayStock = (_fromWarehouseId != null && productWarehouseId == _fromWarehouseId) ? stock : stock;
                                   final isInSourceWarehouse = _fromWarehouseId == null || productWarehouseId == _fromWarehouseId;
                                   return ListTile(
                                     dense: true,
@@ -512,7 +507,6 @@ class _TransferCard extends StatelessWidget {
     final toName = transfer['to_warehouse_name'] as String? ?? 'غير محدد';
     final productName = transfer['product_name'] as String? ?? 'غير محدد';
     final quantity = (transfer['quantity'] as num?)?.toDouble() ?? 0.0;
-    final date = transfer['date'] as String? ?? '';
     final transferNumber = transfer['transfer_number'] as String? ?? '';
 
     return Card(

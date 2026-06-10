@@ -579,6 +579,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           FilledButton(
             onPressed: () async {
+              final navigator = Navigator.of(ctx);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
               for (final c in currencies) {
                 final code = c['code'] as String;
                 final rate = double.tryParse(controllers[code]?.text ?? '1.0') ?? 1.0;
@@ -586,12 +588,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'exchange_rate': rate,
                 });
               }
-              Navigator.pop(ctx);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تم تحديث أسعار الصرف بنجاح'), backgroundColor: AppColors.success),
-                );
-              }
+              if (!mounted) return;
+              navigator.pop();
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(content: Text('تم تحديث أسعار الصرف بنجاح'), backgroundColor: AppColors.success),
+              );
             },
             child: const Text('حفظ'),
           ),

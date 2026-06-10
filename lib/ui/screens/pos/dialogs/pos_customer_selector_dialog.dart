@@ -11,6 +11,7 @@ import '../../../../data/datasources/repositories/customer_repository.dart';
 /// Shows the customer selector bottom sheet dialog.
 Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) async {
   final customers = await locator<CustomerRepository>().getAllCustomers();
+  if (!context.mounted) return;
   final searchController = TextEditingController();
 
   await showModalBottomSheet(

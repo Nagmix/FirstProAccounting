@@ -305,7 +305,6 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                       final variance = item['variance'] as double;
                       final isMatch = variance.abs() < 0.005;
                       final isPositive = variance > 0;
-                      final isNegative = variance < 0;
 
                       // تحديد اللون حسب نوع الفرق
                       Color varianceColor;
@@ -916,7 +915,6 @@ class _SessionCard extends StatelessWidget {
     final warehouseName = session['warehouse_name'] as String? ?? 'جميع المستودعات';
     final date = session['date'] as String? ?? '';
     final status = session['status'] as String? ?? 'draft';
-    final totalItems = (session['total_items'] as num?)?.toInt() ?? 0;
     final matched = (session['matched_items'] as num?)?.toInt() ?? 0;
     final mismatched = (session['mismatched_items'] as num?)?.toInt() ?? 0;
     final isCompleted = status == 'completed';

@@ -11,16 +11,9 @@ import '../../../data/datasources/repositories/product_repository.dart';
 /// Helper class for purchase order line items in the creation form.
 class _OrderItem {
   int? productId;
-  String productName;
-  double quantity;
-  double unitPrice;
-
-  _OrderItem({
-    this.productId,
-    this.productName = '',
-    this.quantity = 1.0,
-    this.unitPrice = 0.0,
-  });
+  String productName = '';
+  double quantity = 1.0;
+  double unitPrice = 0.0;
 
   double get total => quantity * unitPrice;
 }
@@ -331,12 +324,6 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> with Single
   }
 
   // ── Create Purchase Order Dialog ─────────────────────────────────
-
-  static const Map<String, String> _currencyLabels = {
-    'YER': 'ر.ي (ريال يمني)',
-    'SAR': 'ر.س (ريال سعودي)',
-    'USD': '\$ (دولار أمريكي)',
-  };
 
   void _showCreateOrderDialog() {
     showModalBottomSheet(

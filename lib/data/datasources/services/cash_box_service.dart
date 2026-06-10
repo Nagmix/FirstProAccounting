@@ -251,7 +251,7 @@ class CashBoxService {
     double obBalance = 0.0;
 
     // 11a. Try reference_id first (for data created after the fix)
-    if (cashBoxId != null) {
+    {
       final obByRef = await db.rawQuery('''
         SELECT
           COALESCE(SUM(t.debit), 0) AS total_debit,

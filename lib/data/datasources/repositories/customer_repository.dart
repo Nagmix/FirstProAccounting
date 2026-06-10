@@ -241,10 +241,10 @@ class CustomerRepository {
               final newJournalId = generateUniqueJournalId();
               if (newSigned > 0) {
                 // New is credit (له)
-                await _insertOpeningBalanceEntry(txn, newCustomersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned, false, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, newExchangeRate);
+                await _insertOpeningBalanceEntry(txn, newCustomersAccountId, newOpeningBalanceAccountId, newJournalId, newSigned, false, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, newExchangeRate);
               } else {
                 // New is debit (عليه)
-                await _insertOpeningBalanceEntry(txn, newCustomersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, newExchangeRate);
+                await _insertOpeningBalanceEntry(txn, newCustomersAccountId, newOpeningBalanceAccountId, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, newExchangeRate);
               }
             }
 
@@ -488,13 +488,6 @@ class CustomerRepository {
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
       }
     }
-  }
-
-  /// Legacy version kept for backward compatibility — wraps in its own transaction.
-  Future<void> _reverseOpeningBalanceOnDelete(Database db, int customerId) async {
-    await db.transaction((txn) async {
-      await _reverseOpeningBalanceOnDeleteTxn(txn, customerId);
-    });
   }
 
   Future<int> getCustomerCount() async {

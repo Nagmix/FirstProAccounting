@@ -1274,6 +1274,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                             double.tryParse(closingAmountController.text) ?? expectedAmount;
                         final difference = closingAmount - expectedAmount;
                         final now = DateTime.now();
+                        final navigator = Navigator.of(ctx);
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
                         try {
                           // Step 1: Post all shift invoices
                           await locator<ShiftService>().postShiftInvoices(shiftId);
@@ -1293,14 +1295,14 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                           await locator<ShiftService>().closeShift(shiftId, closeData);
 
                           if (!mounted) return;
-                          Navigator.pop(ctx); // Close bottom sheet
+                          navigator.pop(); // Close bottom sheet
 
                           // Show result dialog
                           _showCloseResultDialog(expectedAmount, closingAmount, difference, symbol);
                         } catch (e) {
                           if (!mounted) return;
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          navigator.pop();
+                          scaffoldMessenger.showSnackBar(
                             SnackBar(
                               content: Text('حدث خطأ أثناء إقفال الوردية'),
                               backgroundColor: AppColors.error,

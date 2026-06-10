@@ -507,39 +507,35 @@ class StockService {
                 });
                 await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveInventoryAccountId, adjustmentAmount, 0.0, now);
               }
-              if (varianceIncomeAccountId != null) {
-                await txn.insert('transactions', {
-                  'account_id': varianceIncomeAccountId,
-                  'journal_id': journalId,
-                  'debit': 0,
-                  'credit': MoneyHelper.toCents(adjustmentAmount),
-                  'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
-                  'date': now,
-                  'created_at': now,
-                  'currency_code': 'YER',
-                  'exchange_rate': 1.0,
-                  'amount_base': MoneyHelper.toCents(adjustmentAmount),
-                });
-                await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, adjustmentAmount, now);
-              }
+              await txn.insert('transactions', {
+                'account_id': varianceIncomeAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(adjustmentAmount),
+                'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
+                'date': now,
+                'created_at': now,
+                'currency_code': 'YER',
+                'exchange_rate': 1.0,
+                'amount_base': MoneyHelper.toCents(adjustmentAmount),
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, adjustmentAmount, now);
             } else {
               // نقص مخزون: مدين = خسارة تفاوت الجرد، دائن = المخزون
               final lossAmount = adjustmentAmount.abs();
-              if (varianceLossAccountId != null) {
-                await txn.insert('transactions', {
-                  'account_id': varianceLossAccountId,
-                  'journal_id': journalId,
-                  'debit': MoneyHelper.toCents(lossAmount),
-                  'credit': 0,
-                  'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
-                  'date': now,
-                  'created_at': now,
-                  'currency_code': 'YER',
-                  'exchange_rate': 1.0,
-                  'amount_base': MoneyHelper.toCents(lossAmount),
-                });
-                await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, lossAmount, 0.0, now);
-              }
+              await txn.insert('transactions', {
+                'account_id': varianceLossAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(lossAmount),
+                'credit': 0,
+                'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
+                'date': now,
+                'created_at': now,
+                'currency_code': 'YER',
+                'exchange_rate': 1.0,
+                'amount_base': MoneyHelper.toCents(lossAmount),
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, lossAmount, 0.0, now);
               if (effectiveInventoryAccountId != null) {
                 await txn.insert('transactions', {
                   'account_id': effectiveInventoryAccountId,
@@ -785,40 +781,36 @@ class StockService {
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
         }
-        if (varianceIncomeAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': varianceIncomeAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(totalIncreaseValue),
-            'description': 'سند جرد - زيادة مخزون',
-            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
-            'created_at': now,
-            'currency_code': currency,
-            'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
-            'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * voucherRate).round(),
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
-        }
+        await txn.insert('transactions', {
+          'account_id': varianceIncomeAccountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(totalIncreaseValue),
+          'description': 'سند جرد - زيادة مخزون',
+          'date': voucherMap['date'] as String? ?? now.substring(0, 10),
+          'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
+          'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * voucherRate).round(),
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
       }
 
       // C-05: قيود نقص المخزون — مدين خسارة تفاوت الجرد / دائن المخزون
       if (totalDecreaseValue > 0) {
-        if (varianceLossAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': varianceLossAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(totalDecreaseValue),
-            'credit': 0,
-            'description': 'سند جرد - نقص مخزون',
-            'date': voucherMap['date'] as String? ?? now.substring(0, 10),
-            'created_at': now,
-            'currency_code': currency,
-            'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
-            'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * voucherRate).round(),
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
-        }
+        await txn.insert('transactions', {
+          'account_id': varianceLossAccountId,
+          'journal_id': journalId,
+          'debit': MoneyHelper.toCents(totalDecreaseValue),
+          'credit': 0,
+          'description': 'سند جرد - نقص مخزون',
+          'date': voucherMap['date'] as String? ?? now.substring(0, 10),
+          'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
+          'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * voucherRate).round(),
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
         if (inventoryAccount != null) {
           final invAccId = inventoryAccount['id'] as int;
           await txn.insert('transactions', {
@@ -1193,40 +1185,36 @@ class StockService {
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
         }
-        if (varianceIncomeAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': varianceIncomeAccountId,
-            'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(totalIncreaseValue),
-            'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
-            'date': voucherDate,
-            'created_at': now,
-            'currency_code': currency,
-            'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
-            'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
-        }
+        await txn.insert('transactions', {
+          'account_id': varianceIncomeAccountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': MoneyHelper.toCents(totalIncreaseValue),
+          'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
+          'date': voucherDate,
+          'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
+          'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
       }
 
       // C-05: قيود نقص المخزون — مدين خسارة تفاوت الجرد / دائن المخزون
       if (totalDecreaseValue > 0) {
-        if (varianceLossAccountId != null) {
-          await txn.insert('transactions', {
-            'account_id': varianceLossAccountId,
-            'journal_id': journalId,
-            'debit': MoneyHelper.toCents(totalDecreaseValue),
-            'credit': 0,
-            'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
-            'date': voucherDate,
-            'created_at': now,
-            'currency_code': currency,
-            'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
-            'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
-          });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
-        }
+        await txn.insert('transactions', {
+          'account_id': varianceLossAccountId,
+          'journal_id': journalId,
+          'debit': MoneyHelper.toCents(totalDecreaseValue),
+          'credit': 0,
+          'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
+          'date': voucherDate,
+          'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
+          'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
         if (inventoryAccount != null) {
           final invAccId = inventoryAccount['id'] as int;
           await txn.insert('transactions', {

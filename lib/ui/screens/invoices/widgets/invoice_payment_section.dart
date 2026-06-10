@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/utils/money_helper.dart';
 
 /// Extracted payment section widget for the CreateInvoiceScreen.
 ///

@@ -801,7 +801,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       paymentMechanism: effectivePaymentMechanism,
       isReturn: _vm.isReturn,
       cashBoxId: _vm.paymentMechanism == 'cash' ? _vm.selectedCashBoxId : null,
-      transportCharges: _transportCharges,
+      transportChargesParam: _transportCharges,
       paidAmount: effectivePaidAmount,
     );
 

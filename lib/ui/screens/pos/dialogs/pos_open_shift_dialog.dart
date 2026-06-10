@@ -24,6 +24,7 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
   final cashierNameController = TextEditingController(text: vm.cashierName);
   final notesController = TextEditingController();
 
+  if (!context.mounted) return;
   await showModalBottomSheet(
     context: context,
     isScrollControlled: true,

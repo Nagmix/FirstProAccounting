@@ -319,6 +319,7 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
       // If pre-check fails, let the actual delete handle it
     }
 
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

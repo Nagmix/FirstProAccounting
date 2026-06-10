@@ -420,7 +420,7 @@ class ReportService {
         SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
                SUM(total) AS total
         FROM invoices
-        WHERE type = 'sale' AND is_return = 0
+        WHERE type IN ('sale','pos') AND is_return = 0
           AND strftime('%Y', created_at) = ?
           $salesCurrencyFilter
         GROUP BY month
@@ -456,14 +456,14 @@ class ReportService {
     final revenueData = await db.rawQuery('''
       SELECT
         CASE
-          WHEN type = 'sale' AND is_return = 0 THEN 'مبيعات'
+          WHEN type IN ('sale','pos') AND is_return = 0 THEN 'مبيعات'
           WHEN type = 'purchase' AND is_return = 1 THEN 'مرتجع مشتريات'
           ELSE 'أخرى'
         END AS category,
         SUM(total) AS total,
         'إيرادات' AS type
       FROM invoices
-      WHERE (type = 'sale' AND is_return = 0 OR type = 'purchase' AND is_return = 1)
+      WHERE (type IN ('sale','pos') AND is_return = 0 OR type = 'purchase' AND is_return = 1)
         AND strftime('%Y', created_at) = ?
         $currencyFilter
       GROUP BY category
@@ -508,7 +508,7 @@ class ReportService {
     return await db.rawQuery('''
       SELECT date(created_at) AS date, COALESCE(SUM(total), 0.0) AS total
       FROM invoices
-      WHERE type = 'sale' AND is_return = 0
+      WHERE type IN ('sale','pos') AND is_return = 0
         AND date(created_at) >= ?
         $currencyFilter
       GROUP BY date(created_at)
@@ -532,7 +532,7 @@ class ReportService {
         SUM(ii.total_price) AS total_amount
       FROM invoice_items ii
       JOIN invoices i ON ii.invoice_id = i.id
-      WHERE i.type = 'sale' AND i.is_return = 0
+      WHERE i.type IN ('sale','pos') AND i.is_return = 0
         $currencyFilter
       GROUP BY ii.product_name
       ORDER BY total_amount DESC
@@ -575,7 +575,7 @@ class ReportService {
         SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
                SUM(paid_amount) AS inflow
         FROM invoices
-        WHERE type = 'sale' AND is_return = 0 AND paid_amount > 0
+        WHERE type IN ('sale','pos') AND is_return = 0 AND paid_amount > 0
           AND strftime('%Y', created_at) = ?
           $currencyFilter
         GROUP BY month

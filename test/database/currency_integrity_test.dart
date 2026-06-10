@@ -61,26 +61,6 @@ void main() {
     });
   }
 
-  /// Helper: create a cash box for testing.
-  Future<int> _insertCashBox({
-    String name = 'صندوق اختبار',
-    String currency = 'YER',
-    int? linkedAccountId,
-  }) async {
-    final now = DateTime.now().toIso8601String();
-    return await db.insert('cash_boxes', {
-      'name': name,
-      'type': 'cash_box',
-      'currency': currency,
-      'balance': MoneyHelper.toCents(50000.0),
-      'balance_type': 'credit',
-      'linked_account_id': linkedAccountId,
-      'is_active': 1,
-      'created_at': now,
-      'updated_at': now,
-    });
-  }
-
   /// Helper: count transactions with NULL currency_code.
   Future<int> _countNullCurrencyCode() async {
     final result = await db.rawQuery(

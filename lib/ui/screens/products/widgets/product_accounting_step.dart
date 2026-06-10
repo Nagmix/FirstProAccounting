@@ -59,7 +59,6 @@ class ProductAccountingStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLocked = false; // Allow editing accounts in edit mode
     final taxRate = double.tryParse(taxRateController.text) ?? 0.0;
     final showVatAccount = taxRate > 0;
 
@@ -122,7 +121,7 @@ class ProductAccountingStep extends StatelessWidget {
                     ),
                   ))
               .toList(),
-          onChanged: isLocked ? null : (v) => onSalesAccountChanged(v),
+          onChanged: onSalesAccountChanged,
         ),
         const SizedBox(height: 14),
 
@@ -143,7 +142,7 @@ class ProductAccountingStep extends StatelessWidget {
                     ),
                   ))
               .toList(),
-          onChanged: isLocked ? null : (v) => onPurchaseAccountChanged(v),
+          onChanged: onPurchaseAccountChanged,
         ),
         const SizedBox(height: 14),
 
@@ -164,7 +163,7 @@ class ProductAccountingStep extends StatelessWidget {
                     ),
                   ))
               .toList(),
-          onChanged: isLocked ? null : (v) => onInventoryAccountChanged(v),
+          onChanged: onInventoryAccountChanged,
         ),
         const SizedBox(height: 14),
 
@@ -185,7 +184,7 @@ class ProductAccountingStep extends StatelessWidget {
                     ),
                   ))
               .toList(),
-          onChanged: isLocked ? null : (v) => onCogsAccountChanged(v),
+          onChanged: onCogsAccountChanged,
         ),
         const SizedBox(height: 14),
 
@@ -261,7 +260,7 @@ class ProductAccountingStep extends StatelessWidget {
                       ),
                     ))
                 .toList(),
-            onChanged: isLocked ? null : (v) => onVatAccountChanged(v),
+            onChanged: onVatAccountChanged,
           ),
           const SizedBox(height: 14),
 

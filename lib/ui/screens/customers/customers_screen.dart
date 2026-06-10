@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
@@ -8,7 +7,6 @@ import '../../../core/helpers/currency_constants.dart';
 import '../../../core/helpers/avatar_helper.dart';
 import '../../../core/helpers/delete_helper.dart';
 import '../../../data/datasources/repositories/customer_repository.dart';
-import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/models/customer_model.dart';
 import '../../widgets/empty_state.dart';
 import 'add_customer_sheet.dart';

@@ -841,7 +841,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                           labelText: 'الرصيد الافتتاحي',
                           prefixIcon: const Icon(Icons.calculate),
                           suffixText: _currencyInfo[_openingBalanceCurrency]
-                                  ?['symbol'] as String? ??
+                                  ?['symbol'] ??
                               AppConstants.currency,
                         ),
                       ),

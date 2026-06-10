@@ -590,24 +590,24 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
     if (choice == null || !mounted) return;
 
     try {
-      String filePath;
+      String _;
 
       switch (choice) {
         case 'accounts':
           final accounts = await locator<AccountRepository>().getAllAccounts();
-          filePath = await ExcelExporter.exportAccountsToExcel(accounts);
+          _ = await ExcelExporter.exportAccountsToExcel(accounts);
           break;
         case 'invoices':
           final invoices = await locator<InvoiceRepository>().getAllInvoices();
-          filePath = await ExcelExporter.exportInvoicesToExcel(invoices);
+          _ = await ExcelExporter.exportInvoicesToExcel(invoices);
           break;
         case 'inventory':
           final products = await locator<ProductRepository>().getAllProducts();
-          filePath = await ExcelExporter.exportInventoryToExcel(products);
+          _ = await ExcelExporter.exportInventoryToExcel(products);
           break;
         case 'transactions':
           final transactions = await locator<ReportService>().getAllTransactionsForExport();
-          filePath = await ExcelExporter.exportTransactionsToExcel(transactions);
+          _ = await ExcelExporter.exportTransactionsToExcel(transactions);
           break;
         default:
           return;

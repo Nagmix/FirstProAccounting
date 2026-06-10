@@ -192,7 +192,7 @@ void main() {
       final now = DateTime.now().toIso8601String();
       final cashAcc = await _insertAccount(code: '8031', type: 'ASSET', balanceType: 'debit');
       final revenueAcc = await _insertAccount(code: '8032', type: 'REVENUE', balanceType: 'credit');
-      final expenseAcc = await _insertAccount(code: '8033', type: 'EXPENSE', balanceType: 'debit');
+      await _insertAccount(code: '8033', type: 'EXPENSE', balanceType: 'debit');
 
       // Create several balanced journal entries
       final amounts = [1000.0, 2500.0, 7500.0, 15000.0];
@@ -511,7 +511,7 @@ void main() {
       });
 
       // Verify base amounts balance in YER
-      final result = await db.rawQuery(
+      await db.rawQuery(
         'SELECT CAST(COALESCE(SUM(amount_base), 0) AS INTEGER) AS total_base '
         'FROM transactions WHERE journal_id = ?',
         [journalId],

@@ -323,6 +323,7 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
               ? 'تعديل رمز القفل المكون من 4 أرقام'
               : 'تعيين رمز PIN من 4 أرقام لحماية التطبيق',
           onTap: () async {
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
             final pin = await _showPinDialog(isSetting: true);
             if (pin != null && pin.length == 4) {
               await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
@@ -341,14 +342,13 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
                 }
                 widget.onPinEnabledChanged(true);
               }
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('تم حفظ رمز PIN بنجاح'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              }
+              if (!mounted) return;
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(
+                  content: Text('تم حفظ رمز PIN بنجاح'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
             }
           },
           isDark: widget.isDark,

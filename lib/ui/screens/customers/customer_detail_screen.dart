@@ -299,13 +299,13 @@ class _CustomerDetailScreenState extends EntityDetailState<CustomerDetailScreen>
           final obCurrency = customer.currency ?? 'YER';
           final isCredit = openingAmount > 0;
           movements.insert(0, {
-            'id': 'opening_balance', 'date': customer.createdAt ?? DateTime.now().toIso8601String(),
+            'id': 'opening_balance', 'date': customer.createdAt.toIso8601String(),
             'type': 'opening_balance', 'type_ar': 'رصيد افتتاحي', 'filter_key': 'opening_balance',
             'icon': Icons.account_balance_wallet, 'color': AppColors.accentBlue,
             'description': 'رصيد افتتاحي (${isCredit ? "له" : "عليه"})',
             'debit': isCredit ? 0.0 : openingAmount.abs(), 'credit': isCredit ? openingAmount.abs() : 0.0,
             'currency': obCurrency, 'source': 'opening_balance', 'voucher_type': null,
-            'created_at': customer.createdAt ?? DateTime.now().toIso8601String(),
+            'created_at': customer.createdAt.toIso8601String(),
           });
         }
       }

@@ -1078,7 +1078,6 @@ void main() {
       });
 
       test('empty list results in zero total', () {
-        final boxes = <Map<String, dynamic>>[];
         double total = 0.0;
         expect(total, equals(0.0));
       });

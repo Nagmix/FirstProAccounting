@@ -34,7 +34,6 @@ class _DebtsScreenState extends State<DebtsScreen>
   // ── Computed currency balances ──────────────────────────────────────
   Map<int, double> _customerCurrencyBalances = {};
   Map<int, double> _supplierCurrencyBalances = {};
-  bool _isBalancesLoading = false;
 
   // ── Filters ───────────────────────────────────────────────────────
   String _selectedCurrency = 'الكل';
@@ -90,7 +89,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   // ── Currency balance loading (computed per-currency) ──────────────
   Future<void> _loadCurrencyBalances() async {
     if (_selectedCurrency == 'الكل') return; // No specific currency selected, use stored balances
-    setState(() => _isBalancesLoading = true);
+    setState(() {});
 
     final customerRepo = locator<CustomerRepository>();
     final supplierRepo = locator<SupplierRepository>();
@@ -128,7 +127,6 @@ class _DebtsScreenState extends State<DebtsScreen>
       setState(() {
         _customerCurrencyBalances = newCustomerBalances;
         _supplierCurrencyBalances = newSupplierBalances;
-        _isBalancesLoading = false;
       });
     }
   }

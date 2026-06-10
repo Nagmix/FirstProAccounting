@@ -8,7 +8,6 @@ import '../../../core/utils/excel_exporter.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
 import '../../screens/settings/bluetooth_printer_settings_screen.dart';
 
@@ -228,7 +227,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
     if (_periodFilter != 3) {
       final now = DateTime.now();
       filtered = filtered.where((m) {
-        final dateStr = m['date'] as String;
+        final dateStr = m['date'] as String?;
+        if (dateStr == null) return true; // Skip entries with missing dates
         try {
           final date = DateTime.parse(dateStr);
           switch (_periodFilter) {
@@ -252,11 +252,12 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
     // 4. Date range filter
     if (_dateRange != null) {
       filtered = filtered.where((m) {
-        final dateStr = m['date'] as String;
+        final dateStr = m['date'] as String?;
+        if (dateStr == null) return true; // Skip entries with missing dates
         try {
           final date = DateTime.parse(dateStr);
           return !date.isBefore(_dateRange!.start) &&
-              !date.isAfter(
+              date.isBefore(
                   _dateRange!.end.add(const Duration(days: 1)));
         } catch (_) {
           return true;
@@ -1566,8 +1567,6 @@ class _MovementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     final icon = movement['icon'] as IconData? ?? Icons.description;
     final color = movement['color'] as Color? ?? AppColors.textSecondary;
     final description =
