@@ -130,6 +130,7 @@ class InvoiceRepository {
         for (final item in items) {
           final productId = (item['product_id'] as num?)?.toInt();
           final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          double itemTransportShareBase = 0.0;
           // Use base_quantity for stock deduction (always in base unit)
           // Falls back to quantity for backward compat with old invoice items
           final baseQuantity =
@@ -214,7 +215,6 @@ class InvoiceRepository {
               final productRow = await txn.query('products',
                   where: 'id = ?', whereArgs: [productId], limit: 1);
 
-              double itemTransportShareBase = 0.0;
               if (transportCharges > 0 && totalBaseQuantityForTransport > 0) {
                 // transportCharges here is in invoice currency
                 final double totalTransportBase =

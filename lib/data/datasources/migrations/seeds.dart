@@ -154,8 +154,8 @@ class DatabaseSeeds {
   }
 
   /// Seed accounts for a specific currency if they don't already exist.
-  static Future<void> seedAccountsForCurrency(Database db, String currencyCode,
-      String currencySymbol, int codeOffset) async {
+  static Future<void> seedAccountsForCurrency(DatabaseExecutor db,
+      String currencyCode, String currencySymbol, int codeOffset) async {
     final now = DateTime.now().toIso8601String();
 
     final baseCode = 1000 + codeOffset;
