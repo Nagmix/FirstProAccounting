@@ -30,6 +30,30 @@ class DateFormatter {
         '${date.minute.toString().padLeft(2, '0')}';
   }
 
+  /// (B-1/A-5) يبني timestamp كامل للتخزين من اليوم الذي اختاره
+  /// المستخدم + وقت اللحظة الحالية، بصيغة ISO-8601.
+  ///
+  /// الجذر التاريخي: شاشات السندات كانت تخزن `date` بصيغة يوم-فقط
+  /// (`2026-06-10`) بينما بقية النظام يخزن timestamp كاملاً، مما كسر
+  /// الفرز الزمني والرصيد التراكمي عند اختلاط الصيغتين في نفس اليوم.
+  ///
+  /// القاعدة المعتمدة: التاريخ المحاسبي = اليوم الذي اختاره المستخدم
+  /// (يُحترم حتى لو كان ماضياً)، والوقت = لحظة الحفظ الفعلية — فيبقى
+  /// الترتيب داخل اليوم الواحد بترتيب الإدخال الحقيقي.
+  static String storageTimestamp(DateTime selectedDay, {DateTime? now}) {
+    final t = now ?? DateTime.now();
+    return DateTime(
+      selectedDay.year,
+      selectedDay.month,
+      selectedDay.day,
+      t.hour,
+      t.minute,
+      t.second,
+      t.millisecond,
+      t.microsecond,
+    ).toIso8601String();
+  }
+
   /// Returns a time-of-day greeting in Arabic.
   ///
   /// - Before 12:00 → `'صباح الخير'`

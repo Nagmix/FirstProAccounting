@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
@@ -158,9 +160,7 @@ class _CreateReceiptPaymentVoucherScreenState
 
     // Filter by entity type
     if (_selectedEntityFilter != 'all') {
-      result = result
-          .where((e) => e['type'] == _selectedEntityFilter)
-          .toList();
+      result = result.where((e) => e['type'] == _selectedEntityFilter).toList();
     }
 
     // Filter by search query
@@ -283,10 +283,12 @@ class _CreateReceiptPaymentVoucherScreenState
       final autoMappingService = locator<VoucherAutoMappingService>();
 
       final amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
-      final dateStr = _selectedDate.toIso8601String().split('T').first;
+      // B-1/A-5: store a FULL timestamp (selected day + current time) so
+      // chronological sorting and running balances work across all
+      // movement types. Day-only storage broke ordering vs full timestamps.
+      final dateStr = DateFormatter.storageTimestamp(_selectedDate);
       final entityId = (_selectedEntity!['id'] as num?)?.toInt() ?? 0;
-      final entityAccountId =
-          (_selectedEntity!['account_id'] as num?)?.toInt();
+      final entityAccountId = (_selectedEntity!['account_id'] as num?)?.toInt();
 
       await autoMappingService.createReceiptPaymentVoucher(
         voucherType: _isReceipt ? 'receipt' : 'payment',
@@ -351,11 +353,9 @@ class _CreateReceiptPaymentVoucherScreenState
   //  Helpers
   // ════════════════════════════════════════════════════════════════
 
-  Color get _typeColor =>
-      _isReceipt ? AppColors.success : AppColors.error;
+  Color get _typeColor => _isReceipt ? AppColors.success : AppColors.error;
 
-  String get _title =>
-      _isReceipt ? 'سند قبض' : 'سند صرف';
+  String get _title => _isReceipt ? 'سند قبض' : 'سند صرف';
 
   String _getEntityTypeName(String? type) {
     if (type == null) return '';
@@ -618,8 +618,7 @@ class _CreateReceiptPaymentVoucherScreenState
     return AnimatedBuilder(
       animation: _typeAnimController,
       builder: (context, child) {
-        final animatedColor =
-            _typeColorAnimation.value ?? _typeColor;
+        final animatedColor = _typeColorAnimation.value ?? _typeColor;
 
         return Container(
           padding: const EdgeInsets.all(4),
@@ -667,9 +666,8 @@ class _CreateReceiptPaymentVoucherScreenState
                           'قبض',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: _isReceipt
-                                ? FontWeight.w700
-                                : FontWeight.w500,
+                            fontWeight:
+                                _isReceipt ? FontWeight.w700 : FontWeight.w500,
                             color: _isReceipt
                                 ? AppColors.success
                                 : AppColors.textSecondary,
@@ -713,9 +711,8 @@ class _CreateReceiptPaymentVoucherScreenState
                           'صرف',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: !_isReceipt
-                                ? FontWeight.w700
-                                : FontWeight.w500,
+                            fontWeight:
+                                !_isReceipt ? FontWeight.w700 : FontWeight.w500,
                             color: !_isReceipt
                                 ? AppColors.error
                                 : AppColors.textSecondary,
@@ -765,9 +762,8 @@ class _CreateReceiptPaymentVoucherScreenState
                 border: isSelected
                     ? Border.all(color: _typeColor, width: 1.5)
                     : Border.all(
-                        color: isDark
-                            ? AppColors.darkBorder
-                            : AppColors.divider,
+                        color:
+                            isDark ? AppColors.darkBorder : AppColors.divider,
                       ),
               ),
               child: Center(
@@ -775,8 +771,7 @@ class _CreateReceiptPaymentVoucherScreenState
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight:
-                        isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: isSelected
                         ? _typeColor
                         : isDark
@@ -825,9 +820,8 @@ class _CreateReceiptPaymentVoucherScreenState
               )
             : null,
         filled: true,
-        fillColor: isDark
-            ? AppColors.darkSurfaceVariant
-            : AppColors.surfaceVariant,
+        fillColor:
+            isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 10,
@@ -866,9 +860,7 @@ class _CreateReceiptPaymentVoucherScreenState
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurfaceVariant
-            : AppColors.surfaceVariant,
+        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? AppColors.darkBorder : AppColors.divider,
@@ -880,13 +872,10 @@ class _CreateReceiptPaymentVoucherScreenState
           hint: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Text(
-              _filteredEntities.isEmpty
-                  ? 'لا توجد حسابات'
-                  : 'اختر الحساب',
+              _filteredEntities.isEmpty ? 'لا توجد حسابات' : 'اختر الحساب',
               style: TextStyle(
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.textHint,
+                color:
+                    isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                 fontSize: 14,
               ),
             ),
@@ -895,9 +884,8 @@ class _CreateReceiptPaymentVoucherScreenState
           padding: const EdgeInsets.symmetric(horizontal: 12),
           icon: Icon(
             Icons.arrow_drop_down,
-            color: isDark
-                ? AppColors.darkTextSecondary
-                : AppColors.textSecondary,
+            color:
+                isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
           ),
           items: _filteredEntities.map((entity) {
             final id = (entity['id'] as num?)?.toInt();
@@ -984,8 +972,7 @@ class _CreateReceiptPaymentVoucherScreenState
               orElse: () => <String, dynamic>{},
             );
             setState(() {
-              _selectedEntity =
-                  entity.isNotEmpty ? entity : null;
+              _selectedEntity = entity.isNotEmpty ? entity : null;
             });
           },
         ),
@@ -1035,16 +1022,14 @@ class _CreateReceiptPaymentVoucherScreenState
     // If not, treat as null to avoid DropdownButton assertion error
     int? effectiveCashBoxId = _selectedCashBoxId;
     if (effectiveCashBoxId != null &&
-        !filtered.any((cb) =>
-            (cb['id'] as num?)?.toInt() == effectiveCashBoxId)) {
+        !filtered
+            .any((cb) => (cb['id'] as num?)?.toInt() == effectiveCashBoxId)) {
       effectiveCashBoxId = null;
     }
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurfaceVariant
-            : AppColors.surfaceVariant,
+        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? AppColors.darkBorder : AppColors.divider,
@@ -1058,9 +1043,8 @@ class _CreateReceiptPaymentVoucherScreenState
             child: Text(
               'اختر حساب الصندوق',
               style: TextStyle(
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.textHint,
+                color:
+                    isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                 fontSize: 14,
               ),
             ),
@@ -1069,9 +1053,8 @@ class _CreateReceiptPaymentVoucherScreenState
           padding: const EdgeInsets.symmetric(horizontal: 12),
           icon: Icon(
             Icons.arrow_drop_down,
-            color: isDark
-                ? AppColors.darkTextSecondary
-                : AppColors.textSecondary,
+            color:
+                isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
           ),
           items: filtered.map((cb) {
             final id = (cb['id'] as num?)?.toInt();
@@ -1085,7 +1068,9 @@ class _CreateReceiptPaymentVoucherScreenState
               child: Row(
                 children: [
                   Icon(
-                    isBank ? Icons.account_balance : Icons.account_balance_wallet,
+                    isBank
+                        ? Icons.account_balance
+                        : Icons.account_balance_wallet,
                     size: 18,
                     color: _typeColor,
                   ),
@@ -1159,9 +1144,8 @@ class _CreateReceiptPaymentVoucherScreenState
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.darkSurfaceVariant
-              : AppColors.surfaceVariant,
+          color:
+              isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark ? AppColors.darkBorder : AppColors.divider,
@@ -1175,17 +1159,14 @@ class _CreateReceiptPaymentVoucherScreenState
               _selectedDate.toIso8601String().split('T').first,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
+                color:
+                    isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
             ),
             const Spacer(),
             Icon(
               Icons.arrow_drop_down,
-              color: isDark
-                  ? AppColors.darkTextSecondary
-                  : AppColors.textHint,
+              color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
             ),
           ],
         ),
@@ -1216,9 +1197,8 @@ class _CreateReceiptPaymentVoucherScreenState
           ),
         ),
         filled: true,
-        fillColor: isDark
-            ? AppColors.darkSurfaceVariant
-            : AppColors.surfaceVariant,
+        fillColor:
+            isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -1246,14 +1226,17 @@ class _CreateReceiptPaymentVoucherScreenState
   Widget _buildCurrencySelector(ThemeData theme, bool isDark) {
     // قائمة منسدلة احترافية مع العملات من قاعدة البيانات
     return DropdownButtonFormField<String>(
-      value: _currencies.any((c) => c['code'] == _selectedCurrency) ? _selectedCurrency : null,
+      value: _currencies.any((c) => c['code'] == _selectedCurrency)
+          ? _selectedCurrency
+          : null,
       decoration: InputDecoration(
         labelText: 'العملة',
         prefixIcon: Icon(Icons.currency_exchange, size: 20, color: _typeColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         isDense: true,
       ),
       items: _currencies.map((c) {
@@ -1265,10 +1248,12 @@ class _CreateReceiptPaymentVoucherScreenState
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(symbol, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              Text(symbol,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
               const SizedBox(width: 6),
               Flexible(
-                child: Text(nameAr, overflow: TextOverflow.ellipsis,
+                child: Text(nameAr,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12)),
               ),
             ],
@@ -1331,9 +1316,8 @@ class _CreateReceiptPaymentVoucherScreenState
           ),
         ),
         filled: true,
-        fillColor: isDark
-            ? AppColors.darkSurfaceVariant
-            : AppColors.surfaceVariant,
+        fillColor:
+            isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

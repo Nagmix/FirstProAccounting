@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/movement_sorter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/supplier_repository.dart';
 import '../../../data/datasources/database_helper.dart';
@@ -22,7 +23,8 @@ class SupplierDetailScreen extends StatefulWidget {
   State<SupplierDetailScreen> createState() => _SupplierDetailScreenState();
 }
 
-class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen> {
+class _SupplierDetailScreenState
+    extends EntityDetailState<SupplierDetailScreen> {
   // Supplier data (refreshable) — local field not in base class
   Supplier? _freshSupplier;
 
@@ -30,20 +32,20 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
 
   @override
   List<FilterTab> get filterTabs => const [
-    FilterTab(key: 'all', label: 'جميع الحركات والفواتير'),
-    FilterTab(key: 'opening_balance', label: 'رصيد افتتاحي'),
-    FilterTab(key: 'debit', label: 'عليه'),
-    FilterTab(key: 'credit', label: 'له'),
-    FilterTab(key: 'payment_voucher', label: 'سند صرف'),
-    FilterTab(key: 'receipt_voucher', label: 'سند قبض'),
-    FilterTab(key: 'general_entry', label: 'قيد عام'),
-    FilterTab(key: 'outgoing_transfer', label: 'حوالة صادرة'),
-    FilterTab(key: 'incoming_transfer', label: 'حوالة وارده'),
-    FilterTab(key: 'sales', label: 'مبيعات فقط'),
-    FilterTab(key: 'purchases', label: 'مشتريات فقط'),
-    FilterTab(key: 'returns', label: 'مرتجع'),
-    FilterTab(key: 'compound_entry', label: 'قيد متعدد'),
-  ];
+        FilterTab(key: 'all', label: 'جميع الحركات والفواتير'),
+        FilterTab(key: 'opening_balance', label: 'رصيد افتتاحي'),
+        FilterTab(key: 'debit', label: 'عليه'),
+        FilterTab(key: 'credit', label: 'له'),
+        FilterTab(key: 'payment_voucher', label: 'سند صرف'),
+        FilterTab(key: 'receipt_voucher', label: 'سند قبض'),
+        FilterTab(key: 'general_entry', label: 'قيد عام'),
+        FilterTab(key: 'outgoing_transfer', label: 'حوالة صادرة'),
+        FilterTab(key: 'incoming_transfer', label: 'حوالة وارده'),
+        FilterTab(key: 'sales', label: 'مبيعات فقط'),
+        FilterTab(key: 'purchases', label: 'مشتريات فقط'),
+        FilterTab(key: 'returns', label: 'مرتجع'),
+        FilterTab(key: 'compound_entry', label: 'قيد متعدد'),
+      ];
 
   @override
   String get entityName => _freshSupplier?.name ?? widget.supplier.name;
@@ -88,7 +90,8 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
     isLoading = true;
 
     try {
-      final supplierMap = await locator<SupplierRepository>().getSupplierById(widget.supplier.id!);
+      final supplierMap = await locator<SupplierRepository>()
+          .getSupplierById(widget.supplier.id!);
       if (supplierMap != null) {
         _freshSupplier = Supplier.fromMap(supplierMap);
       }
@@ -127,10 +130,12 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
         final isReturn = (inv['is_return'] as int? ?? 0) == 1;
         final total = MoneyHelper.readMoney(inv['total']);
         final currency = inv['currency'] as String? ?? 'YER';
-        final createdAt = inv['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final createdAt =
+            inv['created_at'] as String? ?? DateTime.now().toIso8601String();
 
         String effectiveType, typeAr, filterKey;
-        IconData icon; Color color;
+        IconData icon;
+        Color color;
         double debit = 0.0, credit = 0.0;
 
         // Supplier accounting rules (liability account):
@@ -139,30 +144,60 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
         //   Sale → supplier owes us → debit (عليه)
         //   Sale return → we owe more → credit (له)
         if (type == 'purchase' && !isReturn) {
-          effectiveType = 'purchase'; typeAr = 'فاتورة مشتريات'; icon = Icons.shopping_cart;
-          color = AppColors.secondary; credit = total; filterKey = 'purchases';
+          effectiveType = 'purchase';
+          typeAr = 'فاتورة مشتريات';
+          icon = Icons.shopping_cart;
+          color = AppColors.secondary;
+          credit = total;
+          filterKey = 'purchases';
         } else if (type == 'purchase' && isReturn) {
-          effectiveType = 'purchase_return'; typeAr = 'مرتجع مشتريات'; icon = Icons.keyboard_return;
-          color = AppColors.accentPink; debit = total; filterKey = 'returns';
+          effectiveType = 'purchase_return';
+          typeAr = 'مرتجع مشتريات';
+          icon = Icons.keyboard_return;
+          color = AppColors.accentPink;
+          debit = total;
+          filterKey = 'returns';
         } else if (type == 'sale' && !isReturn) {
-          effectiveType = 'sale'; typeAr = 'فاتورة مبيعات'; icon = Icons.receipt_long;
-          color = AppColors.primary; debit = total; filterKey = 'sales';
+          effectiveType = 'sale';
+          typeAr = 'فاتورة مبيعات';
+          icon = Icons.receipt_long;
+          color = AppColors.primary;
+          debit = total;
+          filterKey = 'sales';
         } else if (type == 'sale' && isReturn) {
-          effectiveType = 'sale_return'; typeAr = 'مرتجع مبيعات'; icon = Icons.keyboard_return;
-          color = AppColors.warning; credit = total; filterKey = 'returns';
+          effectiveType = 'sale_return';
+          typeAr = 'مرتجع مبيعات';
+          icon = Icons.keyboard_return;
+          color = AppColors.warning;
+          credit = total;
+          filterKey = 'returns';
         } else {
-          effectiveType = type; typeAr = 'فاتورة'; icon = Icons.receipt;
-          color = AppColors.textSecondary; credit = total; filterKey = 'all';
+          effectiveType = type;
+          typeAr = 'فاتورة';
+          icon = Icons.receipt;
+          color = AppColors.textSecondary;
+          credit = total;
+          filterKey = 'all';
         }
 
         final remaining = MoneyHelper.readMoney(inv['remaining']);
-        final desc = '$typeAr - ${inv['id'] ?? ''}${remaining > 0 ? ' (متبقي: ${remaining.toStringAsFixed(2)})' : ''}';
+        final desc =
+            '$typeAr - ${inv['id'] ?? ''}${remaining > 0 ? ' (متبقي: ${remaining.toStringAsFixed(2)})' : ''}';
 
         movements.add({
-          'id': inv['id'], 'date': createdAt, 'type': effectiveType, 'type_ar': typeAr,
-          'filter_key': filterKey, 'icon': icon, 'color': color, 'description': desc,
-          'debit': debit, 'credit': credit, 'currency': currency,
-          'source': 'invoice', 'voucher_type': null,
+          'id': inv['id'],
+          'date': createdAt,
+          'type': effectiveType,
+          'type_ar': typeAr,
+          'filter_key': filterKey,
+          'icon': icon,
+          'color': color,
+          'description': desc,
+          'debit': debit,
+          'credit': credit,
+          'currency': currency,
+          'source': 'invoice',
+          'voucher_type': null,
           'created_at': inv['created_at'] as String? ?? createdAt,
         });
       }
@@ -176,8 +211,10 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
 
       // Discover unlinked vouchers across ALL currencies (supplier is
       // multi-currency, so we must check payable accounts for all).
-      final allSupplierAccounts = await supplierRepo.getSupplierPayableAccountsAllCurrencies();
-      final supplierAccountIds = allSupplierAccounts.map((a) => a['id']).toList();
+      final allSupplierAccounts =
+          await supplierRepo.getSupplierPayableAccountsAllCurrencies();
+      final supplierAccountIds =
+          allSupplierAccounts.map((a) => a['id']).toList();
 
       if (supplierAccountIds.isNotEmpty) {
         // Get all vouchers without a supplier_id
@@ -191,12 +228,14 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
           final voucherId = v['id'] as int?;
           if (voucherId == null) continue;
           try {
-            final items = await locator<CashBoxService>().getVoucherItems(voucherId);
+            final items =
+                await locator<CashBoxService>().getVoucherItems(voucherId);
             for (final item in items) {
               final accountId = item['account_id'] as int?;
               if (accountId != null && supplierAccountIds.contains(accountId)) {
                 final desc = v['description'] as String? ?? '';
-                final supplierName = _freshSupplier?.name ?? widget.supplier.name;
+                final supplierName =
+                    _freshSupplier?.name ?? widget.supplier.name;
                 if (desc.contains(supplierName)) {
                   voucherRows.add(v);
                 }
@@ -211,10 +250,13 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
         final voucherType = v['voucher_type'] as String? ?? '';
         final totalAmount = MoneyHelper.readMoney(v['total_amount']);
         final currency = v['currency'] as String? ?? 'YER';
-        final dateStr = v['date'] as String? ?? v['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final dateStr = v['date'] as String? ??
+            v['created_at'] as String? ??
+            DateTime.now().toIso8601String();
 
         String typeAr, filterKey;
-        IconData icon; Color color;
+        IconData icon;
+        Color color;
         double debit = 0.0, credit = 0.0;
 
         // Supplier voucher accounting:
@@ -222,27 +264,43 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
         //   Receipt voucher → supplier pays us → credit (له)
         switch (voucherType) {
           case 'receipt':
-            typeAr = 'سند قبض'; icon = Icons.assignment_turned_in; color = AppColors.success;
-            credit = totalAmount; filterKey = 'receipt_voucher'; break;
+            typeAr = 'سند قبض';
+            icon = Icons.assignment_turned_in;
+            color = AppColors.success;
+            credit = totalAmount;
+            filterKey = 'receipt_voucher';
+            break;
           case 'payment':
-            typeAr = 'سند صرف'; icon = Icons.assignment_return; color = AppColors.error;
-            debit = totalAmount; filterKey = 'payment_voucher'; break;
+            typeAr = 'سند صرف';
+            icon = Icons.assignment_return;
+            color = AppColors.error;
+            debit = totalAmount;
+            filterKey = 'payment_voucher';
+            break;
           case 'settlement':
           case 'compound':
             // For settlement/compound vouchers, the debit/credit direction
             // depends on the voucher_items. Look up the actual effect on the
             // supplier's payable account (code 21xx).
             typeAr = voucherType == 'settlement' ? 'قيد عام' : 'قيد متعدد';
-            icon = voucherType == 'settlement' ? Icons.balance : Icons.dynamic_feed;
-            color = voucherType == 'settlement' ? AppColors.info : AppColors.accentBlue;
-            filterKey = voucherType == 'settlement' ? 'general_entry' : 'compound_entry';
+            icon = voucherType == 'settlement'
+                ? Icons.balance
+                : Icons.dynamic_feed;
+            color = voucherType == 'settlement'
+                ? AppColors.info
+                : AppColors.accentBlue;
+            filterKey = voucherType == 'settlement'
+                ? 'general_entry'
+                : 'compound_entry';
             // Determine direction from voucher_items
             final vId = v['id'];
             try {
-              final vItems = await locator<CashBoxService>().getVoucherItems(vId as int);
+              final vItems =
+                  await locator<CashBoxService>().getVoucherItems(vId as int);
               for (final vi in vItems) {
                 final viAccountId = vi['account_id'] as int?;
-                if (viAccountId != null && supplierAccountIds.contains(viAccountId)) {
+                if (viAccountId != null &&
+                    supplierAccountIds.contains(viAccountId)) {
                   final viDebit = MoneyHelper.readMoney(vi['debit']);
                   final viCredit = MoneyHelper.readMoney(vi['credit']);
                   debit += viDebit;
@@ -254,22 +312,43 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
             }
             break;
           case 'outgoing_transfer':
-            typeAr = 'حوالة صادرة'; icon = Icons.send; color = AppColors.secondary;
-            debit = totalAmount; filterKey = 'outgoing_transfer'; break;
+            typeAr = 'حوالة صادرة';
+            icon = Icons.send;
+            color = AppColors.secondary;
+            debit = totalAmount;
+            filterKey = 'outgoing_transfer';
+            break;
           case 'incoming_transfer':
-            typeAr = 'حوالة وارده'; icon = Icons.call_received; color = AppColors.accentBlue;
-            credit = totalAmount; filterKey = 'incoming_transfer'; break;
+            typeAr = 'حوالة وارده';
+            icon = Icons.call_received;
+            color = AppColors.accentBlue;
+            credit = totalAmount;
+            filterKey = 'incoming_transfer';
+            break;
           default:
-            typeAr = 'سند'; icon = Icons.description; color = AppColors.textSecondary;
-            debit = totalAmount; filterKey = 'all';
+            typeAr = 'سند';
+            icon = Icons.description;
+            color = AppColors.textSecondary;
+            debit = totalAmount;
+            filterKey = 'all';
         }
 
-        final description = v['description'] as String? ?? '$typeAr - ${v['voucher_number'] ?? ''}';
+        final description = v['description'] as String? ??
+            '$typeAr - ${v['voucher_number'] ?? ''}';
         movements.add({
-          'id': 'v_${v['id']}', 'date': dateStr, 'type': voucherType, 'type_ar': typeAr,
-          'filter_key': filterKey, 'icon': icon, 'color': color, 'description': description,
-          'debit': debit, 'credit': credit, 'currency': currency,
-          'source': 'voucher', 'voucher_type': voucherType,
+          'id': 'v_${v['id']}',
+          'date': dateStr,
+          'type': voucherType,
+          'type_ar': typeAr,
+          'filter_key': filterKey,
+          'icon': icon,
+          'color': color,
+          'description': description,
+          'debit': debit,
+          'credit': credit,
+          'currency': currency,
+          'source': 'voucher',
+          'voucher_type': voucherType,
           'created_at': v['created_at'] as String? ?? dateStr,
         });
       }
@@ -280,26 +359,40 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
     // 3. Opening balance transactions
     try {
       final supplier = _freshSupplier ?? widget.supplier;
-      final obTransactions = await locator<SupplierRepository>().getSupplierOpeningBalanceTransactions(supplierId);
+      final obTransactions = await locator<SupplierRepository>()
+          .getSupplierOpeningBalanceTransactions(supplierId);
 
       for (final ob in obTransactions) {
         final debit = MoneyHelper.readMoney(ob['debit']);
         final credit = MoneyHelper.readMoney(ob['credit']);
-        final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final dateStr = ob['date'] as String? ??
+            ob['created_at'] as String? ??
+            DateTime.now().toIso8601String();
         final description = ob['description'] as String? ?? 'رصيد افتتاحي';
-        final obCurrency = ob['account_currency'] as String? ?? supplier.currency;
+        final obCurrency =
+            ob['account_currency'] as String? ?? supplier.currency;
 
         movements.add({
-          'id': 'ob_${ob['id']}', 'date': dateStr, 'type': 'opening_balance', 'type_ar': 'رصيد افتتاحي',
-          'filter_key': 'opening_balance', 'icon': Icons.account_balance_wallet, 'color': AppColors.accentBlue,
-          'description': description, 'debit': debit, 'credit': credit, 'currency': obCurrency,
-          'source': 'opening_balance', 'voucher_type': null,
+          'id': 'ob_${ob['id']}',
+          'date': dateStr,
+          'type': 'opening_balance',
+          'type_ar': 'رصيد افتتاحي',
+          'filter_key': 'opening_balance',
+          'icon': Icons.account_balance_wallet,
+          'color': AppColors.accentBlue,
+          'description': description,
+          'debit': debit,
+          'credit': credit,
+          'currency': obCurrency,
+          'source': 'opening_balance',
+          'voucher_type': null,
           'created_at': ob['created_at'] as String? ?? dateStr,
         });
       }
 
       // Fallback for legacy data
-      if (obTransactions.isEmpty && (supplier.balance != 0.0 || supplier.currency.isNotEmpty)) {
+      if (obTransactions.isEmpty &&
+          (supplier.balance != 0.0 || supplier.currency.isNotEmpty)) {
         // Only sum movements in the supplier's stored currency to avoid
         // mixing different currencies (multi-currency environment).
         double allDebit = 0.0, allCredit = 0.0;
@@ -309,19 +402,28 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
           allDebit += MoneyHelper.readMoney(m['debit']);
           allCredit += MoneyHelper.readMoney(m['credit']);
         }
-        final supplierSignedBalance = supplier.balanceType == 'credit' ? supplier.balance : -supplier.balance;
+        final supplierSignedBalance = supplier.balanceType == 'credit'
+            ? supplier.balance
+            : -supplier.balance;
         final openingAmount = supplierSignedBalance - (allCredit - allDebit);
 
         if (openingAmount.abs() >= 0.005) {
           final obCurrency = supplier.currency;
           final isCredit = openingAmount > 0;
           movements.insert(0, {
-            'id': 'opening_balance', 'date': supplier.createdAt.toIso8601String(),
-            'type': 'opening_balance', 'type_ar': 'رصيد افتتاحي', 'filter_key': 'opening_balance',
-            'icon': Icons.account_balance_wallet, 'color': AppColors.accentBlue,
+            'id': 'opening_balance',
+            'date': supplier.createdAt.toIso8601String(),
+            'type': 'opening_balance',
+            'type_ar': 'رصيد افتتاحي',
+            'filter_key': 'opening_balance',
+            'icon': Icons.account_balance_wallet,
+            'color': AppColors.accentBlue,
             'description': 'رصيد افتتاحي (${isCredit ? "له" : "عليه"})',
-            'debit': isCredit ? 0.0 : openingAmount.abs(), 'credit': isCredit ? openingAmount.abs() : 0.0,
-            'currency': obCurrency, 'source': 'opening_balance', 'voucher_type': null,
+            'debit': isCredit ? 0.0 : openingAmount.abs(),
+            'credit': isCredit ? openingAmount.abs() : 0.0,
+            'currency': obCurrency,
+            'source': 'opening_balance',
+            'voucher_type': null,
             'created_at': supplier.createdAt.toIso8601String(),
           });
         }
@@ -330,12 +432,9 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
       debugPrint('SupplierDetailScreen.loadMovements [opening_balance]: $e');
     }
 
-    // Sort by date+time ascending (oldest first).
-    movements.sort((a, b) {
-      final cmp = (a['date']?.toString() ?? '').compareTo(b['date']?.toString() ?? '');
-      if (cmp != 0) return cmp;
-      return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
-    });
+    // Sort chronologically (oldest first) via the unified sorter —
+    // handles mixed date formats (day-only vs full timestamp). B-1 fix.
+    MovementSorter.sortChronologically(movements);
 
     // Calculate running balance for ALL movements chronologically, per currency
     final currencyRunBal = <String, double>{};
@@ -343,7 +442,8 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
       final currency = m['currency'] as String? ?? 'YER';
       final debit = MoneyHelper.readMoney(m['debit']);
       final credit = MoneyHelper.readMoney(m['credit']);
-      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
+      currencyRunBal[currency] =
+          (currencyRunBal[currency] ?? 0.0) + credit - debit;
       m['running_balance'] = currencyRunBal[currency];
     }
 
@@ -378,7 +478,8 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
                 context: context,
                 isScrollControlled: true,
                 useSafeArea: true,
-                builder: (context) => AddSupplierSheet(supplier: _freshSupplier ?? widget.supplier),
+                builder: (context) => AddSupplierSheet(
+                    supplier: _freshSupplier ?? widget.supplier),
               );
               if (mounted) loadData();
             },
@@ -388,9 +489,14 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.edit_rounded, size: 18, color: AppColors.accentBlue),
+                  Icon(Icons.edit_rounded,
+                      size: 18, color: AppColors.accentBlue),
                   const SizedBox(width: 4),
-                  Text('تعديل', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.accentBlue)),
+                  Text('تعديل',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.accentBlue)),
                 ],
               ),
             ),

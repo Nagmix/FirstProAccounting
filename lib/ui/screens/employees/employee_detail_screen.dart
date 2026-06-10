@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/movement_sorter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/employee_repository.dart';
 import '../../../data/datasources/repositories/reference_data_repository.dart';
@@ -20,7 +21,8 @@ class EmployeeDetailScreen extends StatefulWidget {
   State<EmployeeDetailScreen> createState() => _EmployeeDetailScreenState();
 }
 
-class _EmployeeDetailScreenState extends EntityDetailState<EmployeeDetailScreen> {
+class _EmployeeDetailScreenState
+    extends EntityDetailState<EmployeeDetailScreen> {
   // Employee data (refreshable)
   Map<String, dynamic>? _freshEmployee;
 
@@ -28,10 +30,10 @@ class _EmployeeDetailScreenState extends EntityDetailState<EmployeeDetailScreen>
 
   @override
   List<FilterTab> get filterTabs => const [
-    FilterTab(key: 'all', label: 'الكل'),
-    FilterTab(key: 'payment_voucher', label: 'سند صرف'),
-    FilterTab(key: 'receipt_voucher', label: 'سند قبض'),
-  ];
+        FilterTab(key: 'all', label: 'الكل'),
+        FilterTab(key: 'payment_voucher', label: 'سند صرف'),
+        FilterTab(key: 'receipt_voucher', label: 'سند قبض'),
+      ];
 
   @override
   String get entityName =>
@@ -49,8 +51,7 @@ class _EmployeeDetailScreenState extends EntityDetailState<EmployeeDetailScreen>
   String get entityTypeName => VoucherAutoMappingService.entityEmployee;
 
   @override
-  int? get entityId =>
-      (_freshEmployee ?? widget.employee)['id'] as int?;
+  int? get entityId => (_freshEmployee ?? widget.employee)['id'] as int?;
 
   @override
   IconData get entityIcon => Icons.badge;
@@ -118,8 +119,8 @@ class _EmployeeDetailScreenState extends EntityDetailState<EmployeeDetailScreen>
     // 1. Load transactions for this employee's account
     if (accountId != null) {
       try {
-        final transactions =
-            await locator<EmployeeRepository>().getEmployeeTransactions(accountId);
+        final transactions = await locator<EmployeeRepository>()
+            .getEmployeeTransactions(accountId);
 
         for (final txn in transactions) {
           final debit = MoneyHelper.readMoney(txn['debit']);
@@ -243,8 +244,8 @@ class _EmployeeDetailScreenState extends EntityDetailState<EmployeeDetailScreen>
             filterKey = 'all';
         }
 
-        final description =
-            v['description'] as String? ?? '$typeAr - ${v['voucher_number'] ?? ''}';
+        final description = v['description'] as String? ??
+            '$typeAr - ${v['voucher_number'] ?? ''}';
 
         movements.add({
           'id': 'v_${v['id']}',
@@ -304,13 +305,9 @@ class _EmployeeDetailScreenState extends EntityDetailState<EmployeeDetailScreen>
       debugPrint('EmployeeDetailScreen.loadMovements [opening_balance]: $e');
     }
 
-    // Sort by date+time ascending (oldest first).
-    movements.sort((a, b) {
-      final cmp = (a['date'] as String).compareTo(b['date'] as String);
-      if (cmp != 0) return cmp;
-      return ((a['created_at'] as String?) ?? '')
-          .compareTo((b['created_at'] as String?) ?? '');
-    });
+    // Sort chronologically (oldest first) via the unified sorter —
+    // handles mixed date formats (day-only vs full timestamp). B-1 fix.
+    MovementSorter.sortChronologically(movements);
 
     // Calculate running balance for ALL movements chronologically, per currency
     final currencyRunBal = <String, double>{};

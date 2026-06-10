@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/movement_sorter.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
@@ -129,15 +130,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       currency: _selectedCurrency,
     );
 
-    // Sort by date+time ascending (oldest first).
-    movements.sort((a, b) {
-      final dateA = a['date'] as String? ?? '';
-      final dateB = b['date'] as String? ?? '';
-      final cmp = dateA.compareTo(dateB);
-      if (cmp != 0) return cmp;
-      return ((a['created_at'] as String?) ?? '')
-          .compareTo((b['created_at'] as String?) ?? '');
-    });
+    // Sort chronologically (oldest first) via the unified sorter —
+    // handles mixed date formats (day-only vs full timestamp). B-1 fix.
+    MovementSorter.sortChronologically(movements);
 
     // Calculate running balance per currency
     final currencyRunBal = <String, double>{};

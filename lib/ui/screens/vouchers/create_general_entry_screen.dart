@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
@@ -42,10 +44,26 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
   // ── Entity type filter options ──────────────────────────────────
   static const _entityTypeFilters = [
     {'value': 'all', 'label': 'الكل', 'icon': Icons.apps},
-    {'value': VoucherAutoMappingService.entityCustomer, 'label': 'عملاء', 'icon': Icons.person},
-    {'value': VoucherAutoMappingService.entitySupplier, 'label': 'موردين', 'icon': Icons.local_shipping},
-    {'value': VoucherAutoMappingService.entityEmployee, 'label': 'موظفين', 'icon': Icons.badge},
-    {'value': VoucherAutoMappingService.entityExpense, 'label': 'مصروفات', 'icon': Icons.receipt_long},
+    {
+      'value': VoucherAutoMappingService.entityCustomer,
+      'label': 'عملاء',
+      'icon': Icons.person
+    },
+    {
+      'value': VoucherAutoMappingService.entitySupplier,
+      'label': 'موردين',
+      'icon': Icons.local_shipping
+    },
+    {
+      'value': VoucherAutoMappingService.entityEmployee,
+      'label': 'موظفين',
+      'icon': Icons.badge
+    },
+    {
+      'value': VoucherAutoMappingService.entityExpense,
+      'label': 'مصروفات',
+      'icon': Icons.receipt_long
+    },
   ];
 
   @override
@@ -91,7 +109,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
     }
   }
 
-  List<Map<String, dynamic>> _getFilteredEntities(String typeFilter, String searchText) {
+  List<Map<String, dynamic>> _getFilteredEntities(
+      String typeFilter, String searchText) {
     var filtered = _allEntities;
 
     // Filter by entity type
@@ -136,7 +155,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
     required bool isFrom,
     required Color accentColor,
   }) async {
-    final searchController = isFrom ? _fromSearchController : _toSearchController;
+    final searchController =
+        isFrom ? _fromSearchController : _toSearchController;
     final selectedEntity = isFrom ? _fromEntity : _toEntity;
 
     await showModalBottomSheet(
@@ -159,7 +179,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(ctx).size.height * 0.75,
                 ),
-                padding: const EdgeInsets.only(top: 8, left: 16, right: 16, bottom: 16),
+                padding: const EdgeInsets.only(
+                    top: 8, left: 16, right: 16, bottom: 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -176,11 +197,13 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
 
                     // Title
                     Text(
-                      isFrom ? 'اختر الحساب المصدر (من)' : 'اختر الحساب الوجهة (إلى)',
+                      isFrom
+                          ? 'اختر الحساب المصدر (من)'
+                          : 'اختر الحساب الوجهة (إلى)',
                       style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: accentColor,
-                      ),
+                            fontWeight: FontWeight.w700,
+                            color: accentColor,
+                          ),
                     ),
                     const SizedBox(height: 16),
 
@@ -193,7 +216,9 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                         separatorBuilder: (_, __) => const SizedBox(width: 8),
                         itemBuilder: (_, index) {
                           final filter = _entityTypeFilters[index];
-                          final currentFilter = isFrom ? _fromEntityTypeFilter : _toEntityTypeFilter;
+                          final currentFilter = isFrom
+                              ? _fromEntityTypeFilter
+                              : _toEntityTypeFilter;
                           final isSelected = currentFilter == filter['value'];
 
                           return ChoiceChip(
@@ -202,20 +227,27 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                             selected: isSelected,
                             selectedColor: accentColor.withOpacity(0.15),
                             side: BorderSide(
-                              color: isSelected ? accentColor : AppColors.divider,
+                              color:
+                                  isSelected ? accentColor : AppColors.divider,
                             ),
                             labelStyle: TextStyle(
-                              color: isSelected ? accentColor : AppColors.textSecondary,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected
+                                  ? accentColor
+                                  : AppColors.textSecondary,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                               fontSize: 12,
                             ),
                             onSelected: (selected) {
                               if (selected) {
                                 setState(() {
                                   if (isFrom) {
-                                    _fromEntityTypeFilter = filter['value'] as String;
+                                    _fromEntityTypeFilter =
+                                        filter['value'] as String;
                                   } else {
-                                    _toEntityTypeFilter = filter['value'] as String;
+                                    _toEntityTypeFilter =
+                                        filter['value'] as String;
                                   }
                                 });
                                 setModalState(() {});
@@ -246,7 +278,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                         isDense: true,
                       ),
                     ),
@@ -259,11 +292,16 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.search_off, size: 48, color: AppColors.textHint.withOpacity(0.5)),
+                                  Icon(Icons.search_off,
+                                      size: 48,
+                                      color:
+                                          AppColors.textHint.withOpacity(0.5)),
                                   const SizedBox(height: 8),
                                   Text(
                                     'لا توجد نتائج',
-                                    style: TextStyle(color: AppColors.textHint, fontSize: 14),
+                                    style: TextStyle(
+                                        color: AppColors.textHint,
+                                        fontSize: 14),
                                   ),
                                 ],
                               ),
@@ -271,17 +309,25 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                           : ListView.separated(
                               shrinkWrap: true,
                               itemCount: filteredEntities.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 6),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 6),
                               itemBuilder: (_, index) {
                                 final entity = filteredEntities[index];
                                 final isSelected = selectedEntity != null &&
                                     selectedEntity['id'] == entity['id'] &&
                                     selectedEntity['type'] == entity['type'];
-                                final entityType = entity['type'] as String? ?? '';
-                                final entityName = entity['name'] as String? ?? '';
-                                final balance = (entity['balance'] as num?)?.toDouble() ?? 0.0;
-                                final balanceType = entity['balance_type'] as String? ?? 'debit';
-                                final currency = entity['currency'] as String? ?? 'YER';
+                                final entityType =
+                                    entity['type'] as String? ?? '';
+                                final entityName =
+                                    entity['name'] as String? ?? '';
+                                final balance =
+                                    (entity['balance'] as num?)?.toDouble() ??
+                                        0.0;
+                                final balanceType =
+                                    entity['balance_type'] as String? ??
+                                        'debit';
+                                final currency =
+                                    entity['currency'] as String? ?? 'YER';
 
                                 return InkWell(
                                   onTap: () {
@@ -302,28 +348,36 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                                   },
                                   borderRadius: BorderRadius.circular(12),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? accentColor.withOpacity(0.08)
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                       border: isSelected
-                                          ? Border.all(color: accentColor, width: 1.5)
-                                          : Border.all(color: AppColors.divider.withOpacity(0.5)),
+                                          ? Border.all(
+                                              color: accentColor, width: 1.5)
+                                          : Border.all(
+                                              color: AppColors.divider
+                                                  .withOpacity(0.5)),
                                     ),
                                     child: Row(
                                       children: [
-                                        _buildEntityTypeIcon(entityType, accentColor),
+                                        _buildEntityTypeIcon(
+                                            entityType, accentColor),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 entityName,
                                                 style: TextStyle(
-                                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w600,
                                                   fontSize: 14,
                                                 ),
                                                 overflow: TextOverflow.ellipsis,
@@ -333,23 +387,32 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                                                 _getEntityTypeLabel(entityType),
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: AppColors.textSecondary,
+                                                  color:
+                                                      AppColors.textSecondary,
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
-                                        if (balance != 0.0 && entityType != VoucherAutoMappingService.entityExpense)
+                                        if (balance != 0.0 &&
+                                            entityType !=
+                                                VoucherAutoMappingService
+                                                    .entityExpense)
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 4),
                                             decoration: BoxDecoration(
                                               color: balanceType == 'debit'
-                                                  ? AppColors.error.withOpacity(0.08)
-                                                  : AppColors.success.withOpacity(0.08),
-                                              borderRadius: BorderRadius.circular(8),
+                                                  ? AppColors.error
+                                                      .withOpacity(0.08)
+                                                  : AppColors.success
+                                                      .withOpacity(0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: Text(
-                                              _formatBalance(balance, balanceType, currency),
+                                              _formatBalance(balance,
+                                                  balanceType, currency),
                                               style: TextStyle(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w600,
@@ -361,8 +424,10 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                                           ),
                                         if (isSelected)
                                           Padding(
-                                            padding: const EdgeInsets.only(right: 4),
-                                            child: Icon(Icons.check_circle, color: accentColor, size: 20),
+                                            padding:
+                                                const EdgeInsets.only(right: 4),
+                                            child: Icon(Icons.check_circle,
+                                                color: accentColor, size: 20),
                                           ),
                                       ],
                                     ),
@@ -480,7 +545,10 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
 
       final fromAmount = double.tryParse(_fromAmountController.text) ?? 0.0;
       final toAmount = double.tryParse(_toAmountController.text) ?? 0.0;
-      final dateStr = _selectedDate.toIso8601String().split('T').first;
+      // B-1/A-5: store a FULL timestamp (selected day + current time) so
+      // chronological sorting and running balances work across all
+      // movement types. Day-only storage broke ordering vs full timestamps.
+      final dateStr = DateFormatter.storageTimestamp(_selectedDate);
 
       await autoMappingService.createGeneralEntry(
         fromEntityType: _fromEntity!['type'] as String,
@@ -604,8 +672,10 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                     amountController: _fromAmountController,
                     currency: _fromCurrency,
                     onCurrencyChanged: (c) => setState(() => _fromCurrency = c),
-                    onEntityTypeFilterChanged: (f) => setState(() => _fromEntityTypeFilter = f),
-                    onEntityTap: () => _showEntityPicker(isFrom: true, accentColor: AppColors.secondary),
+                    onEntityTypeFilterChanged: (f) =>
+                        setState(() => _fromEntityTypeFilter = f),
+                    onEntityTap: () => _showEntityPicker(
+                        isFrom: true, accentColor: AppColors.secondary),
                     onClearEntity: () => setState(() => _fromEntity = null),
                   ),
 
@@ -628,15 +698,18 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                     amountController: _toAmountController,
                     currency: _toCurrency,
                     onCurrencyChanged: (c) => setState(() => _toCurrency = c),
-                    onEntityTypeFilterChanged: (f) => setState(() => _toEntityTypeFilter = f),
-                    onEntityTap: () => _showEntityPicker(isFrom: false, accentColor: AppColors.info),
+                    onEntityTypeFilterChanged: (f) =>
+                        setState(() => _toEntityTypeFilter = f),
+                    onEntityTap: () => _showEntityPicker(
+                        isFrom: false, accentColor: AppColors.info),
                     onClearEntity: () => setState(() => _toEntity = null),
                   ),
 
                   const SizedBox(height: 24),
 
                   // ── Description Section ───────────────────────────
-                  _buildSectionTitle(theme, 'التفاصيل', AppColors.textSecondary),
+                  _buildSectionTitle(
+                      theme, 'التفاصيل', AppColors.textSecondary),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _descriptionController,
@@ -668,7 +741,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                               ),
                             )
                           : const Icon(Icons.save),
-                      label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ القيد العام'),
+                      label:
+                          Text(_isSaving ? 'جاري الحفظ...' : 'حفظ القيد العام'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -719,17 +793,20 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+          color:
+              isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.divider),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today, color: AppColors.primary, size: 20),
+            const Icon(Icons.calendar_today,
+                color: AppColors.primary, size: 20),
             const SizedBox(width: 12),
             Text(
               _selectedDate.toIso8601String().split('T').first,
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             const Icon(Icons.arrow_drop_down, color: AppColors.textHint),
@@ -785,7 +862,9 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  title == 'من حساب' ? Icons.arrow_upward : Icons.arrow_downward,
+                  title == 'من حساب'
+                      ? Icons.arrow_upward
+                      : Icons.arrow_downward,
                   color: accentColor,
                   size: 20,
                 ),
@@ -875,14 +954,16 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                 flex: 3,
                 child: TextFormField(
                   controller: amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: 'المبلغ',
                     prefixIcon: const Icon(Icons.payments_outlined, size: 20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                   ),
                   style: theme.textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -927,7 +1008,9 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
         decoration: BoxDecoration(
           color: hasEntity
               ? accentColor.withOpacity(0.05)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+              : (isDark
+                  ? AppColors.darkSurfaceVariant
+                  : AppColors.surfaceVariant),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: hasEntity ? accentColor.withOpacity(0.3) : AppColors.divider,
@@ -936,7 +1019,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
         child: Row(
           children: [
             if (hasEntity) ...[
-              _buildEntityTypeIcon(entity['type'] as String? ?? '', accentColor),
+              _buildEntityTypeIcon(
+                  entity['type'] as String? ?? '', accentColor),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -961,10 +1045,12 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                           ),
                         ),
                         // Show balance for non-expense entities
-                        if (entity['type'] != VoucherAutoMappingService.entityExpense) ...[
+                        if (entity['type'] !=
+                            VoucherAutoMappingService.entityExpense) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: (entity['balance_type'] == 'debit'
                                       ? AppColors.error
@@ -1027,7 +1113,9 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
   }) {
     // استخدام قائمة منسدلة احترافية مع العملات من قاعدة البيانات
     return DropdownButtonFormField<String>(
-      value: _currencies.any((c) => c['code'] == selectedCurrency) ? selectedCurrency : null,
+      value: _currencies.any((c) => c['code'] == selectedCurrency)
+          ? selectedCurrency
+          : null,
       decoration: InputDecoration(
         labelText: 'العملة',
         prefixIcon: Icon(Icons.currency_exchange, size: 20, color: accentColor),
@@ -1046,10 +1134,12 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(symbol, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              Text(symbol,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
               const SizedBox(width: 6),
               Flexible(
-                child: Text(nameAr, overflow: TextOverflow.ellipsis,
+                child: Text(nameAr,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12)),
               ),
             ],
@@ -1070,7 +1160,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+          color:
+              isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
           shape: BoxShape.circle,
           border: Border.all(color: AppColors.divider),
           boxShadow: [

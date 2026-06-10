@@ -3,6 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/money_helper.dart';
+import '../../../core/utils/movement_sorter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/datasources/repositories/expense_sub_account_repository.dart';
 import '../../../data/datasources/repositories/expense_repository.dart';
@@ -112,18 +113,9 @@ class _ExpenseAccountDetailScreenState
     final expenses = await locator<ExpenseRepository>()
         .getExpensesBySubAccountId(_subAccountId);
 
-    // Sort by date+time ascending (oldest first).
-    expenses.sort((a, b) {
-      final dateA = a['expense_date'] as String? ??
-          a['created_at'] as String? ??
-          '';
-      final dateB = b['expense_date'] as String? ??
-          b['created_at'] as String? ??
-          '';
-      final cmp = dateA.compareTo(dateB);
-      if (cmp != 0) return cmp;
-      return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
-    });
+    // Sort chronologically (oldest first) via the unified sorter —
+    // handles mixed date formats (day-only vs full timestamp). B-1 fix.
+    MovementSorter.sortChronologically(expenses, dateKey: 'expense_date');
 
     // Calculate running balance for ALL expenses chronologically
     double runningBalance = 0.0;
@@ -145,36 +137,31 @@ class _ExpenseAccountDetailScreenState
   // ── Filtering ───────────────────────────────────────────────────
 
   void _applyFilters() {
-    var filtered = _allExpenses
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
+    var filtered =
+        _allExpenses.map((e) => Map<String, dynamic>.from(e)).toList();
 
     // Apply tab filter (operation type)
     final filterKey = _filterTabs[_selectedFilterIndex].key;
     if (filterKey != 'all') {
-      filtered = filtered
-          .where((e) => e['operation_type'] == filterKey)
-          .toList();
+      filtered =
+          filtered.where((e) => e['operation_type'] == filterKey).toList();
     }
 
     // Apply currency filter
     if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
-      filtered = filtered
-          .where((e) => e['currency'] == _selectedCurrency)
-          .toList();
+      filtered =
+          filtered.where((e) => e['currency'] == _selectedCurrency).toList();
     }
 
     // Apply date range filter
     if (_dateRange != null) {
       filtered = filtered.where((e) {
-        final dateStr = e['expense_date'] as String? ??
-            e['created_at'] as String? ??
-            '';
+        final dateStr =
+            e['expense_date'] as String? ?? e['created_at'] as String? ?? '';
         try {
           final date = DateTime.parse(dateStr);
           return !date.isBefore(_dateRange!.start) &&
-              !date.isAfter(
-                  _dateRange!.end.add(const Duration(days: 1)));
+              !date.isAfter(_dateRange!.end.add(const Duration(days: 1)));
         } catch (_) {
           return true;
         }
@@ -352,7 +339,10 @@ class _ExpenseAccountDetailScreenState
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primaryGradientStart, AppColors.primaryGradientEnd],
+          colors: [
+            AppColors.primaryGradientStart,
+            AppColors.primaryGradientEnd
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -420,8 +410,8 @@ class _ExpenseAccountDetailScreenState
                   final balance = entry.value;
                   final isPositive = balance >= 0;
                   return Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
@@ -606,7 +596,8 @@ class _ExpenseAccountDetailScreenState
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
-        color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+        color:
+            isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -703,8 +694,8 @@ class _ExpenseAccountDetailScreenState
     final currency = expense['currency'] as String? ?? 'YER';
     final amount = MoneyHelper.readMoney(expense['amount']);
     final beneficiary = expense['beneficiary'] as String? ?? '';
-    final description = expense['description'] as String? ??
-        expense['notes'] as String? ?? '';
+    final description =
+        expense['description'] as String? ?? expense['notes'] as String? ?? '';
     final runningBalance =
         (expense['running_balance'] as num?)?.toDouble() ?? 0.0;
     final isSarf = operationType == 'صرف';
@@ -744,8 +735,7 @@ class _ExpenseAccountDetailScreenState
             children: [
               // Date badge
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(8),
@@ -779,8 +769,7 @@ class _ExpenseAccountDetailScreenState
               const SizedBox(width: 8),
               // Operation type badge
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: (isSarf ? AppColors.error : AppColors.success)
                       .withOpacity(0.1),
@@ -808,8 +797,7 @@ class _ExpenseAccountDetailScreenState
               const Spacer(),
               // Running balance
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: (runningBalance >= 0
                           ? AppColors.primary
@@ -841,7 +829,9 @@ class _ExpenseAccountDetailScreenState
                   title,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: isLight ? AppColors.textPrimary : AppColors.darkTextPrimary,
+                    color: isLight
+                        ? AppColors.textPrimary
+                        : AppColors.darkTextPrimary,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -876,7 +866,8 @@ class _ExpenseAccountDetailScreenState
             const SizedBox(height: 6),
             Row(
               children: [
-                Icon(Icons.description, size: 14, color: AppColors.textTertiary),
+                Icon(Icons.description,
+                    size: 14, color: AppColors.textTertiary),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -929,8 +920,7 @@ class _ExpenseAccountDetailScreenState
               const Spacer(),
               // Currency tag
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceVariant.withOpacity(0.6),
                   borderRadius: BorderRadius.circular(6),

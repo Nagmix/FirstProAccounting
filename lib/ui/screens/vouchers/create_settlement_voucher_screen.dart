@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
@@ -47,7 +49,8 @@ class _CreateSettlementVoucherScreenState
   int? _creditAccountId;
   final _amountController = TextEditingController();
 
-  Color get _accentColor => widget.isCompound ? AppColors.secondary : AppColors.info;
+  Color get _accentColor =>
+      widget.isCompound ? AppColors.secondary : AppColors.info;
 
   String get _title => widget.isCompound ? 'سند تسوية مزدوج' : 'سند تسوية';
   String get _subtitle => widget.isCompound
@@ -83,9 +86,8 @@ class _CreateSettlementVoucherScreenState
       ]);
       if (mounted) {
         setState(() {
-          _accounts = (results[0])
-              .where((a) => (a['is_active'] as int?) == 1)
-              .toList();
+          _accounts =
+              (results[0]).where((a) => (a['is_active'] as int?) == 1).toList();
           _currencies = results[1];
           _isLoading = false;
           _filterAccounts();
@@ -116,8 +118,8 @@ class _CreateSettlementVoucherScreenState
     }
 
     // ترتيب حسب كود الحساب
-    result.sort((a, b) =>
-        (a['account_code'] as String? ?? '').compareTo(b['account_code'] as String? ?? ''));
+    result.sort((a, b) => (a['account_code'] as String? ?? '')
+        .compareTo(b['account_code'] as String? ?? ''));
 
     setState(() {
       _filteredAccounts = result;
@@ -222,7 +224,8 @@ class _CreateSettlementVoucherScreenState
         return;
       }
       if (_debitAccountId == _creditAccountId) {
-        context.showErrorSnackBar('لا يمكن أن يكون الحساب المدين والدائن واحداً');
+        context
+            .showErrorSnackBar('لا يمكن أن يكون الحساب المدين والدائن واحداً');
         return;
       }
       final amount = double.tryParse(_amountController.text) ?? 0.0;
@@ -236,9 +239,13 @@ class _CreateSettlementVoucherScreenState
 
     try {
       final voucherType = widget.isCompound ? 'compound' : 'settlement';
-      final voucherNumber = await locator<CashBoxService>().getNextVoucherNumber(voucherType);
+      final voucherNumber =
+          await locator<CashBoxService>().getNextVoucherNumber(voucherType);
       final now = DateTime.now().toIso8601String();
-      final dateStr = _selectedDate.toIso8601String().split('T').first;
+      // B-1/A-5: store a FULL timestamp (selected day + current time) so
+      // chronological sorting and running balances work across all
+      // movement types. Day-only storage broke ordering vs full timestamps.
+      final dateStr = DateFormatter.storageTimestamp(_selectedDate);
 
       final voucherMap = {
         'voucher_number': voucherNumber,
@@ -292,7 +299,8 @@ class _CreateSettlementVoucherScreenState
         });
       }
 
-      await locator<VoucherRepository>().saveVoucherWithJournalEntry(voucherMap, items);
+      await locator<VoucherRepository>()
+          .saveVoucherWithJournalEntry(voucherMap, items);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -354,8 +362,10 @@ class _CreateSettlementVoucherScreenState
               icon: const Icon(Icons.save, color: Colors.white),
               label: _isSaving
                   ? const SizedBox(
-                      width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Text('حفظ', style: TextStyle(color: Colors.white)),
             ),
@@ -364,71 +374,82 @@ class _CreateSettlementVoucherScreenState
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : Form(
-          key: _formKey,
-          child: ListView(
-            padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100 + bottomPadding),
-            children: [
-              // عنوان فرعي
-              _buildInfoCard(theme, isDark),
-              const SizedBox(height: 20),
+                key: _formKey,
+                child: ListView(
+                  padding: EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      top: 16,
+                      bottom: 100 + bottomPadding),
+                  children: [
+                    // عنوان فرعي
+                    _buildInfoCard(theme, isDark),
+                    const SizedBox(height: 20),
 
-              // التاريخ والعملة
-              Row(
-                children: [
-                  Expanded(child: _buildDatePicker(theme, isDark)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildCurrencySelector(theme, isDark)),
-                ],
-              ),
-              const SizedBox(height: 20),
+                    // التاريخ والعملة
+                    Row(
+                      children: [
+                        Expanded(child: _buildDatePicker(theme, isDark)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildCurrencySelector(theme, isDark)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
 
-              // الوصف
-              _buildSectionTitle(theme, 'البيان'),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: InputDecoration(
-                  hintText: 'وصف سند التسوية...',
-                  prefixIcon: const Icon(Icons.description),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    // الوصف
+                    _buildSectionTitle(theme, 'البيان'),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: InputDecoration(
+                        hintText: 'وصف سند التسوية...',
+                        prefixIcon: const Icon(Icons.description),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // محتوى القيد
+                    if (widget.isCompound)
+                      _buildCompoundView(theme, isDark)
+                    else
+                      _buildSimpleView(theme, isDark),
+
+                    const SizedBox(height: 16),
+
+                    // المجاميع
+                    _buildTotalsCard(theme, isDark),
+
+                    const SizedBox(height: 24),
+
+                    // زر الحفظ
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSaving ? null : _saveVoucher,
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.save),
+                        label: Text(
+                            _isSaving ? 'جاري الحفظ...' : 'حفظ سند التسوية'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accentColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                maxLines: 2,
               ),
-              const SizedBox(height: 24),
-
-              // محتوى القيد
-              if (widget.isCompound)
-                _buildCompoundView(theme, isDark)
-              else
-                _buildSimpleView(theme, isDark),
-
-              const SizedBox(height: 16),
-
-              // المجاميع
-              _buildTotalsCard(theme, isDark),
-
-              const SizedBox(height: 24),
-
-              // زر الحفظ
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isSaving ? null : _saveVoucher,
-                  icon: _isSaving
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.save),
-                  label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ سند التسوية'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _accentColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -449,7 +470,9 @@ class _CreateSettlementVoucherScreenState
             child: Text(
               _subtitle,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -463,11 +486,15 @@ class _CreateSettlementVoucherScreenState
     return Row(
       children: [
         Container(
-          width: 4, height: 18,
-          decoration: BoxDecoration(color: _accentColor, borderRadius: BorderRadius.circular(2)),
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+              color: _accentColor, borderRadius: BorderRadius.circular(2)),
         ),
         const SizedBox(width: 8),
-        Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: _accentColor)),
+        Text(title,
+            style: theme.textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.w700, color: _accentColor)),
       ],
     );
   }
@@ -484,7 +511,9 @@ class _CreateSettlementVoucherScreenState
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+              color: isDark
+                  ? AppColors.darkSurfaceVariant
+                  : AppColors.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.divider),
             ),
@@ -493,7 +522,8 @@ class _CreateSettlementVoucherScreenState
                 Icon(Icons.calendar_today, color: _accentColor, size: 20),
                 const SizedBox(width: 12),
                 Text(_selectedDate.toIso8601String().split('T').first,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600)),
                 const Spacer(),
                 Icon(Icons.arrow_drop_down, color: AppColors.textHint),
               ],
@@ -511,11 +541,15 @@ class _CreateSettlementVoucherScreenState
         _buildSectionTitle(theme, 'العملة'),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _currencies.any((c) => c['code'] == _selectedCurrency) ? _selectedCurrency : null,
+          value: _currencies.any((c) => c['code'] == _selectedCurrency)
+              ? _selectedCurrency
+              : null,
           decoration: InputDecoration(
-            prefixIcon: Icon(Icons.currency_exchange, size: 20, color: _accentColor),
+            prefixIcon:
+                Icon(Icons.currency_exchange, size: 20, color: _accentColor),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             isDense: true,
           ),
           items: _currencies.map((c) {
@@ -527,9 +561,14 @@ class _CreateSettlementVoucherScreenState
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(symbol, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  Text(symbol,
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                   const SizedBox(width: 6),
-                  Flexible(child: Text(nameAr, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))),
+                  Flexible(
+                      child: Text(nameAr,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12))),
                 ],
               ),
             );
@@ -564,7 +603,9 @@ class _CreateSettlementVoucherScreenState
         // الحساب المدين
         _buildSectionTitle(theme, 'الحساب المدين'),
         const SizedBox(height: 4),
-        Text('يزيد رصيد هذا الحساب', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w500)),
+        Text('يزيد رصيد هذا الحساب',
+            style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.error, fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         _buildAccountDropdown(
           theme: theme,
@@ -579,7 +620,8 @@ class _CreateSettlementVoucherScreenState
         // سهم تحويل
         Center(
           child: Container(
-            width: 48, height: 48,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: _accentColor.withOpacity(0.1),
               shape: BoxShape.circle,
@@ -592,7 +634,9 @@ class _CreateSettlementVoucherScreenState
         // الحساب الدائن
         _buildSectionTitle(theme, 'الحساب الدائن'),
         const SizedBox(height: 4),
-        Text('ينقص رصيد هذا الحساب', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w500)),
+        Text('ينقص رصيد هذا الحساب',
+            style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.success, fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         _buildAccountDropdown(
           theme: theme,
@@ -631,8 +675,12 @@ class _CreateSettlementVoucherScreenState
     required ValueChanged<int?> onChanged,
   }) {
     // التأكد من أن القيمة المختارة موجودة في القائمة
-    final validItems = _filteredAccounts.map((acc) => (acc['id'] as num?)?.toInt() ?? 0).toList();
-    final safeValue = (selectedId != null && validItems.contains(selectedId)) ? selectedId : null;
+    final validItems = _filteredAccounts
+        .map((acc) => (acc['id'] as num?)?.toInt() ?? 0)
+        .toList();
+    final safeValue = (selectedId != null && validItems.contains(selectedId))
+        ? selectedId
+        : null;
 
     return DropdownButtonFormField<int>(
       value: safeValue,
@@ -646,19 +694,33 @@ class _CreateSettlementVoucherScreenState
         final code = acc['account_code'] as String? ?? '';
         final type = acc['account_type'] as String? ?? '';
         final typeAr = Account.accountTypeAr(
-          AccountType.values.firstWhere((e) => e.name == type, orElse: () => AccountType.ASSET),
+          AccountType.values.firstWhere((e) => e.name == type,
+              orElse: () => AccountType.ASSET),
         );
         return DropdownMenuItem<int>(
           value: (acc['id'] as num?)?.toInt(),
           child: Row(
             children: [
-              Text('$code', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary, fontSize: 12)),
+              Text('$code',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                      fontSize: 12)),
               const SizedBox(width: 6),
-              Expanded(child: Text('$name', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
+              Expanded(
+                  child: Text('$name',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13))),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(4)),
-                child: Text(typeAr, style: TextStyle(fontSize: 9, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(4)),
+                child: Text(typeAr,
+                    style: TextStyle(
+                        fontSize: 9,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -703,15 +765,19 @@ class _CreateSettlementVoucherScreenState
               children: [
                 Row(
                   children: [
-                    Text('بند ${index + 1}', style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700, color: _accentColor,
-                    )),
+                    Text('بند ${index + 1}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: _accentColor,
+                        )),
                     const Spacer(),
                     if (_lineItems.length > 1)
                       IconButton(
                         onPressed: () => _removeLineItem(index),
-                        icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        icon: const Icon(Icons.delete_outline,
+                            color: AppColors.error, size: 20),
+                        constraints:
+                            const BoxConstraints(minWidth: 32, minHeight: 32),
                         padding: EdgeInsets.zero,
                       ),
                   ],
@@ -735,11 +801,14 @@ class _CreateSettlementVoucherScreenState
                     Expanded(
                       child: TextFormField(
                         controller: item.debitController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         decoration: InputDecoration(
                           labelText: 'مدين',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
                           isDense: true,
                         ),
                         onChanged: (_) => setState(() {}),
@@ -749,11 +818,14 @@ class _CreateSettlementVoucherScreenState
                     Expanded(
                       child: TextFormField(
                         controller: item.creditController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         decoration: InputDecoration(
                           labelText: 'دائن',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
                           isDense: true,
                         ),
                         onChanged: (_) => setState(() {}),
@@ -767,8 +839,10 @@ class _CreateSettlementVoucherScreenState
                   controller: item.descriptionController,
                   decoration: InputDecoration(
                     hintText: 'وصف البند (اختياري)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     isDense: true,
                   ),
                 ),
@@ -785,10 +859,14 @@ class _CreateSettlementVoucherScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isBalanced ? AppColors.success.withOpacity(0.06) : AppColors.error.withOpacity(0.06),
+        color: isBalanced
+            ? AppColors.success.withOpacity(0.06)
+            : AppColors.error.withOpacity(0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isBalanced ? AppColors.success.withOpacity(0.2) : AppColors.error.withOpacity(0.2),
+          color: isBalanced
+              ? AppColors.success.withOpacity(0.2)
+              : AppColors.error.withOpacity(0.2),
         ),
       ),
       child: Column(
@@ -799,13 +877,17 @@ class _CreateSettlementVoucherScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('إجمالي المدين', style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary, fontWeight: FontWeight.w500,
-                    )),
+                    Text('إجمالي المدين',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        )),
                     const SizedBox(height: 4),
                     Text(
-                      CurrencyFormatter.format(_totalDebit, symbol: _getCurrencySymbol(_selectedCurrency)),
-                      style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.error),
+                      CurrencyFormatter.format(_totalDebit,
+                          symbol: _getCurrencySymbol(_selectedCurrency)),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w800, color: AppColors.error),
                     ),
                   ],
                 ),
@@ -814,13 +896,18 @@ class _CreateSettlementVoucherScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('إجمالي الدائن', style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary, fontWeight: FontWeight.w500,
-                    )),
+                    Text('إجمالي الدائن',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        )),
                     const SizedBox(height: 4),
                     Text(
-                      CurrencyFormatter.format(_totalCredit, symbol: _getCurrencySymbol(_selectedCurrency)),
-                      style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success),
+                      CurrencyFormatter.format(_totalCredit,
+                          symbol: _getCurrencySymbol(_selectedCurrency)),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.success),
                     ),
                   ],
                 ),
@@ -833,7 +920,8 @@ class _CreateSettlementVoucherScreenState
           Row(
             children: [
               Icon(isBalanced ? Icons.check_circle : Icons.error,
-                  color: isBalanced ? AppColors.success : AppColors.error, size: 20),
+                  color: isBalanced ? AppColors.success : AppColors.error,
+                  size: 20),
               const SizedBox(width: 8),
               Text(
                 isBalanced

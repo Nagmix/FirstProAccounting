@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../core/theme/app_colors.dart';
@@ -11,7 +13,8 @@ class CreateVoucherScreen extends StatefulWidget {
   final String? initialType;
   final int? initialSupplierId;
 
-  const CreateVoucherScreen({super.key, this.initialType, this.initialSupplierId});
+  const CreateVoucherScreen(
+      {super.key, this.initialType, this.initialSupplierId});
 
   @override
   State<CreateVoucherScreen> createState() => _CreateVoucherScreenState();
@@ -68,7 +71,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
     final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
     setState(() {
       _accounts = accounts.where((a) => (a['is_active'] as int?) == 1).toList();
-      _cashBoxes = cashBoxes.where((c) => (c['is_active'] as int?) == 1).toList();
+      _cashBoxes =
+          cashBoxes.where((c) => (c['is_active'] as int?) == 1).toList();
       _filteredAccounts = _accounts;
     });
   }
@@ -178,10 +182,14 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final voucherNumber = await locator<CashBoxService>().getNextVoucherNumber(_selectedType);
+      final voucherNumber =
+          await locator<CashBoxService>().getNextVoucherNumber(_selectedType);
       final now = DateTime.now().toIso8601String();
       final totalAmount = _totalDebit;
-      final dateStr = _selectedDate.toIso8601String().split('T').first;
+      // B-1/A-5: store a FULL timestamp (selected day + current time) so
+      // chronological sorting and running balances work across all
+      // movement types. Day-only storage broke ordering vs full timestamps.
+      final dateStr = DateFormatter.storageTimestamp(_selectedDate);
 
       final voucherMap = {
         'voucher_number': voucherNumber,
@@ -214,7 +222,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
       }
 
       // إنشاء السند مع القيود اليومية وتحديث الأرصدة في معاملة واحدة
-      await locator<VoucherRepository>().saveVoucherWithJournalEntry(voucherMap, items);
+      await locator<VoucherRepository>()
+          .saveVoucherWithJournalEntry(voucherMap, items);
 
       if (mounted) {
         context.showSuccessSnackBar('تم حفظ السند بنجاح');
@@ -301,7 +310,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                 decoration: InputDecoration(
                   hintText: 'وصف السند...',
                   prefixIcon: const Icon(Icons.description),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 maxLines: 2,
               ),
@@ -314,7 +324,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                   const Spacer(),
                   IconButton(
                     onPressed: _addLineItem,
-                    icon: const Icon(Icons.add_circle, color: AppColors.primary),
+                    icon:
+                        const Icon(Icons.add_circle, color: AppColors.primary),
                     tooltip: 'إضافة بند',
                   ),
                 ],
@@ -400,14 +411,17 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
           final color = _getTypeColorForType(type['value'] as String);
           return Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _selectedType = type['value'] as String),
+              onTap: () =>
+                  setState(() => _selectedType = type['value'] as String),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+                  color:
+                      isSelected ? color.withOpacity(0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
-                  border: isSelected ? Border.all(color: color, width: 2) : null,
+                  border:
+                      isSelected ? Border.all(color: color, width: 2) : null,
                 ),
                 child: Column(
                   children: [
@@ -421,7 +435,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                       type['label'] as String,
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected ? color : AppColors.textSecondary,
                       ),
                       textAlign: TextAlign.center,
@@ -458,17 +473,20 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+          color:
+              isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.divider),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today, color: AppColors.primary, size: 20),
+            const Icon(Icons.calendar_today,
+                color: AppColors.primary, size: 20),
             const SizedBox(width: 12),
             Text(
               _selectedDate.toIso8601String().split('T').first,
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             const Icon(Icons.arrow_drop_down, color: AppColors.textHint),
@@ -495,7 +513,8 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
     );
   }
 
-  Widget _buildCurrencyOption(String code, String symbol, ThemeData theme, bool isDark) {
+  Widget _buildCurrencyOption(
+      String code, String symbol, ThemeData theme, bool isDark) {
     final isSelected = _selectedCurrency == code;
     return Expanded(
       child: GestureDetector(
@@ -504,9 +523,13 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+            color: isSelected
+                ? AppColors.primary.withOpacity(0.15)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            border: isSelected ? Border.all(color: AppColors.primary, width: 2) : null,
+            border: isSelected
+                ? Border.all(color: AppColors.primary, width: 2)
+                : null,
           ),
           child: Center(
             child: Text(
@@ -570,9 +593,11 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                 if (_lineItems.length > 1)
                   IconButton(
                     onPressed: () => _removeLineItem(index),
-                    icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                    icon: const Icon(Icons.delete_outline,
+                        color: AppColors.error, size: 20),
                     tooltip: 'حذف البند',
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
                     padding: EdgeInsets.zero,
                   ),
               ],
@@ -585,8 +610,10 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
               decoration: InputDecoration(
                 hintText: 'اختر الحساب',
                 prefixIcon: const Icon(Icons.pie_chart, size: 18),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 isDense: true,
               ),
               items: _accounts.map((acc) {
@@ -607,11 +634,14 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: item.debitController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: 'مدين',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       isDense: true,
                     ),
                     onChanged: (_) => setState(() {}),
@@ -621,11 +651,14 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: item.creditController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: 'دائن',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       isDense: true,
                     ),
                     onChanged: (_) => setState(() {}),
@@ -640,8 +673,10 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
               controller: item.descriptionController,
               decoration: InputDecoration(
                 hintText: 'وصف البند (اختياري)',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 isDense: true,
               ),
             ),
@@ -728,7 +763,9 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                isBalanced ? 'السند متوازن ✓' : 'السند غير متوازن - الفرق: ${CurrencyFormatter.format((_totalDebit - _totalCredit).abs())}',
+                isBalanced
+                    ? 'السند متوازن ✓'
+                    : 'السند غير متوازن - الفرق: ${CurrencyFormatter.format((_totalDebit - _totalCredit).abs())}',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: isBalanced ? AppColors.success : AppColors.error,
                   fontWeight: FontWeight.w700,
