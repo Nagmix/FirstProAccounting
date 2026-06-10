@@ -847,10 +847,12 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
     );
   }
 
-  /// Gradient header card showing entity name, phone, and balance.
+  /// Gradient header card showing entity name, type badge, phone, and balance.
+  /// Matches the cash box detail screen design exactly.
   Widget buildHeaderCard() {
     final theme = Theme.of(context);
     final isDebit = _netBalance < 0;
+    final balanceDisplay = CurrencyFormatter.formatValue(_netBalance.abs());
 
     return Container(
       width: double.infinity,
@@ -878,12 +880,10 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
-                child: Text(
-                  avatarLetter,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 22),
+                child: Icon(
+                  entityIcon,
+                  color: Colors.white,
+                  size: 24,
                 ),
               ),
             ),
@@ -898,26 +898,44 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                           fontWeight: FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
-                  if (entitySubtitle.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Row(children: [
-                      const Icon(Icons.work, size: 13, color: Colors.white70),
-                      const SizedBox(width: 4),
-                      Text(entitySubtitle,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: Colors.white70)),
-                    ]),
-                  ],
-                  if (entityPhone.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Row(children: [
-                      const Icon(Icons.phone, size: 13, color: Colors.white70),
-                      const SizedBox(width: 4),
-                      Text(entityPhone,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: Colors.white70)),
-                    ]),
-                  ],
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          entityLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      if (entityPhone.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.phone, size: 12, color: Colors.white70),
+                        const SizedBox(width: 4),
+                        Text(
+                          entityPhone,
+                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                        ),
+                      ],
+                      if (entitySubtitle.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.work, size: 12, color: Colors.white70),
+                        const SizedBox(width: 4),
+                        Text(
+                          entitySubtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -933,7 +951,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               child: Column(
                 children: [
                   Text(
-                    '${_netBalance.abs().toStringAsFixed(2)} ${currencySymbol(_selectedCurrency)}',
+                    '$balanceDisplay ${currencySymbol(_selectedCurrency)}',
                     style: theme.textTheme.titleMedium?.copyWith(
                         color: Colors.white, fontWeight: FontWeight.w800),
                   ),
@@ -990,8 +1008,10 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
   }
 
   /// Toolbar with search, filter, date range, currency, and sort controls.
+  /// Matches the cash box detail screen toolbar design exactly.
   Widget buildToolbar() {
-    final isLight = Theme.of(context).brightness == Brightness.light;
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
       color: isLight ? AppColors.surface : AppColors.darkSurface,
@@ -1009,8 +1029,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 },
                 decoration: InputDecoration(
                   hintText: 'بحث حركة...',
-                  hintStyle: TextStyle(
-                      fontSize: 13, color: AppColors.textHint),
+                  hintStyle: TextStyle(fontSize: 13, color: AppColors.textHint),
                   prefixIcon: const Icon(Icons.search, size: 18),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
@@ -1022,114 +1041,163 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                           })
                       : null,
                   isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide:
-                        BorderSide(color: AppColors.border, width: 1),
+                    borderSide: BorderSide(color: AppColors.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide:
-                        BorderSide(color: AppColors.border, width: 1),
+                    borderSide: BorderSide(color: AppColors.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                        color: AppColors.primary, width: 1.5),
+                    borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Filter button — bordered container with dot indicator
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              border: Border.all(color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.border),
+              borderRadius: BorderRadius.circular(10),
+              color: _selectedFilterIndex > 0 ? AppColors.primary.withOpacity(0.08) : null,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: showFilterPopup,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.filter_list, size: 18, color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.textSecondary),
+                      if (_selectedFilterIndex > 0) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 6, height: 6,
+                          decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 6),
-          // Filter button
-          Material(
-            color: AppColors.primary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(10),
-            child: InkWell(
+
+          // Date range button — bordered container with conditional styling
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              border: Border.all(color: _dateRange != null ? AppColors.primary : AppColors.border),
               borderRadius: BorderRadius.circular(10),
-              onTap: showFilterPopup,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                child: Icon(Icons.filter_list,
-                    size: 20, color: AppColors.primary),
-              ),
+              color: _dateRange != null ? AppColors.primary.withOpacity(0.08) : null,
             ),
-          ),
-          const SizedBox(width: 4),
-          // Date range / clear
-          if (_dateRange != null)
-            Material(
-              color: AppColors.error.withOpacity(0.08),
+            child: Material(
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(10),
               child: InkWell(
+                onTap: _dateRange != null ? clearDateRange : pickDateRange,
                 borderRadius: BorderRadius.circular(10),
-                onTap: clearDateRange,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 10),
-                  child: Icon(Icons.clear,
-                      size: 20, color: AppColors.error),
-                ),
-              ),
-            )
-          else
-            Material(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: pickDateRange,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 10),
-                  child: Icon(Icons.date_range,
-                      size: 20, color: AppColors.primary),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _dateRange != null ? Icons.event_busy : Icons.date_range,
+                        size: 18,
+                        color: _dateRange != null ? AppColors.primary : AppColors.textSecondary,
+                      ),
+                      if (_dateRange != null) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '${_dateRange!.start.day}/${_dateRange!.start.month}',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          const SizedBox(width: 4),
-          // Currency dropdown
-          DropdownButton<String>(
-            value: _selectedCurrency,
-            underline: const SizedBox(),
-            items: _currencyOptions
-                .map((e) => DropdownMenuItem(
-                      value: e.key,
-                      child: Text(e.value,
-                          style: const TextStyle(fontSize: 13)),
-                    ))
-                .toList(),
-            onChanged: (v) {
-              if (v != null) {
-                _selectedCurrency = v;
-                applyFilters();
-              }
-            },
           ),
-          const SizedBox(width: 2),
-          // Sort toggle
+          const SizedBox(width: 6),
+
+          // Currency dropdown — bordered container
+          Container(
+            height: 40,
+            padding: const EdgeInsets.only(left: 8, right: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: DropdownButton<String>(
+              value: _selectedCurrency ?? 'YER',
+              underline: const SizedBox.shrink(),
+              icon: const Icon(Icons.arrow_drop_down, size: 18),
+              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
+              items: _currencyOptions
+                  .map((e) => DropdownMenuItem<String>(
+                        value: e.value,
+                        child: Text(e.key, style: const TextStyle(fontSize: 12)),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null && v.isNotEmpty) {
+                  _selectedCurrency = v;
+                  loadData();
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Sort order toggle — icon + text label in bordered container
           Material(
-            color: AppColors.primary.withOpacity(0.08),
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             child: InkWell(
-              borderRadius: BorderRadius.circular(10),
               onTap: () {
                 _sortDescending = !_sortDescending;
                 applyFilters();
               },
+              borderRadius: BorderRadius.circular(10),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                child: Icon(
-                  _sortDescending
-                      ? Icons.arrow_downward
-                      : Icons.arrow_upward,
-                  size: 20,
-                  color: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  border: Border.all(color: _sortDescending ? AppColors.primary : AppColors.border),
+                  borderRadius: BorderRadius.circular(10),
+                  color: _sortDescending ? AppColors.primary.withOpacity(0.08) : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                      size: 14,
+                      color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _sortDescending ? 'تنازلي' : 'تصاعدي',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1140,56 +1208,89 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
   }
 
   /// Active filter label chip (shown when a non-"all" tab is selected).
+  /// Matches the cash box design with filter label, close button, and movement count.
   Widget buildActiveFilterLabel() {
     if (_selectedFilterIndex == 0) return const SizedBox.shrink();
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final theme = Theme.of(context);
     final label = filterTabs[_selectedFilterIndex].label;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Chip(
-        label: Text('التصفية: $label'),
-        onDeleted: () {
-          setState(() => _selectedFilterIndex = 0);
-          applyFilters();
-        },
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      color: isLight ? AppColors.surface : AppColors.darkSurface,
+      child: Row(
+        children: [
+          Text('الفلتر: ', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: () { setState(() => _selectedFilterIndex = 0); applyFilters(); },
+                  child: Icon(Icons.close, size: 14, color: AppColors.primary),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          Text('${_filteredMovements.length} حركة', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+        ],
       ),
     );
   }
 
   /// Action buttons row: receipt voucher, payment voucher, optional edit.
+  /// Matches the cash box design using OutlinedButton style.
   Widget buildActionButtons() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: isLight ? AppColors.surface : AppColors.darkSurface,
       child: Row(
         children: [
           Expanded(
-            child: ElevatedButton.icon(
+            child: OutlinedButton.icon(
               onPressed: () => showAddVoucherDialog('receipt'),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('سند قبض'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                foregroundColor: Colors.white,
+              icon: const Icon(Icons.assignment_turned_in, size: 16),
+              label: const Text('سند قبض', style: TextStyle(fontSize: 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.success,
+                side: const BorderSide(color: AppColors.success),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: ElevatedButton.icon(
+            child: OutlinedButton.icon(
               onPressed: () => showAddVoucherDialog('payment'),
-              icon: const Icon(Icons.remove, size: 18),
-              label: const Text('سند صرف'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
+              icon: const Icon(Icons.assignment_return, size: 16),
+              label: const Text('سند صرف', style: TextStyle(fontSize: 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
           if (showEditButton) ...[
             const SizedBox(width: 8),
-            ElevatedButton.icon(
+            OutlinedButton.icon(
               onPressed: onEditPressed,
-              icon: const Icon(Icons.edit, size: 18),
-              label: const Text('تعديل'),
+              icon: const Icon(Icons.edit, size: 16),
+              label: const Text('تعديل', style: TextStyle(fontSize: 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             ),
           ],
         ],
@@ -1198,77 +1299,122 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
   }
 
   /// Bottom summary bar showing total credit, debit, and net balance.
+  /// Matches the cash box design with colored containers for each column.
   Widget buildBottomBar() {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     final balanceLabel = _netBalance >= 0 ? 'له' : 'عليه';
-    final balanceColor =
-        _netBalance >= 0 ? AppColors.success : AppColors.error;
+    final balanceColor = _netBalance >= 0 ? AppColors.success : AppColors.error;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black12,
-              blurRadius: 8,
-              offset: const Offset(0, -2))
-        ],
+        color: isLight ? AppColors.surface : AppColors.darkSurface,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), offset: const Offset(0, -2), blurRadius: 8)],
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('له',
-                    style: TextStyle(fontSize: 11, color: Colors.grey)),
-                Text(CurrencyFormatter.formatValue(_totalCredit),
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.success)),
-              ],
-            ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              // له (Credit)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.success.withOpacity(0.25), width: 1),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('له', style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700, color: AppColors.success, fontSize: 12,
+                      )),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_totalCredit.toStringAsFixed(2)} ${currencySymbol(_selectedCurrency)}',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w900, color: AppColors.success, fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // عليه (Debit)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.error.withOpacity(0.25), width: 1),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('عليه', style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 12,
+                      )),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_totalDebit.toStringAsFixed(2)} ${currencySymbol(_selectedCurrency)}',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w900, color: AppColors.error, fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // الرصيد (Net Balance)
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: balanceColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: balanceColor.withOpacity(0.25), width: 1),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(balanceLabel, style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700, color: balanceColor, fontSize: 12,
+                      )),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_netBalance.abs().toStringAsFixed(2)} ${currencySymbol(_selectedCurrency)}',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w900, color: balanceColor, fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text('عليه',
-                    style: TextStyle(fontSize: 11, color: Colors.grey)),
-                Text(CurrencyFormatter.formatValue(_totalDebit),
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.error)),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(balanceLabel,
-                    style:
-                        TextStyle(fontSize: 11, color: balanceColor)),
-                Text(CurrencyFormatter.formatValue(_netBalance.abs()),
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: balanceColor)),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   /// Movements list with loading, empty state, and refresh support.
+  /// Matches the cash box design with proper padding and scroll physics.
   Widget buildMovementsList() {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1277,21 +1423,24 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(entityIcon, size: 64, color: Colors.grey.shade300),
+            Icon(entityIcon, size: 64, color: AppColors.textHint.withOpacity(0.3)),
             const SizedBox(height: 16),
-            const Text('لا توجد حركات',
-                style: TextStyle(color: Colors.grey, fontSize: 16)),
+            Text('لا توجد حركات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
           ],
         ),
       );
     }
     return RefreshIndicator(
       onRefresh: loadData,
+      color: AppColors.primary,
       child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 80, top: 4),
         itemCount: _filteredMovements.length,
         itemBuilder: (ctx, i) => _MovementCard(
           movement: _filteredMovements[i],
           runningBalance: _computeRunningBalance(i),
+          isLight: isLight,
         ),
       ),
     );
@@ -1384,6 +1533,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
   /// Convenience: build the full body column that most entity detail
   /// screens share (header + period filter + toolbar + filter label +
   /// action buttons + movement list).
+  /// Matches the cash box layout structure exactly.
   Widget buildBody() {
     return Column(
       children: [
@@ -1392,7 +1542,6 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
         buildToolbar(),
         buildActiveFilterLabel(),
         buildActionButtons(),
-        const SizedBox(height: 4),
         Expanded(child: buildMovementsList()),
       ],
     );
@@ -1407,16 +1556,17 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
 class _MovementCard extends StatelessWidget {
   final Map<String, dynamic> movement;
   final double runningBalance;
+  final bool isLight;
 
   const _MovementCard({
     required this.movement,
     required this.runningBalance,
+    required this.isLight,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
 
     final icon = movement['icon'] as IconData? ?? Icons.description;
     final color = movement['color'] as Color? ?? AppColors.textSecondary;
