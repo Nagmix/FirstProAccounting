@@ -7,9 +7,9 @@
 
 set -e
 
-# ── Setup Paths ────────────────────────────────────────────────
-export PATH="/home/z/my-project/tools/flutter/bin:/home/z/my-project/tools/dart-sdk/bin:$PATH"
-PROJECT_DIR="/home/z/my-project/FirstProAccounting"
+# ── Setup Paths (B-10: relative — works on any machine) ───────
+# flutter/dart are expected on PATH; the project dir is resolved from git.
+PROJECT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readlink -f "$0")")")"
 cd "$PROJECT_DIR"
 
 # ── Colors ─────────────────────────────────────────────────────

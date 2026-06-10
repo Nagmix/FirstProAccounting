@@ -2,8 +2,8 @@
 # Pre-push hook — يشغل فحص الكود قبل الدفع إلى GitHub
 # يتأكد من عدم وجود أخطاء قبل رفع الكود
 
-export PATH="/home/z/my-project/tools/flutter/bin:/home/z/my-project/tools/dart-sdk/bin:$PATH"
-cd /home/z/my-project/FirstProAccounting
+# B-10: resolve the repo root dynamically — works on any machine.
+cd "$(git rev-parse --show-toplevel)"
 
 echo "🔍 فحص الكود قبل الدفع..."
 
