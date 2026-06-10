@@ -2,13 +2,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' as sqflite;
 import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/security/db_encryption.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/excel_exporter.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -214,31 +215,54 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
         return;
       }
 
-      // Save auto-backup copy
+      // Save auto-backup copy (internal, always)
       await _saveAutoBackup(dbFile);
 
-      // Create timestamped backup for sharing
-      final dir = await getApplicationDocumentsDirectory();
+      // Let the user choose where to save the backup file
       final timestamp = DateTime.now()
           .toIso8601String()
           .replaceAll(':', '-')
           .split('.')
           .first;
-      final backupPath = p.join(dir.path, 'firstpro_backup_$timestamp.db');
-      await dbFile.copy(backupPath);
+      final suggestedName = 'firstpro_backup_$timestamp.db';
+
+      String? savePath;
+      try {
+        savePath = await FilePicker.platform.saveFile(
+          dialogTitle: 'اختر مجلد الحفظ للنسخة الاحتياطية',
+          fileName: suggestedName,
+          type: FileType.any,
+        );
+      } on PlatformException catch (e) {
+        if (kDebugMode) debugPrint('_onBackup: saveFile picker failed: $e');
+        // Fallback: save to app documents and share
+      }
+
+      if (savePath != null) {
+        // User selected a path → save directly
+        await dbFile.copy(savePath);
+      } else {
+        // User cancelled the save dialog OR saveFile unavailable
+        // Fallback to share method
+        final dir = await getApplicationDocumentsDirectory();
+        final backupPath = p.join(dir.path, suggestedName);
+        await dbFile.copy(backupPath);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم الحفظ في المجلد الافتراضي - يمكنك مشاركته'),
+              backgroundColor: AppColors.info,
+            ),
+          );
+        }
+      }
 
       // Update last backup date
       final now = DateTime.now().toIso8601String();
       await widget.saveSetting('last_backup_date', now);
-      setState(() => _lastBackupDate = now);
-
-      // Share the backup file
-      await Share.shareXFiles(
-        [XFile(backupPath)],
-        text: 'نسخة احتياطية - الأول برو المحاسبي',
-      );
-
       if (mounted) {
+        setState(() => _lastBackupDate = now);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم إنشاء النسخة الاحتياطية بنجاح'),
@@ -247,9 +271,13 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
         );
       }
     } catch (e) {
+      if (kDebugMode) debugPrint('_onBackup error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء النسخ الاحتياطي')),
+          SnackBar(
+            content: Text('حدث خطأ أثناء النسخ الاحتياطي: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -375,11 +403,16 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
       final dbHelper = locator<DatabaseHelper>();
 
       // 0. Verify backup file integrity before replacing the database
+      // IMPORTANT: The backup file is encrypted with SQLCipher, so we MUST
+      // use the stored encryption key to open it. Opening without the key
+      // will cause the integrity check to fail on any valid encrypted DB.
       try {
+        final encryptionKey = await DbEncryption.getOrGenerateKey();
         final backupDb = await sqflite.openDatabase(
           backupFilePath,
           version: 1,
           readOnly: true,
+          password: encryptionKey,
         );
         final result = await backupDb.rawQuery('PRAGMA integrity_check');
         await backupDb.close();
@@ -396,12 +429,23 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
           }
           return;
         }
+      } on SecurityException catch (e) {
+        if (mounted) {
+          Navigator.pop(context); // dismiss loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('لا يمكن الوصول لمفتاح التشفير: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
       } catch (e) {
         if (mounted) {
           Navigator.pop(context); // dismiss loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('فشل التحقق من سلامة الملف: $e'),
+              content: Text('فشل التحقق من سلامة الملف'),
               backgroundColor: AppColors.error,
             ),
           );
