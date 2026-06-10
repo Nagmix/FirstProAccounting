@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:firstpro/core/constants/app_constants.dart';
-import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 
 /// ESC/POS command generator for 80mm/58mm thermal printers.

@@ -61,7 +61,8 @@ class EmployeeRepository {
     // If opening balance > 0, create the journal entry against the
     // appropriate currency accounts
     if (balance > 0 && openingBalanceCurrency != null) {
-      final obCodeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(openingBalanceCurrency!);
+      final obCodeOffset = await locator<BaseCurrencyService>()
+          .getOffsetForCurrency(openingBalanceCurrency);
       final obEmployeeAccountCode = (5100 + obCodeOffset).toString();
       final obEquityAccountCode = (2901 + obCodeOffset).toString();
 
