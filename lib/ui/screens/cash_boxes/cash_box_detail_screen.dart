@@ -7,7 +7,6 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/journal_service.dart';
 import '../../../data/models/cash_box_model.dart';
@@ -19,7 +18,8 @@ class CashBoxDetailScreen extends StatefulWidget {
   final CashBox cashBox;
   final String? initialCurrency; // pre-selected currency from list screen
 
-  const CashBoxDetailScreen({super.key, required this.cashBox, this.initialCurrency});
+  const CashBoxDetailScreen(
+      {super.key, required this.cashBox, this.initialCurrency});
 
   @override
   State<CashBoxDetailScreen> createState() => _CashBoxDetailScreenState();
@@ -93,7 +93,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
 
     // Refresh cash box data (non-fatal if this fails)
     try {
-      final cashBoxMap = await locator<CashBoxService>().getCashBoxById(widget.cashBox.id!);
+      final cashBoxMap =
+          await locator<CashBoxService>().getCashBoxById(widget.cashBox.id!);
       if (cashBoxMap != null) {
         _freshCashBox = CashBox.fromMap(cashBoxMap);
       }
@@ -134,7 +135,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       final dateB = b['date'] as String? ?? '';
       final cmp = dateA.compareTo(dateB);
       if (cmp != 0) return cmp;
-      return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
+      return ((a['created_at'] as String?) ?? '')
+          .compareTo((b['created_at'] as String?) ?? '');
     });
 
     // Calculate running balance per currency
@@ -143,7 +145,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       final currency = m['currency'] as String? ?? 'YER';
       final debit = MoneyHelper.readMoney(m['debit']);
       final credit = MoneyHelper.readMoney(m['credit']);
-      currencyRunBal[currency] = (currencyRunBal[currency] ?? 0.0) + credit - debit;
+      currencyRunBal[currency] =
+          (currencyRunBal[currency] ?? 0.0) + credit - debit;
       m['running_balance'] = currencyRunBal[currency];
     }
 
@@ -153,21 +156,27 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
 
   void _applyFilters() {
     // Deep copy maps to avoid mutating _allMovements when setting running_balance
-    var filtered = _allMovements.map((m) => Map<String, dynamic>.from(m)).toList();
+    var filtered =
+        _allMovements.map((m) => Map<String, dynamic>.from(m)).toList();
 
     // Apply tab filter
     final filterKey = _filterTabs[_selectedFilterIndex].key;
     if (filterKey == 'debit') {
-      filtered = filtered.where((m) => (MoneyHelper.readMoney(m['debit'])) > 0).toList();
+      filtered = filtered
+          .where((m) => (MoneyHelper.readMoney(m['debit'])) > 0)
+          .toList();
     } else if (filterKey == 'credit') {
-      filtered = filtered.where((m) => (MoneyHelper.readMoney(m['credit'])) > 0).toList();
+      filtered = filtered
+          .where((m) => (MoneyHelper.readMoney(m['credit'])) > 0)
+          .toList();
     } else if (filterKey != 'all') {
       filtered = filtered.where((m) => m['filter_key'] == filterKey).toList();
     }
 
     // Apply currency filter (mandatory — no 'All' option)
     if (_selectedCurrency != null && _selectedCurrency!.isNotEmpty) {
-      filtered = filtered.where((m) => m['currency'] == _selectedCurrency).toList();
+      filtered =
+          filtered.where((m) => m['currency'] == _selectedCurrency).toList();
     }
 
     // Apply period filter
@@ -179,7 +188,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
           final date = DateTime.parse(dateStr);
           switch (_periodFilter) {
             case 0: // يومي - today
-              return date.year == now.year && date.month == now.month && date.day == now.day;
+              return date.year == now.year &&
+                  date.month == now.month &&
+                  date.day == now.day;
             case 1: // شهري - current month
               return date.year == now.year && date.month == now.month;
             case 2: // سنوي - current year
@@ -187,7 +198,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
             default:
               return true;
           }
-        } catch (_) { return true; }
+        } catch (_) {
+          return true;
+        }
       }).toList();
     }
 
@@ -197,7 +210,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
         final dateStr = m['date'] as String? ?? '';
         try {
           final date = DateTime.parse(dateStr);
-          return !date.isBefore(_dateRange!.start) && !date.isAfter(_dateRange!.end.add(const Duration(days: 1)));
+          return !date.isBefore(_dateRange!.start) &&
+              !date.isAfter(_dateRange!.end.add(const Duration(days: 1)));
         } catch (e) {
           debugPrint('CashBoxDetailScreen._applyFilters: $e');
           return true;
@@ -277,8 +291,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.primary,
-            ),
+                  primary: AppColors.primary,
+                ),
           ),
           child: child!,
         );
@@ -298,9 +312,13 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   // ── Currency symbol helper ──────────────────────────────────────
   String _currencySymbol(String? code) {
     switch (code) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return r'$';
-      case 'YER': default: return 'ر.ي';
+      case 'SAR':
+        return 'ر.س';
+      case 'USD':
+        return r'$';
+      case 'YER':
+      default:
+        return 'ر.ي';
     }
   }
 
@@ -308,7 +326,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   void _showFilterPopup() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => SafeArea(
           child: Padding(
@@ -321,14 +340,21 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                   children: [
                     Icon(Icons.filter_list, color: AppColors.primary),
                     const SizedBox(width: 8),
-                    Text('تصفية الحركات', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    Text('تصفية الحركات',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w700)),
                     const Spacer(),
                     TextButton(
                       onPressed: () {
                         setSheetState(() => _selectedFilterIndex = 0);
                         setState(() => _selectedFilterIndex = 0);
                       },
-                      child: Text('الكل', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                      child: Text('الكل',
+                          style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700)),
                     ),
                   ],
                 ),
@@ -349,10 +375,15 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                       },
                       labelStyle: TextStyle(
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? Colors.white : AppColors.textSecondary,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color:
+                            isSelected ? Colors.white : AppColors.textSecondary,
                       ),
-                      backgroundColor: Theme.of(context).brightness == Brightness.light ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.light
+                              ? AppColors.surfaceVariant
+                              : AppColors.darkSurfaceVariant,
                       selectedColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       visualDensity: VisualDensity.compact,
@@ -372,7 +403,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   Future<void> _showAddVoucherDialog(String voucherType) async {
     final amountController = TextEditingController();
     final descriptionController = TextEditingController();
-    String selectedCurrency = _selectedCurrency ?? _freshCashBox?.currency ?? 'YER';
+    String selectedCurrency =
+        _selectedCurrency ?? _freshCashBox?.currency ?? 'YER';
     bool isSaving = false;
 
     await showDialog(
@@ -403,8 +435,12 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     // Amount
                     TextFormField(
                       controller: amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}'))
+                      ],
                       decoration: InputDecoration(
                         labelText: 'المبلغ',
                         prefixIcon: const Icon(Icons.attach_money),
@@ -421,9 +457,12 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                         prefixIcon: Icon(Icons.currency_exchange),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'YER', child: Text('ريال يمني (YER)')),
-                        DropdownMenuItem(value: 'SAR', child: Text('ريال سعودي (SAR)')),
-                        DropdownMenuItem(value: 'USD', child: Text('دولار أمريكي (USD)')),
+                        DropdownMenuItem(
+                            value: 'YER', child: Text('ريال يمني (YER)')),
+                        DropdownMenuItem(
+                            value: 'SAR', child: Text('ريال سعودي (SAR)')),
+                        DropdownMenuItem(
+                            value: 'USD', child: Text('دولار أمريكي (USD)')),
                       ],
                       onChanged: (v) {
                         if (v != null) {
@@ -438,7 +477,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                       controller: descriptionController,
                       maxLines: 2,
                       decoration: InputDecoration(
-                        labelText: voucherType == 'receipt' ? 'بيان سند القبض' : 'بيان سند الصرف',
+                        labelText: voucherType == 'receipt'
+                            ? 'بيان سند القبض'
+                            : 'بيان سند الصرف',
                         prefixIcon: const Icon(Icons.description),
                       ),
                     ),
@@ -457,7 +498,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           final amount = double.tryParse(amountController.text);
                           if (amount == null || amount <= 0) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('يرجى إدخال مبلغ صالح'), backgroundColor: AppColors.error),
+                              const SnackBar(
+                                  content: Text('يرجى إدخال مبلغ صالح'),
+                                  backgroundColor: AppColors.error),
                             );
                             return;
                           }
@@ -465,21 +508,28 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
 
                           final now = DateTime.now();
                           final cashBoxService = locator<CashBoxService>();
-                          final voucherNumber = await cashBoxService.getNextVoucherNumber(voucherType);
+                          final voucherNumber = await cashBoxService
+                              .getNextVoucherNumber(voucherType);
 
                           // Resolve the Cash & Banks account for the selected currency
-                          final codeOffset = selectedCurrency == 'SAR' ? 1 : (selectedCurrency == 'USD' ? 2 : 0);
+                          final codeOffset = selectedCurrency == 'SAR'
+                              ? 1
+                              : (selectedCurrency == 'USD' ? 2 : 0);
                           final cashBanksCode = (1100 + codeOffset).toString();
                           final journalService = locator<JournalService>();
-                          final cashBanksAccount = await journalService.getAccountByCodeAndCurrency(
-                            cashBanksCode, selectedCurrency,
+                          final cashBanksAccount =
+                              await journalService.getAccountByCodeAndCurrency(
+                            cashBanksCode,
+                            selectedCurrency,
                           );
                           final cashAccountId = cashBanksAccount?['id'] as int?;
 
                           // Resolve the Opening Balance Equity account as contra account
                           final obCode = (2901 + codeOffset).toString();
-                          final obAccount = await journalService.getAccountByCodeAndCurrency(
-                            obCode, selectedCurrency,
+                          final obAccount =
+                              await journalService.getAccountByCodeAndCurrency(
+                            obCode,
+                            selectedCurrency,
                           );
                           final obAccountId = obAccount?['id'] as int?;
 
@@ -487,7 +537,10 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                             setDialogState(() => isSaving = false);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('لم يتم العثور على حساب الصناديق للعملة المحددة'), backgroundColor: AppColors.error),
+                                const SnackBar(
+                                    content: Text(
+                                        'لم يتم العثور على حساب الصناديق للعملة المحددة'),
+                                    backgroundColor: AppColors.error),
                               );
                             }
                             return;
@@ -497,7 +550,10 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                             setDialogState(() => isSaving = false);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('لم يتم العثور على حساب مقابل. لا يمكن إنشاء السند.'), backgroundColor: AppColors.error),
+                                const SnackBar(
+                                    content: Text(
+                                        'لم يتم العثور على حساب مقابل. لا يمكن إنشاء السند.'),
+                                    backgroundColor: AppColors.error),
                               );
                             }
                             return;
@@ -507,7 +563,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                             'voucher_number': voucherNumber,
                             'voucher_type': voucherType,
                             'date': now.toIso8601String(),
-                            'description': descriptionController.text.trim().isEmpty
+                            'description': descriptionController.text
+                                    .trim()
+                                    .isEmpty
                                 ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}'
                                 : descriptionController.text.trim(),
                             'currency': selectedCurrency,
@@ -537,97 +595,40 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                             'account_id': debitAccountId,
                             'debit': amount,
                             'credit': 0.0,
-                            'description': '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
+                            'description':
+                                '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
                           });
                           items.add({
                             'account_id': creditAccountId,
                             'debit': 0.0,
                             'credit': amount,
-                            'description': '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
+                            'description':
+                                '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
                           });
 
+                          // insertVoucher handles the FULL posting atomically inside
+                          // a single DB transaction: it inserts the voucher + items,
+                          // creates the journal `transactions` rows for every item
+                          // with account_id (with currency_code / exchange_rate /
+                          // amount_base), updates account balances via
+                          // updateAccountBalanceWithJournal, updates the linked cash
+                          // box balance (cash_box_id is set in voucherMap), and
+                          // enforces the fiscal-period-open check.
+                          //
+                          // B-0 fix: the previous code repeated all of those steps
+                          // manually after this call (outside any transaction),
+                          // which DOUBLE-POSTED every receipt/payment voucher created
+                          // from this screen: duplicated journal entries, doubled
+                          // account balances, and a doubled cash box balance.
                           await cashBoxService.insertVoucher(voucherMap, items);
-
-                          // Create journal entries (transactions) and update account balances
-                          final db = await locator<DatabaseHelper>().database;
-                          final nowStr = now.toIso8601String();
-                          final voucherIdResult = (await db.query('vouchers',
-                            where: 'voucher_number = ? AND voucher_type = ?',
-                            whereArgs: [voucherNumber, voucherType],
-                            orderBy: 'id DESC', limit: 1,
-                          )).first['id'];
-
-                          // Get exchange rate for base currency conversion
-                          double exchangeRate = 1.0;
-                          try {
-                            final curRows = await db.query('currencies',
-                              where: 'code = ?', whereArgs: [selectedCurrency]);
-                            if (curRows.isNotEmpty) {
-                              exchangeRate = (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-                            }
-                          } catch (_) {}
-
-                          // Insert debit transaction
-                          await db.insert('transactions', {
-                            'account_id': debitAccountId,
-                            'journal_id': 'voucher_${voucherIdResult}',
-                            'debit': MoneyHelper.toCents(amount),
-                            'credit': 0,
-                            'description': '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
-                            'date': now.toIso8601String(),
-                            'created_at': nowStr,
-                            'reference_type': voucherType,
-                            'reference_id': 'voucher_$voucherIdResult',
-                            'currency_code': selectedCurrency,
-                            'exchange_rate': exchangeRate,
-                            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
-                          });
-                          await journalService.updateAccountBalance(
-                            debitAccountId, amount, isDebit: true,
-                          );
-
-                          // Insert credit transaction
-                          await db.insert('transactions', {
-                            'account_id': creditAccountId,
-                            'journal_id': 'voucher_${voucherIdResult}',
-                            'debit': 0,
-                            'credit': MoneyHelper.toCents(amount),
-                            'description': '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
-                            'date': now.toIso8601String(),
-                            'created_at': nowStr,
-                            'reference_type': voucherType,
-                            'reference_id': 'voucher_$voucherIdResult',
-                            'currency_code': selectedCurrency,
-                            'exchange_rate': exchangeRate,
-                            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
-                          });
-                          await journalService.updateAccountBalance(
-                            creditAccountId, amount, isDebit: false,
-                          );
-
-                          // Update cash box balance
-                          final cashBoxRows = await db.query('cash_boxes',
-                            where: 'id = ?', whereArgs: [widget.cashBox.id!], limit: 1);
-                          if (cashBoxRows.isNotEmpty) {
-                            final currentBalance = MoneyHelper.readMoney(cashBoxRows.first['balance']);
-                            final balanceType = cashBoxRows.first['balance_type'] as String? ?? 'credit';
-                            double signedBalance = balanceType == 'credit' ? currentBalance : -currentBalance;
-                            final isCashIn = voucherType == 'receipt';
-                            signedBalance += isCashIn ? amount : -amount;
-                            final newBalance = signedBalance.abs();
-                            final newType = signedBalance >= 0 ? 'credit' : 'debit';
-                            await db.update('cash_boxes', {
-                              'balance': MoneyHelper.toCents(newBalance),
-                              'balance_type': newType,
-                              'updated_at': nowStr,
-                            }, where: 'id = ?', whereArgs: [widget.cashBox.id!]);
-                          }
 
                           if (context.mounted) {
                             Navigator.pop(dialogContext);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(voucherType == 'receipt' ? 'تم إنشاء سند القبض بنجاح' : 'تم إنشاء سند الصرف بنجاح'),
+                                content: Text(voucherType == 'receipt'
+                                    ? 'تم إنشاء سند القبض بنجاح'
+                                    : 'تم إنشاء سند الصرف بنجاح'),
                                 backgroundColor: AppColors.success,
                               ),
                             );
@@ -635,8 +636,14 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           }
                         },
                   child: isSaving
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(voucherType == 'receipt' ? 'إنشاء سند قبض' : 'إنشاء سند صرف'),
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text(voucherType == 'receipt'
+                          ? 'إنشاء سند قبض'
+                          : 'إنشاء سند صرف'),
                 ),
               ],
             );
@@ -652,25 +659,37 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
   void _printReport() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('خيارات الطباعة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text('خيارات الطباعة',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 20),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
+                  decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.picture_as_pdf,
+                      color: AppColors.primary),
                 ),
-                title: const Text('طباعة PDF', style: TextStyle(fontWeight: FontWeight.w700)),
+                title: const Text('طباعة PDF',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: const Text('إنشاء ملف PDF لكشف حساب الصندوق'),
                 trailing: const Icon(Icons.arrow_back_ios, size: 16),
-                onTap: () { Navigator.pop(ctx); _generatePdfStatement(); },
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _generatePdfStatement();
+                },
               ),
             ],
           ),
@@ -689,13 +708,16 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
         totalDebit: _totalDebit,
         totalCredit: _totalCredit,
         netBalance: _netBalance,
-        balanceLabel: _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
+        balanceLabel:
+            _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
         currency: _selectedCurrency ?? cashBox.currency,
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء إنشاء كشف الحساب'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء إنشاء كشف الحساب'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -715,7 +737,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء التصدير'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -742,13 +766,19 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 onTap: _printReport,
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.print_rounded, size: 18, color: AppColors.primary),
+                      Icon(Icons.print_rounded,
+                          size: 18, color: AppColors.primary),
                       const SizedBox(width: 4),
-                      Text('طباعة', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                      Text('طباعة',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary)),
                     ],
                   ),
                 ),
@@ -765,13 +795,19 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 onTap: _exportToExcel,
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.sim_card_download_outlined, size: 18, color: AppColors.success),
+                      Icon(Icons.sim_card_download_outlined,
+                          size: 18, color: AppColors.success),
                       const SizedBox(width: 4),
-                      Text('تصدير', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.success)),
+                      Text('تصدير',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.success)),
                     ],
                   ),
                 ),
@@ -788,7 +824,10 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppColors.primaryGradientStart, AppColors.primaryGradientEnd],
+                colors: [
+                  AppColors.primaryGradientStart,
+                  AppColors.primaryGradientEnd
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -807,7 +846,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     ),
                     child: Center(
                       child: Icon(
-                        cashBox.isBank ? Icons.account_balance : Icons.account_balance_wallet,
+                        cashBox.isBank
+                            ? Icons.account_balance
+                            : Icons.account_balance_wallet,
                         color: Colors.white,
                         size: 24,
                       ),
@@ -831,7 +872,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
@@ -845,13 +887,17 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                                 ),
                               ),
                             ),
-                            if (cashBox.isBank && cashBox.bankName != null && cashBox.bankName!.isNotEmpty) ...[
+                            if (cashBox.isBank &&
+                                cashBox.bankName != null &&
+                                cashBox.bankName!.isNotEmpty) ...[
                               const SizedBox(width: 8),
-                              const Icon(Icons.business, size: 12, color: Colors.white70),
+                              const Icon(Icons.business,
+                                  size: 12, color: Colors.white70),
                               const SizedBox(width: 4),
                               Text(
                                 cashBox.bankName!,
-                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: Colors.white70),
                               ),
                             ],
                           ],
@@ -861,7 +907,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                   ),
                   // Balance badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(14),
@@ -878,14 +925,22 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                         ),
                         const SizedBox(height: 2),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: (isDebit ? AppColors.error : AppColors.success).withOpacity(0.9),
+                            color:
+                                (isDebit ? AppColors.error : AppColors.success)
+                                    .withOpacity(0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            isDebit ? 'عليه' : (cashBox.balance > 0 ? 'له' : 'متساوي'),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11),
+                            isDebit
+                                ? 'عليه'
+                                : (cashBox.balance > 0 ? 'له' : 'متساوي'),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11),
                           ),
                         ),
                       ],
@@ -903,7 +958,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
             color: isLight ? AppColors.surface : AppColors.darkSurface,
             child: Row(
               children: [
-                Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textHint),
+                Icon(Icons.calendar_today_outlined,
+                    size: 16, color: AppColors.textHint),
                 const SizedBox(width: 8),
                 _buildPeriodChip('اليوم', 0),
                 const SizedBox(width: 6),
@@ -928,19 +984,36 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     height: 40,
                     child: TextField(
                       controller: _searchController,
-                      onChanged: (v) { setState(() => _searchQuery = v.trim()); _applyFilters(); },
+                      onChanged: (v) {
+                        setState(() => _searchQuery = v.trim());
+                        _applyFilters();
+                      },
                       decoration: InputDecoration(
                         hintText: 'بحث حركة...',
-                        hintStyle: TextStyle(fontSize: 13, color: AppColors.textHint),
+                        hintStyle:
+                            TextStyle(fontSize: 13, color: AppColors.textHint),
                         prefixIcon: const Icon(Icons.search, size: 18),
                         suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(icon: const Icon(Icons.close, size: 16), onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); _applyFilters(); })
+                            ? IconButton(
+                                icon: const Icon(Icons.close, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                  _applyFilters();
+                                })
                             : null,
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: AppColors.border)),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                                color: AppColors.primary, width: 1.5)),
                       ),
                       style: const TextStyle(fontSize: 13),
                     ),
@@ -952,9 +1025,14 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 Container(
                   height: 40,
                   decoration: BoxDecoration(
-                    border: Border.all(color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.border),
+                    border: Border.all(
+                        color: _selectedFilterIndex > 0
+                            ? AppColors.primary
+                            : AppColors.border),
                     borderRadius: BorderRadius.circular(10),
-                    color: _selectedFilterIndex > 0 ? AppColors.primary.withOpacity(0.08) : null,
+                    color: _selectedFilterIndex > 0
+                        ? AppColors.primary.withOpacity(0.08)
+                        : null,
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -967,12 +1045,19 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.filter_list, size: 18, color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.textSecondary),
+                            Icon(Icons.filter_list,
+                                size: 18,
+                                color: _selectedFilterIndex > 0
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary),
                             if (_selectedFilterIndex > 0) ...[
                               const SizedBox(width: 4),
                               Container(
-                                width: 6, height: 6,
-                                decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle),
                               ),
                             ],
                           ],
@@ -987,28 +1072,43 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 Container(
                   height: 40,
                   decoration: BoxDecoration(
-                    border: Border.all(color: _dateRange != null ? AppColors.primary : AppColors.border),
+                    border: Border.all(
+                        color: _dateRange != null
+                            ? AppColors.primary
+                            : AppColors.border),
                     borderRadius: BorderRadius.circular(10),
-                    color: _dateRange != null ? AppColors.primary.withOpacity(0.08) : null,
+                    color: _dateRange != null
+                        ? AppColors.primary.withOpacity(0.08)
+                        : null,
                   ),
                   child: Material(
                     color: Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                     child: InkWell(
-                      onTap: _dateRange != null ? _clearDateRange : _pickDateRange,
+                      onTap:
+                          _dateRange != null ? _clearDateRange : _pickDateRange,
                       borderRadius: BorderRadius.circular(10),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(_dateRange != null ? Icons.event_busy : Icons.date_range, size: 18,
-                              color: _dateRange != null ? AppColors.primary : AppColors.textSecondary),
+                            Icon(
+                                _dateRange != null
+                                    ? Icons.event_busy
+                                    : Icons.date_range,
+                                size: 18,
+                                color: _dateRange != null
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary),
                             if (_dateRange != null) ...[
                               const SizedBox(width: 4),
                               Text(
                                 '${_dateRange!.start.day}/${_dateRange!.start.month}',
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary),
                               ),
                             ],
                           ],
@@ -1031,9 +1131,20 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     value: _selectedCurrency ?? 'YER',
                     underline: const SizedBox.shrink(),
                     icon: const Icon(Icons.arrow_drop_down, size: 18),
-                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
-                    items: _currencyOptions.map((e) => DropdownMenuItem<String>(value: e.value, child: Text(e.key, style: const TextStyle(fontSize: 12)))).toList(),
-                    onChanged: (v) { if (v != null && v.isNotEmpty) { setState(() => _selectedCurrency = v); _loadData(); } },
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700, color: AppColors.primary),
+                    items: _currencyOptions
+                        .map((e) => DropdownMenuItem<String>(
+                            value: e.value,
+                            child: Text(e.key,
+                                style: const TextStyle(fontSize: 12))))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null && v.isNotEmpty) {
+                        setState(() => _selectedCurrency = v);
+                        _loadData();
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -1048,25 +1159,37 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
                       decoration: BoxDecoration(
-                        border: Border.all(color: _sortDescending ? AppColors.primary : AppColors.border),
+                        border: Border.all(
+                            color: _sortDescending
+                                ? AppColors.primary
+                                : AppColors.border),
                         borderRadius: BorderRadius.circular(10),
-                        color: _sortDescending ? AppColors.primary.withOpacity(0.08) : null,
+                        color: _sortDescending
+                            ? AppColors.primary.withOpacity(0.08)
+                            : null,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                            _sortDescending
+                                ? Icons.arrow_downward
+                                : Icons.arrow_upward,
                             size: 14,
-                            color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                            color: _sortDescending
+                                ? AppColors.primary
+                                : AppColors.textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             _sortDescending ? 'تنازلي' : 'تصاعدي',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                              color: _sortDescending
+                                  ? AppColors.primary
+                                  : AppColors.textSecondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1087,24 +1210,38 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
               color: isLight ? AppColors.surface : AppColors.darkSurface,
               child: Row(
                 children: [
-                  Text('الفلتر: ', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                  Text('الفلتر: ',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: AppColors.textHint)),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(_filterTabs[_selectedFilterIndex].label, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                        Text(_filterTabs[_selectedFilterIndex].label,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700)),
                         const SizedBox(width: 4),
                         GestureDetector(
-                          onTap: () { setState(() => _selectedFilterIndex = 0); _applyFilters(); },
-                          child: Icon(Icons.close, size: 14, color: AppColors.primary),
+                          onTap: () {
+                            setState(() => _selectedFilterIndex = 0);
+                            _applyFilters();
+                          },
+                          child: Icon(Icons.close,
+                              size: 14, color: AppColors.primary),
                         ),
                       ],
                     ),
                   ),
                   const Spacer(),
-                  Text('${_filteredMovements.length} حركة', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                  Text('${_filteredMovements.length} حركة',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: AppColors.textHint)),
                 ],
               ),
             ),
@@ -1119,10 +1256,14 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _showAddVoucherDialog('receipt'),
                     icon: const Icon(Icons.assignment_turned_in, size: 16),
-                    label: const Text('سند قبض', style: TextStyle(fontSize: 12)),
+                    label:
+                        const Text('سند قبض', style: TextStyle(fontSize: 12)),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.success, side: const BorderSide(color: AppColors.success),
-                      padding: const EdgeInsets.symmetric(vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      foregroundColor: AppColors.success,
+                      side: const BorderSide(color: AppColors.success),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
@@ -1131,10 +1272,14 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _showAddVoucherDialog('payment'),
                     icon: const Icon(Icons.assignment_return, size: 16),
-                    label: const Text('سند صرف', style: TextStyle(fontSize: 12)),
+                    label:
+                        const Text('سند صرف', style: TextStyle(fontSize: 12)),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error, side: const BorderSide(color: AppColors.error),
-                      padding: const EdgeInsets.symmetric(vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
@@ -1151,9 +1296,13 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.account_balance_wallet, size: 64, color: AppColors.textHint.withOpacity(0.3)),
+                            Icon(Icons.account_balance_wallet,
+                                size: 64,
+                                color: AppColors.textHint.withOpacity(0.3)),
                             const SizedBox(height: 16),
-                            Text('لا توجد حركات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
+                            Text('لا توجد حركات',
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(color: AppColors.textHint)),
                           ],
                         ),
                       )
@@ -1165,15 +1314,14 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           padding: const EdgeInsets.only(bottom: 80, top: 4),
                           itemCount: _filteredMovements.length,
                           itemBuilder: (context, index) {
-                          final m = _filteredMovements[index];
-                          return _MovementCard(
-                            movement: m,
-                            currencySymbol: _currencySymbol(m['currency']),
-                            isLight: isLight,
-                          );
-                        },
-                        )
-                      ),
+                            final m = _filteredMovements[index];
+                            return _MovementCard(
+                              movement: m,
+                              currencySymbol: _currencySymbol(m['currency']),
+                              isLight: isLight,
+                            );
+                          },
+                        )),
           ),
         ],
       ),
@@ -1182,7 +1330,12 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isLight ? AppColors.surface : AppColors.darkSurface,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), offset: const Offset(0, -2), blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                offset: const Offset(0, -2),
+                blurRadius: 8)
+          ],
         ),
         child: SafeArea(
           top: false,
@@ -1193,23 +1346,30 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 // ── له (Credit) ──────────────────────────────
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
                     decoration: BoxDecoration(
                       color: AppColors.success.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.success.withOpacity(0.25), width: 1),
+                      border: Border.all(
+                          color: AppColors.success.withOpacity(0.25), width: 1),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('له', style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w700, color: AppColors.success, fontSize: 12,
-                        )),
+                        Text('له',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.success,
+                              fontSize: 12,
+                            )),
                         const SizedBox(height: 4),
                         Text(
                           '${_totalCredit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
                           style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w900, color: AppColors.success, fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.success,
+                            fontSize: 13,
                           ),
                           textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
@@ -1223,23 +1383,30 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 // ── عليه (Debit) ─────────────────────────────
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
                     decoration: BoxDecoration(
                       color: AppColors.error.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.error.withOpacity(0.25), width: 1),
+                      border: Border.all(
+                          color: AppColors.error.withOpacity(0.25), width: 1),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('عليه', style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 12,
-                        )),
+                        Text('عليه',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.error,
+                              fontSize: 12,
+                            )),
                         const SizedBox(height: 4),
                         Text(
                           '${_totalDebit.toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
                           style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w900, color: AppColors.error, fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.error,
+                            fontSize: 13,
                           ),
                           textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
@@ -1253,18 +1420,27 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                 // ── الرصيد (Net Balance) — direction by color ─
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: _netBalance >= 0
-                            ? [AppColors.success.withOpacity(0.15), AppColors.success.withOpacity(0.05)]
-                            : [AppColors.error.withOpacity(0.15), AppColors.error.withOpacity(0.05)],
+                            ? [
+                                AppColors.success.withOpacity(0.15),
+                                AppColors.success.withOpacity(0.05)
+                              ]
+                            : [
+                                AppColors.error.withOpacity(0.15),
+                                AppColors.error.withOpacity(0.05)
+                              ],
                         begin: Alignment.centerRight,
                         end: Alignment.centerLeft,
                       ),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: _netBalance >= 0 ? AppColors.success.withOpacity(0.4) : AppColors.error.withOpacity(0.4),
+                        color: _netBalance >= 0
+                            ? AppColors.success.withOpacity(0.4)
+                            : AppColors.error.withOpacity(0.4),
                         width: 1.5,
                       ),
                     ),
@@ -1276,16 +1452,23 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              _netBalance >= 0 ? Icons.trending_up : Icons.trending_down,
+                              _netBalance >= 0
+                                  ? Icons.trending_up
+                                  : Icons.trending_down,
                               size: 13,
-                              color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                              color: _netBalance >= 0
+                                  ? AppColors.success
+                                  : AppColors.error,
                             ),
                             const SizedBox(width: 4),
-                            Text('الرصيد', style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: _netBalance >= 0 ? AppColors.success : AppColors.error,
-                              fontSize: 12,
-                            )),
+                            Text('الرصيد',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: _netBalance >= 0
+                                      ? AppColors.success
+                                      : AppColors.error,
+                                  fontSize: 12,
+                                )),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -1293,7 +1476,9 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           '${_netBalance.abs().toStringAsFixed(2)} ${_currencySymbol(_selectedCurrency)}',
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w900,
-                            color: _netBalance >= 0 ? AppColors.success : AppColors.error,
+                            color: _netBalance >= 0
+                                ? AppColors.success
+                                : AppColors.error,
                             fontSize: 13,
                           ),
                           textAlign: TextAlign.center,
@@ -1323,22 +1508,35 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.light ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant),
+          color: isSelected
+              ? AppColors.primary
+              : (Theme.of(context).brightness == Brightness.light
+                  ? AppColors.surfaceVariant
+                  : AppColors.darkSurfaceVariant),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
             width: isSelected ? 1.5 : 1,
           ),
-          boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))] : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2))
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isSelected)
               Container(
-                width: 8, height: 8,
+                width: 8,
+                height: 8,
                 margin: const EdgeInsets.only(left: 4),
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                    color: Colors.white, shape: BoxShape.circle),
               ),
             Text(
               label,
@@ -1372,7 +1570,10 @@ class _MovementCard extends StatelessWidget {
   final String currencySymbol;
   final bool isLight;
 
-  const _MovementCard({required this.movement, required this.currencySymbol, required this.isLight});
+  const _MovementCard(
+      {required this.movement,
+      required this.currencySymbol,
+      required this.isLight});
 
   @override
   Widget build(BuildContext context) {
@@ -1390,21 +1591,32 @@ class _MovementCard extends StatelessWidget {
     String formattedDate;
     try {
       final date = DateTime.parse(dateStr);
-      formattedDate = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      formattedDate =
+          '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     } catch (e) {
       debugPrint('CashBoxDetailScreen._MovementCard: $e');
       formattedDate = dateStr;
     }
 
-    final balanceColor = runningBalance >= 0 ? AppColors.success : AppColors.error;
+    final balanceColor =
+        runningBalance >= 0 ? AppColors.success : AppColors.error;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       decoration: BoxDecoration(
         color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isLight ? AppColors.border.withOpacity(0.5) : AppColors.darkBorder.withOpacity(0.5), width: 0.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isLight ? 0.03 : 0.15), blurRadius: 4, offset: const Offset(0, 1))],
+        border: Border.all(
+            color: isLight
+                ? AppColors.border.withOpacity(0.5)
+                : AppColors.darkBorder.withOpacity(0.5),
+            width: 0.5),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(isLight ? 0.03 : 0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 1))
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(10),
@@ -1412,8 +1624,11 @@ class _MovementCard extends StatelessWidget {
           children: [
             // Icon
             Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(width: 10),
@@ -1423,16 +1638,29 @@ class _MovementCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(description, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(description,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Text(formattedDate, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                      Text(formattedDate,
+                          style: theme.textTheme.labelSmall
+                              ?.copyWith(color: AppColors.textHint)),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                        child: Text(typeAr, style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600, fontSize: 10)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4)),
+                        child: Text(typeAr,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10)),
                       ),
                     ],
                   ),
@@ -1447,15 +1675,23 @@ class _MovementCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (debit > 0)
-                  Text('${debit.toStringAsFixed(2)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.error, fontWeight: FontWeight.w700))
+                  Text('${debit.toStringAsFixed(2)} $currencySymbol',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.error, fontWeight: FontWeight.w700))
                 else if (credit > 0)
-                  Text('${credit.toStringAsFixed(2)} $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700))
+                  Text('${credit.toStringAsFixed(2)} $currencySymbol',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w700))
                 else
-                  Text('0.00 $currencySymbol', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                  Text('0.00 $currencySymbol',
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textHint)),
                 const SizedBox(height: 2),
                 Text(
                   '${runningBalance.abs().toStringAsFixed(2)}',
-                  style: theme.textTheme.labelSmall?.copyWith(color: balanceColor, fontWeight: FontWeight.w600),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                      color: balanceColor, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
