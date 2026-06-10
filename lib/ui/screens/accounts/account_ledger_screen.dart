@@ -31,7 +31,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   /// For credit-balance accounts, the running balance increases with credits
   /// and decreases with debits. For debit-balance accounts (ASSET, COST, EXPENSE),
   /// it's the opposite.
-  bool get _isCreditBalance => widget.account.balanceType == 'credit';
+  bool get _isCreditBalance => widget.account.effectiveBalanceType == 'credit';
 
   /// Get the correct currency symbol for this account's currency.
   /// This ensures balances are displayed with the proper symbol
@@ -115,7 +115,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   List<Map<String, dynamic>> get _filteredTransactions {
     if (_fromDate == null && _toDate == null) return _transactions;
     return _transactions.where((tx) {
-      final dateStr = tx['date'] as String? ?? tx['created_at'] as String? ?? '';
+      final dateStr = _safeString(tx['date']) ?? _safeString(tx['created_at']) ?? '';
       DateTime? txDate;
       try { txDate = DateTime.parse(dateStr); } catch (_) { return true; }
       if (_fromDate != null && txDate.isBefore(_fromDate!)) return false;
@@ -193,7 +193,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
       double preFilterDebit = 0;
       double preFilterCredit = 0;
       for (final tx in _transactions) {
-        final dateStr = tx['date'] as String? ?? tx['created_at'] as String? ?? '';
+        final dateStr = _safeString(tx['date']) ?? _safeString(tx['created_at']) ?? '';
         DateTime? txDate;
         try { txDate = DateTime.parse(dateStr); } catch (_) { txDate = null; }
         if (txDate != null && _fromDate != null && txDate.isBefore(_fromDate!)) {
@@ -735,8 +735,8 @@ class _TransactionCard extends StatelessWidget {
     final debit = MoneyHelper.readMoney(transaction['debit']);
     final credit = MoneyHelper.readMoney(transaction['credit']);
     final description = (transaction['description'] as String?) ?? 'بدون وصف';
-    final dateStr = transaction['date'] as String? ?? '';
-    final createdAt = transaction['created_at'] as String? ?? '';
+    final dateStr = transaction['date']?.toString() ?? '';
+    final createdAt = transaction['created_at']?.toString() ?? '';
 
     DateTime? txDate;
     try {

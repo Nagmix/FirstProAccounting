@@ -414,7 +414,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   const SizedBox(height: 16),
                   // Main amount
                   _CountUpText(value: _viewModel.todaySales,
-                    style: theme.textTheme.displaySmall!.copyWith(color: Colors.white, fontWeight: FontWeight.w900, height: 1.1, letterSpacing: -0.5),
+                    style: theme.textTheme.displaySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900, height: 1.1, letterSpacing: -0.5)
+                      ?? const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
                     isLoading: _viewModel.isLoading),
                   const SizedBox(height: 12),
                   // Bottom info row: trend + average

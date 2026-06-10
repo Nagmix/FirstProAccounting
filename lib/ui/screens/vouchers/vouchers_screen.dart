@@ -99,8 +99,9 @@ class _VouchersScreenState extends State<VouchersScreen>
         result = result.where((v) =>
           v['voucher_type'] == 'settlement' && v['cash_box_id'] == null).toList();
       } else if (tabIndex == 4) {
-        // سندات التسوية: settlement vouchers with cash_box_id or all settlements
-        result = result.where((v) => v['voucher_type'] == 'settlement').toList();
+        // سندات التسوية: settlement vouchers with cash_box_id
+        result = result.where((v) =>
+          v['voucher_type'] == 'settlement' && v['cash_box_id'] != null).toList();
       } else {
         result = result.where((v) => v['voucher_type'] == typeFilter).toList();
       }

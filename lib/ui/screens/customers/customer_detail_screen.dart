@@ -110,7 +110,7 @@ class _CustomerDetailScreenState extends EntityDetailState<CustomerDetailScreen>
       debugPrint('CustomerDetailScreen.loadData [movements]: $e');
     }
 
-    isLoading = false;
+    if (mounted) isLoading = false;
   }
 
   @override
@@ -315,7 +315,7 @@ class _CustomerDetailScreenState extends EntityDetailState<CustomerDetailScreen>
 
     // Sort by date+time ascending (oldest first).
     movements.sort((a, b) {
-      final cmp = (a['date'] as String).compareTo(b['date'] as String);
+      final cmp = (a['date']?.toString() ?? '').compareTo(b['date']?.toString() ?? '');
       if (cmp != 0) return cmp;
       return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
     });
@@ -346,7 +346,7 @@ class _CustomerDetailScreenState extends EntityDetailState<CustomerDetailScreen>
     );
     // If the edit was successful, reload data
     if (result == true) {
-      loadData();
+      if (mounted) loadData();
     }
   }
 

@@ -9,6 +9,7 @@ import 'migration_v46.dart';
 import 'migration_v47.dart';
 import 'migration_v48.dart';
 import 'migration_v49.dart';
+import 'migration_v50.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -81,5 +82,8 @@ class MigrationRunner {
 
     // v49 — Currency integrity and base-amount tracking
     if (oldVersion < 49) await MigrationV49.migrate(db);
+
+    // v50 — Fix balance_type='auto' in accounts table
+    if (oldVersion < 50) await MigrationV50.migrate(db);
   }
 }

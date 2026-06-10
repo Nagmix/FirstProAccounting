@@ -7,6 +7,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/account_statement_pdf_generator.dart';
 import '../../../core/utils/excel_exporter.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../data/datasources/database_helper.dart';
 import '../../../data/datasources/services/cash_box_service.dart';
 import '../../../data/datasources/services/journal_service.dart';
 import '../../../data/models/cash_box_model.dart';
@@ -173,7 +174,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
     if (_periodFilter != 3) {
       final now = DateTime.now();
       filtered = filtered.where((m) {
-        final dateStr = m['date'] as String;
+        final dateStr = m['date'] as String? ?? '';
         try {
           final date = DateTime.parse(dateStr);
           switch (_periodFilter) {
@@ -193,7 +194,7 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
     // Apply date range filter
     if (_dateRange != null) {
       filtered = filtered.where((m) {
-        final dateStr = m['date'] as String;
+        final dateStr = m['date'] as String? ?? '';
         try {
           final date = DateTime.parse(dateStr);
           return !date.isBefore(_dateRange!.start) && !date.isAfter(_dateRange!.end.add(const Duration(days: 1)));
@@ -492,6 +493,16 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                             return;
                           }
 
+                          if (obAccountId == null) {
+                            setDialogState(() => isSaving = false);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('لم يتم العثور على حساب مقابل. لا يمكن إنشاء السند.'), backgroundColor: AppColors.error),
+                              );
+                            }
+                            return;
+                          }
+
                           final voucherMap = {
                             'voucher_number': voucherNumber,
                             'voucher_type': voucherType,
@@ -509,42 +520,107 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
 
                           List<Map<String, dynamic>> items = [];
 
+                          // Determine debit/credit account IDs
+                          final int debitAccountId;
+                          final int creditAccountId;
                           if (voucherType == 'receipt') {
                             // Receipt: Debit Cash & Banks (cash in), Credit contra account
-                            items.add({
-                              'account_id': cashAccountId,
-                              'debit': amount,
-                              'credit': 0.0,
-                              'description': 'سند قبض - ${_freshCashBox?.name}',
-                            });
-                            if (obAccountId != null) {
-                              items.add({
-                                'account_id': obAccountId,
-                                'debit': 0.0,
-                                'credit': amount,
-                                'description': 'سند قبض - ${_freshCashBox?.name}',
-                              });
-                            }
+                            debitAccountId = cashAccountId;
+                            creditAccountId = obAccountId;
                           } else {
                             // Payment: Debit contra account, Credit Cash & Banks (cash out)
-                            if (obAccountId != null) {
-                              items.add({
-                                'account_id': obAccountId,
-                                'debit': amount,
-                                'credit': 0.0,
-                                'description': 'سند صرف - ${_freshCashBox?.name}',
-                              });
-                            }
-                            items.add({
-                              'account_id': cashAccountId,
-                              'debit': 0.0,
-                              'credit': amount,
-                              'description': 'سند صرف - ${_freshCashBox?.name}',
-                            });
+                            debitAccountId = obAccountId;
+                            creditAccountId = cashAccountId;
                           }
 
-                          if (items.isNotEmpty) {
-                            await cashBoxService.insertVoucher(voucherMap, items);
+                          items.add({
+                            'account_id': debitAccountId,
+                            'debit': amount,
+                            'credit': 0.0,
+                            'description': '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
+                          });
+                          items.add({
+                            'account_id': creditAccountId,
+                            'debit': 0.0,
+                            'credit': amount,
+                            'description': '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
+                          });
+
+                          await cashBoxService.insertVoucher(voucherMap, items);
+
+                          // Create journal entries (transactions) and update account balances
+                          final db = await locator<DatabaseHelper>().database;
+                          final nowStr = now.toIso8601String();
+                          final voucherIdResult = (await db.query('vouchers',
+                            where: 'voucher_number = ? AND voucher_type = ?',
+                            whereArgs: [voucherNumber, voucherType],
+                            orderBy: 'id DESC', limit: 1,
+                          )).first['id'];
+
+                          // Get exchange rate for base currency conversion
+                          double exchangeRate = 1.0;
+                          try {
+                            final curRows = await db.query('currencies',
+                              where: 'code = ?', whereArgs: [selectedCurrency]);
+                            if (curRows.isNotEmpty) {
+                              exchangeRate = (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+                            }
+                          } catch (_) {}
+
+                          // Insert debit transaction
+                          await db.insert('transactions', {
+                            'account_id': debitAccountId,
+                            'journal_id': 'voucher_${voucherIdResult}',
+                            'debit': MoneyHelper.toCents(amount),
+                            'credit': 0,
+                            'description': '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
+                            'date': now.toIso8601String(),
+                            'created_at': nowStr,
+                            'reference_type': voucherType,
+                            'reference_id': 'voucher_$voucherIdResult',
+                            'currency_code': selectedCurrency,
+                            'exchange_rate': exchangeRate,
+                            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
+                          });
+                          await journalService.updateAccountBalance(
+                            debitAccountId, amount, isDebit: true,
+                          );
+
+                          // Insert credit transaction
+                          await db.insert('transactions', {
+                            'account_id': creditAccountId,
+                            'journal_id': 'voucher_${voucherIdResult}',
+                            'debit': 0,
+                            'credit': MoneyHelper.toCents(amount),
+                            'description': '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - ${_freshCashBox?.name}',
+                            'date': now.toIso8601String(),
+                            'created_at': nowStr,
+                            'reference_type': voucherType,
+                            'reference_id': 'voucher_$voucherIdResult',
+                            'currency_code': selectedCurrency,
+                            'exchange_rate': exchangeRate,
+                            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
+                          });
+                          await journalService.updateAccountBalance(
+                            creditAccountId, amount, isDebit: false,
+                          );
+
+                          // Update cash box balance
+                          final cashBoxRows = await db.query('cash_boxes',
+                            where: 'id = ?', whereArgs: [widget.cashBox.id!], limit: 1);
+                          if (cashBoxRows.isNotEmpty) {
+                            final currentBalance = MoneyHelper.readMoney(cashBoxRows.first['balance']);
+                            final balanceType = cashBoxRows.first['balance_type'] as String? ?? 'credit';
+                            double signedBalance = balanceType == 'credit' ? currentBalance : -currentBalance;
+                            final isCashIn = voucherType == 'receipt';
+                            signedBalance += isCashIn ? amount : -amount;
+                            final newBalance = signedBalance.abs();
+                            final newType = signedBalance >= 0 ? 'credit' : 'debit';
+                            await db.update('cash_boxes', {
+                              'balance': MoneyHelper.toCents(newBalance),
+                              'balance_type': newType,
+                              'updated_at': nowStr,
+                            }, where: 'id = ?', whereArgs: [widget.cashBox.id!]);
                           }
 
                           if (context.mounted) {
@@ -1301,14 +1377,14 @@ class _MovementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final icon = movement['icon'] as IconData;
-    final color = movement['color'] as Color;
-    final typeAr = movement['type_ar'] as String;
-    final description = movement['description'] as String;
+    final icon = movement['icon'] as IconData? ?? Icons.receipt;
+    final color = movement['color'] as Color? ?? AppColors.primary;
+    final typeAr = movement['type_ar'] as String? ?? '';
+    final description = movement['description'] as String? ?? '';
     final debit = MoneyHelper.readMoney(movement['debit']);
     final credit = MoneyHelper.readMoney(movement['credit']);
     final runningBalance = MoneyHelper.readMoney(movement['running_balance']);
-    final dateStr = movement['date'] as String;
+    final dateStr = movement['date'] as String? ?? '';
 
     // Format date
     String formattedDate;

@@ -286,13 +286,13 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
     //    each point in time, including transactions hidden by filters.
     final allBalances = <String, double>{};
     for (final m in _allMovements) {
-      final mId = m['id'] as String?;
+      final mId = m['id']?.toString();
       if (mId != null) {
         allBalances[mId] = MoneyHelper.readMoney(m['running_balance']);
       }
     }
     for (final m in filtered) {
-      final mId = m['id'] as String?;
+      final mId = m['id']?.toString();
       if (mId != null && allBalances.containsKey(mId)) {
         m['running_balance'] = allBalances[mId];
       }

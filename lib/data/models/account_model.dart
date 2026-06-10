@@ -127,20 +127,24 @@ class Account {
   factory Account.fromMap(Map<String, dynamic> map) {
     return Account(
       id: map['id'],
-      nameAr: map['name_ar'],
+      nameAr: (map['name_ar'] ?? '') as String,
       nameEn: map['name_en'] ?? '',
       parentId: map['parent_id'],
-      accountCode: map['account_code'],
+      accountCode: (map['account_code'] ?? '') as String,
       accountType: _accountTypeFromString(map['account_type'] ?? 'ASSET'),
       balance: MoneyHelper.readMoney(map['balance']),
       currency: map['currency'] ?? 'YER',
       linkedCashBoxId: map['linked_cash_box_id'],
       isActive: (map['is_active'] ?? 1) == 1,
       debtCeiling: MoneyHelper.readMoney(map['debt_ceiling']),
-      balanceType: map['balance_type'] ?? 'auto',
+      balanceType: map['balance_type'] ?? (
+        (_accountTypeFromString(map['account_type'] ?? 'ASSET') == AccountType.LIABILITY ||
+         _accountTypeFromString(map['account_type'] ?? 'ASSET') == AccountType.EQUITY ||
+         _accountTypeFromString(map['account_type'] ?? 'ASSET') == AccountType.REVENUE) ? 'credit' : 'debit'
+      ),
       isSystem: (map['is_system'] ?? 0) == 1,
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
     );
   }
 

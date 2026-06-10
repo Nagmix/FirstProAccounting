@@ -115,15 +115,31 @@ class VoucherAutoMappingService {
     try {
       final expenseSubAccounts = await db.query('expense_sub_accounts',
           where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
+      // Pre-load first expense account for currency/account_id resolution
+      String expenseCurrency = 'YER';
+      int? expenseAccountId;
+      try {
+        final accRows = await db.query(
+          'accounts',
+          where: 'account_code LIKE ? AND is_active = 1',
+          whereArgs: ['5%'],
+          orderBy: 'account_code ASC',
+          limit: 1,
+        );
+        if (accRows.isNotEmpty) {
+          expenseCurrency = accRows.first['currency'] as String? ?? 'YER';
+          expenseAccountId = accRows.first['id'] as int?;
+        }
+      } catch (_) {}
       for (final e in expenseSubAccounts) {
         entities.add({
           'id': e['id'],
           'name': e['name'] ?? '',
           'type': entityExpense,
-          'currency': '',
+          'currency': expenseCurrency,
           'balance': 0.0,
           'balance_type': 'debit',
-          'account_id': null,
+          'account_id': expenseAccountId,
         });
       }
     } catch (_) {
@@ -192,14 +208,33 @@ class VoucherAutoMappingService {
           final rows = await db.query('expense_sub_accounts',
               where: 'is_active = ?', whereArgs: [1], orderBy: 'name ASC');
           for (final e in rows) {
+            // Look up the associated expense account's currency from the
+            // chart of accounts.  Expense sub-accounts don't have their own
+            // currency column, so we default to 'YER' which matches the
+            // base account code (5000).
+            String expenseCurrency = 'YER';
+            int? expenseAccountId;
+            try {
+              final accRows = await db.query(
+                'accounts',
+                where: 'account_code LIKE ? AND is_active = 1',
+                whereArgs: ['5%'],
+                orderBy: 'account_code ASC',
+                limit: 1,
+              );
+              if (accRows.isNotEmpty) {
+                expenseCurrency = accRows.first['currency'] as String? ?? 'YER';
+                expenseAccountId = accRows.first['id'] as int?;
+              }
+            } catch (_) {}
             entities.add({
               'id': e['id'],
               'name': e['name'] ?? '',
               'type': entityExpense,
-              'currency': '',
+              'currency': expenseCurrency,
               'balance': 0.0,
               'balance_type': 'debit',
-              'account_id': null,
+              'account_id': expenseAccountId,
             });
           }
           break;
@@ -282,6 +317,55 @@ class VoucherAutoMappingService {
     if (results.isNotEmpty) {
       return results.first['id'] as int;
     }
+
+    // Fallback for expense entities: expense sub-accounts may not have
+    // currency-specific accounts in the chart of accounts.  Try finding
+    // the account by code only (ignoring currency) so that vouchers with
+    // non-YER currencies can still resolve to the correct expense account.
+    if (entityType == entityExpense) {
+      if (txn != null) {
+        results = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND is_active = 1',
+          whereArgs: [accountCode],
+          limit: 1,
+        );
+      } else {
+        final db = await _db;
+        results = await db.query(
+          'accounts',
+          where: 'account_code = ? AND is_active = 1',
+          whereArgs: [accountCode],
+          limit: 1,
+        );
+      }
+      if (results.isNotEmpty) {
+        return results.first['id'] as int;
+      }
+
+      // Last resort: try the base code (5000) with YER currency
+      final baseCodeStr = baseCode.toString();
+      if (txn != null) {
+        results = await txn.query(
+          'accounts',
+          where: 'account_code = ? AND is_active = 1',
+          whereArgs: [baseCodeStr],
+          limit: 1,
+        );
+      } else {
+        final db = await _db;
+        results = await db.query(
+          'accounts',
+          where: 'account_code = ? AND is_active = 1',
+          whereArgs: [baseCodeStr],
+          limit: 1,
+        );
+      }
+      if (results.isNotEmpty) {
+        return results.first['id'] as int;
+      }
+    }
+
     return null;
   }
 
@@ -719,6 +803,8 @@ class VoucherAutoMappingService {
       case entityExpense:
         tableName = 'expense_sub_accounts';
         break;
+      case entityOther:
+        return 'جهة أخرى';
       default:
         tableName = 'customers';
     }
@@ -787,8 +873,12 @@ class VoucherAutoMappingService {
       case entityExpense:
         // المصروفات لا تحتاج تحديث رصيد هنا لأنها تُحدث عبر expense_repository
         return;
+      case entityOther:
+        // entityOther entities don't have a balance table
+        break;
       default:
-        return;
+        // Unknown entity types — nothing to update
+        break;
     }
 
     // ── Update entity balance with balance_type-aware logic ──

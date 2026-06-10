@@ -108,7 +108,7 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
       debugPrint('SupplierDetailScreen.loadData [movements]: $e');
     }
 
-    isLoading = false;
+    if (mounted) isLoading = false;
   }
 
   // ─── loadMovements — SUPPLIER-specific accounting logic ──────────
@@ -332,7 +332,7 @@ class _SupplierDetailScreenState extends EntityDetailState<SupplierDetailScreen>
 
     // Sort by date+time ascending (oldest first).
     movements.sort((a, b) {
-      final cmp = (a['date'] as String).compareTo(b['date'] as String);
+      final cmp = (a['date']?.toString() ?? '').compareTo(b['date']?.toString() ?? '');
       if (cmp != 0) return cmp;
       return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
     });

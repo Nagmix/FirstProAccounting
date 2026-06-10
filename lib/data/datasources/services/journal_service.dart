@@ -56,11 +56,19 @@ class JournalService {
           WHEN balance_type = 'credit' AND ? = 0 THEN ?
           WHEN balance_type = 'debit'  AND ? = 1 THEN ?
           WHEN balance_type = 'debit'  AND ? = 0 THEN -?
+          WHEN balance_type = 'auto' AND account_type IN ('LIABILITY','EQUITY','REVENUE') AND ? = 1 THEN -?
+          WHEN balance_type = 'auto' AND account_type IN ('LIABILITY','EQUITY','REVENUE') AND ? = 0 THEN ?
+          WHEN balance_type = 'auto' AND account_type IN ('ASSET','COST','EXPENSE') AND ? = 1 THEN ?
+          WHEN balance_type = 'auto' AND account_type IN ('ASSET','COST','EXPENSE') AND ? = 0 THEN -?
           ELSE 0
         END,
         updated_at = ?
       WHERE id = ?
     ''', [
+      isDebitInt, amountCents,
+      isDebitInt, amountCents,
+      isDebitInt, amountCents,
+      isDebitInt, amountCents,
       isDebitInt, amountCents,
       isDebitInt, amountCents,
       isDebitInt, amountCents,
@@ -99,11 +107,15 @@ class JournalService {
         balance = balance + CASE
           WHEN balance_type = 'credit' THEN ? - ?
           WHEN balance_type = 'debit'  THEN ? - ?
+          WHEN balance_type = 'auto' AND account_type IN ('LIABILITY','EQUITY','REVENUE') THEN ? - ?
+          WHEN balance_type = 'auto' AND account_type IN ('ASSET','COST','EXPENSE') THEN ? - ?
           ELSE 0
         END,
         updated_at = ?
       WHERE id = ?
     ''', [
+      creditCents, debitCents,
+      debitCents, creditCents,
       creditCents, debitCents,
       debitCents, creditCents,
       now, accountId,

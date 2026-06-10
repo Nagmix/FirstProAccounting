@@ -668,9 +668,13 @@ class AccountRepository {
     final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
     if (account.isNotEmpty) {
       final currentBalance = MoneyHelper.readMoney(account.first['balance']);
-      final balanceType = account.first['balance_type'] as String? ?? 'credit';
+      final balanceTypeRaw = account.first['balance_type'] as String? ?? 'auto';
+      final accountType = account.first['account_type'] as String? ?? 'ASSET';
+      final bool isCreditBalance = balanceTypeRaw == 'credit' || 
+          (balanceTypeRaw == 'auto' && 
+           (accountType == 'LIABILITY' || accountType == 'EQUITY' || accountType == 'REVENUE'));
       double newBalance;
-      if (balanceType == 'credit') {
+      if (isCreditBalance) {
         newBalance = currentBalance + credit - debit;
       } else {
         newBalance = currentBalance + debit - credit;
