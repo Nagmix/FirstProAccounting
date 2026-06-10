@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';

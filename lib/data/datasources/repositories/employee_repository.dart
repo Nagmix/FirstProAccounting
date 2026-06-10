@@ -37,8 +37,9 @@ class EmployeeRepository {
     // as the stored default. It does NOT permanently bind the employee to that currency.
     // We set account_id to the employee account (5100+offset) for the opening
     // balance currency so vouchers can be linked back.
+    final String obCurrency = openingBalanceCurrency ?? 'YER';
     final codeOffset = await locator<BaseCurrencyService>()
-        .getOffsetForCurrency(openingBalanceCurrency);
+        .getOffsetForCurrency(obCurrency);
     final employeeAccountCode = (5100 + codeOffset).toString();
 
     // Resolve employee account to get account_id
@@ -60,9 +61,7 @@ class EmployeeRepository {
     // If opening balance > 0, create the journal entry against the
     // appropriate currency accounts
     if (balance > 0 && openingBalanceCurrency != null) {
-      final obCodeOffset = openingBalanceCurrency == 'SAR'
-          ? 1
-          : (openingBalanceCurrency == 'USD' ? 2 : 0);
+      final obCodeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(openingBalanceCurrency!);
       final obEmployeeAccountCode = (5100 + obCodeOffset).toString();
       final obEquityAccountCode = (2901 + obCodeOffset).toString();
 

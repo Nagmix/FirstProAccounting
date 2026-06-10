@@ -164,8 +164,8 @@ class ExpenseRepository {
     // This matches the pattern in invoice_repository.
     final bool needsYerConversion =
         expenseCurrency != 'YER' && exchangeRate > 0;
-    final int codeOffset = await locator<BaseCurrencyService>()
-        .getOffsetForCurrency(journalCurrency);
+    final String journalCurrency = needsYerConversion ? 'YER' : expenseCurrency;
+    final int codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(journalCurrency);
     // Journal amount: amountBase (YER) when converting, amount (native) otherwise
     final double journalAmount = needsYerConversion ? amountBase : amount;
 

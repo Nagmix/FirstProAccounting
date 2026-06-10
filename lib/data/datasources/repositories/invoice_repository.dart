@@ -2068,8 +2068,7 @@ class InvoiceRepository {
 
       // 5. Create journal entries
       final journalId = generateUniqueJournalId();
-      final codeOffset =
-          invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
+      final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
       final double effectiveExchangeRate =
           exchangeRate > 0 ? exchangeRate : 1.0;
 

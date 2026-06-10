@@ -1397,12 +1397,6 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
   List<Map<String, dynamic>> _invoices = [];
   bool _isLoading = true;
 
-  static const Map<String, Map<String, String>> CurrencyConstants.currencyInfo = {
-    'YER': {'symbol': 'ر.ي'},
-    'SAR': {'symbol': 'ر.س'},
-    'USD': {'symbol': '\$'},
-  };
-
   @override
   void initState() {
     super.initState();
@@ -1705,12 +1699,6 @@ class _SupplierInvoicesSheet extends StatefulWidget {
 class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
   List<Map<String, dynamic>> _invoices = [];
   bool _isLoading = true;
-
-  static const Map<String, Map<String, String>> CurrencyConstants.currencyInfo = {
-    'YER': {'symbol': 'ر.ي'},
-    'SAR': {'symbol': 'ر.س'},
-    'USD': {'symbol': '\$'},
-  };
 
   @override
   void initState() {

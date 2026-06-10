@@ -62,7 +62,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
   /// Resolve the linked account for the opening balance journal entry based on currency.
   /// This is temporary — only used for the journal entry, NOT stored on the cash box.
   Future<int?> _resolveLinkedAccountForCurrency(String currency) async {
-    final code = _cashBanksAccountCodes[currency]!;
+    final offset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
+    final code = (1100 + offset).toString();
     final account = await locator<JournalService>()
         .getAccountByCodeAndCurrency(code, currency);
     return account?['id'] as int?;
@@ -177,7 +178,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final viewPaddingBottom = MediaQuery.of(context).viewPadding.bottom;
     final currencySymbol =
-        _currencyInfo[_currency]?['symbol'] ?? AppConstants.currency;
+        CurrencyConstants.currencySymbol(_currency);
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset + viewPaddingBottom),
