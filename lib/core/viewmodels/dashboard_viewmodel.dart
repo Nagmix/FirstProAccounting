@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../di/service_locator.dart';
 import '../utils/money_helper.dart';
+import '../../data/datasources/database_helper.dart';
 import '../../data/datasources/repositories/invoice_repository.dart';
 import '../../data/datasources/repositories/product_repository.dart';
 import '../../data/datasources/repositories/customer_repository.dart';
@@ -170,7 +171,7 @@ class DashboardViewModel extends ChangeNotifier {
 
     // 2. Recent vouchers (receipt/payment)
     try {
-      final db = await locator<JournalService>()._db;
+      final db = await DatabaseHelper().database;
       final vouchers = await db.query(
         'vouchers',
         orderBy: 'created_at DESC',
