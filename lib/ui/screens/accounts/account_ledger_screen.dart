@@ -27,6 +27,12 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   // Sort order: false=ascending (oldest first), true=descending (newest first)
   bool _sortDescending = false;
 
+  /// Whether this account has a credit-balance nature (LIABILITY, EQUITY, REVENUE).
+  /// For credit-balance accounts, the running balance increases with credits
+  /// and decreases with debits. For debit-balance accounts (ASSET, COST, EXPENSE),
+  /// it's the opposite.
+  bool get _isCreditBalance => widget.account.balanceType == 'credit';
+
   /// Get the correct currency symbol for this account's currency.
   /// This ensures balances are displayed with the proper symbol
   /// (e.g., ر.س for SAR accounts, $ for USD) instead of always using
@@ -170,7 +176,11 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
       totalDebit += MoneyHelper.readMoney(tx['debit']);
       totalCredit += MoneyHelper.readMoney(tx['credit']);
     }
-    final netBalance = totalDebit - totalCredit;
+    // For debit-balance accounts: net = debit - credit (debit increases balance)
+    // For credit-balance accounts: net = credit - debit (credit increases balance)
+    final netBalance = _isCreditBalance
+        ? totalCredit - totalDebit
+        : totalDebit - totalCredit;
 
     // Compute running balances from ascending-order data
     // Start from opening balance so final running balance matches account's current balance
@@ -191,20 +201,29 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
           preFilterCredit += MoneyHelper.readMoney(tx['credit']);
         }
       }
-      openingBalance = (widget.account.balance - (_transactions.fold<double>(0, (sum, tx) =>
-        sum + (MoneyHelper.readMoney(tx['debit'])) - (MoneyHelper.readMoney(tx['credit'])))))
-        + preFilterDebit - preFilterCredit;
+      // Calculate total net movement from ALL transactions in the account's perspective
+      final totalNet = _isCreditBalance
+          ? _transactions.fold<double>(0, (sum, tx) =>
+              sum + MoneyHelper.readMoney(tx['credit']) - MoneyHelper.readMoney(tx['debit']))
+          : _transactions.fold<double>(0, (sum, tx) =>
+              sum + MoneyHelper.readMoney(tx['debit']) - MoneyHelper.readMoney(tx['credit']));
+      final preFilterNet = _isCreditBalance
+          ? preFilterCredit - preFilterDebit
+          : preFilterDebit - preFilterCredit;
+      openingBalance = (widget.account.balance - totalNet) + preFilterNet;
     }
 
     // Running balance is always computed from ascending (chronological) order
-    // Build a map from transaction id to running balance for O(1) lookup
+    // Direction depends on the account's balance_type:
+    //   - Debit-balance (ASSET/COST/EXPENSE): running += debit - credit
+    //   - Credit-balance (LIABILITY/EQUITY/REVENUE): running += credit - debit
     final runningById = <dynamic, double>{};
     double running = openingBalance;
     for (int i = 0; i < filteredTx.length; i++) {
       final tx = filteredTx[i];
       final debit = MoneyHelper.readMoney(tx['debit']);
       final credit = MoneyHelper.readMoney(tx['credit']);
-      running += debit - credit;
+      running += _isCreditBalance ? (credit - debit) : (debit - credit);
       runningById[tx['id']] = running;
     }
 

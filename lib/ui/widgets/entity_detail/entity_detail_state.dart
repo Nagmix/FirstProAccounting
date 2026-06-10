@@ -99,6 +99,9 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
   /// Entity phone for display (may be empty).
   String get entityPhone;
 
+  /// Optional subtitle for the header (e.g. job title for employee).
+  String get entitySubtitle => '';
+
   /// Entity type string used by voucher creation
   /// (one of [VoucherAutoMappingService.entityCustomer],
   /// [VoucherAutoMappingService.entitySupplier],
@@ -134,6 +137,11 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
 
   /// Called when the edit button is pressed.
   void onEditPressed() {}
+
+  /// Extra actions to show in the AppBar (before print/export buttons).
+  /// Override in subclasses to add entity-specific AppBar actions
+  /// (e.g. edit button for supplier).
+  List<Widget> buildExtraAppBarActions() => [];
 
   // ─── Shared Getters / Setters ──────────────────────────────────────
 
@@ -890,6 +898,16 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                           fontWeight: FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
+                  if (entitySubtitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Row(children: [
+                      const Icon(Icons.work, size: 13, color: Colors.white70),
+                      const SizedBox(width: 4),
+                      Text(entitySubtitle,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: Colors.white70)),
+                    ]),
+                  ],
                   if (entityPhone.isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Row(children: [
@@ -1301,6 +1319,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
   /// Build the standard AppBar actions (print + export buttons).
   List<Widget> buildAppBarActions() {
     return [
+      ...buildExtraAppBarActions(),
       // Print button
       Container(
         margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8),

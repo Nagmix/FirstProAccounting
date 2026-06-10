@@ -271,6 +271,12 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
             const SnackBar(content: Text('لا يمكن حذف حساب مرتبط بمعاملات محاسبية'), backgroundColor: AppColors.error),
           );
         }
+      } else if (result == -4) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لا يمكن حذف حساب مرتبط ببنود سندات'), backgroundColor: AppColors.error),
+          );
+        }
       } else {
         _loadData();
       }
