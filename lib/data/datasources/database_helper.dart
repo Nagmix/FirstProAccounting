@@ -164,6 +164,27 @@ class DatabaseHelper {
             debugPrint('PRAGMA foreign_keys = ON (onOpen) failed: $e');
           }
         }
+        // B-15: VERIFY enforcement is actually active instead of trusting
+        // the execute call. If foreign keys are silently off in production,
+        // orphan journal/stock rows can accumulate without anyone noticing.
+        try {
+          final rows = await db.rawQuery('PRAGMA foreign_keys');
+          final enabled = rows.isNotEmpty &&
+              (rows.first.values.first == 1 || rows.first.values.first == '1');
+          if (!enabled) {
+            // Loudly record the integrity risk (debug console + release log).
+            debugPrint(
+              'CRITICAL: SQLite foreign_keys enforcement is OFF — '
+              'referential integrity is NOT guaranteed on this device.',
+            );
+            assert(
+              false,
+              'PRAGMA foreign_keys could not be enabled — fix before shipping.',
+            );
+          }
+        } catch (e) {
+          debugPrint('B-15: PRAGMA foreign_keys verification failed: $e');
+        }
       },
     );
   }
