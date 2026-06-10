@@ -140,6 +140,9 @@ class ShiftService {
       await db.transaction((txn) async {
         final journalId = generateUniqueJournalId();
 
+        // Look up exchange rate for invoice currency
+        final exchangeRate = await _getExchangeRate(txn, invoiceCurrency);
+
         // تحديد إزاحة كود الحساب حسب العملة
         final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
 
@@ -187,6 +190,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
             }
@@ -201,6 +207,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
             }
@@ -217,6 +226,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(effectivePaid) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, effectivePaid, 0.0, now);
             }
@@ -231,6 +243,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(effectiveRemaining) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, effectiveRemaining, 0.0, now);
             }
@@ -245,6 +260,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
             }
@@ -262,6 +280,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
             }
@@ -276,6 +297,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
             }
@@ -301,6 +325,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
             }
@@ -315,6 +342,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, returnInvAccountId, 0.0, total, now);
             }
@@ -331,6 +361,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
             }
@@ -345,6 +378,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(effectivePaid) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, effectivePaid, now);
             }
@@ -359,6 +395,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(effectiveRemaining) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, effectiveRemaining, now);
             }
@@ -375,6 +414,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
             }
@@ -390,6 +432,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
             }
@@ -411,6 +456,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, taxAmount, 0.0, now);
             }
@@ -424,6 +472,9 @@ class ShiftService {
               'created_at': now,
               'reference_type': invoiceType,
               'reference_id': invoiceId,
+              'currency_code': invoiceCurrency,
+              'exchange_rate': exchangeRate,
+              'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
           } else if ((invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') && isReturn) {
@@ -438,6 +489,9 @@ class ShiftService {
               'created_at': now,
               'reference_type': invoiceType,
               'reference_id': invoiceId,
+              'currency_code': invoiceCurrency,
+              'exchange_rate': exchangeRate,
+              'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, taxAmount, 0.0, now);
             if (salesAccountId != null) {
@@ -451,6 +505,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, taxAmount, now);
             }
@@ -466,6 +523,9 @@ class ShiftService {
               'created_at': now,
               'reference_type': invoiceType,
               'reference_id': invoiceId,
+              'currency_code': invoiceCurrency,
+              'exchange_rate': exchangeRate,
+              'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, taxAmount, 0.0, now);
             if (purchasesAccountId != null) {
@@ -479,6 +539,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, taxAmount, now);
             }
@@ -495,6 +558,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, taxAmount, 0.0, now);
             }
@@ -508,6 +574,9 @@ class ShiftService {
               'created_at': now,
               'reference_type': invoiceType,
               'reference_id': invoiceId,
+              'currency_code': invoiceCurrency,
+              'exchange_rate': exchangeRate,
+              'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
           }
@@ -592,6 +661,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
               });
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
@@ -603,6 +675,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
@@ -617,6 +692,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
               });
               await txn.insert('transactions', {
                 'account_id': cogsAccountId,
@@ -628,6 +706,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
@@ -695,6 +776,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(totalPurchaseCost) * exchangeRate).round(),
               });
               await txn.insert('transactions', {
                 'account_id': purchAccountId,
@@ -706,6 +790,9 @@ class ShiftService {
                 'created_at': now,
                 'reference_type': invoiceType,
                 'reference_id': invoiceId,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': (MoneyHelper.toCents(totalPurchaseCost) * exchangeRate).round(),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccountId, totalPurchaseCost, 0.0, now);
               await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchAccountId, 0.0, totalPurchaseCost, now);
@@ -831,6 +918,9 @@ class ShiftService {
     final now = DateTime.now().toIso8601String();
 
     await db.transaction((txn) async {
+      // Look up exchange rate for the cash in/out currency
+      final exchangeRate = await _getExchangeRate(txn, currency);
+
       // ── 1. Update cash box balance ──
       final cashBoxRow = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
       if (cashBoxRow.isNotEmpty) {
@@ -881,6 +971,9 @@ class ShiftService {
             'description': reason,
             'date': now,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': exchangeRate,
+            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
           });
           await txn.insert('transactions', {
             'account_id': expenseAccountId,
@@ -889,6 +982,9 @@ class ShiftService {
             'description': reason,
             'date': now,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': exchangeRate,
+            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
           });
           // Update account balances
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, amount, 0.0, now);
@@ -902,6 +998,9 @@ class ShiftService {
             'description': reason,
             'date': now,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': exchangeRate,
+            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
           });
           await txn.insert('transactions', {
             'account_id': cashAccountId,
@@ -910,6 +1009,9 @@ class ShiftService {
             'description': reason,
             'date': now,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': exchangeRate,
+            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
           });
           // Update account balances
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccountId, amount, 0.0, now);
@@ -928,6 +1030,27 @@ class ShiftService {
         whereArgs: [shiftId],
       );
     });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Helper methods
+  // ══════════════════════════════════════════════════════════════
+
+  /// Look up the exchange rate for a given currency code from the currencies table.
+  /// Returns 1.0 for YER (base currency). Falls back to hardcoded rates if
+  /// the currencies table is not yet available.
+  Future<double> _getExchangeRate(Transaction txn, String currencyCode) async {
+    if (currencyCode == 'YER') return 1.0;
+    try {
+      final rows = await txn.query('currencies', where: 'code = ?', whereArgs: [currencyCode], limit: 1);
+      if (rows.isNotEmpty) {
+        return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      }
+    } catch (_) {}
+    // Fallback rates
+    if (currencyCode == 'SAR') return 140.0;
+    if (currencyCode == 'USD') return 530.0;
+    return 1.0;
   }
 
   /// Helper to get current transaction count for a shift within a transaction.

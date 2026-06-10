@@ -461,6 +461,8 @@ class VoucherAutoMappingService {
       );
 
       // إنشاء قيود يومية - مدين
+      final receiptRates = await _getExchangeRates(txn);
+      final receiptRate = receiptRates[currency] ?? 1.0;
       await txn.insert('transactions', {
         'account_id': debitAccountId,
         'journal_id': journalId,
@@ -471,6 +473,9 @@ class VoucherAutoMappingService {
         'created_at': now,
         'reference_type': voucherType,
         'reference_id': 'voucher_$voucherId',
+        'currency_code': currency,
+        'exchange_rate': receiptRate,
+        'amount_base': (MoneyHelper.toCents(amount) * receiptRate).round(),
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, debitAccountId, amount, 0.0, now);
@@ -486,6 +491,9 @@ class VoucherAutoMappingService {
         'created_at': now,
         'reference_type': voucherType,
         'reference_id': 'voucher_$voucherId',
+        'currency_code': currency,
+        'exchange_rate': receiptRate,
+        'amount_base': (MoneyHelper.toCents(amount) * receiptRate).round(),
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, creditAccountId, 0.0, amount, now);
@@ -640,6 +648,9 @@ class VoucherAutoMappingService {
       }
 
       // قيد يومي - مدين (حساب "إلى")
+      final entryRates = await _getExchangeRates(txn);
+      final toRate = entryRates[toCurrency] ?? 1.0;
+      final fromRate = entryRates[fromCurrency] ?? 1.0;
       await txn.insert('transactions', {
         'account_id': toAccount,
         'journal_id': journalId,
@@ -650,6 +661,9 @@ class VoucherAutoMappingService {
         'created_at': now,
         'reference_type': 'settlement',
         'reference_id': 'voucher_$voucherId',
+        'currency_code': toCurrency,
+        'exchange_rate': toRate,
+        'amount_base': (MoneyHelper.toCents(toAmount) * toRate).round(),
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, toAccount, toAmount, 0.0, now);
@@ -665,6 +679,9 @@ class VoucherAutoMappingService {
         'created_at': now,
         'reference_type': 'settlement',
         'reference_id': 'voucher_$voucherId',
+        'currency_code': fromCurrency,
+        'exchange_rate': fromRate,
+        'amount_base': (MoneyHelper.toCents(fromAmount) * fromRate).round(),
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, fromAccount, 0.0, fromAmount, now);
@@ -940,6 +957,9 @@ class VoucherAutoMappingService {
         'created_at': now,
         'reference_type': 'exchange_difference',
         'reference_id': journalId,
+        'currency_code': 'YER',
+        'exchange_rate': 1.0,
+        'amount_base': MoneyHelper.toCents(difference),
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, exchangeAccountId, 0.0, difference, now);
@@ -955,6 +975,9 @@ class VoucherAutoMappingService {
         'created_at': now,
         'reference_type': 'exchange_difference',
         'reference_id': journalId,
+        'currency_code': 'YER',
+        'exchange_rate': 1.0,
+        'amount_base': MoneyHelper.toCents(difference),
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, exchangeAccountId, difference, 0.0, now);

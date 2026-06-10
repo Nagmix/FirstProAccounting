@@ -410,12 +410,13 @@ class ReportDataLoader {
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
+  /// OPTIMIZED: Replaced getAllCustomers() (fetch ALL) with
+  /// getCustomerById(id) (fetch ONE by primary key).
   static Future<ReportLoadResult> _loadCustomerStatementReport({required ReportFilterParams params}) async {
     if (params.selectedCustomerId == null) return const ReportLoadResult(rows: [], totals: {});
-    final customer = await locator<CustomerRepository>().getAllCustomers();
-    final cust = customer.firstWhere((c) => c['id'] == params.selectedCustomerId, orElse: () => <String, dynamic>{});
-    final custName = cust['name'] as String? ?? '';
-    final custCurrency = cust['currency'] as String? ?? 'YER';
+    final cust = await locator<CustomerRepository>().getCustomerById(params.selectedCustomerId!);
+    final custName = cust?['name'] as String? ?? '';
+    final custCurrency = cust?['currency'] as String? ?? 'YER';
 
     final txs = await locator<ReportService>().getCustomerStatementReport(
       customerId: params.selectedCustomerId!,
@@ -446,12 +447,13 @@ class ReportDataLoader {
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
+  /// OPTIMIZED: Replaced getAllSuppliers() (fetch ALL) with
+  /// getSupplierById(id) (fetch ONE by primary key).
   static Future<ReportLoadResult> _loadSupplierStatementReport({required ReportFilterParams params}) async {
     if (params.selectedSupplierId == null) return const ReportLoadResult(rows: [], totals: {});
-    final suppliers = await locator<SupplierRepository>().getAllSuppliers();
-    final sup = suppliers.firstWhere((s) => s['id'] == params.selectedSupplierId, orElse: () => <String, dynamic>{});
-    final supName = sup['name'] as String? ?? '';
-    final supCurrency = sup['currency'] as String? ?? 'YER';
+    final sup = await locator<SupplierRepository>().getSupplierById(params.selectedSupplierId!);
+    final supName = sup?['name'] as String? ?? '';
+    final supCurrency = sup?['currency'] as String? ?? 'YER';
 
     final txs = await locator<ReportService>().getSupplierMovementReport(
       supplierId: params.selectedSupplierId!,
@@ -535,13 +537,20 @@ class ReportDataLoader {
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
+  /// OPTIMIZED: Compute totals in a single pass while building rows,
+  /// instead of building rows first then .fold() again for totals.
   static Future<ReportLoadResult> _loadInventoryMovementReport({required ReportFilterParams params}) async {
     final items = await locator<ReportService>().getInventoryMovementReport(startDate: params.dateFrom, endDate: params.dateTo);
+    double totalIn = 0, totalOut = 0, totalRevenue = 0, totalCost = 0;
     final rows = items.map((item) {
       final qtyIn = (item['qty_in'] as num?)?.toDouble() ?? 0.0;
       final qtyOut = (item['qty_out'] as num?)?.toDouble() ?? 0.0;
       final revenue = MoneyHelper.readCalculatedMoney(item['total_revenue']);
       final cost = MoneyHelper.readCalculatedMoney(item['total_cost']);
+      totalIn += qtyIn;
+      totalOut += qtyOut;
+      totalRevenue += revenue;
+      totalCost += cost;
       return {
         'الصنف': (item['name_ar'] ?? item['product_name']) as String? ?? '',
         'الوارد': qtyIn,
@@ -551,10 +560,6 @@ class ReportDataLoader {
         'إجمالي المشتريات': cost,
       };
     }).toList();
-    final totalIn = rows.fold(0.0, (s, r) => s + ((r['الوارد'] as num?)?.toDouble() ?? 0.0));
-    final totalOut = rows.fold(0.0, (s, r) => s + ((r['الصادر'] as num?)?.toDouble() ?? 0.0));
-    final totalRevenue = rows.fold(0.0, (s, r) => s + ((r['إجمالي المبيعات'] as num?)?.toDouble() ?? 0.0));
-    final totalCost = rows.fold(0.0, (s, r) => s + ((r['إجمالي المشتريات'] as num?)?.toDouble() ?? 0.0));
     final totals = {'إجمالي الوارد': totalIn, 'إجمالي الصادر': totalOut, 'الصافي': totalIn - totalOut, 'إجمالي المبيعات': totalRevenue, 'إجمالي المشتريات': totalCost};
     return ReportLoadResult(rows: rows, totals: totals);
   }
@@ -623,44 +628,41 @@ class ReportDataLoader {
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
+  /// OPTIMIZED: Replaced getAllCustomers/getAllSuppliers (fetch ALL) +
+  /// Dart-side `balance > 0` filter with direct SQL WHERE balance > 0
+  /// via ReportService.getCustomerDebts/getSupplierDebts.
   static Future<ReportLoadResult> _loadDebtReport({required bool isCustomer}) async {
     final rows = <Map<String, dynamic>>[];
     double totalBalance = 0;
     if (isCustomer) {
-      final customers = await locator<CustomerRepository>().getAllCustomers();
+      final customers = await locator<ReportService>().getCustomerDebts();
       for (final c in customers) {
         final balance = MoneyHelper.readMoney(c['balance']);
-        if (balance > 0) {
-          totalBalance += balance;
-          rows.add({
-            'الاسم': c['name'] as String? ?? '',
-            'الرصيد': balance,
-            'نوع الرصيد': (c['balance_type'] as String? ?? 'credit') == 'credit' ? 'له (علينا)' : 'عليه (لنا)',
-            'العملة': c['currency'] as String? ?? 'YER',
-            'الهاتف': c['phone'] as String? ?? '',
-            'سقف الدين': MoneyHelper.readMoney(c['debt_ceiling']),
-          });
-        }
+        totalBalance += balance;
+        rows.add({
+          'الاسم': c['name'] as String? ?? '',
+          'الرصيد': balance,
+          'نوع الرصيد': (c['balance_type'] as String? ?? 'credit') == 'credit' ? 'له (علينا)' : 'عليه (لنا)',
+          'العملة': c['currency'] as String? ?? 'YER',
+          'الهاتف': c['phone'] as String? ?? '',
+          'سقف الدين': MoneyHelper.readMoney(c['debt_ceiling']),
+        });
       }
     } else {
-      final suppliers = await locator<SupplierRepository>().getAllSuppliers();
+      final suppliers = await locator<ReportService>().getSupplierDebts();
       for (final s in suppliers) {
         final balance = MoneyHelper.readMoney(s['balance']);
-        final balanceType = s['balance_type'] as String? ?? 'credit';
-        // Only show suppliers WE owe (credit/له) — "ديون الموردين" means
-        // our debts TO suppliers, not suppliers who owe us (debit/عليه).
-        final signedBalance = balanceType == 'credit' ? balance : -balance;
-        if (signedBalance > 0) {
-          totalBalance += signedBalance;
-          rows.add({
-            'الاسم': s['name'] as String? ?? '',
-            'الرصيد': signedBalance,
-            'نوع الرصيد': 'له (علينا)',
-            'العملة': s['currency'] as String? ?? 'YER',
-            'الهاتف': s['phone'] as String? ?? '',
-            'سقف الدين': MoneyHelper.readMoney(s['debt_ceiling']),
-          });
-        }
+        // Suppliers from getSupplierDebts() already filtered: balance > 0 AND balance_type='credit'
+        // So signedBalance is always positive (we owe them).
+        totalBalance += balance;
+        rows.add({
+          'الاسم': s['name'] as String? ?? '',
+          'الرصيد': balance,
+          'نوع الرصيد': 'له (علينا)',
+          'العملة': s['currency'] as String? ?? 'YER',
+          'الهاتف': s['phone'] as String? ?? '',
+          'سقف الدين': MoneyHelper.readMoney(s['debt_ceiling']),
+        });
       }
     }
     final totals = {'إجمالي الديون': totalBalance, 'العدد': rows.length.toDouble()};

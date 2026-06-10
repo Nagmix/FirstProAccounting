@@ -404,6 +404,7 @@ class ProductRepository {
           final totalValue = openingStock * baseCostPrice;
           if (totalValue > 0) {
             final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+            final productExchangeRate = await _getExchangeRate(txn, currency);
 
             // Find inventory account (1300 + offset)
             final inventoryAccount = await txn.query(
@@ -432,6 +433,9 @@ class ProductRepository {
                 'description': 'رصيد افتتاحي - منتج: $productName',
                 'date': now,
                 'created_at': now,
+                'currency_code': currency,
+                'exchange_rate': currency == 'YER' ? 1.0 : productExchangeRate,
+                'amount_base': (MoneyHelper.toCents(totalValue) * productExchangeRate).round(),
               });
               await txn.insert('transactions', {
                 'account_id': openingBalanceAccountId,
@@ -440,6 +444,9 @@ class ProductRepository {
                 'description': 'رصيد افتتاحي - منتج: $productName',
                 'date': now,
                 'created_at': now,
+                'currency_code': currency,
+                'exchange_rate': currency == 'YER' ? 1.0 : productExchangeRate,
+                'amount_base': (MoneyHelper.toCents(totalValue) * productExchangeRate).round(),
               });
 
               // Update account balances using JournalService
@@ -457,6 +464,22 @@ class ProductRepository {
       throw StateError('Failed to save product: database insert returned null');
     }
     return savedProductId!;
+  }
+
+  /// Get exchange rate for a currency from the currencies table.
+  /// Falls back to hardcoded defaults if the table/query fails.
+  Future<double> _getExchangeRate(dynamic executor, String currency) async {
+    if (currency == 'YER') return 1.0;
+    try {
+      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      if (rows.isNotEmpty) {
+        return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      }
+    } catch (_) {}
+    // Fallback defaults
+    if (currency == 'SAR') return 140.0;
+    if (currency == 'USD') return 530.0;
+    return 1.0;
   }
 
   /// Update an existing product with unit conversions.

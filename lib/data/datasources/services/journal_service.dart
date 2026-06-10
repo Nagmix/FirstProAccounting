@@ -297,6 +297,9 @@ class JournalService {
           'description': 'مكاسب صرف $currency - $referenceId',
           'date': now.substring(0, 10),
           'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
         });
         await txn.insert('transactions', {
           'account_id': exchangeAccountId,
@@ -306,6 +309,9 @@ class JournalService {
           'description': 'مكاسب صرف $currency - $referenceId',
           'date': now.substring(0, 10),
           'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
         });
         await updateAccountBalanceWithJournal(
           txn, accountId, gainLossAmount.abs(), 0.0, now,
@@ -323,6 +329,9 @@ class JournalService {
           'description': 'خسائر صرف $currency - $referenceId',
           'date': now.substring(0, 10),
           'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
         });
         await txn.insert('transactions', {
           'account_id': accountId,
@@ -332,6 +341,9 @@ class JournalService {
           'description': 'خسائر صرف $currency - $referenceId',
           'date': now.substring(0, 10),
           'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
         });
         await updateAccountBalanceWithJournal(
           txn, exchangeAccountId, gainLossAmount.abs(), 0.0, now,

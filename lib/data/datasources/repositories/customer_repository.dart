@@ -35,6 +35,14 @@ class CustomerRepository {
         ..remove('opening_balance_currency');
       customerId = await txn.insert('customers', MoneyHelper.toCentsMap(insertMap, MoneyHelper.customerMoneyFields));
 
+      // Look up exchange rate for the customer's currency
+      double customerExchangeRate = 1.0;
+      if (customerCurrency != 'YER') {
+        final curRows = await txn.query('currencies', where: 'code = ?', whereArgs: [customerCurrency], limit: 1);
+        customerExchangeRate = curRows.isNotEmpty ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0 : 1.0;
+      }
+      final customerBaseAmount = customerCurrency == 'YER' ? openingBalance : openingBalance * customerExchangeRate;
+
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
         final journalId = generateUniqueJournalId();
@@ -60,6 +68,9 @@ class CustomerRepository {
               'created_at': now,
               'reference_type': 'opening_balance',
               'reference_id': referenceId,
+              'currency_code': customerCurrency,
+              'exchange_rate': customerExchangeRate,
+              'amount_base': MoneyHelper.toCents(customerBaseAmount),
             });
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
@@ -71,6 +82,9 @@ class CustomerRepository {
               'created_at': now,
               'reference_type': 'opening_balance',
               'reference_id': referenceId,
+              'currency_code': customerCurrency,
+              'exchange_rate': customerExchangeRate,
+              'amount_base': MoneyHelper.toCents(customerBaseAmount),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, openingBalance, 0.0, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
@@ -86,6 +100,9 @@ class CustomerRepository {
               'created_at': now,
               'reference_type': 'opening_balance',
               'reference_id': referenceId,
+              'currency_code': customerCurrency,
+              'exchange_rate': customerExchangeRate,
+              'amount_base': MoneyHelper.toCents(customerBaseAmount),
             });
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
@@ -97,6 +114,9 @@ class CustomerRepository {
               'created_at': now,
               'reference_type': 'opening_balance',
               'reference_id': referenceId,
+              'currency_code': customerCurrency,
+              'exchange_rate': customerExchangeRate,
+              'amount_base': MoneyHelper.toCents(customerBaseAmount),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, openingBalance, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
@@ -192,15 +212,27 @@ class CustomerRepository {
           }
 
           return await db.transaction((txn) async {
+            // Look up exchange rates for old and new currencies
+            double oldExchangeRate = 1.0;
+            if (oldCurrency != 'YER') {
+              final curRows = await txn.query('currencies', where: 'code = ?', whereArgs: [oldCurrency], limit: 1);
+              oldExchangeRate = curRows.isNotEmpty ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0 : 1.0;
+            }
+            double newExchangeRate = 1.0;
+            if (newCurrency != 'YER') {
+              final curRows = await txn.query('currencies', where: 'code = ?', whereArgs: [newCurrency], limit: 1);
+              newExchangeRate = curRows.isNotEmpty ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0 : 1.0;
+            }
+
             // Reverse old signed balance in old currency
             if (oldCustomersAccountId != null && oldOpeningBalanceAccountId != null && oldSigned.abs() >= 0.005) {
               final reverseJournalId = generateUniqueJournalId();
               if (oldSigned > 0) {
                 // Old was credit → reverse with debit on customer, credit on OB
-                await _insertOpeningBalanceEntry(txn, oldCustomersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned, true, 'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+                await _insertOpeningBalanceEntry(txn, oldCustomersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned, true, 'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, oldCurrency, oldExchangeRate);
               } else {
                 // Old was debit → reverse with credit on customer, debit on OB
-                await _insertOpeningBalanceEntry(txn, oldCustomersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned.abs(), false, 'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+                await _insertOpeningBalanceEntry(txn, oldCustomersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned.abs(), false, 'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, oldCurrency, oldExchangeRate);
               }
             }
 
@@ -209,10 +241,10 @@ class CustomerRepository {
               final newJournalId = generateUniqueJournalId();
               if (newSigned > 0) {
                 // New is credit (له)
-                await _insertOpeningBalanceEntry(txn, newCustomersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned, false, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+                await _insertOpeningBalanceEntry(txn, newCustomersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned, false, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, newExchangeRate);
               } else {
                 // New is debit (عليه)
-                await _insertOpeningBalanceEntry(txn, newCustomersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+                await _insertOpeningBalanceEntry(txn, newCustomersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, newExchangeRate);
               }
             }
 
@@ -232,14 +264,21 @@ class CustomerRepository {
 
         if (customersAccountId != null && openingBalanceAccountId != null) {
           return await db.transaction((txn) async {
+            // Look up exchange rate for the currency
+            double exchangeRate = 1.0;
+            if (newCurrency != 'YER') {
+              final curRows = await txn.query('currencies', where: 'code = ?', whereArgs: [newCurrency], limit: 1);
+              exchangeRate = curRows.isNotEmpty ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0 : 1.0;
+            }
+
             if (signedDiff > 0) {
               // Signed balance increased (more credit/له or less debit/عليه):
               // Credit Customers account, Debit Opening Balance Equity
-              await _insertOpeningBalanceEntry(txn, customersAccountId, openingBalanceAccountId, journalId, signedDiff, false, 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+              await _insertOpeningBalanceEntry(txn, customersAccountId, openingBalanceAccountId, journalId, signedDiff, false, 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, exchangeRate);
             } else {
               // Signed balance decreased (more debit/عليه or less credit/له):
               // Debit Customers account, Credit Opening Balance Equity
-              await _insertOpeningBalanceEntry(txn, customersAccountId, openingBalanceAccountId, journalId, signedDiff.abs(), true, 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}', now, id);
+              await _insertOpeningBalanceEntry(txn, customersAccountId, openingBalanceAccountId, journalId, signedDiff.abs(), true, 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, exchangeRate);
             }
 
             return await txn.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
@@ -265,6 +304,8 @@ class CustomerRepository {
 
   /// Helper: Insert a pair of opening balance journal entries.
   /// [isDebitCustomer] true = Debit Customer / Credit OB, false = Credit Customer / Debit OB
+  /// [currencyCode] the currency of the transaction
+  /// [exchangeRate] the exchange rate to convert to base currency (YER)
   Future<void> _insertOpeningBalanceEntry(
     Transaction txn,
     int customersAccountId,
@@ -275,7 +316,10 @@ class CustomerRepository {
     String description,
     String now,
     int customerId,
+    String currencyCode,
+    double exchangeRate,
   ) async {
+    final baseAmount = currencyCode == 'YER' ? amount : amount * exchangeRate;
     await txn.insert('transactions', {
       'account_id': customersAccountId,
       'journal_id': journalId,
@@ -286,6 +330,9 @@ class CustomerRepository {
       'created_at': now,
       'reference_type': 'opening_balance',
       'reference_id': 'customer_$customerId',
+      'currency_code': currencyCode,
+      'exchange_rate': exchangeRate,
+      'amount_base': MoneyHelper.toCents(baseAmount),
     });
     await txn.insert('transactions', {
       'account_id': openingBalanceAccountId,
@@ -297,6 +344,9 @@ class CustomerRepository {
       'created_at': now,
       'reference_type': 'opening_balance',
       'reference_id': 'customer_$customerId',
+      'currency_code': currencyCode,
+      'exchange_rate': exchangeRate,
+      'amount_base': MoneyHelper.toCents(baseAmount),
     });
     await _dbHelper.journal.updateAccountBalanceWithJournal(
       txn, customersAccountId,
@@ -380,11 +430,26 @@ class CustomerRepository {
       accountNet[accountId] = (accountNet[accountId] ?? 0.0) + (credit - debit);
     }
 
+    // Pre-fetch currencies table for exchange rate lookups
+    final currenciesRows = await txn.query('currencies');
+    final currencyRates = <String, double>{'YER': 1.0};
+    for (final c in currenciesRows) {
+      final code = c['code'] as String? ?? '';
+      final rate = (c['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      if (code.isNotEmpty) currencyRates[code] = rate;
+    }
+
     // Create reversing entries
     for (final entry in accountNet.entries) {
       final accountId = entry.key;
       final netCredit = entry.value; // positive = original was credit, negative = original was debit
       if (netCredit.abs() < 0.005) continue;
+
+      // Look up the account's currency for currency_code and exchange_rate
+      final accountRow = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+      final accountCurrency = accountRow.isNotEmpty ? (accountRow.first['currency'] as String? ?? 'YER') : 'YER';
+      final accountExchangeRate = currencyRates[accountCurrency] ?? 1.0;
+      final baseAmount = accountCurrency == 'YER' ? netCredit.abs() : netCredit.abs() * accountExchangeRate;
 
       if (netCredit > 0) {
         // Original was credit → reverse with debit
@@ -398,6 +463,9 @@ class CustomerRepository {
           'created_at': now,
           'reference_type': 'opening_balance_reversal',
           'reference_id': referenceId,
+          'currency_code': accountCurrency,
+          'exchange_rate': accountExchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, netCredit, 0.0, now);
       } else {
@@ -413,6 +481,9 @@ class CustomerRepository {
           'created_at': now,
           'reference_type': 'opening_balance_reversal',
           'reference_id': referenceId,
+          'currency_code': accountCurrency,
+          'exchange_rate': accountExchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
       }

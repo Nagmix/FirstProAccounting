@@ -187,6 +187,7 @@ class StockService {
       if (transferValue.abs() >= 0.005) {
         final journalId = generateUniqueJournalId();
         final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final transferRate = await _getExchangeRate(txn, transferCurrency);
 
         // محاولة استخدام حساب المخزون المرتبط بالمستودع، أو الافتراضي
         int? fromInventoryAccountId;
@@ -215,6 +216,9 @@ class StockService {
             'description': 'تحويل مخزني من مستودع #$fromWarehouseId إلى #$toWarehouseId - منتج #$productId',
             'date': now,
             'created_at': now,
+            'currency_code': transferCurrency,
+            'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
+            'amount_base': (MoneyHelper.toCents(transferValue) * transferRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, toInventoryAccountId, transferValue, 0.0, now);
 
@@ -227,6 +231,9 @@ class StockService {
             'description': 'تحويل مخزني من مستودع #$fromWarehouseId إلى #$toWarehouseId - منتج #$productId',
             'date': now,
             'created_at': now,
+            'currency_code': transferCurrency,
+            'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
+            'amount_base': (MoneyHelper.toCents(transferValue) * transferRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromInventoryAccountId, 0.0, transferValue, now);
         }
@@ -245,6 +252,22 @@ class StockService {
     final accountCode = (1300 + codeOffset).toString();
     final rows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [accountCode, currency], limit: 1);
     return rows.isNotEmpty ? rows.first['id'] as int : null;
+  }
+
+  /// Helper: Look up exchange rate from currencies table for a given currency code.
+  /// Returns 1.0 for YER, falls back to hardcoded rates if not found in DB.
+  Future<double> _getExchangeRate(DatabaseExecutor executor, String currency) async {
+    if (currency == 'YER') return 1.0;
+    try {
+      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      if (rows.isNotEmpty) {
+        return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      }
+    } catch (_) {}
+    // Fallback defaults
+    if (currency == 'SAR') return 140.0;
+    if (currency == 'USD') return 530.0;
+    return 1.0;
   }
 
   /// جلب جميع التحويلات المخزنية مع أسماء المستودعات والمنتجات
@@ -478,6 +501,9 @@ class StockService {
                   'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
+                  'currency_code': 'YER',
+                  'exchange_rate': 1.0,
+                  'amount_base': MoneyHelper.toCents(adjustmentAmount),
                 });
                 await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveInventoryAccountId, adjustmentAmount, 0.0, now);
               }
@@ -490,6 +516,9 @@ class StockService {
                   'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
+                  'currency_code': 'YER',
+                  'exchange_rate': 1.0,
+                  'amount_base': MoneyHelper.toCents(adjustmentAmount),
                 });
                 await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, adjustmentAmount, now);
               }
@@ -505,6 +534,9 @@ class StockService {
                   'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
+                  'currency_code': 'YER',
+                  'exchange_rate': 1.0,
+                  'amount_base': MoneyHelper.toCents(lossAmount),
                 });
                 await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, lossAmount, 0.0, now);
               }
@@ -517,6 +549,9 @@ class StockService {
                   'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
+                  'currency_code': 'YER',
+                  'exchange_rate': 1.0,
+                  'amount_base': MoneyHelper.toCents(lossAmount),
                 });
                 await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveInventoryAccountId, 0.0, lossAmount, now);
               }
@@ -667,6 +702,7 @@ class StockService {
         final journalId = generateUniqueJournalId();
         // Get currency for this voucher
         final currency = voucherMap['currency'] as String? ?? 'YER';
+        final voucherRate = await _getExchangeRate(txn, currency);
 
         // ── C-05: استخدام حسابات تفاوت الجرد بدل COGS ──
         // COGS يجب أن يعكس تكلفة البضاعة المباعة فقط وليس فروقات الجرد
@@ -743,6 +779,9 @@ class StockService {
             'description': 'سند جرد - زيادة مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
+            'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * voucherRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
         }
@@ -755,6 +794,9 @@ class StockService {
             'description': 'سند جرد - زيادة مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
+            'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * voucherRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
         }
@@ -771,6 +813,9 @@ class StockService {
             'description': 'سند جرد - نقص مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
+            'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * voucherRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
         }
@@ -784,6 +829,9 @@ class StockService {
             'description': 'سند جرد - نقص مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
+            'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * voucherRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
         }
@@ -929,6 +977,8 @@ class StockService {
         // ── W-08: عكس القيود بدقة باستخدام رقم السند ──
         // البحث عن القيود المرتبطة برقم السند بالضبط بدل التاريخ والوصف
         final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
+        final deleteCurrency = voucherRows.first['currency'] as String? ?? 'YER';
+        final deleteRate = await _getExchangeRate(txn, deleteCurrency);
 
         final relatedTxns = await txn.rawQuery(
           '''SELECT * FROM transactions
@@ -944,6 +994,7 @@ class StockService {
           final credit = MoneyHelper.readMoney(txnRow['credit']);
 
           // Reverse: swap debit and credit
+          final reversalAmount = credit > 0 ? credit : debit;
           await txn.insert('transactions', {
             'account_id': accId,
             'journal_id': generateUniqueJournalId(),
@@ -952,6 +1003,9 @@ class StockService {
             'description': 'عكس قيد - حذف سند جرد رقم $voucherNumber',
             'date': now.substring(0, 10),
             'created_at': now,
+            'currency_code': deleteCurrency,
+            'exchange_rate': deleteCurrency == 'YER' ? 1.0 : deleteRate,
+            'amount_base': (MoneyHelper.toCents(reversalAmount) * deleteRate).round(),
           });
 
           // Reverse the account balance
@@ -1001,6 +1055,7 @@ class StockService {
       }
 
       final currency = voucherRows.first['currency'] as String? ?? 'YER';
+      final confirmRate = await _getExchangeRate(txn, currency);
       final voucherDate = voucherRows.first['date'] as String? ?? now.substring(0, 10);
 
       // Fetch items
@@ -1132,6 +1187,9 @@ class StockService {
             'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
             'date': voucherDate,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
+            'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
         }
@@ -1144,6 +1202,9 @@ class StockService {
             'description': 'تأكيد سند جرد $voucherNumber - زيادة مخزون',
             'date': voucherDate,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
+            'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
         }
@@ -1160,6 +1221,9 @@ class StockService {
             'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
             'date': voucherDate,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
+            'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
         }
@@ -1173,6 +1237,9 @@ class StockService {
             'description': 'تأكيد سند جرد $voucherNumber - نقص مخزون',
             'date': voucherDate,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
+            'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
         }

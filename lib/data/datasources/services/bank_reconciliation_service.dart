@@ -296,6 +296,7 @@ class BankReconciliationService {
       final currency = cashBox.first['currency'] as String? ?? 'YER';
       final codeOffset =
           currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+      final exchangeRate = await _getExchangeRate(txn, currency);
 
       // Bank charges: Dr. Bank Charges Expense / Cr. Cash
       if (calculated.bankCharges.abs() >= 0.005) {
@@ -322,6 +323,9 @@ class BankReconciliationService {
               'رسوم بنكية - تسوية ${recon.reconciliationNumber}',
           'date': now,
           'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
+          'amount_base': (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate).round(),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, expenseAccountId, calculated.bankCharges, 0.0, now);
@@ -335,6 +339,9 @@ class BankReconciliationService {
               'رسوم بنكية - تسوية ${recon.reconciliationNumber}',
           'date': now,
           'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
+          'amount_base': (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate).round(),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, linkedAccountId, 0.0, calculated.bankCharges, now);
@@ -366,6 +373,9 @@ class BankReconciliationService {
                 'فوائد بنكية - تسوية ${recon.reconciliationNumber}',
             'date': now,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
+            'amount_base': (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, linkedAccountId, calculated.interestEarned, 0.0, now);
@@ -379,6 +389,9 @@ class BankReconciliationService {
                 'فوائد بنكية - تسوية ${recon.reconciliationNumber}',
             'date': now,
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
+            'amount_base': (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate).round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, revenueAccountId, 0.0, calculated.interestEarned, now);
@@ -495,6 +508,22 @@ class BankReconciliationService {
     final db = await _db;
     await db.update('bank_reconciliations', recon.toMap(),
         where: 'id = ?', whereArgs: [recon.id]);
+  }
+
+  /// Get exchange rate for a currency from the currencies table.
+  /// Falls back to hardcoded defaults if the table/query fails.
+  Future<double> _getExchangeRate(dynamic executor, String currency) async {
+    if (currency == 'YER') return 1.0;
+    try {
+      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      if (rows.isNotEmpty) {
+        return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      }
+    } catch (_) {}
+    // Fallback defaults
+    if (currency == 'SAR') return 140.0;
+    if (currency == 'USD') return 530.0;
+    return 1.0;
   }
 
   /// Delete a draft reconciliation

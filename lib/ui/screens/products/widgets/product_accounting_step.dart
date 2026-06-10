@@ -224,7 +224,13 @@ class ProductAccountingStep extends StatelessWidget {
                       child: const Text('فهمت، استمر'),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        // Revert to previous costing method by notifying parent
+                        // with the current (unchanged) value, which forces a rebuild
+                        // and resets the dropdown visual state.
+                        onCostingMethodChanged(costingMethod);
+                      },
                       child: const Text('إلغاء'),
                     ),
                   ],

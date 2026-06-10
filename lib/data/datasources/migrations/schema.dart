@@ -201,8 +201,9 @@ class DatabaseSchema {
         date TEXT NOT NULL,
         created_at TEXT NOT NULL,
         balance_type TEXT,
-        currency_code TEXT,
+        currency_code TEXT NOT NULL DEFAULT 'YER',
         exchange_rate REAL NOT NULL DEFAULT 1.0,
+        amount_base INTEGER NOT NULL DEFAULT 0,
         reference_type TEXT,
         reference_id TEXT,
         FOREIGN KEY (account_id) REFERENCES accounts (id)
@@ -658,6 +659,7 @@ class DatabaseSchema {
         description TEXT,
         currency TEXT NOT NULL DEFAULT 'YER',
         total_amount INTEGER NOT NULL DEFAULT 0,
+        exchange_rate REAL NOT NULL DEFAULT 1.0,
         cash_box_id INTEGER,
         customer_id INTEGER,
         supplier_id INTEGER,

@@ -206,6 +206,9 @@ class ExpenseRepository {
             'description': 'مصروف: $title',
             'date': now,
             'created_at': now,
+            'currency_code': expenseCurrency,
+            'exchange_rate': exchangeRate,
+            'amount_base': MoneyHelper.toCents(amountBase),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccId, journalAmount, 0.0, now);
         }
@@ -218,6 +221,9 @@ class ExpenseRepository {
             'description': 'مصروف: $title',
             'date': now,
             'created_at': now,
+            'currency_code': expenseCurrency,
+            'exchange_rate': exchangeRate,
+            'amount_base': MoneyHelper.toCents(amountBase),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, 0.0, journalAmount, now);
         }
@@ -234,6 +240,9 @@ class ExpenseRepository {
             'description': 'استرداد مصروف: $title',
             'date': now,
             'created_at': now,
+            'currency_code': expenseCurrency,
+            'exchange_rate': exchangeRate,
+            'amount_base': MoneyHelper.toCents(amountBase),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, journalAmount, 0.0, now);
         }
@@ -247,6 +256,9 @@ class ExpenseRepository {
             'description': 'استرداد مصروف: $title',
             'date': now,
             'created_at': now,
+            'currency_code': expenseCurrency,
+            'exchange_rate': exchangeRate,
+            'amount_base': MoneyHelper.toCents(amountBase),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccId, 0.0, journalAmount, now);
         }
@@ -308,6 +320,7 @@ class ExpenseRepository {
       final oldAmount = MoneyHelper.readMoney(existingExpense['amount']);
       final oldOperationType = existingExpense['operation_type'] as String? ?? 'صرف';
       final oldCurrency = existingExpense['currency'] as String? ?? 'YER';
+      final oldExchangeRate = (existingExpense['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       final oldCodeOffset = oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
       final oldExpenseAccountId = (existingExpense['expense_account_id'] as int?) ?? (existingExpense['account_id'] as int?);
       final oldCashBoxId = existingExpense['cash_box_id'] as int?;
@@ -345,6 +358,9 @@ class ExpenseRepository {
             'description': 'تعديل/عكس مصروف: $oldTitle',
             'date': now,
             'created_at': now,
+            'currency_code': oldCurrency,
+            'exchange_rate': oldExchangeRate,
+            'amount_base': MoneyHelper.toCents(oldAmountBase),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, oldExpenseAccountId, 0.0, oldAmountBase, now);
 
@@ -357,6 +373,9 @@ class ExpenseRepository {
               'description': 'تعديل/عكس مصروف: $oldTitle',
               'date': now,
               'created_at': now,
+              'currency_code': oldCurrency,
+              'exchange_rate': oldExchangeRate,
+              'amount_base': MoneyHelper.toCents(oldAmountBase),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, oldCashBankAccountId, oldAmountBase, 0.0, now);
           }
@@ -371,6 +390,9 @@ class ExpenseRepository {
               'description': 'تعديل/عكس قبض: $oldTitle',
               'date': now,
               'created_at': now,
+              'currency_code': oldCurrency,
+              'exchange_rate': oldExchangeRate,
+              'amount_base': MoneyHelper.toCents(oldAmountBase),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, oldCashBankAccountId, 0.0, oldAmountBase, now);
           }
@@ -382,6 +404,9 @@ class ExpenseRepository {
             'description': 'تعديل/عكس قبض: $oldTitle',
             'date': now,
             'created_at': now,
+            'currency_code': oldCurrency,
+            'exchange_rate': oldExchangeRate,
+            'amount_base': MoneyHelper.toCents(oldAmountBase),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, oldExpenseAccountId, oldAmountBase, 0.0, now);
         }
@@ -470,6 +495,9 @@ class ExpenseRepository {
             'description': 'مصروف: $title',
             'date': now,
             'created_at': now,
+            'currency_code': newCurrency,
+            'exchange_rate': newExchangeRate,
+            'amount_base': MoneyHelper.toCents(newAmountBase),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveExpenseAccountId, journalAmount, 0.0, now);
 
@@ -482,6 +510,9 @@ class ExpenseRepository {
               'description': 'مصروف: $title',
               'date': now,
               'created_at': now,
+              'currency_code': newCurrency,
+              'exchange_rate': newExchangeRate,
+              'amount_base': MoneyHelper.toCents(newAmountBase),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBankAccountId, 0.0, journalAmount, now);
           }
@@ -496,6 +527,9 @@ class ExpenseRepository {
               'description': 'قبض: $title',
               'date': now,
               'created_at': now,
+              'currency_code': newCurrency,
+              'exchange_rate': newExchangeRate,
+              'amount_base': MoneyHelper.toCents(newAmountBase),
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBankAccountId, journalAmount, 0.0, now);
           }
@@ -507,6 +541,9 @@ class ExpenseRepository {
             'description': 'قبض: $title',
             'date': now,
             'created_at': now,
+            'currency_code': newCurrency,
+            'exchange_rate': newExchangeRate,
+            'amount_base': MoneyHelper.toCents(newAmountBase),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveExpenseAccountId, 0.0, journalAmount, now);
         }

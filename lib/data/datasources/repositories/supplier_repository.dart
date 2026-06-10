@@ -38,6 +38,9 @@ class SupplierRepository {
       if (openingBalance > 0) {
         final journalId = generateUniqueJournalId();
         final codeOffset = openingBalanceCurrency == 'SAR' ? 1 : (openingBalanceCurrency == 'USD' ? 2 : 0);
+        final openingBalanceExchangeRate = await _getExchangeRate(txn, openingBalanceCurrency);
+        final openingBalanceIsYer = openingBalanceCurrency == 'YER';
+        final openingBalanceAmountBase = MoneyHelper.toCents(openingBalanceIsYer ? openingBalance : openingBalance * openingBalanceExchangeRate);
 
         final suppliersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2100 + codeOffset).toString(), openingBalanceCurrency], limit: 1);
         final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), openingBalanceCurrency], limit: 1);
@@ -58,6 +61,9 @@ class SupplierRepository {
               'created_at': now,
               'reference_type': 'opening_balance',
               'reference_id': 'supplier_$supplierId',
+              'currency_code': openingBalanceCurrency,
+              'exchange_rate': openingBalanceIsYer ? 1.0 : openingBalanceExchangeRate,
+              'amount_base': openingBalanceAmountBase,
             });
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
@@ -69,6 +75,9 @@ class SupplierRepository {
               'created_at': now,
               'reference_type': 'opening_balance',
               'reference_id': 'supplier_$supplierId',
+              'currency_code': openingBalanceCurrency,
+              'exchange_rate': openingBalanceIsYer ? 1.0 : openingBalanceExchangeRate,
+              'amount_base': openingBalanceAmountBase,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, openingBalance, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
@@ -84,6 +93,9 @@ class SupplierRepository {
               'created_at': now,
               'reference_type': 'opening_balance',
               'reference_id': 'supplier_$supplierId',
+              'currency_code': openingBalanceCurrency,
+              'exchange_rate': openingBalanceIsYer ? 1.0 : openingBalanceExchangeRate,
+              'amount_base': openingBalanceAmountBase,
             });
             await txn.insert('transactions', {
               'account_id': openingBalanceAccountId,
@@ -95,6 +107,9 @@ class SupplierRepository {
               'created_at': now,
               'reference_type': 'opening_balance',
               'reference_id': 'supplier_$supplierId',
+              'currency_code': openingBalanceCurrency,
+              'exchange_rate': openingBalanceIsYer ? 1.0 : openingBalanceExchangeRate,
+              'amount_base': openingBalanceAmountBase,
             });
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, openingBalance, 0.0, now);
             await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
@@ -149,6 +164,8 @@ class SupplierRepository {
             ?? oldSupplier['currency'] as String?
             ?? 'YER';
         final oldCurrency = oldSupplier['currency'] as String? ?? 'YER';
+        final oldExchangeRate = await _getExchangeRate(db, oldCurrency);
+        final newExchangeRate = await _getExchangeRate(db, newCurrency);
 
         // ── Handle currency change ──
         // When the opening balance currency changes, we must:
@@ -189,10 +206,10 @@ class SupplierRepository {
               final reverseJournalId = generateUniqueJournalId();
               if (oldSigned > 0) {
                 // Old was credit (له) → reverse with debit on supplier, credit on OB
-                await _insertOpeningBalanceEntry(txn, oldSuppliersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned, true, 'عكس رصيد افتتاحي مورد (تغيير عملة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id);
+                await _insertOpeningBalanceEntry(txn, oldSuppliersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned, true, 'عكس رصيد افتتاحي مورد (تغيير عملة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, oldCurrency, oldExchangeRate);
               } else {
                 // Old was debit (عليه) → reverse with credit on supplier, debit on OB
-                await _insertOpeningBalanceEntry(txn, oldSuppliersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned.abs(), false, 'عكس رصيد افتتاحي مورد (تغيير عملة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id);
+                await _insertOpeningBalanceEntry(txn, oldSuppliersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned.abs(), false, 'عكس رصيد افتتاحي مورد (تغيير عملة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, oldCurrency, oldExchangeRate);
               }
             }
 
@@ -201,10 +218,10 @@ class SupplierRepository {
               final newJournalId = generateUniqueJournalId();
               if (newSigned > 0) {
                 // New is credit (له)
-                await _insertOpeningBalanceEntry(txn, newSuppliersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned, false, 'رصيد افتتاحي مورد (عملة جديدة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id);
+                await _insertOpeningBalanceEntry(txn, newSuppliersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned, false, 'رصيد افتتاحي مورد (عملة جديدة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, newCurrency, newExchangeRate);
               } else {
                 // New is debit (عليه)
-                await _insertOpeningBalanceEntry(txn, newSuppliersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي مورد (عملة جديدة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id);
+                await _insertOpeningBalanceEntry(txn, newSuppliersAccountId!, newOpeningBalanceAccountId!, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي مورد (عملة جديدة) - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, newCurrency, newExchangeRate);
               }
             }
 
@@ -227,11 +244,11 @@ class SupplierRepository {
             if (signedDiff > 0) {
               // Signed balance increased (more credit/له or less debit/عليه):
               // Credit Suppliers account, Debit Opening Balance Equity
-              await _insertOpeningBalanceEntry(txn, suppliersAccountId, openingBalanceAccountId, journalId, signedDiff, false, 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}', now, id);
+              await _insertOpeningBalanceEntry(txn, suppliersAccountId, openingBalanceAccountId, journalId, signedDiff, false, 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, newCurrency, newExchangeRate);
             } else {
               // Signed balance decreased (more debit/عليه or less credit/له):
               // Debit Suppliers account, Credit Opening Balance Equity
-              await _insertOpeningBalanceEntry(txn, suppliersAccountId, openingBalanceAccountId, journalId, signedDiff.abs(), true, 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}', now, id);
+              await _insertOpeningBalanceEntry(txn, suppliersAccountId, openingBalanceAccountId, journalId, signedDiff.abs(), true, 'تعديل رصيد مورد - ${supplierMap['name'] ?? oldSupplier['name']}', now, id, newCurrency, newExchangeRate);
             }
 
             return await txn.update('suppliers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.supplierMoneyFields), where: 'id = ?', whereArgs: [id]);
@@ -257,6 +274,8 @@ class SupplierRepository {
 
   /// Helper: Insert a pair of opening balance journal entries for suppliers.
   /// [isDebitSupplier] true = Debit Supplier / Credit OB, false = Credit Supplier / Debit OB
+  /// [currencyCode] The currency of the transaction (e.g. 'YER', 'SAR', 'USD').
+  /// [exchangeRate] The exchange rate to YER for the given currency.
   Future<void> _insertOpeningBalanceEntry(
     Transaction txn,
     int suppliersAccountId,
@@ -267,7 +286,11 @@ class SupplierRepository {
     String description,
     String now,
     int supplierId,
+    String currencyCode,
+    double exchangeRate,
   ) async {
+    final isYer = currencyCode == 'YER';
+    final amountBase = MoneyHelper.toCents(isYer ? amount : amount * exchangeRate);
     await txn.insert('transactions', {
       'account_id': suppliersAccountId,
       'journal_id': journalId,
@@ -278,6 +301,9 @@ class SupplierRepository {
       'created_at': now,
       'reference_type': 'opening_balance',
       'reference_id': 'supplier_$supplierId',
+      'currency_code': currencyCode,
+      'exchange_rate': isYer ? 1.0 : exchangeRate,
+      'amount_base': amountBase,
     });
     await txn.insert('transactions', {
       'account_id': openingBalanceAccountId,
@@ -289,6 +315,9 @@ class SupplierRepository {
       'created_at': now,
       'reference_type': 'opening_balance',
       'reference_id': 'supplier_$supplierId',
+      'currency_code': currencyCode,
+      'exchange_rate': isYer ? 1.0 : exchangeRate,
+      'amount_base': amountBase,
     });
     await _dbHelper.journal.updateAccountBalanceWithJournal(
       txn, suppliersAccountId,
@@ -359,6 +388,13 @@ class SupplierRepository {
       final netCredit = entry.value; // positive = original was credit, negative = original was debit
       if (netCredit.abs() < 0.005) continue;
 
+      // Look up the account's currency for currency_code / exchange_rate / amount_base
+      final accountRow = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+      final accountCurrency = accountRow.isNotEmpty ? (accountRow.first['currency'] as String? ?? 'YER') : 'YER';
+      final rate = await _getExchangeRate(txn, accountCurrency);
+      final isYer = accountCurrency == 'YER';
+      final baseAmount = isYer ? netCredit.abs() : netCredit.abs() * rate;
+
       if (netCredit > 0) {
         // Original was credit → reverse with debit
         await txn.insert('transactions', {
@@ -371,6 +407,9 @@ class SupplierRepository {
           'created_at': now,
           'reference_type': 'opening_balance_reversal',
           'reference_id': referenceId,
+          'currency_code': accountCurrency,
+          'exchange_rate': isYer ? 1.0 : rate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, netCredit, 0.0, now);
       } else {
@@ -386,6 +425,9 @@ class SupplierRepository {
           'created_at': now,
           'reference_type': 'opening_balance_reversal',
           'reference_id': referenceId,
+          'currency_code': accountCurrency,
+          'exchange_rate': isYer ? 1.0 : rate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
       }
@@ -397,6 +439,23 @@ class SupplierRepository {
     await db.transaction((txn) async {
       await _reverseOpeningBalanceOnDeleteTxn(txn, supplierId);
     });
+  }
+
+  /// Look up the exchange rate for a currency from the currencies table.
+  /// Returns 1.0 for YER, and falls back to hardcoded rates if the table
+  /// is unavailable.
+  Future<double> _getExchangeRate(DatabaseExecutor executor, String currency) async {
+    if (currency == 'YER') return 1.0;
+    try {
+      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      if (rows.isNotEmpty) {
+        return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      }
+    } catch (_) {}
+    // Fallback defaults
+    if (currency == 'SAR') return 140.0;
+    if (currency == 'USD') return 530.0;
+    return 1.0;
   }
 
   /// Get all invoices for a specific supplier.

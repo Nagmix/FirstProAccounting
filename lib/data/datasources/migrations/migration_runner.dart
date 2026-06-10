@@ -8,6 +8,7 @@ import 'migration_v44_to_v45.dart';
 import 'migration_v46.dart';
 import 'migration_v47.dart';
 import 'migration_v48.dart';
+import 'migration_v49.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -77,5 +78,8 @@ class MigrationRunner {
 
     // v48 — Ensure employee_id column exists in vouchers table (safety net for fresh v47 installs)
     if (oldVersion < 48) await MigrationV48.migrate(db);
+
+    // v49 — Currency integrity and base-amount tracking
+    if (oldVersion < 49) await MigrationV49.migrate(db);
   }
 }

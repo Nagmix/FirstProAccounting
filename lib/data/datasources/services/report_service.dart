@@ -776,6 +776,10 @@ class ReportService {
     // REVENUE / EXPENSE accounts that are NOT captured by the
     // invoices/expenses tables. This ensures the P&L report reflects
     // the full general ledger, not just operational tables.
+    //
+    // OPTIMIZED: Replaced N+1 (iterate accounts + per-account query)
+    // with a single query per account type using IN (...) subquery,
+    // reducing from 3N+3 queries to just 3 queries total.
     int manualRevenue = 0;
     int manualExpenses = 0;
     int manualCogs = 0;
@@ -785,70 +789,51 @@ class ReportService {
       );
 
       // Revenue accounts (account_type = 'REVENUE') — credit nature
-      // Manual entries that are NOT linked to invoices (reference_type != 'invoice')
+      // Single query with IN (...) instead of per-account loop
       final revCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
       final revCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
-      final revAccounts = await db.rawQuery(
-        "SELECT a.id FROM accounts a WHERE a.account_type = 'REVENUE' AND a.is_active = 1$revCurrencyFilter",
-        revCurrencyArgs,
+      final revRes2 = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM(t.credit) - SUM(t.debit), 0) AS INTEGER) AS manual_rev "
+        "FROM transactions t "
+        "WHERE t.account_id IN (SELECT a.id FROM accounts a WHERE a.account_type = 'REVENUE' AND a.is_active = 1$revCurrencyFilter) "
+        "$acctDf "
+        // FIX: Exclude ALL invoice-related reference types, not just 'invoice'/'pos_sale'.
+        // The invoice_repository uses 'sale','pos','purchase','sale_return','purchase_return'.
+        // postShiftInvoices now also sets reference_type to the invoiceType.
+        // Including reference_type IS NULL was causing double-counting for
+        // transactions created before the reference_type fix was applied.
+        "AND t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
+        [...revCurrencyArgs, ...acctDateArgs],
       );
-      for (final acct in revAccounts) {
-        final revArgs = <dynamic>[acct['id']];
-        revArgs.addAll(acctDateArgs);
-        final revRes2 = await db.rawQuery(
-          "SELECT CAST(COALESCE(SUM(t.credit) - SUM(t.debit), 0) AS INTEGER) AS manual_rev "
-          "FROM transactions t "
-          "WHERE t.account_id = ?$acctDf "
-          // FIX: Exclude ALL invoice-related reference types, not just 'invoice'/'pos_sale'.
-          // The invoice_repository uses 'sale','pos','purchase','sale_return','purchase_return'.
-          // postShiftInvoices now also sets reference_type to the invoiceType.
-          // Including reference_type IS NULL was causing double-counting for
-          // transactions created before the reference_type fix was applied.
-          "AND t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
-          revArgs,
-        );
-        manualRevenue += (revRes2.first['manual_rev'] as int? ?? 0);
-      }
+      manualRevenue = (revRes2.first['manual_rev'] as int? ?? 0);
 
       // Expense accounts (account_type = 'EXPENSE') — debit nature
+      // Single query with IN (...) instead of per-account loop
       final expCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
       final expCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
-      final expAccounts = await db.rawQuery(
-        "SELECT a.id FROM accounts a WHERE a.account_type = 'EXPENSE' AND a.is_active = 1$expCurrencyFilter",
-        expCurrencyArgs,
+      final expRes2 = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_exp "
+        "FROM transactions t "
+        "WHERE t.account_id IN (SELECT a.id FROM accounts a WHERE a.account_type = 'EXPENSE' AND a.is_active = 1$expCurrencyFilter) "
+        "$acctDf "
+        "AND t.reference_type NOT IN ('expense', 'invoice', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
+        [...expCurrencyArgs, ...acctDateArgs],
       );
-      for (final acct in expAccounts) {
-        final expArgs = <dynamic>[acct['id']];
-        expArgs.addAll(acctDateArgs);
-        final expRes2 = await db.rawQuery(
-          "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_exp "
-          "FROM transactions t "
-          "WHERE t.account_id = ?$acctDf "
-          "AND t.reference_type NOT IN ('expense', 'invoice', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
-          expArgs,
-        );
-        manualExpenses += (expRes2.first['manual_exp'] as int? ?? 0);
-      }
+      manualExpenses = (expRes2.first['manual_exp'] as int? ?? 0);
 
-      // COGS accounts (account_type = 'COGS' or account_code like '4%') — debit nature
+      // COGS accounts (account_type = 'COGS') — debit nature
+      // Single query with IN (...) instead of per-account loop
       final cogsCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
       final cogsCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
-      final cogsAccounts = await db.rawQuery(
-        "SELECT a.id FROM accounts a WHERE a.account_type = 'COGS' AND a.is_active = 1$cogsCurrencyFilter",
-        cogsCurrencyArgs,
+      final cogsRes2 = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_cogs "
+        "FROM transactions t "
+        "WHERE t.account_id IN (SELECT a.id FROM accounts a WHERE a.account_type = 'COGS' AND a.is_active = 1$cogsCurrencyFilter) "
+        "$acctDf "
+        "AND t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
+        [...cogsCurrencyArgs, ...acctDateArgs],
       );
-      for (final acct in cogsAccounts) {
-        final cogsArgs = <dynamic>[acct['id']];
-        cogsArgs.addAll(acctDateArgs);
-        final cogsRes2 = await db.rawQuery(
-          "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_cogs "
-          "FROM transactions t "
-          "WHERE t.account_id = ?$acctDf "
-          "AND t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
-          cogsArgs,
-        );
-        manualCogs += (cogsRes2.first['manual_cogs'] as int? ?? 0);
-      }
+      manualCogs = (cogsRes2.first['manual_cogs'] as int? ?? 0);
     } catch (_) {
       // Non-critical: if chart-of-accounts supplement fails, use zero
     }
@@ -1042,83 +1027,195 @@ class ReportService {
 
   /// ديون العملاء — returns all customers with positive balances.
   /// Values are raw DB integers (cents).
+  ///
+  /// OPTIMIZED: Replaced N+1 per-customer getCustomerBalanceForCurrency()
+  /// calls with a single SQL query using subqueries for opening balance,
+  /// invoices, and voucher items, aggregated per customer.
   Future<List<Map<String, dynamic>>> getCustomerBalancesReport({String? currency}) async {
-    final customers = await _dbHelper.customers.getAllCustomers();
-    // When a specific currency is requested, use the computed per-currency
-    // balance instead of the stored single-currency balance field, because
-    // the customer is multi-currency and the stored balance only reflects
-    // one currency's opening balance.
+    final db = await _db;
+    // When a specific currency is requested, compute the per-currency
+    // balance using a single SQL query with JOIN + GROUP BY instead of
+    // iterating all customers and calling getCustomerBalanceForCurrency().
     if (currency != null && currency.isNotEmpty) {
-      final result = <Map<String, dynamic>>[];
-      for (final c in customers) {
-        final id = c['id'] as int?;
-        if (id == null) continue;
-        final computedBalance = await _dbHelper.customers.getCustomerBalanceForCurrency(id, currency);
-        if (computedBalance.abs() >= 0.005) {
-          result.add({
-            'name': c['name'],
-            'balance': MoneyHelper.toCents(computedBalance.abs()),
-            'balance_type': computedBalance >= 0 ? 'credit' : 'debit',
-            'currency': currency,
-            'phone': c['phone'],
-            'debt_ceiling': c['debt_ceiling'],
-          });
-        }
+      try {
+        return await db.rawQuery('''
+          SELECT c.name, c.phone, c.debt_ceiling, ? AS currency,
+            ABS(COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0)) AS balance,
+            CASE WHEN (COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0)) >= 0
+                 THEN 'credit' ELSE 'debit' END AS balance_type
+          FROM customers c
+          LEFT JOIN (
+            SELECT t.reference_id,
+              CAST(COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS INTEGER) AS net
+            FROM transactions t
+            INNER JOIN accounts a ON t.account_id = a.id
+            WHERE t.reference_type = 'opening_balance'
+              AND a.account_code LIKE '12%'
+              AND a.currency = ?
+            GROUP BY t.reference_id
+          ) ob ON ob.reference_id = 'customer_' || c.id
+          LEFT JOIN (
+            SELECT customer_id,
+              CAST(SUM(CASE
+                WHEN type IN ('sale','pos') AND is_return=0 THEN -total
+                WHEN type IN ('sale','pos') AND is_return=1 THEN total
+                WHEN type='purchase' AND is_return=0 THEN total
+                WHEN type='purchase' AND is_return=1 THEN -total
+                ELSE 0
+              END) AS INTEGER) AS net
+            FROM invoices
+            WHERE customer_id IS NOT NULL AND currency = ?
+            GROUP BY customer_id
+          ) inv ON inv.customer_id = c.id
+          LEFT JOIN (
+            SELECT v.customer_id,
+              CAST(COALESCE(SUM(vi.credit), 0) - COALESCE(SUM(vi.debit), 0) AS INTEGER) AS net
+            FROM vouchers v
+            INNER JOIN voucher_items vi ON v.id = vi.voucher_id
+            INNER JOIN accounts a ON vi.account_id = a.id
+            WHERE v.currency = ?
+              AND a.account_code LIKE '12%'
+            GROUP BY v.customer_id
+          ) vch ON vch.customer_id = c.id
+          WHERE COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0) != 0
+        ''', [currency, currency, currency, currency]);
+      } catch (_) {
+        // Fallback: voucher_items table may not exist in older DBs
+        return await db.rawQuery('''
+          SELECT c.name, c.phone, c.debt_ceiling, ? AS currency,
+            ABS(COALESCE(ob.net, 0) + COALESCE(inv.net, 0)) AS balance,
+            CASE WHEN (COALESCE(ob.net, 0) + COALESCE(inv.net, 0)) >= 0
+                 THEN 'credit' ELSE 'debit' END AS balance_type
+          FROM customers c
+          LEFT JOIN (
+            SELECT t.reference_id,
+              CAST(COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS INTEGER) AS net
+            FROM transactions t
+            INNER JOIN accounts a ON t.account_id = a.id
+            WHERE t.reference_type = 'opening_balance'
+              AND a.account_code LIKE '12%'
+              AND a.currency = ?
+            GROUP BY t.reference_id
+          ) ob ON ob.reference_id = 'customer_' || c.id
+          LEFT JOIN (
+            SELECT customer_id,
+              CAST(SUM(CASE
+                WHEN type IN ('sale','pos') AND is_return=0 THEN -total
+                WHEN type IN ('sale','pos') AND is_return=1 THEN total
+                WHEN type='purchase' AND is_return=0 THEN total
+                WHEN type='purchase' AND is_return=1 THEN -total
+                ELSE 0
+              END) AS INTEGER) AS net
+            FROM invoices
+            WHERE customer_id IS NOT NULL AND currency = ?
+            GROUP BY customer_id
+          ) inv ON inv.customer_id = c.id
+          WHERE COALESCE(ob.net, 0) + COALESCE(inv.net, 0) != 0
+        ''', [currency, currency, currency]);
       }
-      return result;
     }
-    return customers
-        .where((c) => (c['balance'] as num?)?.toInt() != 0)
-        .map((c) => {
-              'name': c['name'],
-              'balance': c['balance'],
-              'balance_type': c['balance_type'],
-              'currency': c['currency'],
-              'phone': c['phone'],
-              'debt_ceiling': c['debt_ceiling'],
-            })
-        .toList();
+    // No currency filter — query directly from DB with WHERE instead of
+    // loading all customers and filtering in Dart.
+    return await db.rawQuery(
+      "SELECT name, balance, balance_type, currency, phone, debt_ceiling "
+      "FROM customers WHERE CAST(balance AS INTEGER) != 0",
+    );
   }
 
   // ── 7. Supplier Balances ──────────────────────────────────────
 
   /// ديون الموردين — returns all suppliers with positive balances.
   /// Values are raw DB integers (cents).
-  /// When a specific currency is requested, uses the computed per-currency
-  /// balance (like the customer version) instead of the stored single-currency
-  /// balance, because suppliers are multi-currency.
+  ///
+  /// OPTIMIZED: Replaced N+1 per-supplier getSupplierBalanceForCurrency()
+  /// calls with a single SQL query using subqueries for opening balance,
+  /// invoices, and voucher items, aggregated per supplier.
   Future<List<Map<String, dynamic>>> getSupplierBalancesReport({String? currency}) async {
-    final suppliers = await _dbHelper.suppliers.getAllSuppliers();
+    final db = await _db;
     if (currency != null && currency.isNotEmpty) {
-      final result = <Map<String, dynamic>>[];
-      for (final s in suppliers) {
-        final id = s['id'] as int?;
-        if (id == null) continue;
-        final computedBalance = await _dbHelper.suppliers.getSupplierBalanceForCurrency(id, currency);
-        if (computedBalance.abs() >= 0.005) {
-          result.add({
-            'name': s['name'],
-            'balance': MoneyHelper.toCents(computedBalance.abs()),
-            'balance_type': computedBalance >= 0 ? 'credit' : 'debit',
-            'currency': currency,
-            'phone': s['phone'],
-            'debt_ceiling': s['debt_ceiling'],
-          });
-        }
+      try {
+        return await db.rawQuery('''
+          SELECT s.name, s.phone, s.debt_ceiling, ? AS currency,
+            ABS(COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0)) AS balance,
+            CASE WHEN (COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0)) >= 0
+                 THEN 'credit' ELSE 'debit' END AS balance_type
+          FROM suppliers s
+          LEFT JOIN (
+            SELECT t.reference_id,
+              CAST(COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS INTEGER) AS net
+            FROM transactions t
+            INNER JOIN accounts a ON t.account_id = a.id
+            WHERE t.reference_type = 'opening_balance'
+              AND a.account_code LIKE '21%'
+              AND a.currency = ?
+            GROUP BY t.reference_id
+          ) ob ON ob.reference_id = 'supplier_' || s.id
+          LEFT JOIN (
+            SELECT supplier_id,
+              CAST(SUM(CASE
+                WHEN type='purchase' AND is_return=0 THEN total
+                WHEN type='purchase' AND is_return=1 THEN -total
+                WHEN type IN ('sale','pos') AND is_return=0 THEN -total
+                WHEN type IN ('sale','pos') AND is_return=1 THEN total
+                ELSE 0
+              END) AS INTEGER) AS net
+            FROM invoices
+            WHERE supplier_id IS NOT NULL AND currency = ?
+            GROUP BY supplier_id
+          ) inv ON inv.supplier_id = s.id
+          LEFT JOIN (
+            SELECT v.supplier_id,
+              CAST(COALESCE(SUM(vi.credit), 0) - COALESCE(SUM(vi.debit), 0) AS INTEGER) AS net
+            FROM vouchers v
+            INNER JOIN voucher_items vi ON v.id = vi.voucher_id
+            INNER JOIN accounts a ON vi.account_id = a.id
+            WHERE v.currency = ?
+                AND a.account_code LIKE '21%'
+            GROUP BY v.supplier_id
+          ) vch ON vch.supplier_id = s.id
+          WHERE COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0) != 0
+        ''', [currency, currency, currency, currency]);
+      } catch (_) {
+        // Fallback: voucher_items table may not exist in older DBs
+        return await db.rawQuery('''
+          SELECT s.name, s.phone, s.debt_ceiling, ? AS currency,
+            ABS(COALESCE(ob.net, 0) + COALESCE(inv.net, 0)) AS balance,
+            CASE WHEN (COALESCE(ob.net, 0) + COALESCE(inv.net, 0)) >= 0
+                 THEN 'credit' ELSE 'debit' END AS balance_type
+          FROM suppliers s
+          LEFT JOIN (
+            SELECT t.reference_id,
+              CAST(COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS INTEGER) AS net
+            FROM transactions t
+            INNER JOIN accounts a ON t.account_id = a.id
+            WHERE t.reference_type = 'opening_balance'
+              AND a.account_code LIKE '21%'
+              AND a.currency = ?
+            GROUP BY t.reference_id
+          ) ob ON ob.reference_id = 'supplier_' || s.id
+          LEFT JOIN (
+            SELECT supplier_id,
+              CAST(SUM(CASE
+                WHEN type='purchase' AND is_return=0 THEN total
+                WHEN type='purchase' AND is_return=1 THEN -total
+                WHEN type IN ('sale','pos') AND is_return=0 THEN -total
+                WHEN type IN ('sale','pos') AND is_return=1 THEN total
+                ELSE 0
+              END) AS INTEGER) AS net
+            FROM invoices
+            WHERE supplier_id IS NOT NULL AND currency = ?
+            GROUP BY supplier_id
+          ) inv ON inv.supplier_id = s.id
+          WHERE COALESCE(ob.net, 0) + COALESCE(inv.net, 0) != 0
+        ''', [currency, currency, currency]);
       }
-      return result;
     }
-    return suppliers
-        .where((s) => (s['balance'] as num?)?.toInt() != 0)
-        .map((s) => {
-              'name': s['name'],
-              'balance': s['balance'],
-              'balance_type': s['balance_type'],
-              'currency': s['currency'],
-              'phone': s['phone'],
-              'debt_ceiling': s['debt_ceiling'],
-            })
-        .toList();
+    // No currency filter — query directly from DB with WHERE instead of
+    // loading all suppliers and filtering in Dart.
+    return await db.rawQuery(
+      "SELECT name, balance, balance_type, currency, phone, debt_ceiling "
+      "FROM suppliers WHERE CAST(balance AS INTEGER) != 0",
+    );
   }
 
   // ── 8. Expenses ───────────────────────────────────────────────
@@ -1146,8 +1243,10 @@ class ReportService {
   // ── 9. Cash Boxes ─────────────────────────────────────────────
 
   /// حركة الصندوق — returns cash box data with per‑box sales/purchase
-  /// totals. The caller iterates cash boxes, filters by currency/cashBoxId,
-  /// and adds per‑box invoice aggregates.
+  /// totals.
+  ///
+  /// OPTIMIZED: Replaced Dart loop over cash boxes + per-box SQL query
+  /// with a single SQL query using LEFT JOIN + conditional aggregation.
   Future<List<Map<String, dynamic>>> getCashBoxesReport({
     String? currency,
     int? cashBoxId,
@@ -1155,46 +1254,30 @@ class ReportService {
     DateTime? dateTo,
   }) async {
     final db = await _db;
-    final cashBoxes = await _dbHelper.cashBoxes.getAllCashBoxes();
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo);
+    final args = <dynamic>[];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
+    args.addAll(dateArgs);
 
-    final results = <Map<String, dynamic>>[];
-    for (final cb in cashBoxes) {
-      if (currency != null && currency.isNotEmpty && cb['currency'] != currency) continue;
-      if (cashBoxId != null && cb['id'] != cashBoxId) continue;
-
-      final cbId = cb['id'] as int;
-
-      // Invoice aggregates for this cash box
-      final invRes = await db.rawQuery(
-        "SELECT type, CAST(COALESCE(SUM(total), 0) AS INTEGER) as total "
-        "FROM invoices WHERE cash_box_id=? AND is_return=0$df GROUP BY type",
-        [cbId, ...dateArgs],
-      );
-
-      int salesTotal = 0;
-      int purchaseTotal = 0;
-      for (final inv in invRes) {
-        final t = inv['type'] as String? ?? '';
-        final tot = inv['total'] as int? ?? 0;
-        if (t == 'sale' || t == 'pos') {
-          salesTotal = tot;
-        } else if (t == 'purchase') {
-          purchaseTotal = tot;
-        }
-      }
-
-      results.add({
-        'id': cbId,
-        'name': cb['name'],
-        'type': cb['type'],
-        'currency': cb['currency'],
-        'balance': cb['balance'],
-        'balance_type': cb['balance_type'],
-        'sales_total': salesTotal,
-        'purchase_total': purchaseTotal,
-      });
+    String whereExtra = '';
+    if (currency != null && currency.isNotEmpty) {
+      whereExtra += ' AND cb.currency = ?';
+      args.add(currency);
     }
+    if (cashBoxId != null) {
+      whereExtra += ' AND cb.id = ?';
+      args.add(cashBoxId);
+    }
+
+    final results = await db.rawQuery('''
+      SELECT cb.id, cb.name, cb.type, cb.currency, cb.balance, cb.balance_type,
+        CAST(COALESCE(SUM(CASE WHEN i.type IN ('sale','pos') AND i.is_return=0 THEN i.total ELSE 0 END), 0) AS INTEGER) AS sales_total,
+        CAST(COALESCE(SUM(CASE WHEN i.type='purchase' AND i.is_return=0 THEN i.total ELSE 0 END), 0) AS INTEGER) AS purchase_total
+      FROM cash_boxes cb
+      LEFT JOIN invoices i ON i.cash_box_id = cb.id AND i.is_return = 0$df
+      WHERE 1=1$whereExtra
+      GROUP BY cb.id
+    ''', args);
+
     return results;
   }
 
@@ -1326,6 +1409,10 @@ class ReportService {
   /// debit/credit balances. Each row has:
   /// `account_code`, `name_ar`, `account_type`, `currency`,
   /// `debit`, `credit` (raw INTEGER cents).
+  ///
+  /// OPTIMIZED: Replaced N+1 (iterate accounts + per-account balance query)
+  /// with a single SQL using LEFT JOIN transactions + GROUP BY (same
+  /// approach as getTrialBalanceData which already does this correctly).
   Future<List<Map<String, dynamic>>> getTrialBalanceReport({
     DateTime? dateFrom,
     DateTime? dateTo,
@@ -1333,51 +1420,59 @@ class ReportService {
     String? accountType,
   }) async {
     final db = await _db;
-    final accounts = await _dbHelper.accounts.getAllAccounts();
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'date');
+    final args = <dynamic>[];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.date');
+    args.addAll(dateArgs);
 
-    final results = <Map<String, dynamic>>[];
-    for (final account in accounts) {
-      if (currency != null && currency.isNotEmpty && account['currency'] != currency) continue;
-      if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
-        if (account['account_type'] != accountType) continue;
-      }
-      final accountId = account['id'] as int;
-
-      final balanceArgs = <dynamic>[accountId];
-      balanceArgs.addAll(dateArgs);
-      final result = await db.rawQuery(
-        "SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS balance "
-        "FROM transactions "
-        "WHERE account_id = ?$df",
-        balanceArgs,
-      );
-      final balance = result.first['balance'] as int? ?? 0;
-      if (balance == 0) continue;
-
-      final isDebit = balance > 0;
-      results.add({
-        'account_code': account['account_code'],
-        'name_ar': account['name_ar'],
-        'account_type': account['account_type'],
-        'currency': account['currency'],
-        'debit': isDebit ? balance.abs() : 0,
-        'credit': isDebit ? 0 : balance.abs(),
-      });
+    String cf = '';
+    if (currency != null && currency.isNotEmpty) {
+      cf = ' AND a.currency = ?';
+      args.add(currency);
     }
-    return results;
+    if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+      cf += ' AND a.account_type = ?';
+      args.add(accountType);
+    }
+
+    final rawResults = await db.rawQuery(
+      "SELECT a.account_code, a.name_ar, a.account_type, a.currency, "
+      "CAST(COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) AS INTEGER) AS net_balance "
+      "FROM accounts a "
+      "LEFT JOIN transactions t ON t.account_id = a.id$df "
+      "WHERE a.is_active = 1$cf "
+      "GROUP BY a.id "
+      "HAVING net_balance != 0",
+      args,
+    );
+
+    // Split net balance into debit/credit sides
+    return rawResults.map((row) {
+      final netBalance = row['net_balance'] as int? ?? 0;
+      final isDebit = netBalance > 0;
+      return {
+        'account_code': row['account_code'],
+        'name_ar': row['name_ar'],
+        'account_type': row['account_type'],
+        'currency': row['currency'],
+        'debit': isDebit ? netBalance.abs() : 0,
+        'credit': isDebit ? 0 : netBalance.abs(),
+      };
+    }).toList();
   }
 
   // ── 15b. Consolidated Trial Balance (base currency) ────────────
 
   /// ميزان المراجعة التجميعي — converts all currency balances to
-  /// the base currency (YER) using the stored exchange_rate on each
-  /// transaction. Falls back to the current rate from the currencies
-  /// table for transactions where exchange_rate was not stored (pre-v46).
+  /// the base currency (YER) using the current rate from the currencies
+  /// table.
   ///
   /// Returns the same structure as `getTrialBalanceReport` but with
   /// all amounts converted to the base currency, plus `base_currency`
   /// and `total_debit_base` / `total_credit_base` summary fields.
+  ///
+  /// OPTIMIZED: Replaced N+1 (iterate accounts + per-account balance query)
+  /// plus Dart-side currency conversion with a single SQL query using
+  /// LEFT JOIN transactions + GROUP BY + currencies table for conversion.
   Future<List<Map<String, dynamic>>> getConsolidatedTrialBalanceReport({
     DateTime? dateFrom,
     DateTime? dateTo,
@@ -1386,58 +1481,56 @@ class ReportService {
     const String baseCurrency = 'YER';
     final db = await _db;
 
-    // Get current exchange rates from currencies table for fallback
-    final ratesRows = await db.query('currencies', where: 'is_active = 1');
-    final currentRates = <String, double>{};
-    for (final r in ratesRows) {
-      currentRates[r['code'] as String] = (r['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+    final args = <dynamic>[];
+    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.date');
+    args.addAll(dateArgs);
+
+    String atFilter = '';
+    if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+      atFilter = ' AND a.account_type = ?';
+      args.add(accountType);
     }
 
-    final accounts = await _dbHelper.accounts.getAllAccounts();
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'date');
+    // Single query: LEFT JOIN transactions for balance, LEFT JOIN currencies
+    // for exchange rate, compute both original and base-currency balances.
+    final rawResults = await db.rawQuery('''
+      SELECT a.account_code, a.name_ar, a.account_type, a.currency,
+        CAST(COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) AS INTEGER) AS balance_original,
+        CASE WHEN a.currency = ? THEN 1.0 ELSE COALESCE(cur.rate, 1.0) END AS exchange_rate_used,
+        CAST(ROUND(
+          (COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0)) *
+          CASE WHEN a.currency = ? THEN 1.0 ELSE COALESCE(cur.rate, 1.0) END
+        ) AS INTEGER) AS balance_base
+      FROM accounts a
+      LEFT JOIN transactions t ON t.account_id = a.id$df
+      LEFT JOIN (
+        SELECT code, MAX(exchange_rate) AS rate FROM currencies WHERE is_active = 1 GROUP BY code
+      ) cur ON cur.code = a.currency
+      WHERE a.is_active = 1$atFilter
+      GROUP BY a.id
+      HAVING balance_base != 0
+    ''', [baseCurrency, baseCurrency, ...args]);
 
-    final results = <Map<String, dynamic>>[];
-    for (final account in accounts) {
-      if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
-        if (account['account_type'] != accountType) continue;
-      }
-      final accountId = account['id'] as int;
-      final accountCurrency = account['currency'] as String? ?? baseCurrency;
-
-      // Get balance in account's currency
-      final balanceArgs = <dynamic>[accountId];
-      balanceArgs.addAll(dateArgs);
-      final result = await db.rawQuery(
-        "SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS balance "
-        "FROM transactions "
-        "WHERE account_id = ?$df",
-        balanceArgs,
-      );
-      final balance = result.first['balance'] as int? ?? 0;
-      if (balance == 0) continue;
-
-      // Convert to base currency
-      final rate = accountCurrency == baseCurrency
-          ? 1.0
-          : (currentRates[accountCurrency] ?? 1.0);
-      // balance is in cents of accountCurrency; convert to base currency cents
-      final balanceInBase = (balance * rate).round();
-
-      final isDebit = balanceInBase > 0;
-      results.add({
-        'account_code': account['account_code'],
-        'name_ar': account['name_ar'],
-        'account_type': account['account_type'],
-        'currency': accountCurrency,
+    // Split balances into debit/credit sides
+    return rawResults.map((row) {
+      final balanceOriginal = row['balance_original'] as int? ?? 0;
+      final balanceBase = row['balance_base'] as int? ?? 0;
+      final rateUsed = (row['exchange_rate_used'] as num?)?.toDouble() ?? 1.0;
+      final isDebitBase = balanceBase > 0;
+      final isDebitOriginal = balanceOriginal > 0;
+      return {
+        'account_code': row['account_code'],
+        'name_ar': row['name_ar'],
+        'account_type': row['account_type'],
+        'currency': row['currency'],
         'base_currency': baseCurrency,
-        'debit': isDebit ? balanceInBase.abs() : 0,
-        'credit': isDebit ? 0 : balanceInBase.abs(),
-        'debit_original': balance > 0 ? balance.abs() : 0,
-        'credit_original': balance > 0 ? 0 : balance.abs(),
-        'exchange_rate_used': rate,
-      });
-    }
-    return results;
+        'debit': isDebitBase ? balanceBase.abs() : 0,
+        'credit': isDebitBase ? 0 : balanceBase.abs(),
+        'debit_original': isDebitOriginal ? balanceOriginal.abs() : 0,
+        'credit_original': isDebitOriginal ? 0 : balanceOriginal.abs(),
+        'exchange_rate_used': rateUsed,
+      };
+    }).toList();
   }
 
   // ── 16. Customer Statement ────────────────────────────────────
@@ -1834,5 +1927,31 @@ class ReportService {
       [date.toIso8601String()],
     );
     return (result.first['cnt'] as int?) ?? 0;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Debt report helpers (used by ReportDataLoader)
+  //  OPTIMIZED: Direct SQL with WHERE filter instead of fetching
+  //  all entities and filtering in Dart.
+  // ══════════════════════════════════════════════════════════════
+
+  /// جلب عملاء لديهم رصيد موجب — returns customers with balance > 0.
+  /// Values are raw DB integers (cents).
+  Future<List<Map<String, dynamic>>> getCustomerDebts() async {
+    final db = await _db;
+    return await db.rawQuery(
+      "SELECT name, balance, balance_type, currency, phone, debt_ceiling "
+      "FROM customers WHERE CAST(balance AS INTEGER) > 0",
+    );
+  }
+
+  /// جلب موردين علينا دين لهم — returns suppliers with credit balance
+  /// (money we owe them). Values are raw DB integers (cents).
+  Future<List<Map<String, dynamic>>> getSupplierDebts() async {
+    final db = await _db;
+    return await db.rawQuery(
+      "SELECT name, balance, balance_type, currency, phone, debt_ceiling "
+      "FROM suppliers WHERE CAST(balance AS INTEGER) > 0 AND balance_type = 'credit'",
+    );
   }
 }

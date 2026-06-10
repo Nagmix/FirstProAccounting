@@ -767,6 +767,10 @@ class CashBoxService {
       );
       final fromCashBanksAccountId = fromCashBanksAccount.isNotEmpty ? fromCashBanksAccount.first['id'] as int : null;
 
+      // Look up exchange rates for currency conversion
+      final toRate = await _getExchangeRate(txn, toCurrency);
+      final fromRate = await _getExchangeRate(txn, fromCurrency);
+
       // مدين: حساب الصناديق والبنوك للعملة المستلمة
       if (toCashBanksAccountId != null && toAmount > 0) {
         await txn.insert('transactions', {
@@ -777,6 +781,9 @@ class CashBoxService {
           'description': 'صرافة: استلام $toCurrency - ${exchangeMap['exchange_number']}',
           'date': now,
           'created_at': now,
+          'currency_code': toCurrency,
+          'exchange_rate': toCurrency == 'YER' ? 1.0 : toRate,
+          'amount_base': (MoneyHelper.toCents(toAmount) * toRate).round(),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, toCashBanksAccountId, toAmount, 0.0, now);
       }
@@ -791,6 +798,9 @@ class CashBoxService {
           'description': 'صرافة: صرف $fromCurrency - ${exchangeMap['exchange_number']}',
           'date': now,
           'created_at': now,
+          'currency_code': fromCurrency,
+          'exchange_rate': fromCurrency == 'YER' ? 1.0 : fromRate,
+          'amount_base': (MoneyHelper.toCents(fromAmount) * fromRate).round(),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromCashBanksAccountId, 0.0, fromAmount, now);
       }
@@ -812,6 +822,9 @@ class CashBoxService {
             'description': 'أرباح صرافة - ${exchangeMap['exchange_number']}',
             'date': now,
             'created_at': now,
+            'currency_code': 'YER',
+            'exchange_rate': 1.0,
+            'amount_base': MoneyHelper.toCents(gainLoss),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, exchangeAccountId, 0.0, gainLoss, now);
         } else if (gainLossType == 'loss') {
@@ -824,6 +837,9 @@ class CashBoxService {
             'description': 'خسائر صرافة - ${exchangeMap['exchange_number']}',
             'date': now,
             'created_at': now,
+            'currency_code': 'YER',
+            'exchange_rate': 1.0,
+            'amount_base': MoneyHelper.toCents(gainLoss),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(txn, exchangeAccountId, gainLoss, 0.0, now);
         }
@@ -940,6 +956,9 @@ class CashBoxService {
         toAccountId = toCashBanksAccount.isNotEmpty ? toCashBanksAccount.first['id'] as int : null;
       }
 
+      // Look up exchange rate for transfer currency
+      final transferRate = await _getExchangeRate(txn, transferCurrency);
+
       // مدين: حساب الصناديق والبنوك للوجهة
       if (toAccountId != null && amount > 0) {
         await txn.insert('transactions', {
@@ -950,6 +969,9 @@ class CashBoxService {
           'description': 'تحويل: استلام من صندوق آخر - ${transferMap['transfer_number']}',
           'date': now,
           'created_at': now,
+          'currency_code': transferCurrency,
+          'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
+          'amount_base': (MoneyHelper.toCents(amount) * transferRate).round(),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, toAccountId, amount, 0.0, now);
       }
@@ -964,6 +986,9 @@ class CashBoxService {
           'description': 'تحويل: صرف إلى صندوق آخر - ${transferMap['transfer_number']}',
           'date': now,
           'created_at': now,
+          'currency_code': transferCurrency,
+          'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
+          'amount_base': (MoneyHelper.toCents(amount) * transferRate).round(),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromAccountId, 0.0, amount, now);
       }
@@ -1041,6 +1066,10 @@ class CashBoxService {
       // إدراج السند
       voucherId = await txn.insert('vouchers', MoneyHelper.toCentsMap(voucherMap, MoneyHelper.voucherMoneyFields));
 
+      // Look up voucher currency exchange rate
+      final voucherCurrency = (voucherMap['currency'] as String?) ?? 'YER';
+      final voucherRate = await _getExchangeRate(txn, voucherCurrency);
+
       // إدراج بنود السند وإنشاء قيود يومية
       for (final item in items) {
         final itemMap = Map<String, dynamic>.from(item);
@@ -1053,6 +1082,7 @@ class CashBoxService {
         final debit = MoneyHelper.readMoney(item['debit']);
         final credit = MoneyHelper.readMoney(item['credit']);
         if (accountId != null && (debit > 0 || credit > 0)) {
+          final itemAmount = debit > 0 ? debit : credit;
           await txn.insert('transactions', {
             'account_id': accountId,
             'journal_id': journalId,
@@ -1061,6 +1091,9 @@ class CashBoxService {
             'description': item['description'] ?? voucherMap['description'] ?? 'سند ${voucherMap['voucher_number']}',
             'date': voucherMap['date'],
             'created_at': now,
+            'currency_code': voucherCurrency,
+            'exchange_rate': voucherCurrency == 'YER' ? 1.0 : voucherRate,
+            'amount_base': (MoneyHelper.toCents(itemAmount) * voucherRate).round(),
           });
 
           // تحديث رصيد الحساب باستخدام منطق balance_type
@@ -1183,6 +1216,10 @@ class CashBoxService {
       final totalAmount = MoneyHelper.readMoney(voucherData['total_amount']);
       final cashBoxId = voucherData['cash_box_id'];
 
+      // Look up voucher currency exchange rate for reversal
+      final voucherCurrency = (voucherData['currency'] as String?) ?? 'YER';
+      final voucherRate = await _getExchangeRate(txn, voucherCurrency);
+
       // جلب بنود السند وعكس القيود
       final items = await txn.query('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
       for (final item in items) {
@@ -1191,6 +1228,7 @@ class CashBoxService {
         final credit = MoneyHelper.readMoney(item['credit']);
         if (accountId != null && (debit > 0 || credit > 0)) {
           // عكس القيد:debit يصبح credit والعكس
+          final reversalAmount = credit > 0 ? credit : debit;
           await txn.insert('transactions', {
             'account_id': accountId,
             'journal_id': generateUniqueJournalId(),
@@ -1199,6 +1237,9 @@ class CashBoxService {
             'description': 'عكس سند $voucherNumber',
             'date': voucherDate,
             'created_at': now,
+            'currency_code': voucherCurrency,
+            'exchange_rate': voucherCurrency == 'YER' ? 1.0 : voucherRate,
+            'amount_base': (MoneyHelper.toCents(reversalAmount) * voucherRate).round(),
           });
 
           // تحديث رصيد الحساب (عكس) باستخدام منطق balance_type
@@ -1299,6 +1340,11 @@ class CashBoxService {
     // **Fix (7.3):** Wrapped in db.transaction with updateAccountBalanceWithJournal
     // for atomicity (eliminates race condition from read-then-write).
     await db.transaction((txn) async {
+      // Look up the linked account's currency for currency_code / exchange_rate / amount_base
+      final linkedAccountRow = await txn.query('accounts', where: 'id = ?', whereArgs: [linkedAccountId], limit: 1);
+      final linkedAccountCurrency = linkedAccountRow.isNotEmpty ? (linkedAccountRow.first['currency'] as String? ?? 'YER') : 'YER';
+      final linkedAccountRate = await _getExchangeRate(txn, linkedAccountCurrency);
+
       if (balanceType == 'credit') {
         // له — Safe has money: Debit Cash & Banks, Credit Opening Balance Equity
         await txn.insert('transactions', {
@@ -1311,6 +1357,9 @@ class CashBoxService {
           'created_at': now,
           'reference_type': 'opening_balance',
           'reference_id': referenceId,
+          'currency_code': linkedAccountCurrency,
+          'exchange_rate': linkedAccountCurrency == 'YER' ? 1.0 : linkedAccountRate,
+          'amount_base': (MoneyHelper.toCents(openingBalance) * linkedAccountRate).round(),
         });
         await txn.insert('transactions', {
           'account_id': openingBalanceAccountId,
@@ -1322,6 +1371,9 @@ class CashBoxService {
           'created_at': now,
           'reference_type': 'opening_balance',
           'reference_id': referenceId,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': MoneyHelper.toCents(openingBalance),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, linkedAccountId, openingBalance, 0.0, now,
@@ -1341,6 +1393,9 @@ class CashBoxService {
           'created_at': now,
           'reference_type': 'opening_balance',
           'reference_id': referenceId,
+          'currency_code': linkedAccountCurrency,
+          'exchange_rate': linkedAccountCurrency == 'YER' ? 1.0 : linkedAccountRate,
+          'amount_base': (MoneyHelper.toCents(openingBalance) * linkedAccountRate).round(),
         });
         await txn.insert('transactions', {
           'account_id': openingBalanceAccountId,
@@ -1352,6 +1407,9 @@ class CashBoxService {
           'created_at': now,
           'reference_type': 'opening_balance',
           'reference_id': referenceId,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': MoneyHelper.toCents(openingBalance),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, linkedAccountId, 0.0, openingBalance, now,
@@ -1361,6 +1419,22 @@ class CashBoxService {
         );
       }
     });
+  }
+
+  /// Look up the exchange rate for a currency from the currencies table.
+  /// Falls back to hardcoded rates for SAR/USD if the table is unavailable.
+  Future<double> _getExchangeRate(DatabaseExecutor executor, String currency) async {
+    if (currency == 'YER') return 1.0;
+    try {
+      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      if (rows.isNotEmpty) {
+        return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      }
+    } catch (_) {}
+    // Fallback defaults
+    if (currency == 'SAR') return 140.0;
+    if (currency == 'USD') return 530.0;
+    return 1.0;
   }
 
   /// توليد رقم السند التالي حسب النوع

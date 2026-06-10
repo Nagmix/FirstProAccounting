@@ -94,6 +94,7 @@ class EmployeeRepository {
           balanceType: balanceType,
           employeeName: employeeName,
           employeeId: employeeId,
+          currency: openingBalanceCurrency,
         );
       }
     }
@@ -118,10 +119,15 @@ class EmployeeRepository {
     required String balanceType,
     required String employeeName,
     int? employeeId,
+    String currency = 'YER',
   }) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
     final journalId = generateUniqueJournalId();
+
+    // Resolve exchange rate for the given currency
+    final exchangeRate = await _getExchangeRate(currency);
+    final baseAmount = currency == 'YER' ? balance : balance * exchangeRate;
 
     await db.transaction((txn) async {
       if (balanceType == 'credit') {
@@ -137,6 +143,9 @@ class EmployeeRepository {
           'created_at': now,
           'reference_type': 'opening_balance',
           'reference_id': employeeId != null ? 'employee_$employeeId' : null,
+          'currency_code': currency,
+          'exchange_rate': exchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await txn.insert('transactions', {
           'account_id': equityAccountId,
@@ -148,6 +157,9 @@ class EmployeeRepository {
           'created_at': now,
           'reference_type': 'opening_balance',
           'reference_id': employeeId != null ? 'employee_$employeeId' : null,
+          'currency_code': currency,
+          'exchange_rate': exchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, balance, now);
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, equityAccountId, balance, 0.0, now);
@@ -164,6 +176,9 @@ class EmployeeRepository {
           'created_at': now,
           'reference_type': 'opening_balance',
           'reference_id': employeeId != null ? 'employee_$employeeId' : null,
+          'currency_code': currency,
+          'exchange_rate': exchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await txn.insert('transactions', {
           'account_id': equityAccountId,
@@ -175,6 +190,9 @@ class EmployeeRepository {
           'created_at': now,
           'reference_type': 'opening_balance',
           'reference_id': employeeId != null ? 'employee_$employeeId' : null,
+          'currency_code': currency,
+          'exchange_rate': exchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, balance, 0.0, now);
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, equityAccountId, 0.0, balance, now);
@@ -328,6 +346,10 @@ class EmployeeRepository {
         ? description!.trim()
         : '${balanceType == 'credit' ? 'له' : 'عليه'} - ${employee['name'] ?? ''}';
 
+    // Resolve exchange rate for the given currency
+    final exchangeRate = await _getExchangeRate(currency);
+    final baseAmount = currency == 'YER' ? amount : amount * exchangeRate;
+
     await db.transaction((txn) async {
       if (balanceType == 'credit') {
         // له - الموظف له مبلغ (سند قبض من الموظف):
@@ -341,6 +363,9 @@ class EmployeeRepository {
           'description': desc,
           'date': now,
           'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': exchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await txn.insert('transactions', {
           'account_id': cashAccountId,
@@ -350,6 +375,9 @@ class EmployeeRepository {
           'description': desc,
           'date': now,
           'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': exchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, empAccountId!, 0.0, amount, now);
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId!, amount, 0.0, now);
@@ -365,6 +393,9 @@ class EmployeeRepository {
           'description': desc,
           'date': now,
           'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': exchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await txn.insert('transactions', {
           'account_id': cashAccountId,
@@ -374,6 +405,9 @@ class EmployeeRepository {
           'description': desc,
           'date': now,
           'created_at': now,
+          'currency_code': currency,
+          'exchange_rate': exchangeRate,
+          'amount_base': MoneyHelper.toCents(baseAmount),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, empAccountId!, amount, 0.0, now);
         await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId!, 0.0, amount, now);
@@ -449,6 +483,23 @@ class EmployeeRepository {
     }
 
     return balance;
+  }
+
+  /// Look up the exchange rate for a currency from the currencies table.
+  /// Returns 1.0 for YER or if the currency is not found.
+  Future<double> _getExchangeRate(String currency) async {
+    if (currency == 'YER') return 1.0;
+    final db = await _db;
+    final rows = await db.query(
+      'currencies',
+      where: 'code = ?',
+      whereArgs: [currency],
+      limit: 1,
+    );
+    if (rows.isNotEmpty) {
+      return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+    }
+    return 1.0;
   }
 
   /// Update the employee's balance in the employees table.
