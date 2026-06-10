@@ -57,6 +57,9 @@ class InvoiceRepository {
       final db = await _db;
       final total = MoneyHelper.readMoney(invoiceMap['total']);
       final invoiceCurrency = (invoiceMap['currency'] as String?) ?? 'YER';
+      final double exchangeRate =
+          (invoiceMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      final double effectiveExchangeRate = exchangeRate > 0 ? exchangeRate : 1.0;
       final now = DateTime.now().toIso8601String();
 
       // ── التحقق من قفل الفترة المحاسبية ──
@@ -220,8 +223,6 @@ class InvoiceRepository {
                 //
                 // A-09: المخزون وتكلفة الوحدة يجب أن تكون دائماً بالعملة الأساس (YER)
                 // يتم تحويل سعر الوحدة ومصاريف النقل إلى العملة الأساس قبل تحديث المتوسط
-                final double effectiveExchangeRate =
-                    exchangeRate > 0 ? exchangeRate : 1.0;
                 final double baseUnitPrice = unitPrice * effectiveExchangeRate;
 
                 double itemTransportShareBase = 0.0;
@@ -264,7 +265,7 @@ class InvoiceRepository {
                 'reference_id': invoiceIdStr,
                 // A-09: unit_cost is stored in base currency
                 'unit_cost': MoneyHelper.toCents(unitPrice *
-                    (exchangeRate > 0 ? exchangeRate : 1.0)),
+                    (effectiveExchangeRate)),
                 'created_at': now,
               });
 
@@ -280,7 +281,7 @@ class InvoiceRepository {
               if (costingMethod != CostingMethod.weightedAverage) {
                 // unit cost per base unit = total purchase value (Base) / base quantity
                 final double effectiveRate =
-                    exchangeRate > 0 ? exchangeRate : 1.0;
+                    effectiveExchangeRate;
                 final unitCostPerBase = baseQuantity > 0
                     ? ((quantity * unitPrice * effectiveRate) +
                             (itemTransportShareBase)) /
@@ -381,11 +382,6 @@ class InvoiceRepository {
             effectivePaid > 0.005;
         final remainingAmount = total - effectivePaid;
 
-        // ── Multi-currency: Journal entries should be in base currency (YER) ──
-        // When the invoice is in a foreign currency, convert amounts to YER
-        // using the invoice's exchange rate, and use YER accounts.
-        final exchangeRate =
-            (invoiceMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
         // A-07 & A-9 Fix: الفواتير بالعملة الأجنبية تُرحل بعملتها على حساباتها الخاصة
         // مع الاحتفاظ بالقيمة المحولة في amount_base للتقارير الموحدة
         final double journalTotal = total;
@@ -398,8 +394,6 @@ class InvoiceRepository {
             ? 1
             : (invoiceCurrency == 'USD' ? 2 : 0));
         final String journalCurrency = invoiceCurrency;
-        final double effectiveExchangeRate =
-            exchangeRate > 0 ? exchangeRate : 1.0;
 
         // ── Discount, Transport & Tax amounts for journal ──
         final double journalDiscount = discountAmount;
@@ -407,6 +401,9 @@ class InvoiceRepository {
         final double taxAmount =
             MoneyHelper.readMoney(invoiceMap['tax_amount']);
         final double journalTax = taxAmount;
+        // IAS 2: Transport into base currency
+        final double yerTransport = journalTransport * effectiveExchangeRate;
+        const bool needsYerConversion = false; // Legacy flag
 
         // ── Net Recording Approach (C-01/C-02/M-02 fix) ──
         final double netRevenueAmount =
@@ -1420,7 +1417,7 @@ class InvoiceRepository {
               'date': now,
               'created_at': now,
               'currency_code': journalCurrency,
-              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'exchange_rate': effectiveExchangeRate,
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1433,7 +1430,7 @@ class InvoiceRepository {
               'date': now,
               'created_at': now,
               'currency_code': journalCurrency,
-              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'exchange_rate': effectiveExchangeRate,
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1464,7 +1461,7 @@ class InvoiceRepository {
               'date': now,
               'created_at': now,
               'currency_code': journalCurrency,
-              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'exchange_rate': effectiveExchangeRate,
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1477,7 +1474,7 @@ class InvoiceRepository {
               'date': now,
               'created_at': now,
               'currency_code': journalCurrency,
-              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'exchange_rate': effectiveExchangeRate,
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1533,7 +1530,7 @@ class InvoiceRepository {
               'date': now,
               'created_at': now,
               'currency_code': journalCurrency,
-              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'exchange_rate': effectiveExchangeRate,
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1547,7 +1544,7 @@ class InvoiceRepository {
               'date': now,
               'created_at': now,
               'currency_code': journalCurrency,
-              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'exchange_rate': effectiveExchangeRate,
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1590,7 +1587,7 @@ class InvoiceRepository {
               'date': now,
               'created_at': now,
               'currency_code': journalCurrency,
-              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'exchange_rate': effectiveExchangeRate,
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1604,7 +1601,7 @@ class InvoiceRepository {
               'date': now,
               'created_at': now,
               'currency_code': journalCurrency,
-              'exchange_rate': needsYerConversion ? exchangeRate : 1.0,
+              'exchange_rate': effectiveExchangeRate,
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
