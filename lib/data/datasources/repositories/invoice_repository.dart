@@ -213,6 +213,17 @@ class InvoiceRepository {
               // المبلغ الإجمالي لكل وحدة = سعر الشراء + الحصة النسبية من مصاريف النقل
               final productRow = await txn.query('products',
                   where: 'id = ?', whereArgs: [productId], limit: 1);
+
+              double itemTransportShareBase = 0.0;
+              if (transportCharges > 0 && totalBaseQuantityForTransport > 0) {
+                // transportCharges here is in invoice currency
+                final double totalTransportBase =
+                    transportCharges * effectiveExchangeRate;
+                itemTransportShareBase =
+                    (baseQuantity / totalBaseQuantityForTransport) *
+                        totalTransportBase;
+              }
+
               if (productRow.isNotEmpty) {
                 final currentStock =
                     (productRow.first['current_stock'] as num?)?.toDouble() ??
@@ -224,16 +235,6 @@ class InvoiceRepository {
                 // A-09: المخزون وتكلفة الوحدة يجب أن تكون دائماً بالعملة الأساس (YER)
                 // يتم تحويل سعر الوحدة ومصاريف النقل إلى العملة الأساس قبل تحديث المتوسط
                 final double baseUnitPrice = unitPrice * effectiveExchangeRate;
-
-                double itemTransportShareBase = 0.0;
-                if (transportCharges > 0 && totalBaseQuantityForTransport > 0) {
-                  // transportCharges here is in invoice currency
-                  final double totalTransportBase =
-                      transportCharges * effectiveExchangeRate;
-                  itemTransportShareBase =
-                      (baseQuantity / totalBaseQuantityForTransport) *
-                          totalTransportBase;
-                }
 
                 final totalPurchaseValueBase =
                     (quantity * baseUnitPrice) + itemTransportShareBase;
@@ -403,7 +404,6 @@ class InvoiceRepository {
         final double journalTax = taxAmount;
         // IAS 2: Transport into base currency
         final double yerTransport = journalTransport * effectiveExchangeRate;
-        const bool needsYerConversion = false; // Legacy flag
 
         // ── Net Recording Approach (C-01/C-02/M-02 fix) ──
         final double netRevenueAmount =
