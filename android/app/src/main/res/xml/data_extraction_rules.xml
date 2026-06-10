@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- B-5: Android 12+ (API 31) data extraction rules.
+     The SQLCipher database must NOT be backed up to the cloud or
+     transferred between devices: its encryption key lives in the
+     Android Keystore and never leaves the device, so a restored copy
+     would be permanently unreadable (silent data loss for the user).
+     In-app backup/restore from the settings screen is the supported
+     migration path. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

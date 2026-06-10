@@ -1,14 +1,36 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.CAMERA"/>
-    <uses-permission android:name="android.permission.BLUETOOTH"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <!-- B-6: Legacy Bluetooth permissions are only needed on Android 11
+         (API 30) and below; scoping them prevents Play Console warnings. -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- B-6: neverForLocation — we scan only for thermal printers, never
+         to derive user location. Removes the location-permission linkage
+         on Android 12+ and the Play Store location disclosure demand. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s"/>
+    <!-- B-6: fine location is only required for BT scanning on Android 11
+         and below (with neverForLocation it is not needed on 12+). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required for Google Sign-In, Drive API, Firebase, Play Integrity in future -->
+    <!-- B-5: allowBackup=false — the SQLCipher key lives in Android
+         Keystore and is NOT included in cloud/adb backups. A restored
+         database without its key is permanently unreadable, so backups
+         of the encrypted DB are worse than none (data-loss illusion).
+         In-app backup/restore (settings) remains the supported path. -->
     <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        tools:targetApi="s"
         android:label="الاول برو المحاسبي"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
