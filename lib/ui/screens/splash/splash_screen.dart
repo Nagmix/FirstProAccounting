@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Modern animated splash screen for the FirstPro accounting app.
 ///

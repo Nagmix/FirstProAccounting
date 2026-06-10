@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/services/bank_reconciliation_service.dart';
-import '../../../data/models/bank_reconciliation_model.dart';
-import 'bank_reconciliation_detail_screen.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/services/bank_reconciliation_service.dart';
+import 'package:firstpro/data/models/bank_reconciliation_model.dart';
+import 'package:firstpro/ui/screens/bank_reconciliation/bank_reconciliation_detail_screen.dart';
 
 class BankReconciliationScreen extends StatefulWidget {
   const BankReconciliationScreen({super.key});

@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../core/helpers/currency_constants.dart';
-import '../../../core/helpers/avatar_helper.dart';
-import '../../../core/helpers/delete_helper.dart';
-import '../../../data/datasources/repositories/supplier_repository.dart';
-import '../../../data/models/supplier_model.dart';
-import '../../widgets/empty_state.dart';
-import 'add_supplier_sheet.dart';
-import 'supplier_detail_screen.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
+import 'package:firstpro/core/helpers/avatar_helper.dart';
+import 'package:firstpro/core/helpers/delete_helper.dart';
+import 'package:firstpro/data/datasources/repositories/supplier_repository.dart';
+import 'package:firstpro/data/models/supplier_model.dart';
+import 'package:firstpro/ui/widgets/empty_state.dart';
+import 'package:firstpro/ui/screens/suppliers/add_supplier_sheet.dart';
+import 'package:firstpro/ui/screens/suppliers/supplier_detail_screen.dart';
 
 /// Professional suppliers management screen for the FirstPro accounting app.
 ///

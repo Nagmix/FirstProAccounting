@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../../core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Barcode scanner screen using device camera with manual entry fallback.
 class BarcodeScannerScreen extends StatefulWidget {

@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
-import '../../core/utils/money_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Advanced chart widgets using fl_chart package.
 /// Supports line charts, bar charts, and pie charts for financial data visualization.

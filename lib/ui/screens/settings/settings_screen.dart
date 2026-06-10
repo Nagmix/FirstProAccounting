@@ -4,21 +4,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../core/license/license_constants.dart';
-import '../../../core/license/license_models.dart';
-import '../../../core/license/license_provider.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/repositories/reference_data_repository.dart';
-import '../currency_exchange/currency_exchange_screen.dart';
-import '../cash_transfers/cash_transfer_screen.dart';
-import '../debts/debts_screen.dart';
-import 'bluetooth_printer_settings_screen.dart';
-import 'widgets/settings_helpers.dart';
-import 'widgets/settings_profile_section.dart';
-import 'widgets/settings_data_section.dart';
-import 'widgets/settings_app_lock_section.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/license/license_constants.dart';
+import 'package:firstpro/core/license/license_models.dart';
+import 'package:firstpro/core/license/license_provider.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/ui/screens/currency_exchange/currency_exchange_screen.dart';
+import 'package:firstpro/ui/screens/cash_transfers/cash_transfer_screen.dart';
+import 'package:firstpro/ui/screens/debts/debts_screen.dart';
+import 'package:firstpro/ui/screens/settings/bluetooth_printer_settings_screen.dart';
+import 'package:firstpro/ui/screens/settings/widgets/settings_helpers.dart';
+import 'package:firstpro/ui/screens/settings/widgets/settings_profile_section.dart';
+import 'package:firstpro/ui/screens/settings/widgets/settings_data_section.dart';
+import 'package:firstpro/ui/screens/settings/widgets/settings_app_lock_section.dart';
 
 /// Professional settings screen for the FirstPro accounting app.
 ///

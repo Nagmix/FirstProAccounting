@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/expense_sub_account_repository.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/expense_sub_account_repository.dart';
 
 /// Bottom sheet for adding or editing an expense sub-account.
 ///

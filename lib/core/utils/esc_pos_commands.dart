@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'money_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 /// ESC/POS command generator for 80mm/58mm thermal printers.
 ///

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
-import '../database_helper.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
 
 class AuditService {
   final DatabaseHelper _dbHelper;

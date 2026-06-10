@@ -1,5 +1,5 @@
-import '../../core/utils/money_helper.dart';
-import 'inventory_cost_layer_model.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
 
 class Product {
   final int? id;

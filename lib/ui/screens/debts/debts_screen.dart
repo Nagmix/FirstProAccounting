@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/customer_repository.dart';
-import '../../../data/datasources/repositories/supplier_repository.dart';
-import '../../../data/datasources/repositories/account_repository.dart';
-import '../../../data/datasources/repositories/invoice_repository.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
+import 'package:firstpro/data/datasources/repositories/supplier_repository.dart';
+import 'package:firstpro/data/datasources/repositories/account_repository.dart';
+import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  DEBTS SCREEN – FirstPro Arabic Accounting App

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Comprehensive Material 3 theme for the FirstPro accounting app.
 /// Modern 2026 design with deep blue-purple gradients, smooth shadows,

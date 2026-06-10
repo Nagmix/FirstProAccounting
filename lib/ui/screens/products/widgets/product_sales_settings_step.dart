@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'product_form_helpers.dart';
+import 'package:firstpro/ui/screens/products/widgets/product_form_helpers.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Step 7 – إعدادات البيع

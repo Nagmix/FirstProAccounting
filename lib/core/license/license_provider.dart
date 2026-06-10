@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-import 'license_models.dart';
-import 'license_service.dart';
+import 'package:firstpro/core/license/license_models.dart';
+import 'package:firstpro/core/license/license_service.dart';
 
 /// ChangeNotifier provider for license state.
 /// Used to notify the UI when the license state changes.

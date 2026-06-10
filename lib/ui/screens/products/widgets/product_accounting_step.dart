@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../data/models/inventory_cost_layer_model.dart';
-import 'product_form_helpers.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
+import 'package:firstpro/ui/screens/products/widgets/product_form_helpers.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Step 8 – المحاسبة

@@ -1,6 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
-import 'money_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 /// EntityBalanceHelper — Unified balance update logic for entities
 /// (customers, suppliers, employees) that correctly handles the

@@ -1,6 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import 'seeds.dart';
-import 'migration_helpers.dart';
+import 'package:firstpro/data/datasources/migrations/seeds.dart';
+import 'package:firstpro/data/datasources/migrations/migration_helpers.dart';
 
 class MigrationV2ToV10 {
   /// v2: Add item_code, supplier_id, and other product columns

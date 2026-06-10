@@ -1,4 +1,4 @@
-import '../../core/utils/money_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 enum AccountType { ASSET, LIABILITY, EQUITY, COST, REVENUE, EXPENSE }
 

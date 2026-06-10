@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../../core/utils/movement_sorter.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/customer_repository.dart';
-import '../../../data/datasources/services/cash_box_service.dart';
-import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
-import '../../../data/models/customer_model.dart';
-import '../../../ui/widgets/entity_detail/entity_detail_state.dart';
-import 'edit_customer_sheet.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/utils/movement_sorter.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
+import 'package:firstpro/data/datasources/services/cash_box_service.dart';
+import 'package:firstpro/data/datasources/services/voucher_auto_mapping_service.dart';
+import 'package:firstpro/data/models/customer_model.dart';
+import 'package:firstpro/ui/widgets/entity_detail/entity_detail_state.dart';
+import 'package:firstpro/ui/screens/customers/edit_customer_sheet.dart';
 
 /// Customer Detail / Ledger Screen — Modern Professional Design
 /// Displays all financial movements for a specific customer with

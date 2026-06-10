@@ -1,4 +1,4 @@
-import '../../core/utils/money_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 class Customer {
   final int? id;

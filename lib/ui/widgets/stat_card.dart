@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/design_system.dart';
-import '../../core/utils/currency_formatter.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/design_system.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
 
 /// A modern statistics card with accent bar, gradient icon background,
 /// and smooth entry animation. Inspired by the fitness app UI design.

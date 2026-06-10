@@ -1,8 +1,8 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
-import '../../../core/utils/money_helper.dart';
-import '../../models/inventory_cost_layer_model.dart';
-import '../database_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
 
 class CostingEngineService {
   final DatabaseHelper _dbHelper;

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/design_system.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/design_system.dart';
 
 /// Custom bottom navigation bar with a notched center for the FAB button.
 class CustomBottomBar extends StatelessWidget {

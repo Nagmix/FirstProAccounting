@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/license/license_constants.dart';
-import '../../../core/license/license_provider.dart';
-import '../../../core/theme/app_colors.dart';
+import 'package:firstpro/core/license/license_constants.dart';
+import 'package:firstpro/core/license/license_provider.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Screen shown when the license has expired.
 /// Uses a warning/red gradient design to convey urgency.

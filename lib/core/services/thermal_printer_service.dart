@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../di/service_locator.dart';
-import '../../data/datasources/repositories/reference_data_repository.dart';
-import '../utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 /// Service for Bluetooth thermal printer (80mm) integration.
 /// Uses flutter_blue_plus for Bluetooth connectivity and manual ESC/POS

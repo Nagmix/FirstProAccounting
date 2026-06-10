@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import '../../../../core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Profile card displayed at the top of the Settings screen.
 ///

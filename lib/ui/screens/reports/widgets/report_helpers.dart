@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import '../../../../core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Shared Data Types

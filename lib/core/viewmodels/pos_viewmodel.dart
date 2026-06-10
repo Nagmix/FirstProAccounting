@@ -1,16 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import '../constants/app_constants.dart';
-import '../di/service_locator.dart';
-import '../../data/datasources/repositories/product_repository.dart';
-import '../../data/datasources/repositories/reference_data_repository.dart';
-import '../../data/datasources/repositories/invoice_repository.dart';
-import '../../data/datasources/services/cash_box_service.dart';
-import '../../data/datasources/services/shift_service.dart';
-import '../../data/datasources/services/report_service.dart';
-import '../../data/models/product_model.dart';
-import '../utils/money_helper.dart';
-import '../../ui/screens/pos/pos_models.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/product_repository.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
+import 'package:firstpro/data/datasources/services/cash_box_service.dart';
+import 'package:firstpro/data/datasources/services/shift_service.dart';
+import 'package:firstpro/data/datasources/services/report_service.dart';
+import 'package:firstpro/data/models/product_model.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/ui/screens/pos/pos_models.dart';
 
 /// ViewModel for POS screen — manages POS data state and enables
 /// reactive updates for sync readiness.

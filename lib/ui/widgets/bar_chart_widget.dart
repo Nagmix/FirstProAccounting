@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// A single data point for the bar chart.
 class BarData {

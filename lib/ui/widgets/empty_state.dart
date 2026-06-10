@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/design_system.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/design_system.dart';
 
 /// A reusable empty-state widget displayed when a list has no items.
 /// Modern design with gradient icon background and animated entry.

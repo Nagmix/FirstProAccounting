@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/currency_formatter.dart';
-import '../pos_models.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/ui/screens/pos/pos_models.dart';
 
 /// Action buttons section widget for the POS cart (checkout, hold, clear, etc.).
 class PosActionButtons extends StatelessWidget {

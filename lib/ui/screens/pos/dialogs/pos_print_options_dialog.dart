@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Shows the print options bottom sheet (PDF or Bluetooth thermal).
 void showPrintOptionsDialog(

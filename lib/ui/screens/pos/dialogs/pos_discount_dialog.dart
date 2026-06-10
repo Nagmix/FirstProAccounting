@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/extensions/context_extensions.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/viewmodels/pos_viewmodel.dart';
-import '../pos_models.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
+import 'package:firstpro/ui/screens/pos/pos_models.dart';
 
 /// Shows the discount dialog.
 void showDiscountDialog(BuildContext context, PosViewModel vm) {

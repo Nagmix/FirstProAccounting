@@ -1,9 +1,9 @@
-import '../../../../core/di/service_locator.dart';
-import '../../../../core/utils/money_helper.dart';
-import '../../../../data/datasources/repositories/customer_repository.dart';
-import '../../../../data/datasources/repositories/supplier_repository.dart';
-import '../../../../data/datasources/services/report_service.dart';
-import 'report_helpers.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
+import 'package:firstpro/data/datasources/repositories/supplier_repository.dart';
+import 'package:firstpro/data/datasources/services/report_service.dart';
+import 'package:firstpro/ui/screens/reports/widgets/report_helpers.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Data Loading for Reports

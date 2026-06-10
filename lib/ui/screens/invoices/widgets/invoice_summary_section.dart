@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/extensions/context_extensions.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/currency_formatter.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
 
 /// Extracted summary section widget for the CreateInvoiceScreen.
 ///

@@ -5,10 +5,10 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 
-import '../di/service_locator.dart';
-import '../../data/datasources/repositories/reference_data_repository.dart';
-import '../../data/datasources/repositories/customer_repository.dart';
-import '../utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 /// Professional sales invoice PDF generator for the FirstPro accounting app.
 ///

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/utils/currency_formatter.dart';
-import '../../data/models/invoice_item_model.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/data/models/invoice_item_model.dart';
 
 /// A reusable card widget that displays a single [InvoiceItem] inside
 /// the invoice creation screen. Supports inline quantity editing and

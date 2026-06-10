@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_constants.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/design_system.dart';
-import '../../core/utils/currency_formatter.dart';
-import '../../core/utils/date_formatter.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/design_system.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/date_formatter.dart';
 
 /// Status of a transaction displayed in the tile.
 enum TransactionStatus { paid, unpaid, pending }

@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
-import '../di/service_locator.dart';
-import '../utils/money_helper.dart';
-import '../../data/datasources/database_helper.dart';
-import '../../data/datasources/repositories/invoice_repository.dart';
-import '../../data/datasources/repositories/product_repository.dart';
-import '../../data/datasources/repositories/customer_repository.dart';
-import '../../data/datasources/repositories/expense_repository.dart';
-import '../../data/datasources/repositories/reference_data_repository.dart';
-import '../../data/datasources/services/report_service.dart';
-import '../../data/datasources/services/cash_box_service.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
+import 'package:firstpro/data/datasources/repositories/product_repository.dart';
+import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
+import 'package:firstpro/data/datasources/repositories/expense_repository.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/services/report_service.dart';
+import 'package:firstpro/data/datasources/services/cash_box_service.dart';
 
 /// ViewModel for Dashboard — manages dashboard data loading and refresh.
 ///

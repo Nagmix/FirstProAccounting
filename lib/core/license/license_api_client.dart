@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'license_constants.dart';
+import 'package:firstpro/core/license/license_constants.dart';
 
 /// API client for communicating with the license server.
 class LicenseApiClient {

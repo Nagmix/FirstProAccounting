@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
-import '../../../core/utils/entity_balance_helper.dart';
-import '../../../core/utils/journal_id_helper.dart';
-import '../../../core/utils/money_helper.dart';
-import '../database_helper.dart';
+import 'package:firstpro/core/utils/entity_balance_helper.dart';
+import 'package:firstpro/core/utils/journal_id_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
 
 /// خدمة التحويل التلقائي من الكيانات (عملاء/موردين/موظفين/مصروفات)
 /// إلى حسابات شجرة المحاسبة وإنشاء القيود المحاسبية تلقائياً

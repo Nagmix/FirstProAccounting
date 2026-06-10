@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/license/license_constants.dart';
-import '../../../core/license/license_provider.dart';
-import '../../../core/license/license_models.dart';
-import '../../../core/license/license_service.dart';
-import '../../../core/theme/app_colors.dart';
+import 'package:firstpro/core/license/license_constants.dart';
+import 'package:firstpro/core/license/license_provider.dart';
+import 'package:firstpro/core/license/license_models.dart';
+import 'package:firstpro/core/license/license_service.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Screen that displays the current license status and details.
 class LicenseStatusScreen extends StatefulWidget {

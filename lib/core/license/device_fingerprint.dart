@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 
-import 'license_constants.dart';
+import 'package:firstpro/core/license/license_constants.dart';
 
 /// Generates a unique device fingerprint and manages installation ID.
 class DeviceFingerprint {

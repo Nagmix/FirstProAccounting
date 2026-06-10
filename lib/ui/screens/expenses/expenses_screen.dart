@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../core/helpers/currency_constants.dart';
-import '../../../core/helpers/avatar_helper.dart';
-import '../../../core/helpers/delete_helper.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../data/datasources/repositories/expense_sub_account_repository.dart';
-import '../../../ui/widgets/empty_state.dart';
-import 'expense_account_detail_screen.dart';
-import 'add_expense_sub_account_sheet.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
+import 'package:firstpro/core/helpers/avatar_helper.dart';
+import 'package:firstpro/core/helpers/delete_helper.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/data/datasources/repositories/expense_sub_account_repository.dart';
+import 'package:firstpro/ui/widgets/empty_state.dart';
+import 'package:firstpro/ui/screens/expenses/expense_account_detail_screen.dart';
+import 'package:firstpro/ui/screens/expenses/add_expense_sub_account_sheet.dart';
 
 /// Professional expense sub-accounts management screen.
 ///

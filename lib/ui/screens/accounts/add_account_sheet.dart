@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/account_repository.dart';
-import '../../../data/datasources/services/cash_box_service.dart';
-import '../../../data/models/account_model.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/account_repository.dart';
+import 'package:firstpro/data/datasources/services/cash_box_service.dart';
+import 'package:firstpro/data/models/account_model.dart';
 
 class AddAccountSheet extends StatefulWidget {
   final Account? existing;

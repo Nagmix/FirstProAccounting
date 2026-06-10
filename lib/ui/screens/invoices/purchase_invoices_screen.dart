@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/extensions/context_extensions.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_formatter.dart';
-import '../../../core/utils/invoice_pdf_generator.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/invoice_repository.dart';
-import 'create_invoice_screen.dart';
-import 'invoice_detail_screen.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/date_formatter.dart';
+import 'package:firstpro/core/utils/invoice_pdf_generator.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
+import 'package:firstpro/ui/screens/invoices/create_invoice_screen.dart';
+import 'package:firstpro/ui/screens/invoices/invoice_detail_screen.dart';
 
 /// Purchase invoices listing screen – shows only purchase and purchase_return invoices.
 class PurchaseInvoicesScreen extends StatefulWidget {

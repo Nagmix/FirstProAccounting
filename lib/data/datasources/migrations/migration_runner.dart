@@ -1,15 +1,15 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import 'migration_v2_to_v10.dart';
-import 'migration_v11_to_v20.dart';
-import 'migration_v21_to_v30.dart';
-import 'migration_v31_to_v43.dart';
-import 'migration_v44_to_v44.dart';
-import 'migration_v44_to_v45.dart';
-import 'migration_v46.dart';
-import 'migration_v47.dart';
-import 'migration_v48.dart';
-import 'migration_v49.dart';
-import 'migration_v50.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v2_to_v10.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v11_to_v20.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v21_to_v30.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v31_to_v43.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v44_to_v44.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v44_to_v45.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v46.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v47.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v48.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v49.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v50.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.

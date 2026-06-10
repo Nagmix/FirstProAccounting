@@ -8,16 +8,16 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' as sqflite;
-import '../../../../core/di/service_locator.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/excel_exporter.dart';
-import '../../../../data/datasources/database_helper.dart';
-import '../../../../data/datasources/repositories/account_repository.dart';
-import '../../../../data/datasources/repositories/invoice_repository.dart';
-import '../../../../data/datasources/repositories/product_repository.dart';
-import '../../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../../data/datasources/services/report_service.dart';
-import 'settings_helpers.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/excel_exporter.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/repositories/account_repository.dart';
+import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
+import 'package:firstpro/data/datasources/repositories/product_repository.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/services/report_service.dart';
+import 'package:firstpro/ui/screens/settings/widgets/settings_helpers.dart';
 
 /// Data management section: backup, restore, auto-backup, export, and clear.
 ///

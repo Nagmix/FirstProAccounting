@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/extensions/context_extensions.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/utils/money_helper.dart';
-import '../../../../core/viewmodels/pos_viewmodel.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
 
 /// Shift info bar widget displayed at the top of the POS screen when a shift is active.
 class PosShiftInfoBar extends StatelessWidget {

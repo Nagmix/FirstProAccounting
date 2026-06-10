@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/repositories/product_repository.dart';
-import '../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../data/models/product_model.dart';
-import '../../widgets/empty_state.dart';
-import 'add_product_sheet.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/data/datasources/repositories/product_repository.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/models/product_model.dart';
+import 'package:firstpro/ui/widgets/empty_state.dart';
+import 'package:firstpro/ui/screens/products/add_product_sheet.dart';
 
 /// Products / inventory management screen for the FirstPro accounting app.
 ///

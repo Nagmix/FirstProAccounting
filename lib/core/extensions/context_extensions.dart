@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Convenient [BuildContext] extensions for accessing theme data,
 /// media-query values, and navigation helpers throughout the app.

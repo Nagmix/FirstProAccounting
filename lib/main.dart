@@ -5,19 +5,19 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 
-import 'l10n/generated/app_localizations.dart';
-import 'core/constants/app_constants.dart';
-import 'core/di/service_locator.dart';
-import 'core/license/license_provider.dart';
-import 'core/license/license_models.dart';
-import 'core/theme/app_theme.dart';
-import 'data/datasources/database_helper.dart';
-import 'ui/navigation/app_router.dart';
-import 'ui/navigation/main_scaffold.dart';
-import 'ui/screens/app_lock/app_lock_screen.dart';
-import 'ui/screens/license/license_activation_screen.dart';
-import 'ui/screens/license/license_expiry_screen.dart';
-import 'ui/screens/splash/splash_screen.dart';
+import 'package:firstpro/l10n/generated/app_localizations.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/license/license_provider.dart';
+import 'package:firstpro/core/license/license_models.dart';
+import 'package:firstpro/core/theme/app_theme.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/ui/navigation/app_router.dart';
+import 'package:firstpro/ui/navigation/main_scaffold.dart';
+import 'package:firstpro/ui/screens/app_lock/app_lock_screen.dart';
+import 'package:firstpro/ui/screens/license/license_activation_screen.dart';
+import 'package:firstpro/ui/screens/license/license_expiry_screen.dart';
+import 'package:firstpro/ui/screens/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

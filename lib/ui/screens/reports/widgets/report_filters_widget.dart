@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/di/service_locator.dart';
-import '../../../../data/datasources/repositories/account_repository.dart';
-import '../../../../data/datasources/repositories/customer_repository.dart';
-import '../../../../data/datasources/repositories/supplier_repository.dart';
-import '../../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../../data/datasources/services/cash_box_service.dart';
-import 'report_helpers.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/account_repository.dart';
+import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
+import 'package:firstpro/data/datasources/repositories/supplier_repository.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/services/cash_box_service.dart';
+import 'package:firstpro/ui/screens/reports/widgets/report_helpers.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Report Filters Section – date presets, custom dates, entity

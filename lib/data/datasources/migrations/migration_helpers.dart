@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import '../../../core/utils/money_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 /// Shared helper methods used by database migrations and schema operations.
 class MigrationHelpers {

@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
-import '../../../../core/di/service_locator.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../data/datasources/repositories/reference_data_repository.dart';
-import 'settings_helpers.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/ui/screens/settings/widgets/settings_helpers.dart';
 
 /// App lock section: PIN toggle, set/change PIN, and biometric authentication.
 ///

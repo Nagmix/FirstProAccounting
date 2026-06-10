@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Shared delete confirmation dialog used across all entity list screens.
 ///

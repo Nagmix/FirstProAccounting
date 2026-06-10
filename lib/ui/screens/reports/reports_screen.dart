@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import 'trial_balance_screen.dart';
-import 'financial_statements_screen.dart';
-import 'widgets/report_helpers.dart';
-import 'widgets/report_data_loader.dart';
-import 'widgets/report_card_widget.dart';
-import 'widgets/report_filters_widget.dart';
-import 'widgets/report_results_widget.dart';
-import 'widgets/report_export_button.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/ui/screens/reports/trial_balance_screen.dart';
+import 'package:firstpro/ui/screens/reports/financial_statements_screen.dart';
+import 'package:firstpro/ui/screens/reports/widgets/report_helpers.dart';
+import 'package:firstpro/ui/screens/reports/widgets/report_data_loader.dart';
+import 'package:firstpro/ui/screens/reports/widgets/report_card_widget.dart';
+import 'package:firstpro/ui/screens/reports/widgets/report_filters_widget.dart';
+import 'package:firstpro/ui/screens/reports/widgets/report_results_widget.dart';
+import 'package:firstpro/ui/screens/reports/widgets/report_export_button.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Reports Screen – Professional Redesign

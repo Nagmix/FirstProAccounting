@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/extensions/context_extensions.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/utils/money_helper.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 /// Extracted entity (customer/supplier) section widget for the CreateInvoiceScreen.
 ///

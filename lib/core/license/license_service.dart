@@ -3,11 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
-import '../../data/datasources/database_helper.dart';
-import 'device_fingerprint.dart';
-import 'license_api_client.dart';
-import 'license_constants.dart';
-import 'license_models.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/core/license/device_fingerprint.dart';
+import 'package:firstpro/core/license/license_api_client.dart';
+import 'package:firstpro/core/license/license_constants.dart';
+import 'package:firstpro/core/license/license_models.dart';
 
 /// Main service for managing the application license.
 /// Handles activation, validation, offline grace periods, and feature gating.

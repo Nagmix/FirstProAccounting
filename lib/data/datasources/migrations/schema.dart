@@ -1,5 +1,5 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import 'seeds.dart';
+import 'package:firstpro/data/datasources/migrations/seeds.dart';
 
 class DatabaseSchema {
   /// Creates all tables for a fresh database installation.

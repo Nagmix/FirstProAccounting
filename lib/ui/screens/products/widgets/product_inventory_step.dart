@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../data/models/product_model.dart';
-import 'product_form_helpers.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/data/models/product_model.dart';
+import 'package:firstpro/ui/screens/products/widgets/product_form_helpers.dart';
 
 // ═══════════════════════════════════════════════════════════════════
 //  Step 4 – المخزون

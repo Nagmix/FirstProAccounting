@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
 
 /// Unified design system for the FirstPro accounting app.
 /// Provides consistent spacing, radii, shadows, and shared widget styles.

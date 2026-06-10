@@ -1,7 +1,7 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import '../../../core/utils/money_helper.dart';
-import 'seeds.dart';
-import 'migration_helpers.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/datasources/migrations/seeds.dart';
+import 'package:firstpro/data/datasources/migrations/migration_helpers.dart';
 
 class MigrationV31ToV43 {
   /// v31: Add original_invoice_id to invoices

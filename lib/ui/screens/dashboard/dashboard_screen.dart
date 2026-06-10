@@ -1,15 +1,15 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_formatter.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../core/viewmodels/dashboard_viewmodel.dart';
-import '../../navigation/app_router.dart';
-import '../../widgets/animated_entry.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/date_formatter.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/viewmodels/dashboard_viewmodel.dart';
+import 'package:firstpro/ui/navigation/app_router.dart';
+import 'package:firstpro/ui/widgets/animated_entry.dart';
 
 /// The main dashboard screen – the first thing the user sees.
 ///

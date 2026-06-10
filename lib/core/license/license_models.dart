@@ -1,4 +1,4 @@
-import 'license_constants.dart';
+import 'package:firstpro/core/license/license_constants.dart';
 
 /// License type enumeration.
 enum LicenseType {

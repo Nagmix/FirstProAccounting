@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../models/product_model.dart';
-import '../database_helper.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/models/product_model.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
 
 class ProductRepository {
   final DatabaseHelper _dbHelper;

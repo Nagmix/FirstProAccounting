@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/design_system.dart';
-import '../../../core/services/bluetooth_printer_service.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/design_system.dart';
+import 'package:firstpro/core/services/bluetooth_printer_service.dart';
 
 /// Bluetooth thermal printer settings screen.
 class BluetoothPrinterSettingsScreen extends StatefulWidget {

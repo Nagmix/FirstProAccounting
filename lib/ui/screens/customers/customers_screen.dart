@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../core/helpers/currency_constants.dart';
-import '../../../core/helpers/avatar_helper.dart';
-import '../../../core/helpers/delete_helper.dart';
-import '../../../data/datasources/repositories/customer_repository.dart';
-import '../../../data/models/customer_model.dart';
-import '../../widgets/empty_state.dart';
-import 'add_customer_sheet.dart';
-import 'customer_detail_screen.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
+import 'package:firstpro/core/helpers/avatar_helper.dart';
+import 'package:firstpro/core/helpers/delete_helper.dart';
+import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
+import 'package:firstpro/data/models/customer_model.dart';
+import 'package:firstpro/ui/widgets/empty_state.dart';
+import 'package:firstpro/ui/screens/customers/add_customer_sheet.dart';
+import 'package:firstpro/ui/screens/customers/customer_detail_screen.dart';
 
 /// Professional customers management screen for the FirstPro accounting app.
 ///

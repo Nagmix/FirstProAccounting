@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/supplier_repository.dart';
-import '../../../data/models/supplier_model.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/supplier_repository.dart';
+import 'package:firstpro/data/models/supplier_model.dart';
 
 class AddSupplierSheet extends StatefulWidget {
   const AddSupplierSheet({super.key, this.supplier});

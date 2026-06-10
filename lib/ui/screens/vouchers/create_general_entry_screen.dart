@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/utils/date_formatter.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../core/extensions/context_extensions.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../data/datasources/services/voucher_auto_mapping_service.dart';
+import 'package:firstpro/core/utils/date_formatter.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/services/voucher_auto_mapping_service.dart';
 
 /// شاشة إنشاء قيد عام (من حساب → إلى حساب)
 /// القيد المحاسبي: "من حساب" = دائن (يعطي قيمة)، "إلى حساب" = مدين (يستقبل قيمة)

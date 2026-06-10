@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/extensions/context_extensions.dart';
-import '../../../../data/models/product_model.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/data/models/product_model.dart';
 
 /// Product card widget for the POS product grid.
 class PosProductCard extends StatelessWidget {

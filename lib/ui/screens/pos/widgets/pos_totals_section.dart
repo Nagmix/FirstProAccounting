@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/extensions/context_extensions.dart';
-import '../pos_models.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/ui/screens/pos/pos_models.dart';
 
 /// Totals section widget for the POS cart showing subtotal, discount, tax, and total.
 class PosTotalsSection extends StatelessWidget {

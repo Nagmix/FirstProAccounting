@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../core/helpers/currency_constants.dart';
-import '../../../core/helpers/avatar_helper.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
+import 'package:firstpro/core/helpers/avatar_helper.dart';
 
-import '../../../data/datasources/services/cash_box_service.dart';
-import '../../../data/models/cash_box_model.dart';
-import '../../widgets/empty_state.dart';
-import 'add_cash_box_sheet.dart';
-import 'cash_box_detail_screen.dart';
+import 'package:firstpro/data/datasources/services/cash_box_service.dart';
+import 'package:firstpro/data/models/cash_box_model.dart';
+import 'package:firstpro/ui/widgets/empty_state.dart';
+import 'package:firstpro/ui/screens/cash_boxes/add_cash_box_sheet.dart';
+import 'package:firstpro/ui/screens/cash_boxes/cash_box_detail_screen.dart';
 
 /// Professional Cash Boxes / Banks management screen for the FirstPro accounting app.
 ///

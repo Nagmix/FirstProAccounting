@@ -1,4 +1,4 @@
-import '../constants/app_constants.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
 
 /// Utility class for formatting currency values in Arabic context.
 class CurrencyFormatter {

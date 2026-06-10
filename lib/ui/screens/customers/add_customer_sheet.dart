@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../../core/license/license_provider.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/customer_repository.dart';
-import '../../../data/models/customer_model.dart';
+import 'package:firstpro/core/license/license_provider.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
+import 'package:firstpro/data/models/customer_model.dart';
 
 class AddCustomerSheet extends StatefulWidget {
   const AddCustomerSheet({super.key});

@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_formatter.dart';
-import '../../../core/utils/money_helper.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/services/report_service.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/utils/date_formatter.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/services/report_service.dart';
 
 /// شاشة العمليات اليومية - تعرض جميع الحركات المالية ليوم محدد في مكان واحد
 /// Daily Operations Screen – shows ALL financial transactions for a specific day

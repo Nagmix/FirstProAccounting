@@ -1,7 +1,7 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
-import '../database_helper.dart';
-import '../services/cash_box_service.dart';
+import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/cash_box_service.dart';
 
 class VoucherRepository {
   final DatabaseHelper _dbHelper;

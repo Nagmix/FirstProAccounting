@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/design_system.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/design_system.dart';
 
 /// A modern quick-action button displayed in the dashboard grid.
 /// Shows an [icon] above a [label] inside a card with gradient

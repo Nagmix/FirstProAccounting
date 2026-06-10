@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/viewmodels/pos_viewmodel.dart';
-import '../pos_models.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
+import 'package:firstpro/ui/screens/pos/pos_models.dart';
 
 /// Shows the add partial payment dialog.
 Future<void> showAddPartialPaymentDialog(

@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
-import '../utils/esc_pos_commands.dart';
-import '../di/service_locator.dart';
-import '../../data/datasources/repositories/reference_data_repository.dart';
-import '../../data/datasources/repositories/invoice_repository.dart';
-import '../utils/money_helper.dart';
+import 'package:firstpro/core/utils/esc_pos_commands.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 
 /// Bluetooth printer device info.
 class BluetoothPrinterDevice {

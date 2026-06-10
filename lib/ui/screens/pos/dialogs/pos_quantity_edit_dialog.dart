@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/viewmodels/pos_viewmodel.dart';
+import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
 
 /// Shows the edit quantity dialog for a cart item.
 Future<void> showEditQuantityDialog(

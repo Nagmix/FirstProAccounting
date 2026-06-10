@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/extensions/context_extensions.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../data/models/invoice_item_model.dart';
-import '../../../widgets/invoice_item_card.dart';
+import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/data/models/invoice_item_model.dart';
+import 'package:firstpro/ui/widgets/invoice_item_card.dart';
 
 /// Extracted items section widget for the CreateInvoiceScreen.
 ///

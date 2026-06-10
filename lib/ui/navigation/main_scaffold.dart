@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../core/constants/app_constants.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/design_system.dart';
-import 'app_router.dart';
-import '../screens/dashboard/dashboard_screen.dart';
-import '../screens/customers/customers_screen.dart';
-import '../screens/invoices/invoices_screen.dart';
-import '../widgets/custom_bottom_bar.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/design_system.dart';
+import 'package:firstpro/ui/navigation/app_router.dart';
+import 'package:firstpro/ui/screens/dashboard/dashboard_screen.dart';
+import 'package:firstpro/ui/screens/customers/customers_screen.dart';
+import 'package:firstpro/ui/screens/invoices/invoices_screen.dart';
+import 'package:firstpro/ui/widgets/custom_bottom_bar.dart';
 
 /// LazyIndexedStack — only builds tabs when they are first selected.
 class LazyIndexedStack extends StatefulWidget {

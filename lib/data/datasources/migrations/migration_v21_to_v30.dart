@@ -1,7 +1,7 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import '../../../core/utils/money_helper.dart';
-import 'seeds.dart';
-import 'migration_helpers.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/datasources/migrations/seeds.dart';
+import 'package:firstpro/data/datasources/migrations/migration_helpers.dart';
 
 class MigrationV21ToV30 {
   /// v21: Add contact_method and debt_ceiling to customers

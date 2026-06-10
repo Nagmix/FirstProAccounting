@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/di/service_locator.dart';
-import '../../../data/datasources/repositories/account_repository.dart';
-import '../../../data/datasources/repositories/reference_data_repository.dart';
-import '../../../data/models/account_model.dart';
-import 'add_account_sheet.dart';
-import '../../../ui/navigation/app_router.dart';
+import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_formatter.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/repositories/account_repository.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/models/account_model.dart';
+import 'package:firstpro/ui/screens/accounts/add_account_sheet.dart';
+import 'package:firstpro/ui/navigation/app_router.dart';
 
 class ChartOfAccountsScreen extends StatefulWidget {
   const ChartOfAccountsScreen({super.key});
