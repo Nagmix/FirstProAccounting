@@ -259,10 +259,13 @@ void main() {
         expect(result.containsKey('balance'), isFalse);
       });
 
-      test('does not modify int fields', () {
-        final map = {'balance': 15075}; // Already in cents
+      test('converts int fields to cents (fixes the 5.00 bug)', () {
+        // int values from UI forms must be converted to cents too.
+        // Previously, ints were skipped, causing 500 → stored as 500 cents
+        // → readMoney(500) = 5.00 riyals (should be 500 riyals).
+        final map = {'balance': 500}; // Human-readable 500 riyals
         final result = MoneyHelper.toCentsMap(map, ['balance']);
-        expect(result['balance'], equals(15075)); // Unchanged
+        expect(result['balance'], equals(50000)); // 500 * 100 = 50000 cents
       });
 
       test('preserves original map', () {

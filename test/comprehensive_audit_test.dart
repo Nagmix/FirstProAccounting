@@ -662,7 +662,12 @@ void main() {
     });
 
     test('expense reference_type is excluded from manual expenses', () {
-      expect(shouldExcludeFromManualCalculation('expense'), isTrue);
+      // Expense reference_type is NOT in the exclusion list because expenses
+      // are calculated through their own separate query in the P&L report,
+      // not through the Chart-of-Accounts supplement.
+      // The exclusion list only contains invoice-related types that would
+      // cause double-counting with the invoices table query.
+      expect(shouldExcludeFromManualCalculation('expense'), isFalse);
     });
 
     test('opening_balance reference_type is NOT excluded', () {
@@ -909,38 +914,32 @@ void main() {
       required double amount,
       required bool isCashIn,
     }) {
-      double newBalance;
-      String newBalanceType = currentBalanceType;
+      // Compute the signed balance: credit = positive, debit = negative
+      double signedBalance = currentBalanceType == 'credit'
+          ? currentBalance
+          : -currentBalance;
 
-      if (currentBalanceType == 'credit') {
-        if (isCashIn) {
-          newBalance = currentBalance + amount;
-        } else {
-          newBalance = currentBalance - amount;
-        }
+      // Apply the change: cash-in increases signed balance, cash-out decreases it
+      if (isCashIn) {
+        signedBalance += amount;
       } else {
-        // debit
-        if (isCashIn) {
-          newBalance = currentBalance - amount;
-        } else {
-          newBalance = currentBalance + amount;
-        }
+        signedBalance -= amount;
       }
 
-      // Flip balance_type if balance crosses zero
-      if (newBalance < 0) {
-        newBalanceType = 'debit';
-        newBalance = newBalance.abs();
-      } else if (newBalance >= 0 && newBalanceType == 'debit' && isCashIn) {
-        // If we were in debit and cash-in brought us to positive
+      // Determine new balance type and magnitude
+      String newBalanceType;
+      double newBalance;
+
+      if (signedBalance >= 0) {
         newBalanceType = 'credit';
-      } else if (newBalance >= 0 && currentBalanceType == 'debit' && !isCashIn) {
-        // If we were in debit and cash-out... stays debit unless crossing
+        newBalance = signedBalance;
+      } else {
         newBalanceType = 'debit';
+        newBalance = signedBalance.abs();
       }
 
-      // Final check: if balance is exactly 0, default to credit
-      if (newBalance.abs() < 0.005) {
+      // If balance is exactly zero, default to credit
+      if (newBalance < 0.005) {
         newBalanceType = 'credit';
         newBalance = 0.0;
       }
