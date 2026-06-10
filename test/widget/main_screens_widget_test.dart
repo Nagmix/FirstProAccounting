@@ -486,7 +486,8 @@ class _TestCashBoxCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(name,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
                   Text(isBank ? 'بنك' : 'صندوق'),
                 ],
               ),

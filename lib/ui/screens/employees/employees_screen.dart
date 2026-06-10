@@ -50,7 +50,9 @@ class _EmployeesScreenState extends State<EmployeesScreen>
     _searchController.addListener(() {
       _searchDebounce?.cancel();
       _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+        if (mounted) {
+          setState(() => _searchQuery = _searchController.text.trim());
+        }
       });
     });
     _loadEmployees();
@@ -202,7 +204,8 @@ class _EmployeesScreenState extends State<EmployeesScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final currentSymbol = CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
+    final currentSymbol =
+        CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
 
     return Scaffold(
       appBar: AppBar(
@@ -212,10 +215,14 @@ class _EmployeesScreenState extends State<EmployeesScreen>
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: ActionChip(
-              avatar: Icon(Icons.currency_exchange, size: 16, color: AppColors.primary),
+              avatar: Icon(Icons.currency_exchange,
+                  size: 16, color: AppColors.primary),
               label: Text(
                 '$currentSymbol $_selectedCurrency',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary),
               ),
               onPressed: () => CurrencyConstants.showCurrencyFilterPopup(
                 context: context,
@@ -262,12 +269,19 @@ class _EmployeesScreenState extends State<EmployeesScreen>
 
                 // ── Summary bar ───────────────────────────────────────
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    color: isLight
+                        ? AppColors.surfaceVariant
+                        : AppColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isLight ? AppColors.border : AppColors.darkBorder, width: 0.5),
+                    border: Border.all(
+                        color:
+                            isLight ? AppColors.border : AppColors.darkBorder,
+                        width: 0.5),
                   ),
                   child: Row(
                     children: [
@@ -282,9 +296,13 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                       ),
                       const Spacer(),
                       if (_isBalancesLoading)
-                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                       else ...[
-                        Icon(Icons.account_balance_wallet, size: 16, color: AppColors.textHint),
+                        Icon(Icons.account_balance_wallet,
+                            size: 16, color: AppColors.textHint),
                         const SizedBox(width: 4),
                         Text(
                           'العملة: $_selectedCurrency',
@@ -294,7 +312,8 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Icon(Icons.calculate, size: 16, color: AppColors.primary),
+                        Icon(Icons.calculate,
+                            size: 16, color: AppColors.primary),
                         const SizedBox(width: 4),
                         Text(
                           'الإجمالي: ${CurrencyFormatter.formatValue(_currencyBalances.values.fold(0.0, (sum, b) => sum + b))} $currentSymbol',
@@ -331,39 +350,48 @@ class _EmployeesScreenState extends State<EmployeesScreen>
                               ? 'قم بإضافة موظفين جدد لبدء إدارة حساباتك'
                               : 'لم يتم العثور على نتائج مطابقة',
                           actionLabel: tabIndex == 0 ? 'إضافة موظف' : null,
-                          onAction: tabIndex == 0 ? () => _showAddEmployeeSheet() : null,
+                          onAction: tabIndex == 0
+                              ? () => _showAddEmployeeSheet()
+                              : null,
                         );
                       }
 
                       return RefreshIndicator(
-                        onRefresh: _loadEmployees,
-                        color: AppColors.primary,
-                        child: ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 80, top: 2),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                          final employee = filtered[index];
-                          final id = employee['id'] as int?;
-                          final displayBalance = _currencyBalances[id] ?? 0.0;
-                          return _EmployeeCard(
-                            employee: employee,
-                            avatarColor: AvatarHelper.avatarColor(employee['name'] as String? ?? ''),
-                            displayBalance: displayBalance,
-                            currencySymbol: CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
-                            isLight: isLight,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => EmployeeDetailScreen(employee: employee),
-                                ),
-                              ).then((_) => _loadEmployees());
+                          onRefresh: _loadEmployees,
+                          color: AppColors.primary,
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.only(bottom: 80, top: 2),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final employee = filtered[index];
+                              final id = employee['id'] as int?;
+                              final displayBalance =
+                                  _currencyBalances[id] ?? 0.0;
+                              return _EmployeeCard(
+                                employee: employee,
+                                avatarColor: AvatarHelper.avatarColor(
+                                    employee['name'] as String? ?? ''),
+                                displayBalance: displayBalance,
+                                currencySymbol: CurrencyConstants
+                                            .currencyInfo[_selectedCurrency]
+                                        ?['symbol'] ??
+                                    'ر.ي',
+                                isLight: isLight,
+                                onTap: () {
+                                  Navigator.of(context)
+                                      .push(
+                                        MaterialPageRoute(
+                                          builder: (_) => EmployeeDetailScreen(
+                                              employee: employee),
+                                        ),
+                                      )
+                                      .then((_) => _loadEmployees());
+                                },
+                                onDelete: () => _deleteEmployee(employee),
+                              );
                             },
-                            onDelete: () => _deleteEmployee(employee),
-                          );
-                        },
-                        )
-                      );
+                          ));
                     }),
                   ),
                 ),
@@ -427,7 +455,9 @@ class _EmployeeCard extends StatelessWidget {
         color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLight ? AppColors.border.withValues(alpha: 0.5) : AppColors.darkBorder.withValues(alpha: 0.5),
+          color: isLight
+              ? AppColors.border.withValues(alpha: 0.5)
+              : AppColors.darkBorder.withValues(alpha: 0.5),
           width: 0.5,
         ),
         boxShadow: [
@@ -502,13 +532,17 @@ class _EmployeeCard extends StatelessWidget {
                             Icon(
                               Icons.work,
                               size: 13,
-                              color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                              color: isLight
+                                  ? AppColors.textHint
+                                  : AppColors.darkTextSecondary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               jobTitle,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+                                color: isLight
+                                    ? AppColors.textSecondary
+                                    : AppColors.darkTextSecondary,
                               ),
                             ),
                             if (phone.isNotEmpty) const SizedBox(width: 8),
@@ -521,13 +555,17 @@ class _EmployeeCard extends StatelessWidget {
                             Icon(
                               Icons.phone,
                               size: 13,
-                              color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                              color: isLight
+                                  ? AppColors.textHint
+                                  : AppColors.darkTextSecondary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               phone,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+                                color: isLight
+                                    ? AppColors.textSecondary
+                                    : AppColors.darkTextSecondary,
                               ),
                             ),
                           ],
@@ -540,18 +578,27 @@ class _EmployeeCard extends StatelessWidget {
 
                 // ── Balance Section - الرصيد with color ──────
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: displayBalance != 0
-                          ? [balanceColor.withValues(alpha: 0.12), balanceColor.withValues(alpha: 0.04)]
-                          : [Colors.grey.withValues(alpha: 0.06), Colors.grey.withValues(alpha: 0.02)],
+                          ? [
+                              balanceColor.withValues(alpha: 0.12),
+                              balanceColor.withValues(alpha: 0.04)
+                            ]
+                          : [
+                              Colors.grey.withValues(alpha: 0.06),
+                              Colors.grey.withValues(alpha: 0.02)
+                            ],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: displayBalance != 0 ? balanceColor.withValues(alpha: 0.25) : AppColors.border.withValues(alpha: 0.3),
+                      color: displayBalance != 0
+                          ? balanceColor.withValues(alpha: 0.25)
+                          : AppColors.border.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -559,9 +606,15 @@ class _EmployeeCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isDebit ? Icons.trending_down : isCredit ? Icons.trending_up : Icons.remove,
+                        isDebit
+                            ? Icons.trending_down
+                            : isCredit
+                                ? Icons.trending_up
+                                : Icons.remove,
                         size: 14,
-                        color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                        color: displayBalance != 0
+                            ? balanceColor
+                            : AppColors.textHint,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -569,7 +622,9 @@ class _EmployeeCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
-                          color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                          color: displayBalance != 0
+                              ? balanceColor
+                              : AppColors.textHint,
                         ),
                       ),
                     ],
@@ -582,13 +637,17 @@ class _EmployeeCard extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    color: isLight
+                        ? AppColors.surfaceVariant
+                        : AppColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.arrow_back_ios,
                     size: 12,
-                    color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                    color: isLight
+                        ? AppColors.textHint
+                        : AppColors.darkTextSecondary,
                   ),
                 ),
               ],
@@ -700,9 +759,8 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEditing
-                ? 'تم تعديل الموظف بنجاح'
-                : 'تم إضافة الموظف بنجاح'),
+            content: Text(
+                isEditing ? 'تم تعديل الموظف بنجاح' : 'تم إضافة الموظف بنجاح'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -744,7 +802,8 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
                   )
                 : const Icon(Icons.check, size: 20),
             label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
@@ -754,7 +813,8 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
+          padding:
+              EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -830,8 +890,8 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                       // Amount field
                       TextFormField(
                         controller: _balanceController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         textInputAction: TextInputAction.next,
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
@@ -863,7 +923,8 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                             .toList(),
                         onChanged: isEditing
                             ? null
-                            : (v) => setState(() => _openingBalanceCurrency = v!),
+                            : (v) =>
+                                setState(() => _openingBalanceCurrency = v!),
                       ),
                       const SizedBox(height: 14),
 
@@ -895,11 +956,12 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                                     onTap: () =>
                                         setState(() => _balanceType = 'credit'),
                                     child: Container(
-                                      padding:
-                                          const EdgeInsets.symmetric(vertical: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
                                       decoration: BoxDecoration(
                                         color: _balanceType == 'credit'
-                                            ? AppColors.success.withValues(alpha: 0.1)
+                                            ? AppColors.success
+                                                .withValues(alpha: 0.1)
                                             : Colors.transparent,
                                         borderRadius: const BorderRadius.only(
                                             topRight: Radius.circular(9),
@@ -923,11 +985,12 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                                     onTap: () =>
                                         setState(() => _balanceType = 'debit'),
                                     child: Container(
-                                      padding:
-                                          const EdgeInsets.symmetric(vertical: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
                                       decoration: BoxDecoration(
                                         color: _balanceType == 'debit'
-                                            ? AppColors.error.withValues(alpha: 0.1)
+                                            ? AppColors.error
+                                                .withValues(alpha: 0.1)
                                             : Colors.transparent,
                                         borderRadius: const BorderRadius.only(
                                             topLeft: Radius.circular(9),

@@ -9,7 +9,8 @@ import '../../../../core/viewmodels/pos_viewmodel.dart';
 import '../../../../data/datasources/repositories/customer_repository.dart';
 
 /// Shows the customer selector bottom sheet dialog.
-Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) async {
+Future<void> showCustomerSelectorDialog(
+    BuildContext context, PosViewModel vm) async {
   final customers = await locator<CustomerRepository>().getAllCustomers();
   if (!context.mounted) return;
   final searchController = TextEditingController();
@@ -24,7 +25,9 @@ Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) a
           left: 20,
           right: 20,
           top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom +
+              MediaQuery.of(ctx).viewPadding.bottom +
+              20,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -42,7 +45,8 @@ Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) a
               ),
             ),
             Text('اختر العميل',
-                style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                style: context.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
             TextField(
               controller: searchController,
@@ -51,7 +55,8 @@ Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) a
                 prefixIcon: const Icon(Icons.search, size: 20),
                 filled: true,
                 isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
             const SizedBox(height: 12),
@@ -64,7 +69,9 @@ Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) a
                     final q = searchController.text.toLowerCase();
                     filtered = customers
                         .where((c) =>
-                            (c['name']?.toString() ?? '').toLowerCase().contains(q) ||
+                            (c['name']?.toString() ?? '')
+                                .toLowerCase()
+                                .contains(q) ||
                             (c['phone']?.toString() ?? '').contains(q))
                         .toList();
                   }
@@ -73,9 +80,11 @@ Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) a
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.person, size: 48, color: AppColors.textHint),
+                          Icon(Icons.person,
+                              size: 48, color: AppColors.textHint),
                           const SizedBox(height: 8),
-                          Text('لا يوجد عملاء', style: context.textTheme.bodyLarge),
+                          Text('لا يوجد عملاء',
+                              style: context.textTheme.bodyLarge),
                         ],
                       ),
                     );
@@ -102,13 +111,17 @@ Future<void> showCustomerSelectorDialog(BuildContext context, PosViewModel vm) a
                             color: isSelected ? AppColors.primary : null,
                           ),
                         ),
-                        title: Text(cName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        title: Text(cName,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: cPhone.isNotEmpty ? Text(cPhone) : null,
                         trailing: Text(
                           CurrencyFormatter.format(cBalance),
                           style: TextStyle(
                             fontSize: 12,
-                            color: cBalance > 0 ? AppColors.error : AppColors.success,
+                            color: cBalance > 0
+                                ? AppColors.error
+                                : AppColors.success,
                           ),
                         ),
                         selected: isSelected,

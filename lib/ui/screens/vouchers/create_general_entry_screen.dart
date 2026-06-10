@@ -294,8 +294,8 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                                 children: [
                                   Icon(Icons.search_off,
                                       size: 48,
-                                      color:
-                                          AppColors.textHint.withValues(alpha: 0.5)),
+                                      color: AppColors.textHint
+                                          .withValues(alpha: 0.5)),
                                   const SizedBox(height: 8),
                                   Text(
                                     'لا توجد نتائج',
@@ -1013,7 +1013,9 @@ class _CreateGeneralEntryScreenState extends State<CreateGeneralEntryScreen> {
                   : AppColors.surfaceVariant),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: hasEntity ? accentColor.withValues(alpha: 0.3) : AppColors.divider,
+            color: hasEntity
+                ? accentColor.withValues(alpha: 0.3)
+                : AppColors.divider,
           ),
         ),
         child: Row(

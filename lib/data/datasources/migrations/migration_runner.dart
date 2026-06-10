@@ -14,7 +14,8 @@ import 'migration_v50.dart';
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
   /// The order of migrations must be preserved exactly as-is.
-  static Future<void> onUpgrade(Database db, int oldVersion, int newVersion) async {
+  static Future<void> onUpgrade(
+      Database db, int oldVersion, int newVersion) async {
     // v2–v10
     if (oldVersion < 2) await MigrationV2ToV10.migrateV2(db);
     if (oldVersion < 3) await MigrationV2ToV10.migrateV3(db);

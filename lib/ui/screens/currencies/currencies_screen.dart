@@ -43,7 +43,9 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -63,9 +65,12 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
 
   Future<void> _showAddEditSheet({Currency? existing}) async {
     final codeController = TextEditingController(text: existing?.code ?? '');
-    final nameArController = TextEditingController(text: existing?.nameAr ?? '');
-    final nameEnController = TextEditingController(text: existing?.nameEn ?? '');
-    final symbolController = TextEditingController(text: existing?.symbol ?? '');
+    final nameArController =
+        TextEditingController(text: existing?.nameAr ?? '');
+    final nameEnController =
+        TextEditingController(text: existing?.nameEn ?? '');
+    final symbolController =
+        TextEditingController(text: existing?.symbol ?? '');
     final rateController = TextEditingController(
       text: existing?.exchangeRate.toStringAsFixed(4) ?? '1.0000',
     );
@@ -77,7 +82,8 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
       useSafeArea: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             child: Column(
@@ -87,8 +93,8 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                 Text(
                   isEdit ? 'تعديل العملة' : 'إضافة عملة جديدة',
                   style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                        fontWeight: FontWeight.w700,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
@@ -136,10 +142,12 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: rateController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.done,
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,6}')),
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,6}')),
                   ],
                   decoration: const InputDecoration(
                     labelText: 'سعر الصرف (إلى العملة الأساسية)',
@@ -157,9 +165,13 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                           final nameAr = nameArController.text.trim();
                           final nameEn = nameEnController.text.trim();
                           final symbol = symbolController.text.trim();
-                          final rate = double.tryParse(rateController.text) ?? 1.0;
+                          final rate =
+                              double.tryParse(rateController.text) ?? 1.0;
 
-                          if (code.isEmpty || nameAr.isEmpty || nameEn.isEmpty || symbol.isEmpty) {
+                          if (code.isEmpty ||
+                              nameAr.isEmpty ||
+                              nameEn.isEmpty ||
+                              symbol.isEmpty) {
                             return;
                           }
 
@@ -283,8 +295,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                       Icon(Icons.attach_money,
                           size: 72, color: AppColors.textHint),
                       const SizedBox(height: 16),
-                      Text('لا توجد عملات',
-                          style: theme.textTheme.titleMedium),
+                      Text('لا توجد عملات', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 4),
                       Text('أضف عملة جديدة للبدء',
                           style: theme.textTheme.bodySmall),
@@ -312,14 +323,18 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                 height: 48,
                                 decoration: BoxDecoration(
                                   color: currency.isDefault
-                                      ? AppColors.primary.withValues(alpha: 0.12)
-                                      : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+                                      ? AppColors.primary
+                                          .withValues(alpha: 0.12)
+                                      : (isDark
+                                          ? AppColors.darkSurfaceVariant
+                                          : AppColors.surfaceVariant),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Center(
                                   child: Text(
                                     currency.symbol,
-                                    style: theme.textTheme.titleMedium?.copyWith(
+                                    style:
+                                        theme.textTheme.titleMedium?.copyWith(
                                       fontWeight: FontWeight.w700,
                                       color: currency.isDefault
                                           ? AppColors.primary
@@ -339,7 +354,8 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                       children: [
                                         Text(
                                           currency.nameAr,
-                                          style: theme.textTheme.bodyLarge?.copyWith(
+                                          style: theme.textTheme.bodyLarge
+                                              ?.copyWith(
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
@@ -349,13 +365,16 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                               horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
                                             color: currency.isDefault
-                                                ? AppColors.primary.withValues(alpha: 0.1)
+                                                ? AppColors.primary
+                                                    .withValues(alpha: 0.1)
                                                 : AppColors.surfaceVariant,
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
                                           ),
                                           child: Text(
                                             currency.code,
-                                            style: theme.textTheme.labelSmall?.copyWith(
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
                                               fontWeight: FontWeight.w600,
                                               color: currency.isDefault
                                                   ? AppColors.primary
@@ -370,7 +389,8 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                                 horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: AppColors.successLight,
-                                              borderRadius: BorderRadius.circular(6),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                             ),
                                             child: const Text(
                                               'افتراضية',
@@ -387,7 +407,8 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       'سعر الصرف: ${currency.exchangeRate.toStringAsFixed(4)}',
-                                      style: theme.textTheme.bodySmall?.copyWith(
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
                                         color: isDark
                                             ? AppColors.darkTextSecondary
                                             : AppColors.textSecondary,

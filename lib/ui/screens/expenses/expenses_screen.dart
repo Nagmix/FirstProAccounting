@@ -44,7 +44,9 @@ class _ExpensesScreenState extends State<ExpensesScreen>
     _searchController.addListener(() {
       _searchDebounce?.cancel();
       _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+        if (mounted) {
+          setState(() => _searchQuery = _searchController.text.trim());
+        }
       });
     });
     _loadData();
@@ -218,16 +220,24 @@ class _ExpensesScreenState extends State<ExpensesScreen>
 
                 // ── Summary bar ───────────────────────────────────────
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    color: isLight
+                        ? AppColors.surfaceVariant
+                        : AppColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isLight ? AppColors.border : AppColors.darkBorder, width: 0.5),
+                    border: Border.all(
+                        color:
+                            isLight ? AppColors.border : AppColors.darkBorder,
+                        width: 0.5),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.account_balance_wallet, size: 18, color: AppColors.primary),
+                      Icon(Icons.account_balance_wallet,
+                          size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text(
                         '${_subAccounts.length} حساب مصروف',
@@ -263,38 +273,41 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                               ? 'قم بإضافة حسابات مصروفات جديدة لبدء إدارة مصاريفك'
                               : 'لم يتم العثور على نتائج مطابقة',
                           actionLabel: tabIndex == 0 ? 'إضافة حساب' : null,
-                          onAction: tabIndex == 0 ? _showAddSubAccountSheet : null,
+                          onAction:
+                              tabIndex == 0 ? _showAddSubAccountSheet : null,
                         );
                       }
 
                       return RefreshIndicator(
-                        onRefresh: _loadData,
-                        color: AppColors.primary,
-                        child: ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 80),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                          final account = filtered[index];
-                          return _ExpenseCard(
-                            account: account,
-                            balanceCache: _balanceCache,
-                            expenseCountCache: _expenseCountCache,
-                            avatarColor: AvatarHelper.avatarColor(
-                                account['name'] as String? ?? ''),
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ExpenseAccountDetailScreen(
-                                      subAccount: account),
-                                ),
-                              ).then((_) => _loadData());
+                          onRefresh: _loadData,
+                          color: AppColors.primary,
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.only(bottom: 80),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final account = filtered[index];
+                              return _ExpenseCard(
+                                account: account,
+                                balanceCache: _balanceCache,
+                                expenseCountCache: _expenseCountCache,
+                                avatarColor: AvatarHelper.avatarColor(
+                                    account['name'] as String? ?? ''),
+                                onTap: () {
+                                  Navigator.of(context)
+                                      .push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              ExpenseAccountDetailScreen(
+                                                  subAccount: account),
+                                        ),
+                                      )
+                                      .then((_) => _loadData());
+                                },
+                                onDelete: () => _deleteSubAccount(account),
+                              );
                             },
-                            onDelete: () => _deleteSubAccount(account),
-                          );
-                        },
-                        )
-                      );
+                          ));
                     }),
                   ),
                 ),
@@ -373,7 +386,9 @@ class _ExpenseCard extends StatelessWidget {
         color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLight ? AppColors.border.withValues(alpha: 0.5) : AppColors.darkBorder.withValues(alpha: 0.5),
+          color: isLight
+              ? AppColors.border.withValues(alpha: 0.5)
+              : AppColors.darkBorder.withValues(alpha: 0.5),
           width: 0.5,
         ),
         boxShadow: [
@@ -444,16 +459,24 @@ class _ExpenseCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            description.isNotEmpty ? Icons.description : Icons.receipt_long,
+                            description.isNotEmpty
+                                ? Icons.description
+                                : Icons.receipt_long,
                             size: 13,
-                            color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                            color: isLight
+                                ? AppColors.textHint
+                                : AppColors.darkTextSecondary,
                           ),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              description.isNotEmpty ? description : '$expenseCount عملية',
+                              description.isNotEmpty
+                                  ? description
+                                  : '$expenseCount عملية',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+                                color: isLight
+                                    ? AppColors.textSecondary
+                                    : AppColors.darkTextSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -469,18 +492,27 @@ class _ExpenseCard extends StatelessWidget {
 
                 // ── Balance Section (gradient badge) ────────────
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: totalBalance != 0
-                          ? [balanceColor.withValues(alpha: 0.12), balanceColor.withValues(alpha: 0.04)]
-                          : [Colors.grey.withValues(alpha: 0.06), Colors.grey.withValues(alpha: 0.02)],
+                          ? [
+                              balanceColor.withValues(alpha: 0.12),
+                              balanceColor.withValues(alpha: 0.04)
+                            ]
+                          : [
+                              Colors.grey.withValues(alpha: 0.06),
+                              Colors.grey.withValues(alpha: 0.02)
+                            ],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: totalBalance != 0 ? balanceColor.withValues(alpha: 0.25) : AppColors.border.withValues(alpha: 0.3),
+                      color: totalBalance != 0
+                          ? balanceColor.withValues(alpha: 0.25)
+                          : AppColors.border.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -488,9 +520,15 @@ class _ExpenseCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isDebit ? Icons.trending_up : isCredit ? Icons.trending_down : Icons.remove,
+                        isDebit
+                            ? Icons.trending_up
+                            : isCredit
+                                ? Icons.trending_down
+                                : Icons.remove,
                         size: 14,
-                        color: totalBalance != 0 ? balanceColor : AppColors.textHint,
+                        color: totalBalance != 0
+                            ? balanceColor
+                            : AppColors.textHint,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -498,7 +536,9 @@ class _ExpenseCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
-                          color: totalBalance != 0 ? balanceColor : AppColors.textHint,
+                          color: totalBalance != 0
+                              ? balanceColor
+                              : AppColors.textHint,
                         ),
                       ),
                     ],
@@ -511,13 +551,17 @@ class _ExpenseCard extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    color: isLight
+                        ? AppColors.surfaceVariant
+                        : AppColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.arrow_back_ios,
                     size: 12,
-                    color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                    color: isLight
+                        ? AppColors.textHint
+                        : AppColors.darkTextSecondary,
                   ),
                 ),
               ],

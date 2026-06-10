@@ -82,7 +82,9 @@ class InvoiceEntitySection extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                   letterSpacing: 0.3,
-                  color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : const Color(0xFF1E293B),
                 )),
           ),
           if (trailing != null) trailing,
@@ -115,14 +117,21 @@ class InvoiceEntitySection extends StatelessWidget {
             icon: Icons.person_rounded,
             trailing: isEntityRequired
                 ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: AppColors.error.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text('مطلوب', style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.w700)),
+                    child: Text('مطلوب',
+                        style: context.textTheme.labelSmall?.copyWith(
+                            color: AppColors.error,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700)),
                   )
-                : Text('(اختياري)', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint, fontSize: 11)),
+                : Text('(اختياري)',
+                    style: context.textTheme.bodySmall
+                        ?.copyWith(color: AppColors.textHint, fontSize: 11)),
           ),
           // Entity selection field
           GestureDetector(
@@ -131,12 +140,16 @@ class InvoiceEntitySection extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                color: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : AppColors.surfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: showEntityDropdown
                       ? _accentBlue
-                      : (selectedEntityId != null ? _accentBlue.withValues(alpha: 0.3) : (isDark ? AppColors.darkBorder : AppColors.border)),
+                      : (selectedEntityId != null
+                          ? _accentBlue.withValues(alpha: 0.3)
+                          : (isDark ? AppColors.darkBorder : AppColors.border)),
                   width: showEntityDropdown ? 1.5 : 1,
                 ),
               ),
@@ -150,9 +163,13 @@ class InvoiceEntitySection extends StatelessWidget {
                       selectedEntityName ?? 'اختر حساب...',
                       style: context.textTheme.bodyMedium?.copyWith(
                         color: selectedEntityId != null
-                            ? (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)
+                            ? (isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.textPrimary)
                             : AppColors.textHint,
-                        fontWeight: selectedEntityId != null ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight: selectedEntityId != null
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                     ),
                   ),
@@ -165,11 +182,13 @@ class InvoiceEntitySection extends StatelessWidget {
                           color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.close_rounded, size: 14, color: AppColors.error),
+                        child: const Icon(Icons.close_rounded,
+                            size: 14, color: AppColors.error),
                       ),
                     )
                   else
-                    Icon(Icons.arrow_drop_down_rounded, size: 22, color: _accentBlue),
+                    Icon(Icons.arrow_drop_down_rounded,
+                        size: 22, color: _accentBlue),
                 ],
               ),
             ),
@@ -183,7 +202,10 @@ class InvoiceEntitySection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: _accentBlue.withValues(alpha: 0.2)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
@@ -197,19 +219,28 @@ class InvoiceEntitySection extends StatelessWidget {
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: 'بحث عن حساب...',
-                        prefixIcon: Icon(Icons.search_rounded, size: 18, color: _accentBlue),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        prefixIcon: Icon(Icons.search_rounded,
+                            size: 18, color: _accentBlue),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
+                          borderSide: BorderSide(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.border),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: _accentBlue, width: 1.5),
+                          borderSide:
+                              BorderSide(color: _accentBlue, width: 1.5),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
                         filled: true,
-                        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : AppColors.surfaceVariant.withValues(alpha: 0.3),
                       ),
                       onChanged: onFilterEntities,
                     ),
@@ -219,9 +250,14 @@ class InvoiceEntitySection extends StatelessWidget {
                     onTap: onAddNewEntity,
                     borderRadius: BorderRadius.circular(0),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        border: Border(top: BorderSide(color: isDark ? AppColors.darkDivider : AppColors.divider)),
+                        border: Border(
+                            top: BorderSide(
+                                color: isDark
+                                    ? AppColors.darkDivider
+                                    : AppColors.divider)),
                       ),
                       child: Row(
                         children: [
@@ -232,7 +268,8 @@ class InvoiceEntitySection extends StatelessWidget {
                               gradient: _primaryGradient,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                            child: const Icon(Icons.add_rounded,
+                                size: 16, color: Colors.white),
                           ),
                           const SizedBox(width: 10),
                           Text(
@@ -253,19 +290,30 @@ class InvoiceEntitySection extends StatelessWidget {
                       shrinkWrap: true,
                       padding: EdgeInsets.zero,
                       itemCount: filteredEntities.length,
-                      separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? AppColors.darkDivider : AppColors.divider),
+                      separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: isDark
+                              ? AppColors.darkDivider
+                              : AppColors.divider),
                       itemBuilder: (context, index) {
                         final entity = filteredEntities[index];
-                        final isSelected = selectedEntityId == entity['id'] && selectedEntityType == entity['type'];
+                        final isSelected = selectedEntityId == entity['id'] &&
+                            selectedEntityType == entity['type'];
                         final isCustomer = entity['type'] == 'customer';
-                        final balance = MoneyHelper.readMoney(entity['balance']);
-                        final bt = entity['balance_type'] as String? ?? 'credit';
+                        final balance =
+                            MoneyHelper.readMoney(entity['balance']);
+                        final bt =
+                            entity['balance_type'] as String? ?? 'credit';
 
                         return InkWell(
-                          onTap: () => onEntitySelected(entity['id'] as int, entity['type'] as String),
+                          onTap: () => onEntitySelected(
+                              entity['id'] as int, entity['type'] as String),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            color: isSelected ? _accentBlue.withValues(alpha: 0.06) : null,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            color: isSelected
+                                ? _accentBlue.withValues(alpha: 0.06)
+                                : null,
                             child: Row(
                               children: [
                                 // Avatar circle for entity
@@ -273,35 +321,52 @@ class InvoiceEntitySection extends StatelessWidget {
                                   width: 32,
                                   height: 32,
                                   decoration: BoxDecoration(
-                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withValues(alpha: 0.1),
+                                    color: (isCustomer
+                                            ? AppColors.success
+                                            : const Color(0xFF3B82F6))
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Icon(
-                                    isCustomer ? Icons.person_rounded : Icons.local_shipping_rounded,
+                                    isCustomer
+                                        ? Icons.person_rounded
+                                        : Icons.local_shipping_rounded,
                                     size: 16,
-                                    color: isCustomer ? AppColors.success : const Color(0xFF3B82F6),
+                                    color: isCustomer
+                                        ? AppColors.success
+                                        : const Color(0xFF3B82F6),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     entity['name'] ?? '',
-                                    style: context.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                                    style:
+                                        context.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w400,
                                     ),
                                   ),
                                 ),
                                 if (balance != 0)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: (bt == 'credit' ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
+                                      color: (bt == 'credit'
+                                              ? AppColors.success
+                                              : AppColors.error)
+                                          .withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       '${CurrencyFormatter.format(balance)} ${bt == 'credit' ? 'له' : 'عليه'}',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        color: bt == 'credit' ? AppColors.success : AppColors.error,
+                                      style:
+                                          context.textTheme.bodySmall?.copyWith(
+                                        color: bt == 'credit'
+                                            ? AppColors.success
+                                            : AppColors.error,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -310,15 +375,22 @@ class InvoiceEntitySection extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 // Type badge
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: (isCustomer ? AppColors.success : const Color(0xFF3B82F6)).withValues(alpha: 0.1),
+                                    color: (isCustomer
+                                            ? AppColors.success
+                                            : const Color(0xFF3B82F6))
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     isCustomer ? 'عميل' : 'مورد',
-                                    style: context.textTheme.labelSmall?.copyWith(
-                                      color: isCustomer ? AppColors.success : const Color(0xFF3B82F6),
+                                    style:
+                                        context.textTheme.labelSmall?.copyWith(
+                                      color: isCustomer
+                                          ? AppColors.success
+                                          : const Color(0xFF3B82F6),
                                       fontSize: 9,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -335,14 +407,19 @@ class InvoiceEntitySection extends StatelessWidget {
               ),
             ),
           ],
-          if (isEntityRequired && selectedEntityId == null && paymentMechanism == 'credit')
+          if (isEntityRequired &&
+              selectedEntityId == null &&
+              paymentMechanism == 'credit')
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline_rounded, size: 12, color: AppColors.error),
+                  Icon(Icons.error_outline_rounded,
+                      size: 12, color: AppColors.error),
                   const SizedBox(width: 4),
-                  Text('الحساب مطلوب للفاتورة الآجلة', style: context.textTheme.bodySmall?.copyWith(color: AppColors.error, fontSize: 11)),
+                  Text('الحساب مطلوب للفاتورة الآجلة',
+                      style: context.textTheme.bodySmall
+                          ?.copyWith(color: AppColors.error, fontSize: 11)),
                 ],
               ),
             ),
@@ -358,10 +435,13 @@ class InvoiceEntitySection extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+          color: (isDark
+              ? AppColors.darkSurfaceVariant
+              : AppColors.surfaceVariant),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(Icons.person_outline_rounded, size: 18, color: AppColors.textHint),
+        child: Icon(Icons.person_outline_rounded,
+            size: 18, color: AppColors.textHint),
       );
     }
     final isCustomer = selectedEntityType == 'customer';
@@ -381,7 +461,9 @@ class InvoiceEntitySection extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: (isCustomer ? const Color(0xFF22C55E) : const Color(0xFF3B82F6)).withValues(alpha: 0.25),
+            color:
+                (isCustomer ? const Color(0xFF22C55E) : const Color(0xFF3B82F6))
+                    .withValues(alpha: 0.25),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -389,7 +471,10 @@ class InvoiceEntitySection extends StatelessWidget {
       ),
       child: Center(
         child: Text(initial,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 14)),
       ),
     );
   }

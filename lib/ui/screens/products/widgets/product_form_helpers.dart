@@ -146,7 +146,8 @@ class ProductSearchableDropdown extends StatelessWidget {
       controller: TextEditingController(
         text: selectedId != null
             ? (items.where((i) => i[idKey] == selectedId).isNotEmpty
-                ? items.firstWhere((i) => i[idKey] == selectedId)[nameKey] as String
+                ? items.firstWhere((i) => i[idKey] == selectedId)[nameKey]
+                    as String
                 : '')
             : '',
       ),
@@ -240,10 +241,12 @@ class ProductSearchableDropdown extends StatelessWidget {
                               dense: true,
                               title: Text(name),
                               trailing: isSelected
-                                  ? const Icon(Icons.check, color: AppColors.primary)
+                                  ? const Icon(Icons.check,
+                                      color: AppColors.primary)
                                   : null,
                               selected: isSelected,
-                              selectedTileColor: AppColors.primary.withValues(alpha: 0.05),
+                              selectedTileColor:
+                                  AppColors.primary.withValues(alpha: 0.05),
                               onTap: () {
                                 onChanged?.call(id);
                                 Navigator.of(dialogContext).pop();

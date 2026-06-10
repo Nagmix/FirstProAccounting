@@ -135,8 +135,12 @@ class ReportDataLoader {
       totalPaid += paid;
       totalRemaining += remaining;
       return {
-        'رقم الفاتورة': () { final idStr = (r['id'] as String?) ?? ''; return idStr.length > 12 ? idStr.substring(0, 12) : idStr; }(),
-        'النوع': invoiceTypeAr(r['type'] as String? ?? '', isReturn: r['is_return'] as int?),
+        'رقم الفاتورة': () {
+          final idStr = (r['id'] as String?) ?? '';
+          return idStr.length > 12 ? idStr.substring(0, 12) : idStr;
+        }(),
+        'النوع': invoiceTypeAr(r['type'] as String? ?? '',
+            isReturn: r['is_return'] as int?),
         'الجهة': r['entity_name'] as String? ?? '',
         'الإجمالي': total,
         'المدفوع': paid,
@@ -145,11 +149,17 @@ class ReportDataLoader {
         'التاريخ': r['created_at'] as String? ?? '',
       };
     }).toList();
-    final totals = {'الإجمالي': totalAmount, 'المدفوع': totalPaid, 'المتبقي': totalRemaining, 'العدد': rows.length.toDouble()};
+    final totals = {
+      'الإجمالي': totalAmount,
+      'المدفوع': totalPaid,
+      'المتبقي': totalRemaining,
+      'العدد': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadProfitLossReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadProfitLossReport(
+      {required ReportFilterParams params}) async {
     final reportData = await locator<ReportService>().getProfitLossReport(
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
@@ -161,8 +171,10 @@ class ReportDataLoader {
     }
     final revenue = MoneyHelper.readCalculatedMoney(dataMap['revenue']);
     final purchases = MoneyHelper.readCalculatedMoney(dataMap['purchases']);
-    final salesReturns = MoneyHelper.readCalculatedMoney(dataMap['sales_returns']);
-    final purchaseReturns = MoneyHelper.readCalculatedMoney(dataMap['purchase_returns']);
+    final salesReturns =
+        MoneyHelper.readCalculatedMoney(dataMap['sales_returns']);
+    final purchaseReturns =
+        MoneyHelper.readCalculatedMoney(dataMap['purchase_returns']);
     final expenses = MoneyHelper.readCalculatedMoney(dataMap['expenses']);
     final cogs = MoneyHelper.readCalculatedMoney(dataMap['cogs']);
 
@@ -175,19 +187,41 @@ class ReportDataLoader {
 
     final rows = [
       {'البند': 'إجمالي المبيعات', 'المبلغ': revenue, 'ملاحظة': 'فواتير البيع'},
-      {'البند': 'مرتجعات المبيعات', 'المبلغ': -salesReturns, 'ملاحظة': 'فواتير المرتجع'},
+      {
+        'البند': 'مرتجعات المبيعات',
+        'المبلغ': -salesReturns,
+        'ملاحظة': 'فواتير المرتجع'
+      },
       {'البند': 'صافي المبيعات', 'المبلغ': netSales, 'ملاحظة': ''},
-      {'البند': 'تكلفة البضاعة المباعة', 'المبلغ': cogs, 'ملاحظة': 'محسوبة من تكلفة الأصناف المباعة'},
-      {'البند': 'مجمل الربح', 'المبلغ': grossProfit, 'ملاحظة': 'صافي المبيعات - تكلفة البضاعة'},
+      {
+        'البند': 'تكلفة البضاعة المباعة',
+        'المبلغ': cogs,
+        'ملاحظة': 'محسوبة من تكلفة الأصناف المباعة'
+      },
+      {
+        'البند': 'مجمل الربح',
+        'المبلغ': grossProfit,
+        'ملاحظة': 'صافي المبيعات - تكلفة البضاعة'
+      },
       {'البند': 'المصاريف التشغيلية', 'المبلغ': -expenses, 'ملاحظة': ''},
-      {'البند': 'صافي الربح', 'المبلغ': netProfit, 'ملاحظة': 'مجمل الربح - المصاريف'},
+      {
+        'البند': 'صافي الربح',
+        'المبلغ': netProfit,
+        'ملاحظة': 'مجمل الربح - المصاريف'
+      },
     ];
-    final totals = {'صافي المبيعات': netSales, 'تكلفة البضاعة': cogs, 'صافي الربح': netProfit};
+    final totals = {
+      'صافي المبيعات': netSales,
+      'تكلفة البضاعة': cogs,
+      'صافي الربح': netProfit
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadInvoiceProfitReport({required ReportFilterParams params}) async {
-    final items = await locator<ReportService>().getInvoiceProfitReport(startDate: params.dateFrom, endDate: params.dateTo);
+  static Future<ReportLoadResult> _loadInvoiceProfitReport(
+      {required ReportFilterParams params}) async {
+    final items = await locator<ReportService>().getInvoiceProfitReport(
+        startDate: params.dateFrom, endDate: params.dateTo);
     double totalProfit = 0, totalRevenue = 0, totalCost = 0;
     final rows = items.map((item) {
       final profit = MoneyHelper.readCalculatedMoney(item['profit']);
@@ -208,11 +242,17 @@ class ReportDataLoader {
         'التاريخ': item['created_at'] as String? ?? '',
       };
     }).toList();
-    final totals = {'إجمالي الإيرادات': totalRevenue, 'إجمالي التكلفة': totalCost, 'إجمالي الربح': totalProfit, 'العدد': rows.length.toDouble()};
+    final totals = {
+      'إجمالي الإيرادات': totalRevenue,
+      'إجمالي التكلفة': totalCost,
+      'إجمالي الربح': totalProfit,
+      'العدد': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadSalesByProductReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadSalesByProductReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getSalesByProductReport(
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
@@ -240,11 +280,18 @@ class ReportDataLoader {
         'عدد الفواتير': (r['inv_count'] as num?)?.toInt() ?? 0,
       };
     }).toList();
-    final totals = {'إجمالي المبيعات': totalRevenue, 'إجمالي التكلفة': totalCost, 'إجمالي الربح': totalProfit, 'إجمالي الكمية': totalQty.toDouble(), 'عدد الأصناف': rows.length.toDouble()};
+    final totals = {
+      'إجمالي المبيعات': totalRevenue,
+      'إجمالي التكلفة': totalCost,
+      'إجمالي الربح': totalProfit,
+      'إجمالي الكمية': totalQty.toDouble(),
+      'عدد الأصناف': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadSalesByCustomerReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadSalesByCustomerReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getSalesByCustomerReport(
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
@@ -263,18 +310,26 @@ class ReportDataLoader {
         'المتبقي': MoneyHelper.readCalculatedMoney(r['total_remaining']),
       };
     }).toList();
-    final totals = {'إجمالي المبيعات': totalSales, 'عدد العملاء': rows.length.toDouble()};
+    final totals = {
+      'إجمالي المبيعات': totalSales,
+      'عدد العملاء': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadAccountMovementReport({required ReportFilterParams params}) async {
-    if (params.selectedAccountId == null) return const ReportLoadResult(rows: [], totals: {});
-    final transactions = await locator<ReportService>().getAccountMovementReport(
+  static Future<ReportLoadResult> _loadAccountMovementReport(
+      {required ReportFilterParams params}) async {
+    if (params.selectedAccountId == null) {
+      return const ReportLoadResult(rows: [], totals: {});
+    }
+    final transactions =
+        await locator<ReportService>().getAccountMovementReport(
       accountId: params.selectedAccountId!,
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
     );
-    final balanceType = await locator<ReportService>().getAccountBalanceType(params.selectedAccountId!);
+    final balanceType = await locator<ReportService>()
+        .getAccountBalanceType(params.selectedAccountId!);
     final isDebitNature = balanceType == 'debit';
 
     double running = 0;
@@ -298,14 +353,23 @@ class ReportDataLoader {
         'الرصيد': running,
       });
     }
-    final totals = {'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'العدد': rows.length.toDouble()};
+    final totals = {
+      'مدين': totalDebit,
+      'دائن': totalCredit,
+      'الرصيد': running,
+      'العدد': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadAllAccountMovementReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadAllAccountMovementReport(
+      {required ReportFilterParams params}) async {
     String? typeCode;
     if (params.selectedAccountType != 'الكل') {
-      typeCode = accountTypes.firstWhere((e) => e.key == params.selectedAccountType, orElse: () => const MapEntry('الكل', 'الكل')).value;
+      typeCode = accountTypes
+          .firstWhere((e) => e.key == params.selectedAccountType,
+              orElse: () => const MapEntry('الكل', 'الكل'))
+          .value;
       if (typeCode == 'الكل') typeCode = null;
     }
     final allTx = await locator<ReportService>().getAllAccountMovementReport(
@@ -330,14 +394,22 @@ class ReportDataLoader {
         'العملة': tx['currency'] as String? ?? 'YER',
       };
     }).toList();
-    final totals = {'مدين': totalDebit, 'دائن': totalCredit, 'العدد': rows.length.toDouble()};
+    final totals = {
+      'مدين': totalDebit,
+      'دائن': totalCredit,
+      'العدد': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadTrialBalanceReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadTrialBalanceReport(
+      {required ReportFilterParams params}) async {
     String? typeCode;
     if (params.selectedAccountType != 'الكل') {
-      typeCode = accountTypes.firstWhere((e) => e.key == params.selectedAccountType, orElse: () => const MapEntry('الكل', 'الكل')).value;
+      typeCode = accountTypes
+          .firstWhere((e) => e.key == params.selectedAccountType,
+              orElse: () => const MapEntry('الكل', 'الكل'))
+          .value;
       if (typeCode == 'الكل') typeCode = null;
     }
     final results = await locator<ReportService>().getTrialBalanceReport(
@@ -361,11 +433,17 @@ class ReportDataLoader {
         'دائن': credit,
       };
     }).toList();
-    final totals = {'مدين': totalDebit, 'دائن': totalCredit, 'الفرق': (totalDebit - totalCredit).abs(), 'عدد الحسابات': rows.length.toDouble()};
+    final totals = {
+      'مدين': totalDebit,
+      'دائن': totalCredit,
+      'الفرق': (totalDebit - totalCredit).abs(),
+      'عدد الحسابات': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadCashBoxReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadCashBoxReport(
+      {required ReportFilterParams params}) async {
     final cashBoxes = await locator<ReportService>().getCashBoxesReport(
       currency: currencyCode(params.selectedCurrency),
       cashBoxId: params.selectedCashBoxId,
@@ -380,7 +458,8 @@ class ReportDataLoader {
       final signedBalance = isCredit ? balance : -balance;
       totalBalance += signedBalance;
       final salesTotal = MoneyHelper.readCalculatedMoney(cb['sales_total']);
-      final purchaseTotal = MoneyHelper.readCalculatedMoney(cb['purchase_total']);
+      final purchaseTotal =
+          MoneyHelper.readCalculatedMoney(cb['purchase_total']);
       rows.add({
         'الصندوق': cb['name'] as String? ?? '',
         'النوع': cb['type'] == 'bank' ? 'بنك' : 'صندوق',
@@ -391,30 +470,43 @@ class ReportDataLoader {
         'المشتريات': purchaseTotal,
       });
     }
-    final totals = {'إجمالي الأرصدة': totalBalance.abs(), 'عدد الصناديق': rows.length.toDouble()};
+    final totals = {
+      'إجمالي الأرصدة': totalBalance.abs(),
+      'عدد الصناديق': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadAccountsWithoutMovementReport({required ReportFilterParams params}) async {
-    final accounts = await locator<ReportService>().getAccountsWithoutMovementReport(
+  static Future<ReportLoadResult> _loadAccountsWithoutMovementReport(
+      {required ReportFilterParams params}) async {
+    final accounts =
+        await locator<ReportService>().getAccountsWithoutMovementReport(
       currency: currencyCode(params.selectedCurrency),
-      accountType: params.selectedAccountType != 'الكل' ? params.selectedAccountType : null,
+      accountType: params.selectedAccountType != 'الكل'
+          ? params.selectedAccountType
+          : null,
     );
-    final rows = accounts.map((a) => {
-      'كود الحساب': a['account_code'] as String? ?? '',
-      'اسم الحساب': a['name_ar'] as String? ?? '',
-      'نوع الحساب': accountTypeAr(a['account_type'] as String? ?? ''),
-      'العملة': a['currency'] as String? ?? 'YER',
-    }).toList();
+    final rows = accounts
+        .map((a) => {
+              'كود الحساب': a['account_code'] as String? ?? '',
+              'اسم الحساب': a['name_ar'] as String? ?? '',
+              'نوع الحساب': accountTypeAr(a['account_type'] as String? ?? ''),
+              'العملة': a['currency'] as String? ?? 'YER',
+            })
+        .toList();
     final totals = {'العدد': rows.length.toDouble()};
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
   /// OPTIMIZED: Replaced getAllCustomers() (fetch ALL) with
   /// getCustomerById(id) (fetch ONE by primary key).
-  static Future<ReportLoadResult> _loadCustomerStatementReport({required ReportFilterParams params}) async {
-    if (params.selectedCustomerId == null) return const ReportLoadResult(rows: [], totals: {});
-    final cust = await locator<CustomerRepository>().getCustomerById(params.selectedCustomerId!);
+  static Future<ReportLoadResult> _loadCustomerStatementReport(
+      {required ReportFilterParams params}) async {
+    if (params.selectedCustomerId == null) {
+      return const ReportLoadResult(rows: [], totals: {});
+    }
+    final cust = await locator<CustomerRepository>()
+        .getCustomerById(params.selectedCustomerId!);
     final custName = cust?['name'] as String? ?? '';
     final custCurrency = cust?['currency'] as String? ?? 'YER';
 
@@ -440,7 +532,12 @@ class ReportDataLoader {
         'الرصيد': running,
       };
     }).toList();
-    final totals = <String, double>{'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'العميل': 0};
+    final totals = <String, double>{
+      'مدين': totalDebit,
+      'دائن': totalCredit,
+      'الرصيد': running,
+      'العميل': 0
+    };
     if (custName.isNotEmpty) {
       totals['اسم العميل'] = 0;
     }
@@ -449,9 +546,13 @@ class ReportDataLoader {
 
   /// OPTIMIZED: Replaced getAllSuppliers() (fetch ALL) with
   /// getSupplierById(id) (fetch ONE by primary key).
-  static Future<ReportLoadResult> _loadSupplierStatementReport({required ReportFilterParams params}) async {
-    if (params.selectedSupplierId == null) return const ReportLoadResult(rows: [], totals: {});
-    final sup = await locator<SupplierRepository>().getSupplierById(params.selectedSupplierId!);
+  static Future<ReportLoadResult> _loadSupplierStatementReport(
+      {required ReportFilterParams params}) async {
+    if (params.selectedSupplierId == null) {
+      return const ReportLoadResult(rows: [], totals: {});
+    }
+    final sup = await locator<SupplierRepository>()
+        .getSupplierById(params.selectedSupplierId!);
     final supName = sup?['name'] as String? ?? '';
     final supCurrency = sup?['currency'] as String? ?? 'YER';
 
@@ -479,14 +580,20 @@ class ReportDataLoader {
         'الرصيد': running,
       };
     }).toList();
-    final totals = <String, double>{'مدين': totalDebit, 'دائن': totalCredit, 'الرصيد': running, 'المورد': 0};
+    final totals = <String, double>{
+      'مدين': totalDebit,
+      'دائن': totalCredit,
+      'الرصيد': running,
+      'المورد': 0
+    };
     if (supName.isNotEmpty) {
       totals['اسم المورد'] = 0;
     }
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadExpensesReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadExpensesReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getExpensesReport(
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
@@ -506,11 +613,15 @@ class ReportDataLoader {
         'المستفيد': r['beneficiary'] as String? ?? '',
       };
     }).toList();
-    final totals = {'إجمالي المصروفات': totalAmount, 'العدد': rows.length.toDouble()};
+    final totals = {
+      'إجمالي المصروفات': totalAmount,
+      'العدد': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadInventoryReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadInventoryReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getInventoryReport(
       warehouseId: params.selectedWarehouseId,
       categoryId: params.selectedCategoryId,
@@ -533,14 +644,19 @@ class ReportDataLoader {
         'الفئة': p['category_name'] as String? ?? '',
       };
     }).toList();
-    final totals = {'قيمة المخزون': totalValue, 'عدد الأصناف': rows.length.toDouble()};
+    final totals = {
+      'قيمة المخزون': totalValue,
+      'عدد الأصناف': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
   /// OPTIMIZED: Compute totals in a single pass while building rows,
   /// instead of building rows first then .fold() again for totals.
-  static Future<ReportLoadResult> _loadInventoryMovementReport({required ReportFilterParams params}) async {
-    final items = await locator<ReportService>().getInventoryMovementReport(startDate: params.dateFrom, endDate: params.dateTo);
+  static Future<ReportLoadResult> _loadInventoryMovementReport(
+      {required ReportFilterParams params}) async {
+    final items = await locator<ReportService>().getInventoryMovementReport(
+        startDate: params.dateFrom, endDate: params.dateTo);
     double totalIn = 0, totalOut = 0, totalRevenue = 0, totalCost = 0;
     final rows = items.map((item) {
       final qtyIn = (item['qty_in'] as num?)?.toDouble() ?? 0.0;
@@ -560,7 +676,13 @@ class ReportDataLoader {
         'إجمالي المشتريات': cost,
       };
     }).toList();
-    final totals = {'إجمالي الوارد': totalIn, 'إجمالي الصادر': totalOut, 'الصافي': totalIn - totalOut, 'إجمالي المبيعات': totalRevenue, 'إجمالي المشتريات': totalCost};
+    final totals = {
+      'إجمالي الوارد': totalIn,
+      'إجمالي الصادر': totalOut,
+      'الصافي': totalIn - totalOut,
+      'إجمالي المبيعات': totalRevenue,
+      'إجمالي المشتريات': totalCost
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
@@ -584,28 +706,36 @@ class ReportDataLoader {
         'المخزن': item['warehouse_name'] as String? ?? '',
       };
     }).toList();
-    final totals = {'تكلفة المخزون': totalCost, 'قيمة البيع': totalSell, 'الربح المتوقع': totalSell - totalCost};
+    final totals = {
+      'تكلفة المخزون': totalCost,
+      'قيمة البيع': totalSell,
+      'الربح المتوقع': totalSell - totalCost
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadOutOfStockReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadOutOfStockReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getOutOfStockReport(
       warehouseId: params.selectedWarehouseId,
       categoryId: params.selectedCategoryId,
     );
-    final rows = results.map((p) => {
-      'الصنف': p['name_ar'] as String? ?? '',
-      'الباركود': p['barcode'] as String? ?? '',
-      'سعر التكلفة': MoneyHelper.readCalculatedMoney(p['cost_price']),
-      'سعر البيع': MoneyHelper.readCalculatedMoney(p['sell_price']),
-      'المخزن': p['warehouse_name'] as String? ?? '',
-      'الفئة': p['category_name'] as String? ?? '',
-    }).toList();
+    final rows = results
+        .map((p) => {
+              'الصنف': p['name_ar'] as String? ?? '',
+              'الباركود': p['barcode'] as String? ?? '',
+              'سعر التكلفة': MoneyHelper.readCalculatedMoney(p['cost_price']),
+              'سعر البيع': MoneyHelper.readCalculatedMoney(p['sell_price']),
+              'المخزن': p['warehouse_name'] as String? ?? '',
+              'الفئة': p['category_name'] as String? ?? '',
+            })
+        .toList();
     final totals = {'العدد': rows.length.toDouble()};
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadLowStockReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadLowStockReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getLowStockReport(
       warehouseId: params.selectedWarehouseId,
       categoryId: params.selectedCategoryId,
@@ -631,7 +761,8 @@ class ReportDataLoader {
   /// OPTIMIZED: Replaced getAllCustomers/getAllSuppliers (fetch ALL) +
   /// Dart-side `balance > 0` filter with direct SQL WHERE balance > 0
   /// via ReportService.getCustomerDebts/getSupplierDebts.
-  static Future<ReportLoadResult> _loadDebtReport({required bool isCustomer}) async {
+  static Future<ReportLoadResult> _loadDebtReport(
+      {required bool isCustomer}) async {
     final rows = <Map<String, dynamic>>[];
     double totalBalance = 0;
     if (isCustomer) {
@@ -642,7 +773,9 @@ class ReportDataLoader {
         rows.add({
           'الاسم': c['name'] as String? ?? '',
           'الرصيد': balance,
-          'نوع الرصيد': (c['balance_type'] as String? ?? 'credit') == 'credit' ? 'له (علينا)' : 'عليه (لنا)',
+          'نوع الرصيد': (c['balance_type'] as String? ?? 'credit') == 'credit'
+              ? 'له (علينا)'
+              : 'عليه (لنا)',
           'العملة': c['currency'] as String? ?? 'YER',
           'الهاتف': c['phone'] as String? ?? '',
           'سقف الدين': MoneyHelper.readMoney(c['debt_ceiling']),
@@ -665,11 +798,15 @@ class ReportDataLoader {
         });
       }
     }
-    final totals = {'إجمالي الديون': totalBalance, 'العدد': rows.length.toDouble()};
+    final totals = {
+      'إجمالي الديون': totalBalance,
+      'العدد': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadCashTransfersReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadCashTransfersReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getCashTransfersReport(
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
@@ -687,30 +824,37 @@ class ReportDataLoader {
         'ملاحظات': r['notes'] as String? ?? '',
       };
     }).toList();
-    final totals = {'إجمالي المبالغ': totalAmount, 'العدد': rows.length.toDouble()};
+    final totals = {
+      'إجمالي المبالغ': totalAmount,
+      'العدد': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadCurrencyExchangesReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadCurrencyExchangesReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getCurrencyExchangesReport(
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
     );
-    final rows = results.map((r) => {
-      'من عملة': r['from_currency'] as String? ?? '',
-      'إلى عملة': r['to_currency'] as String? ?? '',
-      'المبلغ المصروف': MoneyHelper.readMoney(r['from_amount']),
-      'المبلغ المستلم': MoneyHelper.readMoney(r['to_amount']),
-      'سعر الصرف': (r['exchange_rate'] as num?)?.toDouble() ?? 0,
-      'من صندوق': r['from_name'] as String? ?? '',
-      'إلى صندوق': r['to_name'] as String? ?? '',
-      'التاريخ': r['created_at'] as String? ?? '',
-    }).toList();
+    final rows = results
+        .map((r) => {
+              'من عملة': r['from_currency'] as String? ?? '',
+              'إلى عملة': r['to_currency'] as String? ?? '',
+              'المبلغ المصروف': MoneyHelper.readMoney(r['from_amount']),
+              'المبلغ المستلم': MoneyHelper.readMoney(r['to_amount']),
+              'سعر الصرف': (r['exchange_rate'] as num?)?.toDouble() ?? 0,
+              'من صندوق': r['from_name'] as String? ?? '',
+              'إلى صندوق': r['to_name'] as String? ?? '',
+              'التاريخ': r['created_at'] as String? ?? '',
+            })
+        .toList();
     final totals = {'العدد': rows.length.toDouble()};
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
-  static Future<ReportLoadResult> _loadVouchersReport({required ReportFilterParams params}) async {
+  static Future<ReportLoadResult> _loadVouchersReport(
+      {required ReportFilterParams params}) async {
     final results = await locator<ReportService>().getVouchersReport(
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
@@ -722,9 +866,14 @@ class ReportDataLoader {
       final vType = r['voucher_type'] as String? ?? '';
       String typeAr;
       switch (vType) {
-        case 'receipt': typeAr = 'سند قبض'; break;
-        case 'payment': typeAr = 'سند صرف'; break;
-        default: typeAr = vType;
+        case 'receipt':
+          typeAr = 'سند قبض';
+          break;
+        case 'payment':
+          typeAr = 'سند صرف';
+          break;
+        default:
+          typeAr = vType;
       }
       return {
         'رقم السند': r['voucher_number'] as String? ?? '',
@@ -736,23 +885,29 @@ class ReportDataLoader {
         'التاريخ': r['date'] as String? ?? '',
       };
     }).toList();
-    final totals = {'إجمالي المبالغ': totalAmount, 'العدد': rows.length.toDouble()};
+    final totals = {
+      'إجمالي المبالغ': totalAmount,
+      'العدد': rows.length.toDouble()
+    };
     return ReportLoadResult(rows: rows, totals: totals);
   }
 
   static Future<ReportLoadResult> _loadShiftsReport() async {
     final results = await locator<ReportService>().getShiftsReport();
-    final rows = results.map((r) => {
-      'رقم الوردية': r['shift_number'] as String? ?? '',
-      'الكاشير': r['cashier_name'] as String? ?? '',
-      'الصندوق': r['cash_box_name'] as String? ?? '',
-      'المبيعات': MoneyHelper.readMoney(r['total_sales']),
-      'المرتجعات': MoneyHelper.readMoney(r['total_returns']),
-      'الخصومات': MoneyHelper.readMoney(r['total_discounts']),
-      'الحالة': (r['status'] as String? ?? '') == 'open' ? 'مفتوحة' : 'مغلقة',
-      'تاريخ الفتح': r['opened_at'] as String? ?? '',
-      'تاريخ الإغلاق': r['closed_at'] as String? ?? '',
-    }).toList();
+    final rows = results
+        .map((r) => {
+              'رقم الوردية': r['shift_number'] as String? ?? '',
+              'الكاشير': r['cashier_name'] as String? ?? '',
+              'الصندوق': r['cash_box_name'] as String? ?? '',
+              'المبيعات': MoneyHelper.readMoney(r['total_sales']),
+              'المرتجعات': MoneyHelper.readMoney(r['total_returns']),
+              'الخصومات': MoneyHelper.readMoney(r['total_discounts']),
+              'الحالة':
+                  (r['status'] as String? ?? '') == 'open' ? 'مفتوحة' : 'مغلقة',
+              'تاريخ الفتح': r['opened_at'] as String? ?? '',
+              'تاريخ الإغلاق': r['closed_at'] as String? ?? '',
+            })
+        .toList();
     final totals = {'العدد': rows.length.toDouble()};
     return ReportLoadResult(rows: rows, totals: totals);
   }

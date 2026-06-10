@@ -13,17 +13,21 @@ class OrderRepository {
   //  Quotation CRUD methods
   // ══════════════════════════════════════════════════════════════
 
-  Future<void> insertQuotationWithItems(Map<String, dynamic> quotationMap, List<Map<String, dynamic>> items) async {
+  Future<void> insertQuotationWithItems(Map<String, dynamic> quotationMap,
+      List<Map<String, dynamic>> items) async {
     final db = await _db;
     await db.transaction((txn) async {
-      await txn.insert('quotations', MoneyHelper.toCentsMap(quotationMap, MoneyHelper.orderMoneyFields));
+      await txn.insert('quotations',
+          MoneyHelper.toCentsMap(quotationMap, MoneyHelper.orderMoneyFields));
       for (final item in items) {
-        await txn.insert('quotation_items', MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
+        await txn.insert('quotation_items',
+            MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
       }
     });
   }
 
-  Future<List<Map<String, dynamic>>> getAllQuotations({String orderBy = 'created_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllQuotations(
+      {String orderBy = 'created_at DESC'}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT q.*, COALESCE(c.name, 'بدون عميل') AS customer_name
@@ -33,7 +37,8 @@ class OrderRepository {
     ''');
   }
 
-  Future<List<Map<String, dynamic>>> getQuotationsByStatus(String status) async {
+  Future<List<Map<String, dynamic>>> getQuotationsByStatus(
+      String status) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT q.*, COALESCE(c.name, 'بدون عميل') AS customer_name
@@ -46,23 +51,30 @@ class OrderRepository {
 
   Future<Map<String, dynamic>?> getQuotationById(String id) async {
     final db = await _db;
-    final results = await db.query('quotations', where: 'id = ?', whereArgs: [id], limit: 1);
+    final results = await db.query('quotations',
+        where: 'id = ?', whereArgs: [id], limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 
-  Future<List<Map<String, dynamic>>> getQuotationItems(String quotationId) async {
+  Future<List<Map<String, dynamic>>> getQuotationItems(
+      String quotationId) async {
     final db = await _db;
-    return await db.query('quotation_items', where: 'quotation_id = ?', whereArgs: [quotationId]);
+    return await db.query('quotation_items',
+        where: 'quotation_id = ?', whereArgs: [quotationId]);
   }
 
-  Future<int> updateQuotation(String id, Map<String, dynamic> quotationMap) async {
+  Future<int> updateQuotation(
+      String id, Map<String, dynamic> quotationMap) async {
     final db = await _db;
-    return await db.update('quotations', MoneyHelper.toCentsMap(quotationMap, MoneyHelper.orderMoneyFields), where: 'id = ?', whereArgs: [id]);
+    return await db.update('quotations',
+        MoneyHelper.toCentsMap(quotationMap, MoneyHelper.orderMoneyFields),
+        where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteQuotation(String id) async {
     final db = await _db;
-    await db.delete('quotation_items', where: 'quotation_id = ?', whereArgs: [id]);
+    await db
+        .delete('quotation_items', where: 'quotation_id = ?', whereArgs: [id]);
     return await db.delete('quotations', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -82,17 +94,21 @@ class OrderRepository {
   //  Purchase Order CRUD methods
   // ══════════════════════════════════════════════════════════════
 
-  Future<void> insertPurchaseOrderWithItems(Map<String, dynamic> poMap, List<Map<String, dynamic>> items) async {
+  Future<void> insertPurchaseOrderWithItems(
+      Map<String, dynamic> poMap, List<Map<String, dynamic>> items) async {
     final db = await _db;
     await db.transaction((txn) async {
-      await txn.insert('purchase_orders', MoneyHelper.toCentsMap(poMap, MoneyHelper.orderMoneyFields));
+      await txn.insert('purchase_orders',
+          MoneyHelper.toCentsMap(poMap, MoneyHelper.orderMoneyFields));
       for (final item in items) {
-        await txn.insert('purchase_order_items', MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
+        await txn.insert('purchase_order_items',
+            MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
       }
     });
   }
 
-  Future<List<Map<String, dynamic>>> getAllPurchaseOrders({String orderBy = 'created_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllPurchaseOrders(
+      {String orderBy = 'created_at DESC'}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT po.*, COALESCE(s.name, 'بدون مورد') AS supplier_name
@@ -102,7 +118,8 @@ class OrderRepository {
     ''');
   }
 
-  Future<List<Map<String, dynamic>>> getPurchaseOrdersByStatus(String status) async {
+  Future<List<Map<String, dynamic>>> getPurchaseOrdersByStatus(
+      String status) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT po.*, COALESCE(s.name, 'بدون مورد') AS supplier_name
@@ -115,23 +132,28 @@ class OrderRepository {
 
   Future<Map<String, dynamic>?> getPurchaseOrderById(String id) async {
     final db = await _db;
-    final results = await db.query('purchase_orders', where: 'id = ?', whereArgs: [id], limit: 1);
+    final results = await db.query('purchase_orders',
+        where: 'id = ?', whereArgs: [id], limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 
   Future<List<Map<String, dynamic>>> getPurchaseOrderItems(String poId) async {
     final db = await _db;
-    return await db.query('purchase_order_items', where: 'purchase_order_id = ?', whereArgs: [poId]);
+    return await db.query('purchase_order_items',
+        where: 'purchase_order_id = ?', whereArgs: [poId]);
   }
 
   Future<int> updatePurchaseOrder(String id, Map<String, dynamic> poMap) async {
     final db = await _db;
-    return await db.update('purchase_orders', MoneyHelper.toCentsMap(poMap, MoneyHelper.orderMoneyFields), where: 'id = ?', whereArgs: [id]);
+    return await db.update('purchase_orders',
+        MoneyHelper.toCentsMap(poMap, MoneyHelper.orderMoneyFields),
+        where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deletePurchaseOrder(String id) async {
     final db = await _db;
-    await db.delete('purchase_order_items', where: 'purchase_order_id = ?', whereArgs: [id]);
+    await db.delete('purchase_order_items',
+        where: 'purchase_order_id = ?', whereArgs: [id]);
     return await db.delete('purchase_orders', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -151,17 +173,21 @@ class OrderRepository {
   //  Sales Order CRUD methods
   // ══════════════════════════════════════════════════════════════
 
-  Future<void> insertSalesOrderWithItems(Map<String, dynamic> soMap, List<Map<String, dynamic>> items) async {
+  Future<void> insertSalesOrderWithItems(
+      Map<String, dynamic> soMap, List<Map<String, dynamic>> items) async {
     final db = await _db;
     await db.transaction((txn) async {
-      await txn.insert('sales_orders', MoneyHelper.toCentsMap(soMap, MoneyHelper.orderMoneyFields));
+      await txn.insert('sales_orders',
+          MoneyHelper.toCentsMap(soMap, MoneyHelper.orderMoneyFields));
       for (final item in items) {
-        await txn.insert('sales_order_items', MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
+        await txn.insert('sales_order_items',
+            MoneyHelper.toCentsMap(item, MoneyHelper.orderItemMoneyFields));
       }
     });
   }
 
-  Future<List<Map<String, dynamic>>> getAllSalesOrders({String orderBy = 'created_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllSalesOrders(
+      {String orderBy = 'created_at DESC'}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT so.*, COALESCE(c.name, 'بدون عميل') AS customer_name
@@ -171,7 +197,8 @@ class OrderRepository {
     ''');
   }
 
-  Future<List<Map<String, dynamic>>> getSalesOrdersByStatus(String status) async {
+  Future<List<Map<String, dynamic>>> getSalesOrdersByStatus(
+      String status) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT so.*, COALESCE(c.name, 'بدون عميل') AS customer_name
@@ -184,23 +211,28 @@ class OrderRepository {
 
   Future<Map<String, dynamic>?> getSalesOrderById(String id) async {
     final db = await _db;
-    final results = await db.query('sales_orders', where: 'id = ?', whereArgs: [id], limit: 1);
+    final results = await db.query('sales_orders',
+        where: 'id = ?', whereArgs: [id], limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 
   Future<List<Map<String, dynamic>>> getSalesOrderItems(String soId) async {
     final db = await _db;
-    return await db.query('sales_order_items', where: 'sales_order_id = ?', whereArgs: [soId]);
+    return await db.query('sales_order_items',
+        where: 'sales_order_id = ?', whereArgs: [soId]);
   }
 
   Future<int> updateSalesOrder(String id, Map<String, dynamic> soMap) async {
     final db = await _db;
-    return await db.update('sales_orders', MoneyHelper.toCentsMap(soMap, MoneyHelper.orderMoneyFields), where: 'id = ?', whereArgs: [id]);
+    return await db.update('sales_orders',
+        MoneyHelper.toCentsMap(soMap, MoneyHelper.orderMoneyFields),
+        where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteSalesOrder(String id) async {
     final db = await _db;
-    await db.delete('sales_order_items', where: 'sales_order_id = ?', whereArgs: [id]);
+    await db.delete('sales_order_items',
+        where: 'sales_order_id = ?', whereArgs: [id]);
     return await db.delete('sales_orders', where: 'id = ?', whereArgs: [id]);
   }
 

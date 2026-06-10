@@ -60,7 +60,9 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
         } else {
           // Count closed today
           final closedAt = s['closed_at'] as String?;
-          if (closedAt != null && closedAt.length >= 10 && closedAt.substring(0, 10) == todayStr) {
+          if (closedAt != null &&
+              closedAt.length >= 10 &&
+              closedAt.substring(0, 10) == todayStr) {
             closedTodayCount++;
           }
         }
@@ -92,9 +94,13 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
   List<Map<String, dynamic>> get _filteredShifts {
     switch (_filter) {
       case 'open':
-        return _allShifts.where((s) => (s['status'] as String?) == 'open').toList();
+        return _allShifts
+            .where((s) => (s['status'] as String?) == 'open')
+            .toList();
       case 'closed':
-        return _allShifts.where((s) => (s['status'] as String?) != 'open').toList();
+        return _allShifts
+            .where((s) => (s['status'] as String?) != 'open')
+            .toList();
       default:
         return _allShifts;
     }
@@ -155,7 +161,10 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.inbox_outlined, size: 56, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                                  Icon(Icons.inbox_outlined,
+                                      size: 56,
+                                      color: AppColors.textTertiary
+                                          .withValues(alpha: 0.5)),
                                   const SizedBox(height: 12),
                                   Text(
                                     _filter == 'open'
@@ -163,14 +172,17 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                                         : _filter == 'closed'
                                             ? 'لا توجد ورديات مغلقة'
                                             : 'لا توجد ورديات',
-                                    style: TextStyle(color: AppColors.textTertiary, fontSize: 16),
+                                    style: TextStyle(
+                                        color: AppColors.textTertiary,
+                                        fontSize: 16),
                                   ),
                                 ],
                               ),
                             ),
                           )
                         : SliverPadding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             sliver: SliverList(
                               delegate: SliverChildBuilderDelegate(
                                 (ctx, i) => _buildShiftCard(_filteredShifts[i]),
@@ -223,7 +235,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
               _summaryItem(
                 icon: Icons.attach_money,
                 label: 'إجمالي المبيعات',
-                value: CurrencyFormatter.formatCompactWithSymbol(_totalSalesAll),
+                value:
+                    CurrencyFormatter.formatCompactWithSymbol(_totalSalesAll),
                 color: AppColors.success,
               ),
             ],
@@ -308,7 +321,12 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
             color: isActive ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             boxShadow: isActive
-                ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))]
+                ? [
+                    BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2))
+                  ]
                 : null,
           ),
           child: Text(
@@ -340,7 +358,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     final totalSales = MoneyHelper.readMoney(shift['total_sales']);
     final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
     final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
-    final expectedAmount = MoneyHelper.readMoney(shift['expected_amount'], fallback: openingAmount + totalSales - totalReturns - totalDiscounts);
+    final expectedAmount = MoneyHelper.readMoney(shift['expected_amount'],
+        fallback: openingAmount + totalSales - totalReturns - totalDiscounts);
     final closingAmount = MoneyHelper.readMoney(shift['closing_amount']);
     final difference = MoneyHelper.readMoney(shift['difference']);
     final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
@@ -400,7 +419,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                       ),
                       child: Icon(
                         isOpen ? Icons.lock_open_outlined : Icons.lock_outline,
-                        color: isOpen ? AppColors.success : AppColors.textTertiary,
+                        color:
+                            isOpen ? AppColors.success : AppColors.textTertiary,
                         size: 22,
                       ),
                     ),
@@ -441,7 +461,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                       children: [
                         if (duration != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: isOpen
                                   ? AppColors.success.withValues(alpha: 0.08)
@@ -454,7 +475,9 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                                 Icon(
                                   Icons.timer_outlined,
                                   size: 14,
-                                  color: isOpen ? AppColors.success : AppColors.textTertiary,
+                                  color: isOpen
+                                      ? AppColors.success
+                                      : AppColors.textTertiary,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -462,8 +485,12 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: isOpen ? AppColors.success : AppColors.textSecondary,
-                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                    color: isOpen
+                                        ? AppColors.success
+                                        : AppColors.textSecondary,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures()
+                                    ],
                                   ),
                                 ),
                               ],
@@ -474,7 +501,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               DateFormatter.formatDateTime(openedAt),
-                              style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                              style: TextStyle(
+                                  fontSize: 11, color: AppColors.textTertiary),
                             ),
                           ),
                       ],
@@ -487,11 +515,13 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.person_outline, size: 14, color: AppColors.textTertiary),
+                      Icon(Icons.person_outline,
+                          size: 14, color: AppColors.textTertiary),
                       const SizedBox(width: 4),
                       Text(
                         cashierName,
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -506,12 +536,14 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   children: [
                     _financialChip(
                       label: 'المبيعات',
-                      value: CurrencyFormatter.format(totalSales, symbol: symbol),
+                      value:
+                          CurrencyFormatter.format(totalSales, symbol: symbol),
                       color: AppColors.success,
                     ),
                     _financialChip(
                       label: 'الافتتاح',
-                      value: CurrencyFormatter.format(openingAmount, symbol: symbol),
+                      value: CurrencyFormatter.format(openingAmount,
+                          symbol: symbol),
                       color: AppColors.primary,
                     ),
                     _financialChip(
@@ -527,7 +559,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                 if (!isOpen && closingAmount > 0) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: (difference.abs() < 0.005
                               ? AppColors.success
@@ -580,7 +613,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                         const Spacer(),
                         Text(
                           'المتوقع: ${CurrencyFormatter.format(expectedAmount, symbol: symbol)}',
-                          style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                          style: TextStyle(
+                              fontSize: 11, color: AppColors.textTertiary),
                         ),
                       ],
                     ),
@@ -598,11 +632,13 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                       icon: const Icon(Icons.lock_outline, size: 18),
                       label: const Text(
                         'إقفال الوردية',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14),
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.error,
-                        side: const BorderSide(color: AppColors.error, width: 1.5),
+                        side: const BorderSide(
+                            color: AppColors.error, width: 1.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -656,7 +692,10 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
           children: [
             Text(
               label,
-              style: TextStyle(fontSize: 10, color: AppColors.textTertiary, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 2),
             Text(
@@ -750,8 +789,12 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          isOpen ? Icons.lock_open_outlined : Icons.lock_outline,
-                          color: isOpen ? AppColors.success : AppColors.textTertiary,
+                          isOpen
+                              ? Icons.lock_open_outlined
+                              : Icons.lock_outline,
+                          color: isOpen
+                              ? AppColors.success
+                              : AppColors.textTertiary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -771,7 +814,9 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                               isOpen ? 'مفتوحة' : 'مغلقة',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isOpen ? AppColors.success : AppColors.textTertiary,
+                                color: isOpen
+                                    ? AppColors.success
+                                    : AppColors.textTertiary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -789,9 +834,12 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
 
                   // ── Shift info section ──
                   _detailSectionTitle('معلومات الوردية'),
-                  _detailRow('رقم الوردية', shift['shift_number']?.toString() ?? '-'),
-                  _detailRow('الكاشير', shift['cashier_name']?.toString() ?? '-'),
-                  _detailRow('الصندوق', shift['cash_box_name']?.toString() ?? '-'),
+                  _detailRow(
+                      'رقم الوردية', shift['shift_number']?.toString() ?? '-'),
+                  _detailRow(
+                      'الكاشير', shift['cashier_name']?.toString() ?? '-'),
+                  _detailRow(
+                      'الصندوق', shift['cash_box_name']?.toString() ?? '-'),
                   _detailRow(
                     'العملة',
                     currency == 'SAR'
@@ -803,17 +851,20 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   _detailRow(
                     'وقت الافتتاح',
                     _parseDate(shift['opened_at'] as String?) != null
-                        ? DateFormatter.formatDateTime(_parseDate(shift['opened_at'] as String?)!)
+                        ? DateFormatter.formatDateTime(
+                            _parseDate(shift['opened_at'] as String?)!)
                         : '-',
                   ),
                   if (!isOpen)
                     _detailRow(
                       'وقت الإغلاق',
                       _parseDate(shift['closed_at'] as String?) != null
-                          ? DateFormatter.formatDateTime(_parseDate(shift['closed_at'] as String?)!)
+                          ? DateFormatter.formatDateTime(
+                              _parseDate(shift['closed_at'] as String?)!)
                           : '-',
                     ),
-                  if (shift['notes'] != null && (shift['notes'] as String).isNotEmpty)
+                  if (shift['notes'] != null &&
+                      (shift['notes'] as String).isNotEmpty)
                     _detailRow('ملاحظات', shift['notes'].toString()),
 
                   const SizedBox(height: 16),
@@ -861,14 +912,23 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.15)),
                     ),
                     child: Column(
                       children: [
                         _detailRow(
                           'المتوقع في الصندوق',
                           CurrencyFormatter.format(
-                            MoneyHelper.readMoney(shift['expected_amount'], fallback: MoneyHelper.readMoney(shift['opening_amount']) + MoneyHelper.readMoney(shift['total_sales']) - MoneyHelper.readMoney(shift['total_returns']) - MoneyHelper.readMoney(shift['total_discounts'])),
+                            MoneyHelper.readMoney(shift['expected_amount'],
+                                fallback: MoneyHelper.readMoney(
+                                        shift['opening_amount']) +
+                                    MoneyHelper.readMoney(
+                                        shift['total_sales']) -
+                                    MoneyHelper.readMoney(
+                                        shift['total_returns']) -
+                                    MoneyHelper.readMoney(
+                                        shift['total_discounts'])),
                             symbol: symbol,
                           ),
                           valueColor: AppColors.primary,
@@ -900,7 +960,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   // ── Transactions list ──
                   if (invoices.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    _detailSectionTitle('الفواتير خلال الوردية (${invoices.length})'),
+                    _detailSectionTitle(
+                        'الفواتير خلال الوردية (${invoices.length})'),
                     const SizedBox(height: 8),
                     ...invoices.map((inv) => _buildInvoiceItem(inv, symbol)),
                   ] else ...[
@@ -912,7 +973,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                       child: Center(
                         child: Text(
                           'لا توجد فواتير في هذه الوردية',
-                          style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                          style: TextStyle(
+                              color: AppColors.textTertiary, fontSize: 13),
                         ),
                       ),
                     ),
@@ -928,29 +990,53 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.error.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
+                        border: Border.all(
+                            color: AppColors.error.withValues(alpha: 0.15)),
                       ),
                       child: Column(
                         children: [
-                          _detailRow('رصيد الافتتاح', CurrencyFormatter.format(
-                            MoneyHelper.readMoney(shift['opening_amount']), symbol: symbol,
-                          )),
-                          _detailRow('إجمالي المبيعات', CurrencyFormatter.format(
-                            MoneyHelper.readMoney(shift['total_sales']), symbol: symbol,
-                          ), valueColor: AppColors.success),
-                          _detailRow('إجمالي المرتجعات', CurrencyFormatter.format(
-                            MoneyHelper.readMoney(shift['total_returns']), symbol: symbol,
-                          ), valueColor: AppColors.error),
-                          _detailRow('إجمالي الخصومات', CurrencyFormatter.format(
-                            MoneyHelper.readMoney(shift['total_discounts']), symbol: symbol,
-                          ), valueColor: AppColors.warning),
+                          _detailRow(
+                              'رصيد الافتتاح',
+                              CurrencyFormatter.format(
+                                MoneyHelper.readMoney(shift['opening_amount']),
+                                symbol: symbol,
+                              )),
+                          _detailRow(
+                              'إجمالي المبيعات',
+                              CurrencyFormatter.format(
+                                MoneyHelper.readMoney(shift['total_sales']),
+                                symbol: symbol,
+                              ),
+                              valueColor: AppColors.success),
+                          _detailRow(
+                              'إجمالي المرتجعات',
+                              CurrencyFormatter.format(
+                                MoneyHelper.readMoney(shift['total_returns']),
+                                symbol: symbol,
+                              ),
+                              valueColor: AppColors.error),
+                          _detailRow(
+                              'إجمالي الخصومات',
+                              CurrencyFormatter.format(
+                                MoneyHelper.readMoney(shift['total_discounts']),
+                                symbol: symbol,
+                              ),
+                              valueColor: AppColors.warning),
                           const Divider(height: 20),
-                          _detailRow('المتوقع', CurrencyFormatter.format(
-                            MoneyHelper.readMoney(shift['expected_amount']), symbol: symbol,
-                          ), isBold: true),
-                          _detailRow('الفعلي', CurrencyFormatter.format(
-                            MoneyHelper.readMoney(shift['closing_amount']), symbol: symbol,
-                          ), isBold: true),
+                          _detailRow(
+                              'المتوقع',
+                              CurrencyFormatter.format(
+                                MoneyHelper.readMoney(shift['expected_amount']),
+                                symbol: symbol,
+                              ),
+                              isBold: true),
+                          _detailRow(
+                              'الفعلي',
+                              CurrencyFormatter.format(
+                                MoneyHelper.readMoney(shift['closing_amount']),
+                                symbol: symbol,
+                              ),
+                              isBold: true),
                           _buildDifferenceRow(shift, symbol),
                         ],
                       ),
@@ -971,7 +1057,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                         icon: const Icon(Icons.lock_outline, size: 20),
                         label: const Text(
                           'إقفال الوردية',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 16),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.error,
@@ -1006,7 +1093,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     );
   }
 
-  Widget _detailRow(String label, String value, {Color? valueColor, bool isBold = false}) {
+  Widget _detailRow(String label, String value,
+      {Color? valueColor, bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1039,7 +1127,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
   Widget _buildDifferenceRow(Map<String, dynamic> shift, String symbol) {
     final difference = MoneyHelper.readMoney(shift['difference']);
     if (difference.abs() < 0.005) {
-      return _detailRow('الفرق', 'متوازن ✓', valueColor: AppColors.success, isBold: true);
+      return _detailRow('الفرق', 'متوازن ✓',
+          valueColor: AppColors.success, isBold: true);
     }
     final isSurplus = difference > 0;
     return _detailRow(
@@ -1056,7 +1145,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     final total = MoneyHelper.readMoney(inv['total']);
     final entityName = inv['entity_name']?.toString() ?? '';
     final createdAt = _parseDate(inv['created_at'] as String?);
-    final invoiceNumber = inv['invoice_number']?.toString() ?? inv['id']?.toString() ?? '-';
+    final invoiceNumber =
+        inv['invoice_number']?.toString() ?? inv['id']?.toString() ?? '-';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1071,7 +1161,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: (isReturn ? AppColors.error : AppColors.success).withValues(alpha: 0.1),
+              color: (isReturn ? AppColors.error : AppColors.success)
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -1087,12 +1178,16 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
               children: [
                 Text(
                   invoiceNumber,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary),
                 ),
                 if (entityName.isNotEmpty)
                   Text(
                     entityName,
-                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                    style:
+                        TextStyle(fontSize: 11, color: AppColors.textTertiary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1136,9 +1231,11 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
     final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
     final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
     final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
-    final expectedAmount = openingAmount + totalSales - totalReturns - totalDiscounts;
+    final expectedAmount =
+        openingAmount + totalSales - totalReturns - totalDiscounts;
 
-    final closingAmountController = TextEditingController(text: expectedAmount.toStringAsFixed(2));
+    final closingAmountController =
+        TextEditingController(text: expectedAmount.toStringAsFixed(2));
     final notesController = TextEditingController();
 
     await showModalBottomSheet(
@@ -1189,7 +1286,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                           color: AppColors.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.lock_outline, color: AppColors.error),
+                        child: const Icon(Icons.lock_outline,
+                            color: AppColors.error),
                       ),
                       const SizedBox(width: 12),
                       const Text(
@@ -1211,20 +1309,37 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.15)),
                     ),
                     child: Column(
                       children: [
-                        _detailRow('رصيد الافتتاح', CurrencyFormatter.format(openingAmount, symbol: symbol)),
-                        _detailRow('إجمالي المبيعات', CurrencyFormatter.format(totalSales, symbol: symbol),
+                        _detailRow(
+                            'رصيد الافتتاح',
+                            CurrencyFormatter.format(openingAmount,
+                                symbol: symbol)),
+                        _detailRow(
+                            'إجمالي المبيعات',
+                            CurrencyFormatter.format(totalSales,
+                                symbol: symbol),
                             valueColor: AppColors.success),
-                        _detailRow('إجمالي المرتجعات', CurrencyFormatter.format(totalReturns, symbol: symbol),
+                        _detailRow(
+                            'إجمالي المرتجعات',
+                            CurrencyFormatter.format(totalReturns,
+                                symbol: symbol),
                             valueColor: AppColors.error),
-                        _detailRow('إجمالي الخصومات', CurrencyFormatter.format(totalDiscounts, symbol: symbol),
+                        _detailRow(
+                            'إجمالي الخصومات',
+                            CurrencyFormatter.format(totalDiscounts,
+                                symbol: symbol),
                             valueColor: AppColors.warning),
                         const Divider(height: 20),
-                        _detailRow('المتوقع في الصندوق', CurrencyFormatter.format(expectedAmount, symbol: symbol),
-                            valueColor: AppColors.primary, isBold: true),
+                        _detailRow(
+                            'المتوقع في الصندوق',
+                            CurrencyFormatter.format(expectedAmount,
+                                symbol: symbol),
+                            valueColor: AppColors.primary,
+                            isBold: true),
                         _detailRow('عدد المعاملات', '$transactionCount'),
                       ],
                     ),
@@ -1235,16 +1350,21 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                   // Closing amount field
                   Text(
                     'المبلغ الفعلي في الصندوق',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: closingAmountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.payments_outlined),
                       hintText: 'أدخل المبلغ الفعلي',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
                       suffixText: symbol,
                     ),
                   ),
@@ -1258,7 +1378,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.note_outlined),
                       hintText: 'ملاحظات الإغلاق...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
 
@@ -1271,14 +1392,16 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         final closingAmount =
-                            double.tryParse(closingAmountController.text) ?? expectedAmount;
+                            double.tryParse(closingAmountController.text) ??
+                                expectedAmount;
                         final difference = closingAmount - expectedAmount;
                         final now = DateTime.now();
                         final navigator = Navigator.of(ctx);
                         final scaffoldMessenger = ScaffoldMessenger.of(context);
                         try {
                           // Step 1: Post all shift invoices
-                          await locator<ShiftService>().postShiftInvoices(shiftId);
+                          await locator<ShiftService>()
+                              .postShiftInvoices(shiftId);
 
                           // Step 2: Close the shift
                           final closeData = {
@@ -1292,13 +1415,15 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                                 : notesController.text,
                             'updated_at': now.toIso8601String(),
                           };
-                          await locator<ShiftService>().closeShift(shiftId, closeData);
+                          await locator<ShiftService>()
+                              .closeShift(shiftId, closeData);
 
                           if (!mounted) return;
                           navigator.pop(); // Close bottom sheet
 
                           // Show result dialog
-                          _showCloseResultDialog(expectedAmount, closingAmount, difference, symbol);
+                          _showCloseResultDialog(expectedAmount, closingAmount,
+                              difference, symbol);
                         } catch (e) {
                           if (!mounted) return;
                           navigator.pop();
@@ -1313,7 +1438,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
                       icon: const Icon(Icons.lock_outline),
                       label: const Text(
                         'تأكيد الإقفال',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 16),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.error,
@@ -1346,12 +1472,15 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
       builder: (dctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
               Icon(
                 difference.abs() < 0.005 ? Icons.check_circle : Icons.warning,
-                color: difference.abs() < 0.005 ? AppColors.success : AppColors.warning,
+                color: difference.abs() < 0.005
+                    ? AppColors.success
+                    : AppColors.warning,
                 size: 28,
               ),
               const SizedBox(width: 8),
@@ -1362,8 +1491,10 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('المتوقع: ${CurrencyFormatter.format(expectedAmount, symbol: symbol)}'),
-              Text('الفعلي: ${CurrencyFormatter.format(closingAmount, symbol: symbol)}'),
+              Text(
+                  'المتوقع: ${CurrencyFormatter.format(expectedAmount, symbol: symbol)}'),
+              Text(
+                  'الفعلي: ${CurrencyFormatter.format(closingAmount, symbol: symbol)}'),
               const SizedBox(height: 8),
               if (difference.abs() >= 0.005)
                 Text(
@@ -1378,7 +1509,8 @@ class _ShiftsScreenState extends State<ShiftsScreen> {
               else
                 const Text(
                   'الصندوق متوازن',
-                  style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.success),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700, color: AppColors.success),
                 ),
             ],
           ),

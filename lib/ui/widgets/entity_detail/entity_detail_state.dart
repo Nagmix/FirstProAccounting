@@ -151,8 +151,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
   set allMovements(List<Map<String, dynamic>> v) => _allMovements = v;
 
   List<Map<String, dynamic>> get filteredMovements => _filteredMovements;
-  set filteredMovements(List<Map<String, dynamic>> v) =>
-      _filteredMovements = v;
+  set filteredMovements(List<Map<String, dynamic>> v) => _filteredMovements = v;
 
   int get selectedFilterIndex => _selectedFilterIndex;
   set selectedFilterIndex(int v) => _selectedFilterIndex = v;
@@ -213,8 +212,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
           .where((m) => MoneyHelper.readMoney(m['credit']) > 0)
           .toList();
     } else if (filterKey != 'all') {
-      filtered =
-          filtered.where((m) => m['filter_key'] == filterKey).toList();
+      filtered = filtered.where((m) => m['filter_key'] == filterKey).toList();
     }
 
     // 2. Currency filter
@@ -257,8 +255,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
         try {
           final date = DateTime.parse(dateStr);
           return !date.isBefore(_dateRange!.start) &&
-              date.isBefore(
-                  _dateRange!.end.add(const Duration(days: 1)));
+              date.isBefore(_dateRange!.end.add(const Duration(days: 1)));
         } catch (_) {
           return true;
         }
@@ -397,8 +394,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children:
-                      List.generate(filterTabs.length, (index) {
+                  children: List.generate(filterTabs.length, (index) {
                     final isSelected = _selectedFilterIndex == index;
                     return ChoiceChip(
                       label: Text(filterTabs[index].label),
@@ -412,9 +408,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                         fontSize: 12,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected
-                            ? Colors.white
-                            : AppColors.textSecondary,
+                        color:
+                            isSelected ? Colors.white : AppColors.textSecondary,
                       ),
                       backgroundColor:
                           Theme.of(context).brightness == Brightness.light
@@ -466,8 +461,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*\.?\d{0,2}'))
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
                   ],
                   decoration: InputDecoration(
                     labelText: 'المبلغ',
@@ -534,8 +528,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               onPressed: isSaving
                   ? null
                   : () async {
-                      final amount =
-                          double.tryParse(amountController.text);
+                      final amount = double.tryParse(amountController.text);
                       if (amount == null || amount <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -554,12 +547,9 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                       try {
                         final autoMappingService =
                             locator<VoucherAutoMappingService>();
-                        final dateStr = DateTime.now()
-                            .toIso8601String()
-                            .split('T')
-                            .first;
-                        await autoMappingService
-                            .createReceiptPaymentVoucher(
+                        final dateStr =
+                            DateTime.now().toIso8601String().split('T').first;
+                        await autoMappingService.createReceiptPaymentVoucher(
                           voucherType: voucherType,
                           entityType: entityTypeName,
                           entityId: entityId ?? 0,
@@ -567,9 +557,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                           amount: amount,
                           currency: selectedCurrency,
                           date: dateStr,
-                          description: descriptionController.text
-                                  .trim()
-                                  .isEmpty
+                          description: descriptionController.text.trim().isEmpty
                               ? '${voucherType == 'receipt' ? 'سند قبض' : 'سند صرف'} - $entityName'
                               : descriptionController.text.trim(),
                         );
@@ -585,13 +573,11 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          final msg = e
-                              .toString()
-                              .replaceFirst('Exception: ', '');
+                          final msg =
+                              e.toString().replaceFirst('Exception: ', '');
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(msg.isNotEmpty
-                                ? msg
-                                : 'حدث خطأ أثناء الحفظ'),
+                            content: Text(
+                                msg.isNotEmpty ? msg : 'حدث خطأ أثناء الحفظ'),
                             backgroundColor: AppColors.error,
                           ));
                         }
@@ -661,13 +647,12 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                   decoration: BoxDecoration(
                       color: AppColors.accentBlue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.bluetooth,
-                      color: AppColors.accentBlue),
+                  child:
+                      const Icon(Icons.bluetooth, color: AppColors.accentBlue),
                 ),
                 title: const Text('طباعة حرارية بلوتوث',
                     style: TextStyle(fontWeight: FontWeight.w700)),
-                subtitle:
-                    const Text('طباعة كشف حساب على طابعة حرارية'),
+                subtitle: const Text('طباعة كشف حساب على طابعة حرارية'),
                 trailing: const Icon(Icons.arrow_back_ios, size: 16),
                 onTap: () async {
                   Navigator.pop(ctx);
@@ -690,9 +675,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
         totalDebit: _totalDebit,
         totalCredit: _totalCredit,
         netBalance: _netBalance,
-        balanceLabel: _netBalance > 0
-            ? 'له'
-            : (_netBalance < 0 ? 'عليه' : 'متساوي'),
+        balanceLabel:
+            _netBalance > 0 ? 'له' : (_netBalance < 0 ? 'عليه' : 'متساوي'),
         phone: entityPhone.isNotEmpty ? entityPhone : null,
         currency: _selectedCurrency ?? 'YER',
       );
@@ -712,8 +696,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
       if (!connected) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:
-                const Text('الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
+            content: const Text(
+                'الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
             backgroundColor: AppColors.warning,
             action: SnackBarAction(
               label: 'الإعدادات',
@@ -721,8 +705,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) =>
-                          const BluetoothPrinterSettingsScreen())),
+                      builder: (_) => const BluetoothPrinterSettingsScreen())),
             ),
           ));
         }
@@ -744,8 +727,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
     } on PrinterException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(e.message),
-            backgroundColor: AppColors.error));
+            content: Text(e.message), backgroundColor: AppColors.error));
       }
     } catch (_) {
       if (mounted) {
@@ -838,8 +820,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color:
-                    isSelected ? Colors.white : AppColors.textSecondary,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
               ),
             ),
           ],
@@ -895,15 +876,15 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 children: [
                   Text(entityName,
                       style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700),
+                          color: Colors.white, fontWeight: FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
@@ -919,11 +900,13 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                       ),
                       if (entityPhone.isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        const Icon(Icons.phone, size: 12, color: Colors.white70),
+                        const Icon(Icons.phone,
+                            size: 12, color: Colors.white70),
                         const SizedBox(width: 4),
                         Text(
                           entityPhone,
-                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: Colors.white70),
                         ),
                       ],
                       if (entitySubtitle.isNotEmpty) ...[
@@ -932,7 +915,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                         const SizedBox(width: 4),
                         Text(
                           entitySubtitle,
-                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: Colors.white70),
                         ),
                       ],
                     ],
@@ -942,8 +926,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
             ),
             // Balance badge
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(14),
@@ -958,17 +941,15 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                   ),
                   const SizedBox(height: 2),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: (isDebit ? AppColors.error : AppColors.success)
                           .withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      isDebit
-                          ? 'عليه'
-                          : (_netBalance > 0 ? 'له' : 'متساوي'),
+                      isDebit ? 'عليه' : (_netBalance > 0 ? 'له' : 'متساوي'),
                       style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -1053,7 +1034,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                    borderSide:
+                        BorderSide(color: AppColors.primary, width: 1.5),
                   ),
                 ),
                 style: const TextStyle(fontSize: 13),
@@ -1066,9 +1048,14 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
           Container(
             height: 40,
             decoration: BoxDecoration(
-              border: Border.all(color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.border),
+              border: Border.all(
+                  color: _selectedFilterIndex > 0
+                      ? AppColors.primary
+                      : AppColors.border),
               borderRadius: BorderRadius.circular(10),
-              color: _selectedFilterIndex > 0 ? AppColors.primary.withValues(alpha: 0.08) : null,
+              color: _selectedFilterIndex > 0
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : null,
             ),
             child: Material(
               color: Colors.transparent,
@@ -1081,12 +1068,18 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.filter_list, size: 18, color: _selectedFilterIndex > 0 ? AppColors.primary : AppColors.textSecondary),
+                      Icon(Icons.filter_list,
+                          size: 18,
+                          color: _selectedFilterIndex > 0
+                              ? AppColors.primary
+                              : AppColors.textSecondary),
                       if (_selectedFilterIndex > 0) ...[
                         const SizedBox(width: 4),
                         Container(
-                          width: 6, height: 6,
-                          decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                              color: AppColors.primary, shape: BoxShape.circle),
                         ),
                       ],
                     ],
@@ -1101,9 +1094,14 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
           Container(
             height: 40,
             decoration: BoxDecoration(
-              border: Border.all(color: _dateRange != null ? AppColors.primary : AppColors.border),
+              border: Border.all(
+                  color: _dateRange != null
+                      ? AppColors.primary
+                      : AppColors.border),
               borderRadius: BorderRadius.circular(10),
-              color: _dateRange != null ? AppColors.primary.withValues(alpha: 0.08) : null,
+              color: _dateRange != null
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : null,
             ),
             child: Material(
               color: Colors.transparent,
@@ -1117,15 +1115,22 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        _dateRange != null ? Icons.event_busy : Icons.date_range,
+                        _dateRange != null
+                            ? Icons.event_busy
+                            : Icons.date_range,
                         size: 18,
-                        color: _dateRange != null ? AppColors.primary : AppColors.textSecondary,
+                        color: _dateRange != null
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
                       ),
                       if (_dateRange != null) ...[
                         const SizedBox(width: 4),
                         Text(
                           '${_dateRange!.start.day}/${_dateRange!.start.month}',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary),
                         ),
                       ],
                     ],
@@ -1148,11 +1153,13 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               value: _selectedCurrency ?? 'YER',
               underline: const SizedBox.shrink(),
               icon: const Icon(Icons.arrow_drop_down, size: 18),
-              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
+              style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700, color: AppColors.primary),
               items: _currencyOptions
                   .map((e) => DropdownMenuItem<String>(
                         value: e.value,
-                        child: Text(e.key, style: const TextStyle(fontSize: 12)),
+                        child:
+                            Text(e.key, style: const TextStyle(fontSize: 12)),
                       ))
                   .toList(),
               onChanged: (v) {
@@ -1178,23 +1185,34 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  border: Border.all(color: _sortDescending ? AppColors.primary : AppColors.border),
+                  border: Border.all(
+                      color: _sortDescending
+                          ? AppColors.primary
+                          : AppColors.border),
                   borderRadius: BorderRadius.circular(10),
-                  color: _sortDescending ? AppColors.primary.withValues(alpha: 0.08) : null,
+                  color: _sortDescending
+                      ? AppColors.primary.withValues(alpha: 0.08)
+                      : null,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                      _sortDescending
+                          ? Icons.arrow_downward
+                          : Icons.arrow_upward,
                       size: 14,
-                      color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                      color: _sortDescending
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       _sortDescending ? 'تنازلي' : 'تصاعدي',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: _sortDescending ? AppColors.primary : AppColors.textSecondary,
+                        color: _sortDescending
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1221,24 +1239,35 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
       color: isLight ? AppColors.surface : AppColors.darkSurface,
       child: Row(
         children: [
-          Text('الفلتر: ', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+          Text('الفلتر: ',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: AppColors.textHint)),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(label, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                Text(label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.primary, fontWeight: FontWeight.w700)),
                 const SizedBox(width: 4),
                 GestureDetector(
-                  onTap: () { setState(() => _selectedFilterIndex = 0); applyFilters(); },
+                  onTap: () {
+                    setState(() => _selectedFilterIndex = 0);
+                    applyFilters();
+                  },
                   child: Icon(Icons.close, size: 14, color: AppColors.primary),
                 ),
               ],
             ),
           ),
           const Spacer(),
-          Text('${_filteredMovements.length} حركة', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+          Text('${_filteredMovements.length} حركة',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: AppColors.textHint)),
         ],
       ),
     );
@@ -1262,7 +1291,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 foregroundColor: AppColors.success,
                 side: const BorderSide(color: AppColors.success),
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
@@ -1276,7 +1306,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 foregroundColor: AppColors.error,
                 side: const BorderSide(color: AppColors.error),
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
@@ -1290,7 +1321,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],
@@ -1310,7 +1342,12 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
     return Container(
       decoration: BoxDecoration(
         color: isLight ? AppColors.surface : AppColors.darkSurface,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), offset: const Offset(0, -2), blurRadius: 8)],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              offset: const Offset(0, -2),
+              blurRadius: 8)
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -1321,23 +1358,31 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               // له (Credit)
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.success.withValues(alpha: 0.25), width: 1),
+                    border: Border.all(
+                        color: AppColors.success.withValues(alpha: 0.25),
+                        width: 1),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('له', style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700, color: AppColors.success, fontSize: 12,
-                      )),
+                      Text('له',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.success,
+                            fontSize: 12,
+                          )),
                       const SizedBox(height: 4),
                       Text(
                         '${_totalCredit.toStringAsFixed(2)} ${currencySymbol(_selectedCurrency)}',
                         style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w900, color: AppColors.success, fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.success,
+                          fontSize: 13,
                         ),
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
@@ -1350,23 +1395,31 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               // عليه (Debit)
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.error.withValues(alpha: 0.25), width: 1),
+                    border: Border.all(
+                        color: AppColors.error.withValues(alpha: 0.25),
+                        width: 1),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('عليه', style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 12,
-                      )),
+                      Text('عليه',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.error,
+                            fontSize: 12,
+                          )),
                       const SizedBox(height: 4),
                       Text(
                         '${_totalDebit.toStringAsFixed(2)} ${currencySymbol(_selectedCurrency)}',
                         style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w900, color: AppColors.error, fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.error,
+                          fontSize: 13,
                         ),
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
@@ -1379,23 +1432,30 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
               // الرصيد (Net Balance)
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
                     color: balanceColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: balanceColor.withValues(alpha: 0.25), width: 1),
+                    border: Border.all(
+                        color: balanceColor.withValues(alpha: 0.25), width: 1),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(balanceLabel, style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700, color: balanceColor, fontSize: 12,
-                      )),
+                      Text(balanceLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: balanceColor,
+                            fontSize: 12,
+                          )),
                       const SizedBox(height: 4),
                       Text(
                         '${_netBalance.abs().toStringAsFixed(2)} ${currencySymbol(_selectedCurrency)}',
                         style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w900, color: balanceColor, fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: balanceColor,
+                          fontSize: 13,
                         ),
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
@@ -1424,9 +1484,12 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(entityIcon, size: 64, color: AppColors.textHint.withValues(alpha: 0.3)),
+            Icon(entityIcon,
+                size: 64, color: AppColors.textHint.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
-            Text('لا توجد حركات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
+            Text('لا توجد حركات',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(color: AppColors.textHint)),
           ],
         ),
       );
@@ -1480,13 +1543,11 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
             onTap: printReport,
             borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.print_rounded,
-                      size: 18, color: AppColors.primary),
+                  Icon(Icons.print_rounded, size: 18, color: AppColors.primary),
                   const SizedBox(width: 4),
                   Text('طباعة',
                       style: TextStyle(
@@ -1509,8 +1570,7 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
             onTap: exportToExcel,
             borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1569,8 +1629,7 @@ class _MovementCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final icon = movement['icon'] as IconData? ?? Icons.description;
     final color = movement['color'] as Color? ?? AppColors.textSecondary;
-    final description =
-        movement['description'] as String? ?? '';
+    final description = movement['description'] as String? ?? '';
     final dateStr = movement['date'] as String? ?? '';
     final typeAr = movement['type_ar'] as String? ?? '';
     final currency = movement['currency'] as String? ?? 'YER';
@@ -1635,8 +1694,7 @@ class _MovementCard extends StatelessWidget {
                     Text(
                       '$displayDate  •  $typeAr',
                       style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary),
+                          fontSize: 11, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -1648,8 +1706,7 @@ class _MovementCard extends StatelessWidget {
                   Text(
                     CurrencyFormatter.formatValue(amount),
                     style: TextStyle(
-                      color:
-                          isDebit ? AppColors.error : AppColors.success,
+                      color: isDebit ? AppColors.error : AppColors.success,
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                     ),

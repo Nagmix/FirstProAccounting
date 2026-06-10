@@ -16,7 +16,8 @@ void main() {
     // ═══════════════════════════════════════════════════════════
     group('construction', () {
       test('creates account with required fields only', () {
-        final account = Account(nameAr: 'النقدية', nameEn: 'Cash', accountCode: '1000');
+        final account =
+            Account(nameAr: 'النقدية', nameEn: 'Cash', accountCode: '1000');
         expect(account.nameAr, equals('النقدية'));
         expect(account.nameEn, equals('Cash'));
         expect(account.accountCode, equals('1000'));
@@ -51,7 +52,8 @@ void main() {
       });
 
       test('defaults balanceType to auto', () {
-        final account = Account(nameAr: 'Test', nameEn: 'Test', accountCode: '1000');
+        final account =
+            Account(nameAr: 'Test', nameEn: 'Test', accountCode: '1000');
         expect(account.balanceType, equals('auto'));
       });
     });
@@ -62,7 +64,9 @@ void main() {
     group('effectiveBalanceType', () {
       test('ASSET accounts have debit nature', () {
         final account = Account(
-          nameAr: 'النقدية', nameEn: 'Cash', accountCode: '1000',
+          nameAr: 'النقدية',
+          nameEn: 'Cash',
+          accountCode: '1000',
           accountType: AccountType.ASSET,
         );
         expect(account.effectiveBalanceType, equals('debit'));
@@ -70,7 +74,9 @@ void main() {
 
       test('COST accounts have debit nature', () {
         final account = Account(
-          nameAr: 'تكلفة البضاعة', nameEn: 'COGS', accountCode: '5000',
+          nameAr: 'تكلفة البضاعة',
+          nameEn: 'COGS',
+          accountCode: '5000',
           accountType: AccountType.COST,
         );
         expect(account.effectiveBalanceType, equals('debit'));
@@ -80,7 +86,9 @@ void main() {
         // CRITICAL: Before C-01 fix, EXPENSE was returning 'credit' — WRONG!
         // Expenses increase with debit, so they must be debit nature.
         final account = Account(
-          nameAr: 'مصاريف إدارية', nameEn: 'Admin Expenses', accountCode: '5200',
+          nameAr: 'مصاريف إدارية',
+          nameEn: 'Admin Expenses',
+          accountCode: '5200',
           accountType: AccountType.EXPENSE,
         );
         expect(account.effectiveBalanceType, equals('debit'));
@@ -88,7 +96,9 @@ void main() {
 
       test('LIABILITY accounts have credit nature', () {
         final account = Account(
-          nameAr: 'الدائنون', nameEn: 'Payables', accountCode: '2000',
+          nameAr: 'الدائنون',
+          nameEn: 'Payables',
+          accountCode: '2000',
           accountType: AccountType.LIABILITY,
         );
         expect(account.effectiveBalanceType, equals('credit'));
@@ -96,7 +106,9 @@ void main() {
 
       test('EQUITY accounts have credit nature', () {
         final account = Account(
-          nameAr: 'رأس المال', nameEn: 'Capital', accountCode: '3000',
+          nameAr: 'رأس المال',
+          nameEn: 'Capital',
+          accountCode: '3000',
           accountType: AccountType.EQUITY,
         );
         expect(account.effectiveBalanceType, equals('credit'));
@@ -104,7 +116,9 @@ void main() {
 
       test('REVENUE accounts have credit nature', () {
         final account = Account(
-          nameAr: 'إيرادات المبيعات', nameEn: 'Sales Revenue', accountCode: '4000',
+          nameAr: 'إيرادات المبيعات',
+          nameEn: 'Sales Revenue',
+          accountCode: '4000',
           accountType: AccountType.REVENUE,
         );
         expect(account.effectiveBalanceType, equals('credit'));
@@ -125,22 +139,38 @@ void main() {
     // ═══════════════════════════════════════════════════════════
     group('currencySymbol', () {
       test('YER returns ر.ي', () {
-        final account = Account(nameAr: 'Test', nameEn: 'Test', accountCode: '1000', currency: 'YER');
+        final account = Account(
+            nameAr: 'Test',
+            nameEn: 'Test',
+            accountCode: '1000',
+            currency: 'YER');
         expect(account.currencySymbol, equals('ر.ي'));
       });
 
       test('SAR returns ر.س', () {
-        final account = Account(nameAr: 'Test', nameEn: 'Test', accountCode: '1000', currency: 'SAR');
+        final account = Account(
+            nameAr: 'Test',
+            nameEn: 'Test',
+            accountCode: '1000',
+            currency: 'SAR');
         expect(account.currencySymbol, equals('ر.س'));
       });
 
       test(r'USD returns $', () {
-        final account = Account(nameAr: 'Test', nameEn: 'Test', accountCode: '1000', currency: 'USD');
+        final account = Account(
+            nameAr: 'Test',
+            nameEn: 'Test',
+            accountCode: '1000',
+            currency: 'USD');
         expect(account.currencySymbol, equals(r'$'));
       });
 
       test('unknown currency defaults to ر.ي', () {
-        final account = Account(nameAr: 'Test', nameEn: 'Test', accountCode: '1000', currency: 'EUR');
+        final account = Account(
+            nameAr: 'Test',
+            nameEn: 'Test',
+            accountCode: '1000',
+            currency: 'EUR');
         expect(account.currencySymbol, equals('ر.ي'));
       });
     });
@@ -151,8 +181,11 @@ void main() {
     group('serialization', () {
       test('toMap converts balance to cents', () {
         final account = Account(
-          nameAr: 'النقدية', nameEn: 'Cash', accountCode: '1000',
-          balance: 150.75, debtCeiling: 5000.50,
+          nameAr: 'النقدية',
+          nameEn: 'Cash',
+          accountCode: '1000',
+          balance: 150.75,
+          debtCeiling: 5000.50,
         );
         final map = account.toMap();
         expect(map['balance'], equals(MoneyHelper.toCents(150.75)));
@@ -161,15 +194,23 @@ void main() {
 
       test('toMap saves effectiveBalanceType (not auto)', () {
         final account = Account(
-          nameAr: 'Test', nameEn: 'Test', accountCode: '1000',
-          accountType: AccountType.ASSET, balanceType: 'auto',
+          nameAr: 'Test',
+          nameEn: 'Test',
+          accountCode: '1000',
+          accountType: AccountType.ASSET,
+          balanceType: 'auto',
         );
         final map = account.toMap();
         expect(map['balance_type'], equals('debit')); // Derived, not 'auto'
       });
 
       test('toMap converts boolean fields to 0/1', () {
-        final active = Account(nameAr: 'Test', nameEn: 'Test', accountCode: '1000', isActive: true, isSystem: false);
+        final active = Account(
+            nameAr: 'Test',
+            nameEn: 'Test',
+            accountCode: '1000',
+            isActive: true,
+            isSystem: false);
         expect(active.toMap()['is_active'], equals(1));
         expect(active.toMap()['is_system'], equals(0));
       });
@@ -235,7 +276,8 @@ void main() {
       test('accountTypeAr returns correct Arabic names', () {
         expect(Account.accountTypeAr(AccountType.ASSET), equals('الأصول'));
         expect(Account.accountTypeAr(AccountType.LIABILITY), equals('الخصوم'));
-        expect(Account.accountTypeAr(AccountType.EQUITY), equals('حقوق الملكية'));
+        expect(
+            Account.accountTypeAr(AccountType.EQUITY), equals('حقوق الملكية'));
         expect(Account.accountTypeAr(AccountType.COST), equals('التكاليف'));
         expect(Account.accountTypeAr(AccountType.REVENUE), equals('الإيرادات'));
         expect(Account.accountTypeAr(AccountType.EXPENSE), equals('المصاريف'));
@@ -248,7 +290,10 @@ void main() {
     group('copyWith', () {
       test('copies with specific fields changed', () {
         final original = Account(
-          id: 1, nameAr: 'النقدية', nameEn: 'Cash', accountCode: '1000',
+          id: 1,
+          nameAr: 'النقدية',
+          nameEn: 'Cash',
+          accountCode: '1000',
           balance: 5000.0,
         );
         final modified = original.copyWith(balance: 6000.0, nameAr: 'البنك');
@@ -260,7 +305,10 @@ void main() {
 
       test('copyWith preserves original when no changes', () {
         final original = Account(
-          id: 1, nameAr: 'النقدية', nameEn: 'Cash', accountCode: '1000',
+          id: 1,
+          nameAr: 'النقدية',
+          nameEn: 'Cash',
+          accountCode: '1000',
         );
         final copy = original.copyWith();
         expect(copy.nameAr, equals(original.nameAr));

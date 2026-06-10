@@ -32,7 +32,8 @@ class PosTotalsSection extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       child: Column(
         children: [
-          _totalRow(context, 'المجموع الفرعي', CurrencyFormatter.format(subtotal)),
+          _totalRow(
+              context, 'المجموع الفرعي', CurrencyFormatter.format(subtotal)),
           if (discount > 0) ...[
             const SizedBox(height: 3),
             _totalRow(
@@ -65,7 +66,8 @@ class PosTotalsSection extends StatelessWidget {
     );
   }
 
-  Widget _totalRow(BuildContext context, String label, String value, {Color? valueColor, TextStyle? valueStyle}) {
+  Widget _totalRow(BuildContext context, String label, String value,
+      {Color? valueColor, TextStyle? valueStyle}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

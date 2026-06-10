@@ -170,7 +170,8 @@ class LicenseStateModel {
   factory LicenseStateModel.fromMap(Map<String, dynamic> map) {
     return LicenseStateModel(
       licenseKey: map['license_key'] as String?,
-      licenseType: LicenseType.fromString(map['license_type'] as String? ?? 'free'),
+      licenseType:
+          LicenseType.fromString(map['license_type'] as String? ?? 'free'),
       status: LicenseStatus.fromString(map['status'] as String? ?? 'free'),
       expiresAt: map['expires_at'] != null
           ? DateTime.tryParse(map['expires_at'] as String)

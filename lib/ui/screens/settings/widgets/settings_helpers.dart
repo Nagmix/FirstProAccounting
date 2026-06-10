@@ -87,12 +87,14 @@ class TextSetting extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           filled: true,
-          fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+          fillColor:
+              isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         ),
       ),
     );
@@ -154,7 +156,9 @@ class NumberSetting extends StatelessWidget {
           Expanded(child: Text(label)),
           Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+              color: isDark
+                  ? AppColors.darkSurfaceVariant
+                  : AppColors.surfaceVariant,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -248,13 +252,15 @@ class DangerTile extends StatelessWidget {
       leading: const Icon(Icons.delete, color: AppColors.error, size: 22),
       title: Text(
         title,
-        style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            color: AppColors.error, fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
         subtitle,
         style: const TextStyle(fontSize: 12, color: AppColors.errorLight),
       ),
-      trailing: const Icon(Icons.arrow_back_ios, size: 16, color: AppColors.error),
+      trailing:
+          const Icon(Icons.arrow_back_ios, size: 16, color: AppColors.error),
       onTap: onTap,
     );
   }

@@ -55,23 +55,44 @@ class DatabaseHelper {
   static void markLocatorReady() => _locatorReady = true;
 
   // Sub-service getters — resolve via locator when available, else create locally
-  JournalService get journal => _locatorReady ? locator<JournalService>() : JournalService(this);
-  AccountRepository get accounts => _locatorReady ? locator<AccountRepository>() : AccountRepository(this);
-  CustomerRepository get customers => _locatorReady ? locator<CustomerRepository>() : CustomerRepository(this);
-  InvoiceRepository get invoices => _locatorReady ? locator<InvoiceRepository>() : InvoiceRepository(this);
-  ProductRepository get products => _locatorReady ? locator<ProductRepository>() : ProductRepository(this);
-  SupplierRepository get suppliers => _locatorReady ? locator<SupplierRepository>() : SupplierRepository(this);
-  ExpenseRepository get expenses => _locatorReady ? locator<ExpenseRepository>() : ExpenseRepository(this);
-  CashBoxService get cashBoxes => _locatorReady ? locator<CashBoxService>() : CashBoxService(this);
-  ReferenceDataRepository get refData => _locatorReady ? locator<ReferenceDataRepository>() : ReferenceDataRepository(this);
-  StockService get stock => _locatorReady ? locator<StockService>() : StockService(this);
-  ShiftService get shifts => _locatorReady ? locator<ShiftService>() : ShiftService(this);
-  OrderRepository get orders => _locatorReady ? locator<OrderRepository>() : OrderRepository(this);
-  ReportService get reports => _locatorReady ? locator<ReportService>() : ReportService(this);
-  AuditService get audit => _locatorReady ? locator<AuditService>() : AuditService(this);
-  CostingEngineService get costingEngine => _locatorReady ? locator<CostingEngineService>() : CostingEngineService(this);
-  BankReconciliationService get bankReconciliation => _locatorReady ? locator<BankReconciliationService>() : BankReconciliationService(this);
-  ExpenseSubAccountRepository get expenseSubAccounts => _locatorReady ? locator<ExpenseSubAccountRepository>() : ExpenseSubAccountRepository(this);
+  JournalService get journal =>
+      _locatorReady ? locator<JournalService>() : JournalService(this);
+  AccountRepository get accounts =>
+      _locatorReady ? locator<AccountRepository>() : AccountRepository(this);
+  CustomerRepository get customers =>
+      _locatorReady ? locator<CustomerRepository>() : CustomerRepository(this);
+  InvoiceRepository get invoices =>
+      _locatorReady ? locator<InvoiceRepository>() : InvoiceRepository(this);
+  ProductRepository get products =>
+      _locatorReady ? locator<ProductRepository>() : ProductRepository(this);
+  SupplierRepository get suppliers =>
+      _locatorReady ? locator<SupplierRepository>() : SupplierRepository(this);
+  ExpenseRepository get expenses =>
+      _locatorReady ? locator<ExpenseRepository>() : ExpenseRepository(this);
+  CashBoxService get cashBoxes =>
+      _locatorReady ? locator<CashBoxService>() : CashBoxService(this);
+  ReferenceDataRepository get refData => _locatorReady
+      ? locator<ReferenceDataRepository>()
+      : ReferenceDataRepository(this);
+  StockService get stock =>
+      _locatorReady ? locator<StockService>() : StockService(this);
+  ShiftService get shifts =>
+      _locatorReady ? locator<ShiftService>() : ShiftService(this);
+  OrderRepository get orders =>
+      _locatorReady ? locator<OrderRepository>() : OrderRepository(this);
+  ReportService get reports =>
+      _locatorReady ? locator<ReportService>() : ReportService(this);
+  AuditService get audit =>
+      _locatorReady ? locator<AuditService>() : AuditService(this);
+  CostingEngineService get costingEngine => _locatorReady
+      ? locator<CostingEngineService>()
+      : CostingEngineService(this);
+  BankReconciliationService get bankReconciliation => _locatorReady
+      ? locator<BankReconciliationService>()
+      : BankReconciliationService(this);
+  ExpenseSubAccountRepository get expenseSubAccounts => _locatorReady
+      ? locator<ExpenseSubAccountRepository>()
+      : ExpenseSubAccountRepository(this);
 
   static Database? _database;
   static Future<Database>? _databaseFuture;
@@ -139,7 +160,9 @@ class DatabaseHelper {
         try {
           await db.execute('PRAGMA foreign_keys = ON');
         } catch (e) {
-          if (kDebugMode) debugPrint('PRAGMA foreign_keys = ON (onOpen) failed: $e');
+          if (kDebugMode) {
+            debugPrint('PRAGMA foreign_keys = ON (onOpen) failed: $e');
+          }
         }
       },
     );
@@ -162,7 +185,8 @@ class DatabaseHelper {
       MigrationHelpers.logMigrationError(operation, error);
 
   /// Delegates to [JournalService.updateAccountBalance].
-  Future<void> updateAccountBalance(int accountId, double amount, {required bool isDebit}) =>
+  Future<void> updateAccountBalance(int accountId, double amount,
+          {required bool isDebit}) =>
       journal.updateAccountBalance(accountId, amount, isDebit: isDebit);
 
   /// Get a setting value by key. Returns null if not found.

@@ -31,12 +31,12 @@ class Account {
     this.linkedCashBoxId,
     this.isActive = true,
     this.debtCeiling = 0.0,
-    this.balanceType = 'auto',  // Will be derived from accountType if 'auto'
+    this.balanceType = 'auto', // Will be derived from accountType if 'auto'
     this.isSystem = false,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now() {
+  })  : createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now() {
     // Auto-derive balanceType from accountType if not explicitly set
     // ASSET, COST, and EXPENSE accounts have debit nature; others have credit nature
   }
@@ -48,9 +48,13 @@ class Account {
   /// using the default YER symbol.
   String get currencySymbol {
     switch (currency) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return r'$';
-      case 'YER': default: return 'ر.ي';
+      case 'SAR':
+        return 'ر.س';
+      case 'USD':
+        return r'$';
+      case 'YER':
+      default:
+        return 'ر.ي';
     }
   }
 
@@ -73,34 +77,53 @@ class Account {
 
   String get _accountTypeString {
     switch (accountType) {
-      case AccountType.ASSET: return 'ASSET';
-      case AccountType.LIABILITY: return 'LIABILITY';
-      case AccountType.EQUITY: return 'EQUITY';
-      case AccountType.COST: return 'COST';
-      case AccountType.REVENUE: return 'REVENUE';
-      case AccountType.EXPENSE: return 'EXPENSE';
+      case AccountType.ASSET:
+        return 'ASSET';
+      case AccountType.LIABILITY:
+        return 'LIABILITY';
+      case AccountType.EQUITY:
+        return 'EQUITY';
+      case AccountType.COST:
+        return 'COST';
+      case AccountType.REVENUE:
+        return 'REVENUE';
+      case AccountType.EXPENSE:
+        return 'EXPENSE';
     }
   }
 
   static AccountType _accountTypeFromString(String value) {
     switch (value) {
-      case 'LIABILITY': return AccountType.LIABILITY;
-      case 'EQUITY': return AccountType.EQUITY;
-      case 'COST': return AccountType.COST;
-      case 'REVENUE': return AccountType.REVENUE;
-      case 'EXPENSE': return AccountType.EXPENSE;
-      case 'ASSET': default: return AccountType.ASSET;
+      case 'LIABILITY':
+        return AccountType.LIABILITY;
+      case 'EQUITY':
+        return AccountType.EQUITY;
+      case 'COST':
+        return AccountType.COST;
+      case 'REVENUE':
+        return AccountType.REVENUE;
+      case 'EXPENSE':
+        return AccountType.EXPENSE;
+      case 'ASSET':
+      default:
+        return AccountType.ASSET;
     }
   }
 
   static String accountTypeAr(AccountType type) {
     switch (type) {
-      case AccountType.ASSET: return 'الأصول';
-      case AccountType.LIABILITY: return 'الخصوم';
-      case AccountType.EQUITY: return 'حقوق الملكية';
-      case AccountType.COST: return 'التكاليف';
-      case AccountType.REVENUE: return 'الإيرادات';
-      case AccountType.EXPENSE: return 'المصاريف';
+      case AccountType.ASSET:
+        return 'الأصول';
+      case AccountType.LIABILITY:
+        return 'الخصوم';
+      case AccountType.EQUITY:
+        return 'حقوق الملكية';
+      case AccountType.COST:
+        return 'التكاليف';
+      case AccountType.REVENUE:
+        return 'الإيرادات';
+      case AccountType.EXPENSE:
+        return 'المصاريف';
     }
   }
 
@@ -117,7 +140,7 @@ class Account {
       'linked_cash_box_id': linkedCashBoxId,
       'is_active': isActive ? 1 : 0,
       'debt_ceiling': MoneyHelper.toCents(debtCeiling),
-      'balance_type': effectiveBalanceType,  // Always save derived value
+      'balance_type': effectiveBalanceType, // Always save derived value
       'is_system': isSystem ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -137,11 +160,15 @@ class Account {
       linkedCashBoxId: map['linked_cash_box_id'],
       isActive: (map['is_active'] ?? 1) == 1,
       debtCeiling: MoneyHelper.readMoney(map['debt_ceiling']),
-      balanceType: map['balance_type'] ?? (
-        (_accountTypeFromString(map['account_type'] ?? 'ASSET') == AccountType.LIABILITY ||
-         _accountTypeFromString(map['account_type'] ?? 'ASSET') == AccountType.EQUITY ||
-         _accountTypeFromString(map['account_type'] ?? 'ASSET') == AccountType.REVENUE) ? 'credit' : 'debit'
-      ),
+      balanceType: map['balance_type'] ??
+          ((_accountTypeFromString(map['account_type'] ?? 'ASSET') ==
+                      AccountType.LIABILITY ||
+                  _accountTypeFromString(map['account_type'] ?? 'ASSET') ==
+                      AccountType.EQUITY ||
+                  _accountTypeFromString(map['account_type'] ?? 'ASSET') ==
+                      AccountType.REVENUE)
+              ? 'credit'
+              : 'debit'),
       isSystem: (map['is_system'] ?? 0) == 1,
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
@@ -149,19 +176,38 @@ class Account {
   }
 
   Account copyWith({
-    int? id, String? nameAr, String? nameEn, int? parentId, String? accountCode,
-    AccountType? accountType, double? balance, String? currency, int? linkedCashBoxId,
-    double? debtCeiling, String? balanceType,
-    bool? isActive, bool? isSystem, DateTime? createdAt, DateTime? updatedAt,
+    int? id,
+    String? nameAr,
+    String? nameEn,
+    int? parentId,
+    String? accountCode,
+    AccountType? accountType,
+    double? balance,
+    String? currency,
+    int? linkedCashBoxId,
+    double? debtCeiling,
+    String? balanceType,
+    bool? isActive,
+    bool? isSystem,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Account(
-      id: id ?? this.id, nameAr: nameAr ?? this.nameAr, nameEn: nameEn ?? this.nameEn,
-      parentId: parentId ?? this.parentId, accountCode: accountCode ?? this.accountCode,
-      accountType: accountType ?? this.accountType, balance: balance ?? this.balance,
-      currency: currency ?? this.currency, linkedCashBoxId: linkedCashBoxId ?? this.linkedCashBoxId,
-      debtCeiling: debtCeiling ?? this.debtCeiling, balanceType: balanceType ?? this.balanceType,
-      isActive: isActive ?? this.isActive, isSystem: isSystem ?? this.isSystem,
-      createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
+      id: id ?? this.id,
+      nameAr: nameAr ?? this.nameAr,
+      nameEn: nameEn ?? this.nameEn,
+      parentId: parentId ?? this.parentId,
+      accountCode: accountCode ?? this.accountCode,
+      accountType: accountType ?? this.accountType,
+      balance: balance ?? this.balance,
+      currency: currency ?? this.currency,
+      linkedCashBoxId: linkedCashBoxId ?? this.linkedCashBoxId,
+      debtCeiling: debtCeiling ?? this.debtCeiling,
+      balanceType: balanceType ?? this.balanceType,
+      isActive: isActive ?? this.isActive,
+      isSystem: isSystem ?? this.isSystem,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

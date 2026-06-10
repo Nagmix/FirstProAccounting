@@ -19,7 +19,8 @@ class PosBankTransferFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bankPayment = vm.payments.where((p) => p.method == 'bank_transfer').firstOrNull;
+    final bankPayment =
+        vm.payments.where((p) => p.method == 'bank_transfer').firstOrNull;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Container(
@@ -50,17 +51,22 @@ class PosBankTransferFields extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'اسم البنك / مزود التحويل',
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 prefixIcon: const Icon(Icons.account_balance, size: 18),
               ),
               onChanged: (v) {
-                final idx = vm.payments.indexWhere((p) => p.method == 'bank_transfer');
+                final idx =
+                    vm.payments.indexWhere((p) => p.method == 'bank_transfer');
                 if (idx >= 0) {
-                  vm.updatePayment(idx, vm.payments[idx].copyWith(providerName: v));
+                  vm.updatePayment(
+                      idx, vm.payments[idx].copyWith(providerName: v));
                 }
               },
-              controller: TextEditingController(text: bankPayment?.providerName ?? '')
+              controller: TextEditingController(
+                  text: bankPayment?.providerName ?? '')
                 ..selection = TextSelection.fromPosition(
                   TextPosition(offset: bankPayment?.providerName?.length ?? 0),
                 ),
@@ -70,19 +76,25 @@ class PosBankTransferFields extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'رقم المرجع / رقم التحويل',
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 prefixIcon: const Icon(Icons.tag, size: 18),
               ),
               onChanged: (v) {
-                final idx = vm.payments.indexWhere((p) => p.method == 'bank_transfer');
+                final idx =
+                    vm.payments.indexWhere((p) => p.method == 'bank_transfer');
                 if (idx >= 0) {
-                  vm.updatePayment(idx, vm.payments[idx].copyWith(referenceNumber: v));
+                  vm.updatePayment(
+                      idx, vm.payments[idx].copyWith(referenceNumber: v));
                 }
               },
-              controller: TextEditingController(text: bankPayment?.referenceNumber ?? '')
+              controller: TextEditingController(
+                  text: bankPayment?.referenceNumber ?? '')
                 ..selection = TextSelection.fromPosition(
-                  TextPosition(offset: bankPayment?.referenceNumber?.length ?? 0),
+                  TextPosition(
+                      offset: bankPayment?.referenceNumber?.length ?? 0),
                 ),
             ),
             const SizedBox(height: 8),
@@ -93,7 +105,8 @@ class PosBankTransferFields extends StatelessWidget {
                   icon: const Icon(Icons.camera_alt, size: 16),
                   label: const Text('التقاط صورة'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     textStyle: const TextStyle(fontSize: 11),
                   ),
                 ),
@@ -103,7 +116,8 @@ class PosBankTransferFields extends StatelessWidget {
                   icon: const Icon(Icons.image, size: 16),
                   label: const Text('إرفاق صورة'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     textStyle: const TextStyle(fontSize: 11),
                   ),
                 ),

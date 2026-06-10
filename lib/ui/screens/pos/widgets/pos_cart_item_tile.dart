@@ -90,9 +90,12 @@ class PosCartItemTile extends StatelessWidget {
                       child: GestureDetector(
                         onTap: onEditQuantity,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                            border: Border.all(
+                                color:
+                                    AppColors.primary.withValues(alpha: 0.3)),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -133,7 +136,8 @@ class PosCartItemTile extends StatelessWidget {
               // Delete
               IconButton(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
+                icon:
+                    const Icon(Icons.delete, size: 16, color: AppColors.error),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 tooltip: 'حذف',

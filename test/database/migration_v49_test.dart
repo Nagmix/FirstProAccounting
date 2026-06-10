@@ -222,7 +222,9 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('V49 Migration — amount_base column on transactions', () {
-    test('amount_base column is added after migration / يتم إضافة عمود amount_base بعد الترحيل', () async {
+    test(
+        'amount_base column is added after migration / يتم إضافة عمود amount_base بعد الترحيل',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -268,7 +270,9 @@ void main() {
           reason: 'amount_base should exist after v49 migration');
     });
 
-    test('amount_base defaults to 0 for new columns / القيمة الافتراضية لـ amount_base هي 0', () async {
+    test(
+        'amount_base defaults to 0 for new columns / القيمة الافتراضية لـ amount_base هي 0',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -302,8 +306,8 @@ void main() {
         'amount_base': 0,
       });
 
-      final txn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [1002]);
+      final txn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [1002]);
       expect(txn.isNotEmpty, isTrue);
       expect(txn.first['amount_base'], 0);
     });
@@ -314,7 +318,9 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('V49 Migration — exchange_rate column on vouchers', () {
-    test('exchange_rate column is added after migration / يتم إضافة عمود exchange_rate بعد الترحيل', () async {
+    test(
+        'exchange_rate column is added after migration / يتم إضافة عمود exchange_rate بعد الترحيل',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -345,7 +351,9 @@ void main() {
           reason: 'exchange_rate should exist after v49 migration');
     });
 
-    test('exchange_rate defaults to 1.0 for YER vouchers / القيمة الافتراضية لسعر الصرف هي 1.0 لسندات الريال', () async {
+    test(
+        'exchange_rate defaults to 1.0 for YER vouchers / القيمة الافتراضية لسعر الصرف هي 1.0 لسندات الريال',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -368,7 +376,9 @@ void main() {
       expect(voucher.first['exchange_rate'], 1.0);
     });
 
-    test('exchange_rate is backfilled for foreign currency vouchers / يتم تعبئة سعر الصرف للسندات بعملة أجنبية', () async {
+    test(
+        'exchange_rate is backfilled for foreign currency vouchers / يتم تعبئة سعر الصرف للسندات بعملة أجنبية',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -417,7 +427,9 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('V49 Migration — NULL currency_code backfilled', () {
-    test('NULL currency_code values are updated to YER / تحديث قيم currency_code الفارغة إلى ريال يمني', () async {
+    test(
+        'NULL currency_code values are updated to YER / تحديث قيم currency_code الفارغة إلى ريال يمني',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -485,7 +497,9 @@ void main() {
       }
     });
 
-    test('Non-NULL currency_code values are preserved / الحفاظ على قيم currency_code غير الفارغة', () async {
+    test(
+        'Non-NULL currency_code values are preserved / الحفاظ على قيم currency_code غير الفارغة',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -517,8 +531,8 @@ void main() {
 
       await applyV49Migration(db);
 
-      final txn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [2003]);
+      final txn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [2003]);
       expect(txn.isNotEmpty, isTrue);
       expect(txn.first['currency_code'], 'USD',
           reason: 'Existing USD currency_code should be preserved');
@@ -530,7 +544,9 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('V49 Migration — amount_base backfill computation', () {
-    test('YER transactions: amount_base = debit or credit / معاملات الريال: amount_base = المدين أو الدائن', () async {
+    test(
+        'YER transactions: amount_base = debit or credit / معاملات الريال: amount_base = المدين أو الدائن',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -577,21 +593,23 @@ void main() {
       await applyV49Migration(db);
 
       // Check debit transaction
-      final debitTxn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [3001]);
+      final debitTxn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [3001]);
       expect(debitTxn.isNotEmpty, isTrue);
       expect(debitTxn.first['amount_base'], MoneyHelper.toCents(5000.0),
           reason: 'YER debit: amount_base should equal debit (500000 cents)');
 
       // Check credit transaction
-      final creditTxn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [3002]);
+      final creditTxn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [3002]);
       expect(creditTxn.isNotEmpty, isTrue);
       expect(creditTxn.first['amount_base'], MoneyHelper.toCents(3000.0),
           reason: 'YER credit: amount_base should equal credit (300000 cents)');
     });
 
-    test('Foreign currency transactions: amount_base = amount * exchange_rate / معاملات العملة الأجنبية: amount_base = المبلغ × سعر الصرف', () async {
+    test(
+        'Foreign currency transactions: amount_base = amount * exchange_rate / معاملات العملة الأجنبية: amount_base = المبلغ × سعر الصرف',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -638,25 +656,29 @@ void main() {
       await applyV49Migration(db);
 
       // Check USD transaction: 10000 cents * 530 = 5300000 → MoneyHelper.fromCents = 53000.0
-      final usdTxn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [3003]);
+      final usdTxn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [3003]);
       expect(usdTxn.isNotEmpty, isTrue);
       final usdAmountBase = usdTxn.first['amount_base'] as int;
       // amount_base = ROUND(debit * exchange_rate) = ROUND(10000 * 530) = 5300000
       expect(usdAmountBase, 5300000,
-          reason: 'USD 100 @ 530: amount_base should be 5300000 cents (= 53000 YER)');
+          reason:
+              'USD 100 @ 530: amount_base should be 5300000 cents (= 53000 YER)');
 
       // Check SAR transaction: 50000 cents * 140 = 7000000
-      final sarTxn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [3004]);
+      final sarTxn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [3004]);
       expect(sarTxn.isNotEmpty, isTrue);
       final sarAmountBase = sarTxn.first['amount_base'] as int;
       // amount_base = ROUND(credit * exchange_rate) = ROUND(50000 * 140) = 7000000
       expect(sarAmountBase, 7000000,
-          reason: 'SAR 500 @ 140: amount_base should be 7000000 cents (= 70000 YER)');
+          reason:
+              'SAR 500 @ 140: amount_base should be 7000000 cents (= 70000 YER)');
     });
 
-    test('Mixed NULL and non-NULL currency_code backfill / تعبئة مختلطة لـ currency_code', () async {
+    test(
+        'Mixed NULL and non-NULL currency_code backfill / تعبئة مختلطة لـ currency_code',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -702,18 +724,20 @@ void main() {
 
       await applyV49Migration(db);
 
-      final nullTxn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [3005]);
+      final nullTxn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [3005]);
       expect(nullTxn.first['currency_code'], 'YER');
       expect(nullTxn.first['amount_base'], MoneyHelper.toCents(8000.0));
 
-      final yerTxn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [3006]);
+      final yerTxn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [3006]);
       expect(yerTxn.first['currency_code'], 'YER');
       expect(yerTxn.first['amount_base'], MoneyHelper.toCents(2000.0));
     });
 
-    test('Idempotent: running migration twice does not corrupt data / تشغيل الترحيل مرتين لا يفسد البيانات', () async {
+    test(
+        'Idempotent: running migration twice does not corrupt data / تشغيل الترحيل مرتين لا يفسد البيانات',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -747,15 +771,16 @@ void main() {
       await applyV49Migration(db);
       await applyV49Migration(db);
 
-      final txn = await db.query('transactions',
-          where: 'journal_id = ?', whereArgs: [3007]);
+      final txn = await db
+          .query('transactions', where: 'journal_id = ?', whereArgs: [3007]);
       expect(txn.isNotEmpty, isTrue);
       expect(txn.first['amount_base'], MoneyHelper.toCents(6000.0),
           reason: 'amount_base should remain correct after double migration');
 
       // Verify only one amount_base column exists
       final columns = await db.rawQuery('PRAGMA table_info(transactions)');
-      final amountBaseCols = columns.where((col) => col['name'] == 'amount_base');
+      final amountBaseCols =
+          columns.where((col) => col['name'] == 'amount_base');
       expect(amountBaseCols.length, 1,
           reason: 'amount_base column should exist exactly once');
     });
@@ -766,7 +791,9 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('V49 Migration — Index on amount_base', () {
-    test('Index idx_transactions_amount_base is created / يتم إنشاء فهرس على amount_base', () async {
+    test(
+        'Index idx_transactions_amount_base is created / يتم إنشاء فهرس على amount_base',
+        () async {
       db = await createPreV49Database();
       final now = DateTime.now().toIso8601String();
 
@@ -803,7 +830,8 @@ void main() {
         "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_transactions_amount_base'",
       );
       expect(indexes.isNotEmpty, isTrue,
-          reason: 'Index idx_transactions_amount_base should exist after migration');
+          reason:
+              'Index idx_transactions_amount_base should exist after migration');
     });
   });
 }

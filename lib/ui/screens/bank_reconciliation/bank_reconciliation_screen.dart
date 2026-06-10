@@ -28,7 +28,8 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
   Future<void> _loadReconciliations() async {
     setState(() => _isLoading = true);
     try {
-      final data = await locator<BankReconciliationService>().getAllReconciliationsWithInfo();
+      final data = await locator<BankReconciliationService>()
+          .getAllReconciliationsWithInfo();
       if (mounted) {
         setState(() {
           _reconciliations = data;
@@ -48,13 +49,15 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
   }
 
   Future<void> _createNewReconciliation() async {
-    final bankCashBoxes = await locator<BankReconciliationService>().getBankCashBoxes();
+    final bankCashBoxes =
+        await locator<BankReconciliationService>().getBankCashBoxes();
 
     if (bankCashBoxes.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('لا يوجد حساب بنكي. قم بإنشاء حساب بنكي أولاً من شاشة الصناديق والبنوك.'),
+            content: Text(
+                'لا يوجد حساب بنكي. قم بإنشاء حساب بنكي أولاً من شاشة الصناديق والبنوك.'),
             backgroundColor: AppColors.warning,
             duration: Duration(seconds: 4),
           ),
@@ -71,14 +74,14 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
 
     if (result != null) {
       try {
-        final reconNumber =
-            await locator<BankReconciliationService>().getNextReconciliationNumber();
+        final reconNumber = await locator<BankReconciliationService>()
+            .getNextReconciliationNumber();
         final cashBoxId = result['cashBoxId'] as int;
         final statementDate = result['statementDate'] as DateTime;
         final statementBalance = result['statementBalance'] as double;
 
-        final bookBalance =
-            await locator<BankReconciliationService>().getBookBalance(cashBoxId);
+        final bookBalance = await locator<BankReconciliationService>()
+            .getBookBalance(cashBoxId);
 
         final recon = BankReconciliation(
           reconciliationNumber: reconNumber,
@@ -88,7 +91,8 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
           bookBalance: bookBalance,
         );
 
-        final id = await locator<BankReconciliationService>().createReconciliation(recon);
+        final id = await locator<BankReconciliationService>()
+            .createReconciliation(recon);
         if (mounted) {
           Navigator.push(
             context,
@@ -102,8 +106,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text('حدث خطأ: $e'),
-                backgroundColor: AppColors.error),
+                content: Text('حدث خطأ: $e'), backgroundColor: AppColors.error),
           );
         }
       }
@@ -114,8 +117,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            BankReconciliationDetailScreen(reconciliationId: id),
+        builder: (_) => BankReconciliationDetailScreen(reconciliationId: id),
       ),
     ).then((_) => _loadReconciliations());
   }
@@ -126,15 +128,16 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
       builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
         title: const Text('حذف التسوية'),
-        content: const Text('هل أنت متأكد من حذف هذه التسوية؟ لا يمكن التراجع عن هذا الإجراء.'),
+        content: const Text(
+            'هل أنت متأكد من حذف هذه التسوية؟ لا يمكن التراجع عن هذا الإجراء.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('إلغاء')),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('حذف',
-                  style: TextStyle(color: AppColors.error))),
+              child:
+                  const Text('حذف', style: TextStyle(color: AppColors.error))),
         ],
       ),
     );
@@ -196,12 +199,12 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
                             color: AppColors.textHint.withValues(alpha: 0.5)),
                         const SizedBox(height: 16),
                         Text('لا توجد تسويات بنكية',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                                color: AppColors.textSecondary)),
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(color: AppColors.textSecondary)),
                         const SizedBox(height: 8),
                         Text('اضغط على + لإنشاء تسوية جديدة',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textHint)),
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: AppColors.textHint)),
                       ],
                     ),
                   )
@@ -211,10 +214,10 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
                     itemBuilder: (context, index) {
                       final r = _reconciliations[index];
                       final status = r['status'] as String? ?? 'draft';
-                      final difference =
-                          MoneyHelper.readMoney(r['difference']);
-                      final bankName =
-                          r['bank_name'] as String? ?? r['cash_box_name'] as String? ?? '';
+                      final difference = MoneyHelper.readMoney(r['difference']);
+                      final bankName = r['bank_name'] as String? ??
+                          r['cash_box_name'] as String? ??
+                          '';
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -246,11 +249,9 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
                                       decoration: BoxDecoration(
                                         color: _statusColor(status)
                                             .withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                            color:
-                                                _statusColor(status)),
+                                            color: _statusColor(status)),
                                       ),
                                       child: Text(
                                         _statusAr(status),
@@ -266,9 +267,8 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
                                       IconButton(
                                         icon: const Icon(Icons.delete,
                                             size: 20, color: AppColors.error),
-                                        onPressed: () =>
-                                            _deleteReconciliation(
-                                                r['id'] as int),
+                                        onPressed: () => _deleteReconciliation(
+                                            r['id'] as int),
                                       ),
                                     ],
                                   ],
@@ -292,7 +292,8 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
                                         color: AppColors.textSecondary),
                                     const SizedBox(width: 6),
                                     Text(
-                                      _formatDate(r['statement_date'] as String?),
+                                      _formatDate(
+                                          r['statement_date'] as String?),
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                               color: AppColors.textSecondary),
@@ -309,8 +310,7 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
                                         CurrencyFormatter.format(
                                             MoneyHelper.readMoney(
                                                 r['statement_balance']))),
-                                    _infoChip(
-                                        'الفرق',
+                                    _infoChip('الفرق',
                                         CurrencyFormatter.format(difference),
                                         color: difference.abs() < 0.005
                                             ? AppColors.success
@@ -372,8 +372,7 @@ class _NewReconciliationDialog extends StatefulWidget {
       _NewReconciliationDialogState();
 }
 
-class _NewReconciliationDialogState
-    extends State<_NewReconciliationDialog> {
+class _NewReconciliationDialogState extends State<_NewReconciliationDialog> {
   int? _selectedCashBoxId;
   DateTime _statementDate = DateTime.now();
   final _statementBalanceController = TextEditingController();
@@ -423,8 +422,7 @@ class _NewReconciliationDialogState
                               ''),
                         ))
                     .toList(),
-                onChanged: (v) =>
-                    setState(() => _selectedCashBoxId = v),
+                onChanged: (v) => setState(() => _selectedCashBoxId = v),
               ),
               const SizedBox(height: 14),
               InkWell(
@@ -442,7 +440,8 @@ class _NewReconciliationDialogState
               const SizedBox(height: 14),
               TextFormField(
                 controller: _statementBalanceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: 'رصيد كشف البنك',
                   prefixIcon: Icon(Icons.attach_money),
@@ -469,8 +468,7 @@ class _NewReconciliationDialogState
                 'cashBoxId': _selectedCashBoxId,
                 'statementDate': _statementDate,
                 'statementBalance':
-                    double.tryParse(_statementBalanceController.text) ??
-                        0.0,
+                    double.tryParse(_statementBalanceController.text) ?? 0.0,
               });
             },
             style: ElevatedButton.styleFrom(

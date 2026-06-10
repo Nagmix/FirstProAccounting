@@ -17,8 +17,10 @@ void main() {
 
     test('toMap converts debit/credit to cents', () {
       final txn = Transaction(
-        accountId: 1, date: DateTime(2026, 1, 1),
-        debit: 1000.0, credit: 0.0,
+        accountId: 1,
+        date: DateTime(2026, 1, 1),
+        debit: 1000.0,
+        credit: 0.0,
       );
       final map = txn.toMap();
       expect(map['debit'], equals(MoneyHelper.toCents(1000.0)));
@@ -27,10 +29,15 @@ void main() {
 
     test('fromMap reads cents correctly', () {
       final map = {
-        'id': 1, 'account_id': 5, 'journal_id': 100,
-        'debit': 100000, 'credit': 0,
-        'description': 'Test', 'date': '2026-01-01',
-        'created_at': '2026-01-01T00:00:00.000', 'balance_type': 'debit',
+        'id': 1,
+        'account_id': 5,
+        'journal_id': 100,
+        'debit': 100000,
+        'credit': 0,
+        'description': 'Test',
+        'date': '2026-01-01',
+        'created_at': '2026-01-01T00:00:00.000',
+        'balance_type': 'debit',
       };
       final txn = Transaction.fromMap(map);
       expect(txn.debit, closeTo(1000.0, 0.01));
@@ -39,9 +46,13 @@ void main() {
 
     test('round-trip preserves debit and credit', () {
       final original = Transaction(
-        id: 1, accountId: 5, journalId: 100,
-        debit: 1500.75, credit: 500.25,
-        description: 'قيد', date: DateTime(2026, 1, 1),
+        id: 1,
+        accountId: 5,
+        journalId: 100,
+        debit: 1500.75,
+        credit: 500.25,
+        description: 'قيد',
+        date: DateTime(2026, 1, 1),
         createdAt: DateTime(2026, 1, 1),
       );
       final restored = Transaction.fromMap(original.toMap());
@@ -50,7 +61,8 @@ void main() {
     });
 
     test('copyWith works correctly', () {
-      final original = Transaction(accountId: 1, date: DateTime(2026, 1, 1), debit: 100.0);
+      final original =
+          Transaction(accountId: 1, date: DateTime(2026, 1, 1), debit: 100.0);
       final modified = original.copyWith(debit: 200.0, credit: 50.0);
       expect(modified.debit, equals(200.0));
       expect(modified.credit, equals(50.0));
@@ -84,8 +96,11 @@ void main() {
 
     test('toMap converts monetary fields to cents', () {
       final product = Product(
-        nameAr: 'قلم', costPrice: 50.0, sellPrice: 100.0,
-        averageCost: 45.0, wholesalePrice: 80.0,
+        nameAr: 'قلم',
+        costPrice: 50.0,
+        sellPrice: 100.0,
+        averageCost: 45.0,
+        wholesalePrice: 80.0,
       );
       final map = product.toMap();
       expect(map['cost_price'], equals(MoneyHelper.toCents(50.0)));
@@ -102,8 +117,12 @@ void main() {
 
     test('toMap converts boolean fields to 0/1', () {
       final product = Product(
-        nameAr: 'قلم', isActive: true, trackStock: true,
-        isSellable: true, allowNegative: false, showInPos: true,
+        nameAr: 'قلم',
+        isActive: true,
+        trackStock: true,
+        isSellable: true,
+        allowNegative: false,
+        showInPos: true,
       );
       final map = product.toMap();
       expect(map['is_active'], equals(1));
@@ -120,7 +139,8 @@ void main() {
       final lifo = Product(nameAr: 'Test', costingMethod: CostingMethod.lifo);
       expect(lifo.toMap()['costing_method'], equals('lifo'));
 
-      final wa = Product(nameAr: 'Test', costingMethod: CostingMethod.weightedAverage);
+      final wa =
+          Product(nameAr: 'Test', costingMethod: CostingMethod.weightedAverage);
       expect(wa.toMap()['costing_method'], equals('weighted_average'));
     });
 
@@ -162,11 +182,17 @@ void main() {
 
     test('round-trip preserves monetary values', () {
       final original = Product(
-        id: 1, nameAr: 'قلم', nameEn: 'Pen',
-        costPrice: 50.0, sellPrice: 100.0, averageCost: 45.0,
-        currentStock: 150.5, currency: 'SAR',
+        id: 1,
+        nameAr: 'قلم',
+        nameEn: 'Pen',
+        costPrice: 50.0,
+        sellPrice: 100.0,
+        averageCost: 45.0,
+        currentStock: 150.5,
+        currency: 'SAR',
         costingMethod: CostingMethod.fifo,
-        createdAt: DateTime(2026, 1, 1), updatedAt: DateTime(2026, 1, 1),
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
       );
       final restored = Product.fromMap(original.toMap());
       expect(restored.costPrice, closeTo(original.costPrice, 0.01));
@@ -181,7 +207,9 @@ void main() {
   group('InvoiceItem Model', () {
     test('creates invoice item with required fields', () {
       final item = InvoiceItem(
-        invoiceId: 'INV-001', productId: 1, productName: 'قلم',
+        invoiceId: 'INV-001',
+        productId: 1,
+        productName: 'قلم',
       );
       expect(item.invoiceId, equals('INV-001'));
       expect(item.quantity, equals(1.0));
@@ -191,8 +219,12 @@ void main() {
 
     test('toMap converts monetary fields to cents', () {
       final item = InvoiceItem(
-        invoiceId: 'INV-001', productId: 1, productName: 'قلم',
-        unitPrice: 50.0, totalPrice: 100.0, unitCost: 30.0,
+        invoiceId: 'INV-001',
+        productId: 1,
+        productName: 'قلم',
+        unitPrice: 50.0,
+        totalPrice: 100.0,
+        unitCost: 30.0,
       );
       final map = item.toMap();
       expect(map['unit_price'], equals(MoneyHelper.toCents(50.0)));
@@ -202,9 +234,16 @@ void main() {
 
     test('round-trip preserves values', () {
       final original = InvoiceItem(
-        id: 1, invoiceId: 'INV-001', productId: 1, productName: 'قلم',
-        quantity: 5.0, unitPrice: 50.0, totalPrice: 250.0,
-        unitCost: 30.0, conversionFactor: 24.0, baseQuantity: 120.0,
+        id: 1,
+        invoiceId: 'INV-001',
+        productId: 1,
+        productName: 'قلم',
+        quantity: 5.0,
+        unitPrice: 50.0,
+        totalPrice: 250.0,
+        unitCost: 30.0,
+        conversionFactor: 24.0,
+        baseQuantity: 120.0,
       );
       final restored = InvoiceItem.fromMap(original.toMap());
       expect(restored.unitPrice, closeTo(original.unitPrice, 0.01));
@@ -219,8 +258,10 @@ void main() {
   group('InventoryCostLayer Model', () {
     test('creates cost layer correctly', () {
       final layer = InventoryCostLayer(
-        productId: 1, quantityOriginal: 100.0,
-        quantityRemaining: 80.0, unitCost: 50.0,
+        productId: 1,
+        quantityOriginal: 100.0,
+        quantityRemaining: 80.0,
+        unitCost: 50.0,
         acquisitionDate: DateTime(2026, 1, 1),
       );
       expect(layer.quantityOriginal, equals(100.0));
@@ -231,8 +272,10 @@ void main() {
 
     test('toMap converts unitCost to cents', () {
       final layer = InventoryCostLayer(
-        productId: 1, quantityOriginal: 100.0,
-        quantityRemaining: 80.0, unitCost: 50.75,
+        productId: 1,
+        quantityOriginal: 100.0,
+        quantityRemaining: 80.0,
+        unitCost: 50.75,
         acquisitionDate: DateTime(2026, 1, 1),
       );
       final map = layer.toMap();
@@ -241,8 +284,11 @@ void main() {
 
     test('round-trip preserves values', () {
       final original = InventoryCostLayer(
-        id: 1, productId: 1, quantityOriginal: 100.0,
-        quantityRemaining: 80.0, unitCost: 50.75,
+        id: 1,
+        productId: 1,
+        quantityOriginal: 100.0,
+        quantityRemaining: 80.0,
+        unitCost: 50.75,
         acquisitionDate: DateTime(2026, 1, 1),
         createdAt: DateTime(2026, 1, 1),
       );

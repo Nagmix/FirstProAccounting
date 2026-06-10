@@ -143,7 +143,8 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'تعديل حساب المصروف' : 'إضافة حساب مصروف جديد'),
+        title:
+            Text(_isEditing ? 'تعديل حساب المصروف' : 'إضافة حساب مصروف جديد'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_forward),
           onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
@@ -155,7 +156,8 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
                   )
                 : const Icon(Icons.check, size: 20),
             label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
@@ -165,7 +167,8 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
+          padding:
+              EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -180,11 +183,11 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                     prefixIcon: Icon(Icons.text_fields),
                     hintText: 'مثال: مصاريف إيجار',
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'اسم الحساب مطلوب' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'اسم الحساب مطلوب'
+                      : null,
                 ),
                 const SizedBox(height: 14),
-
                 TextFormField(
                   controller: _descriptionController,
                   textInputAction: TextInputAction.next,
@@ -195,10 +198,10 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                   ),
                 ),
                 const SizedBox(height: 14),
-
                 TextFormField(
                   controller: _debtCeilingController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'سقف المديونية',
@@ -207,7 +210,6 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                   ),
                 ),
                 const SizedBox(height: 14),
-
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -218,7 +220,6 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                   ),
                 ),
                 const SizedBox(height: 14),
-
                 TextFormField(
                   controller: _notesController,
                   maxLines: 3,
@@ -230,7 +231,6 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 _SectionLabel(label: 'طريقة التواصل'),
                 Row(
                   children: [
@@ -242,8 +242,7 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                         contentPadding: EdgeInsets.zero,
                         dense: true,
                         activeColor: AppColors.primary,
-                        onChanged: (v) =>
-                            setState(() => _contactMethod = v!),
+                        onChanged: (v) => setState(() => _contactMethod = v!),
                       ),
                     ),
                     Expanded(
@@ -254,14 +253,12 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                         contentPadding: EdgeInsets.zero,
                         dense: true,
                         activeColor: AppColors.primary,
-                        onChanged: (v) =>
-                            setState(() => _contactMethod = v!),
+                        onChanged: (v) => setState(() => _contactMethod = v!),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-
                 Row(
                   children: [
                     Expanded(
@@ -297,7 +294,6 @@ class _AddExpenseSubAccountSheetState extends State<AddExpenseSubAccountSheet> {
                     ),
                   ],
                 ),
-
                 SizedBox(height: bottomPadding),
               ],
             ),

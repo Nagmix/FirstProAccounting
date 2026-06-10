@@ -19,7 +19,8 @@ class PosEwalletFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ewalletPayment = vm.payments.where((p) => p.method == 'ewallet').firstOrNull;
+    final ewalletPayment =
+        vm.payments.where((p) => p.method == 'ewallet').firstOrNull;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Container(
@@ -34,7 +35,8 @@ class PosEwalletFields extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.account_balance_wallet, size: 18, color: AppColors.secondary),
+                const Icon(Icons.account_balance_wallet,
+                    size: 18, color: AppColors.secondary),
                 const SizedBox(width: 6),
                 Text(
                   'بيانات المحفظة الإلكترونية',
@@ -50,20 +52,26 @@ class PosEwalletFields extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'اسم مزود المحفظة (مثل: فلوسك، جوالي)',
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 prefixIcon: const Icon(Icons.badge, size: 18),
               ),
               onChanged: (v) {
                 // Update the ewallet provider name in payments
-                final idx = vm.payments.indexWhere((p) => p.method == 'ewallet');
+                final idx =
+                    vm.payments.indexWhere((p) => p.method == 'ewallet');
                 if (idx >= 0) {
-                  vm.updatePayment(idx, vm.payments[idx].copyWith(providerName: v));
+                  vm.updatePayment(
+                      idx, vm.payments[idx].copyWith(providerName: v));
                 }
               },
-              controller: TextEditingController(text: ewalletPayment?.providerName ?? '')
+              controller: TextEditingController(
+                  text: ewalletPayment?.providerName ?? '')
                 ..selection = TextSelection.fromPosition(
-                  TextPosition(offset: ewalletPayment?.providerName?.length ?? 0),
+                  TextPosition(
+                      offset: ewalletPayment?.providerName?.length ?? 0),
                 ),
             ),
             const SizedBox(height: 8),
@@ -74,7 +82,8 @@ class PosEwalletFields extends StatelessWidget {
                   icon: const Icon(Icons.camera_alt, size: 16),
                   label: const Text('التقاط صورة'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     textStyle: const TextStyle(fontSize: 11),
                   ),
                 ),
@@ -84,7 +93,8 @@ class PosEwalletFields extends StatelessWidget {
                   icon: const Icon(Icons.image, size: 16),
                   label: const Text('إرفاق صورة'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     textStyle: const TextStyle(fontSize: 11),
                   ),
                 ),

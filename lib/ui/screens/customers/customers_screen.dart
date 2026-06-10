@@ -48,7 +48,9 @@ class _CustomersScreenState extends State<CustomersScreen>
     _searchController.addListener(() {
       _searchDebounce?.cancel();
       _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+        if (mounted) {
+          setState(() => _searchQuery = _searchController.text.trim());
+        }
       });
     });
     _loadCustomers();
@@ -77,7 +79,9 @@ class _CustomersScreenState extends State<CustomersScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -92,7 +96,8 @@ class _CustomersScreenState extends State<CustomersScreen>
 
       final futures = _customers.map((c) async {
         if (c.id != null) {
-          final balance = await repo.getCustomerBalanceForCurrency(c.id!, _selectedCurrency);
+          final balance = await repo.getCustomerBalanceForCurrency(
+              c.id!, _selectedCurrency);
           return MapEntry(c.id!, balance);
         }
         return null;
@@ -187,7 +192,8 @@ class _CustomersScreenState extends State<CustomersScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final currentSymbol = CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
+    final currentSymbol =
+        CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
 
     return Scaffold(
       appBar: AppBar(
@@ -197,10 +203,14 @@ class _CustomersScreenState extends State<CustomersScreen>
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: ActionChip(
-              avatar: Icon(Icons.currency_exchange, size: 16, color: AppColors.primary),
+              avatar: Icon(Icons.currency_exchange,
+                  size: 16, color: AppColors.primary),
               label: Text(
                 '$currentSymbol $_selectedCurrency',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary),
               ),
               onPressed: () => CurrencyConstants.showCurrencyFilterPopup(
                 context: context,
@@ -247,12 +257,19 @@ class _CustomersScreenState extends State<CustomersScreen>
 
                 // ── Summary bar ───────────────────────────────────────
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    color: isLight
+                        ? AppColors.surfaceVariant
+                        : AppColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isLight ? AppColors.border : AppColors.darkBorder, width: 0.5),
+                    border: Border.all(
+                        color:
+                            isLight ? AppColors.border : AppColors.darkBorder,
+                        width: 0.5),
                   ),
                   child: Row(
                     children: [
@@ -267,9 +284,13 @@ class _CustomersScreenState extends State<CustomersScreen>
                       ),
                       const Spacer(),
                       if (_isBalancesLoading)
-                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                       else ...[
-                        Icon(Icons.account_balance_wallet, size: 16, color: AppColors.textHint),
+                        Icon(Icons.account_balance_wallet,
+                            size: 16, color: AppColors.textHint),
                         const SizedBox(width: 4),
                         Text(
                           'العملة: $_selectedCurrency',
@@ -279,7 +300,8 @@ class _CustomersScreenState extends State<CustomersScreen>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Icon(Icons.calculate, size: 16, color: AppColors.primary),
+                        Icon(Icons.calculate,
+                            size: 16, color: AppColors.primary),
                         const SizedBox(width: 4),
                         Text(
                           'الإجمالي: ${CurrencyFormatter.formatValue(_currencyBalances.values.fold(0.0, (sum, b) => sum + b))} $currentSymbol',
@@ -316,7 +338,8 @@ class _CustomersScreenState extends State<CustomersScreen>
                               ? 'قم بإضافة عملاء جدد لبدء إدارة حساباتك'
                               : 'لم يتم العثور على نتائج مطابقة',
                           actionLabel: tabIndex == 0 ? 'إضافة عميل' : null,
-                          onAction: tabIndex == 0 ? _showAddCustomerSheet : null,
+                          onAction:
+                              tabIndex == 0 ? _showAddCustomerSheet : null,
                         );
                       }
 
@@ -328,23 +351,31 @@ class _CustomersScreenState extends State<CustomersScreen>
                           padding: const EdgeInsets.only(bottom: 80, top: 2),
                           itemCount: filtered.length,
                           itemBuilder: (context, index) {
-                          final customer = filtered[index];
-                          return _CustomerCard(
-                            customer: customer,
-                            avatarColor: AvatarHelper.avatarColor(customer.name),
-                            displayBalance: _currencyBalances[customer.id] ?? 0.0,
-                            currencySymbol: CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
-                            isLight: isLight,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => CustomerDetailScreen(customer: customer),
-                                ),
-                              ).then((_) => _loadCustomers());
-                            },
-                            onDelete: () => _deleteCustomer(customer),
-                          );
-                        },
+                            final customer = filtered[index];
+                            return _CustomerCard(
+                              customer: customer,
+                              avatarColor:
+                                  AvatarHelper.avatarColor(customer.name),
+                              displayBalance:
+                                  _currencyBalances[customer.id] ?? 0.0,
+                              currencySymbol: CurrencyConstants
+                                          .currencyInfo[_selectedCurrency]
+                                      ?['symbol'] ??
+                                  'ر.ي',
+                              isLight: isLight,
+                              onTap: () {
+                                Navigator.of(context)
+                                    .push(
+                                      MaterialPageRoute(
+                                        builder: (_) => CustomerDetailScreen(
+                                            customer: customer),
+                                      ),
+                                    )
+                                    .then((_) => _loadCustomers());
+                              },
+                              onDelete: () => _deleteCustomer(customer),
+                            );
+                          },
                         ),
                       );
                     }),
@@ -407,7 +438,9 @@ class _CustomerCard extends StatelessWidget {
         color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLight ? AppColors.border.withValues(alpha: 0.5) : AppColors.darkBorder.withValues(alpha: 0.5),
+          color: isLight
+              ? AppColors.border.withValues(alpha: 0.5)
+              : AppColors.darkBorder.withValues(alpha: 0.5),
           width: 0.5,
         ),
         boxShadow: [
@@ -480,13 +513,17 @@ class _CustomerCard extends StatelessWidget {
                           Icon(
                             Icons.phone,
                             size: 13,
-                            color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                            color: isLight
+                                ? AppColors.textHint
+                                : AppColors.darkTextSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             customer.phone ?? '—',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+                              color: isLight
+                                  ? AppColors.textSecondary
+                                  : AppColors.darkTextSecondary,
                             ),
                           ),
                         ],
@@ -499,18 +536,27 @@ class _CustomerCard extends StatelessWidget {
 
                 // ── Balance Section - الرصيد with color ──────
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: displayBalance != 0
-                          ? [balanceColor.withValues(alpha: 0.12), balanceColor.withValues(alpha: 0.04)]
-                          : [Colors.grey.withValues(alpha: 0.06), Colors.grey.withValues(alpha: 0.02)],
+                          ? [
+                              balanceColor.withValues(alpha: 0.12),
+                              balanceColor.withValues(alpha: 0.04)
+                            ]
+                          : [
+                              Colors.grey.withValues(alpha: 0.06),
+                              Colors.grey.withValues(alpha: 0.02)
+                            ],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: displayBalance != 0 ? balanceColor.withValues(alpha: 0.25) : AppColors.border.withValues(alpha: 0.3),
+                      color: displayBalance != 0
+                          ? balanceColor.withValues(alpha: 0.25)
+                          : AppColors.border.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -518,9 +564,15 @@ class _CustomerCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isDebit ? Icons.trending_down : isCredit ? Icons.trending_up : Icons.remove,
+                        isDebit
+                            ? Icons.trending_down
+                            : isCredit
+                                ? Icons.trending_up
+                                : Icons.remove,
                         size: 14,
-                        color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                        color: displayBalance != 0
+                            ? balanceColor
+                            : AppColors.textHint,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -528,7 +580,9 @@ class _CustomerCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
-                          color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                          color: displayBalance != 0
+                              ? balanceColor
+                              : AppColors.textHint,
                         ),
                       ),
                     ],
@@ -541,13 +595,17 @@ class _CustomerCard extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    color: isLight
+                        ? AppColors.surfaceVariant
+                        : AppColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.arrow_back_ios,
                     size: 12,
-                    color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                    color: isLight
+                        ? AppColors.textHint
+                        : AppColors.darkTextSecondary,
                   ),
                 ),
               ],

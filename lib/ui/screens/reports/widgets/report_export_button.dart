@@ -22,7 +22,9 @@ class ReportExportFab extends StatelessWidget {
   Future<void> _exportToExcel(BuildContext context) async {
     if (reportRows.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا توجد بيانات للتصدير'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('لا توجد بيانات للتصدير'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
@@ -35,7 +37,9 @@ class ReportExportFab extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حدث خطأ أثناء التصدير'), backgroundColor: AppColors.error),
+          const SnackBar(
+              content: Text('حدث خطأ أثناء التصدير'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -56,7 +60,9 @@ class ReportExportFab extends StatelessWidget {
             _exportToExcel(context);
           case 'print':
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('طباعة – قريباً'), backgroundColor: AppColors.info),
+              const SnackBar(
+                  content: Text('طباعة – قريباً'),
+                  backgroundColor: AppColors.info),
             );
         }
       },
@@ -100,7 +106,11 @@ class ReportExportFab extends StatelessWidget {
           children: [
             Icon(Icons.file_download, color: Colors.white, size: 22),
             SizedBox(width: 8),
-            Text('تصدير', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+            Text('تصدير',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14)),
             SizedBox(width: 4),
             Icon(Icons.arrow_drop_up, color: Colors.white, size: 18),
           ],

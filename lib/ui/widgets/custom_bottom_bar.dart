@@ -171,7 +171,10 @@ class CenterFabButton extends StatelessWidget {
         height: 56,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.primaryGradientStart, AppColors.primaryGradientEnd],
+            colors: [
+              AppColors.primaryGradientStart,
+              AppColors.primaryGradientEnd
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -245,7 +248,8 @@ class BottomBarClipper extends CustomClipper<Path> {
 
     // Semicircular notch cutout (bottom arc)
     path.arcTo(
-      Rect.fromLTWH(centerX - notchWidth / 2, -notchRadius * 0.1, notchWidth, notchRadius * 1.2),
+      Rect.fromLTWH(centerX - notchWidth / 2, -notchRadius * 0.1, notchWidth,
+          notchRadius * 1.2),
       degreeToRadians(200),
       degreeToRadians(-140),
       false,
@@ -265,7 +269,8 @@ class BottomBarClipper extends CustomClipper<Path> {
 
     // Top-right corner radius
     path.arcTo(
-      Rect.fromLTWH(size.width - notchRadius * 0.8, 0, notchRadius * 0.8, notchRadius * 0.8),
+      Rect.fromLTWH(size.width - notchRadius * 0.8, 0, notchRadius * 0.8,
+          notchRadius * 0.8),
       degreeToRadians(270),
       degreeToRadians(90),
       false,

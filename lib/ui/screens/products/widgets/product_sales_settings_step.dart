@@ -41,7 +41,6 @@ class ProductSalesSettingsStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const StepTitle(title: 'إعدادات البيع', icon: Icons.storefront),
-
         ProductSwitchTile(
           title: 'يباع؟',
           subtitle: isSellable ? 'نعم' : 'لا',
@@ -49,7 +48,6 @@ class ProductSalesSettingsStep extends StatelessWidget {
           onChanged: onSellableChanged,
         ),
         const Divider(height: 1),
-
         ProductSwitchTile(
           title: 'يشترى؟',
           subtitle: isPurchasable ? 'نعم' : 'لا',
@@ -57,7 +55,6 @@ class ProductSalesSettingsStep extends StatelessWidget {
           onChanged: onPurchasableChanged,
         ),
         const Divider(height: 1),
-
         ProductSwitchTile(
           title: 'يسمح بالسالب؟',
           subtitle: allowNegative ? 'نعم' : 'لا',
@@ -65,7 +62,6 @@ class ProductSalesSettingsStep extends StatelessWidget {
           onChanged: onAllowNegativeChanged,
         ),
         const Divider(height: 1),
-
         ProductSwitchTile(
           title: 'يباع بالتجزئة؟',
           subtitle: sellRetail ? 'نعم' : 'لا',
@@ -73,7 +69,6 @@ class ProductSalesSettingsStep extends StatelessWidget {
           onChanged: onSellRetailChanged,
         ),
         const Divider(height: 1),
-
         ProductSwitchTile(
           title: 'يظهر في الكاشير؟',
           subtitle: showInPos ? 'نعم' : 'لا',

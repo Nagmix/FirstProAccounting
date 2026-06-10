@@ -78,14 +78,46 @@ class _ReportsScreenState extends State<ReportsScreen>
         color: AppColors.primary,
         isExpanded: true,
         items: [
-          const ReportItem(name: 'تقرير المبيعات', icon: Icons.trending_up, color: AppColors.success, key: 'sales'),
-          const ReportItem(name: 'تقرير المشتريات', icon: Icons.shopping_cart, color: AppColors.error, key: 'purchases'),
-          const ReportItem(name: 'مرتجعات المبيعات', icon: Icons.undo, color: AppColors.warning, key: 'sales_returns'),
-          const ReportItem(name: 'مرتجعات المشتريات', icon: Icons.undo, color: AppColors.warning, key: 'purchase_returns'),
-          const ReportItem(name: 'الأرباح والخسائر', icon: Icons.assessment, color: AppColors.primary, key: 'profit_loss'),
-          const ReportItem(name: 'ربح الفواتير', icon: Icons.receipt_long, color: AppColors.secondary, key: 'invoice_profit'),
-          const ReportItem(name: 'المبيعات حسب المنتج', icon: Icons.inventory, color: AppColors.info, key: 'sales_by_product'),
-          const ReportItem(name: 'المبيعات حسب العميل', icon: Icons.people, color: AppColors.success, key: 'sales_by_customer'),
+          const ReportItem(
+              name: 'تقرير المبيعات',
+              icon: Icons.trending_up,
+              color: AppColors.success,
+              key: 'sales'),
+          const ReportItem(
+              name: 'تقرير المشتريات',
+              icon: Icons.shopping_cart,
+              color: AppColors.error,
+              key: 'purchases'),
+          const ReportItem(
+              name: 'مرتجعات المبيعات',
+              icon: Icons.undo,
+              color: AppColors.warning,
+              key: 'sales_returns'),
+          const ReportItem(
+              name: 'مرتجعات المشتريات',
+              icon: Icons.undo,
+              color: AppColors.warning,
+              key: 'purchase_returns'),
+          const ReportItem(
+              name: 'الأرباح والخسائر',
+              icon: Icons.assessment,
+              color: AppColors.primary,
+              key: 'profit_loss'),
+          const ReportItem(
+              name: 'ربح الفواتير',
+              icon: Icons.receipt_long,
+              color: AppColors.secondary,
+              key: 'invoice_profit'),
+          const ReportItem(
+              name: 'المبيعات حسب المنتج',
+              icon: Icons.inventory,
+              color: AppColors.info,
+              key: 'sales_by_product'),
+          const ReportItem(
+              name: 'المبيعات حسب العميل',
+              icon: Icons.people,
+              color: AppColors.success,
+              key: 'sales_by_customer'),
         ],
       ),
       ReportGroup(
@@ -93,16 +125,56 @@ class _ReportsScreenState extends State<ReportsScreen>
         icon: Icons.account_balance,
         color: AppColors.info,
         items: [
-          const ReportItem(name: 'حركة حساب', icon: Icons.swap_horiz, color: AppColors.info, key: 'account_movement'),
-          const ReportItem(name: 'حركة جميع الحسابات', icon: Icons.view_list, color: AppColors.info, key: 'all_account_movement'),
-          const ReportItem(name: 'ميزان المراجعة', icon: Icons.balance, color: AppColors.primary, key: 'trial_balance'),
-          const ReportItem(name: 'ميزان المراجعة (شاشة كاملة)', icon: Icons.balance, color: AppColors.primary, key: 'trial_balance_screen'),
-          const ReportItem(name: 'القوائم المالية', icon: Icons.account_balance, color: AppColors.info, key: 'financial_statements'),
-          const ReportItem(name: 'حركة الصندوق', icon: Icons.account_balance_wallet, color: AppColors.success, key: 'cash_box'),
-          const ReportItem(name: 'حسابات بدون حركة', icon: Icons.block, color: AppColors.textHint, key: 'accounts_no_movement'),
-          const ReportItem(name: 'كشف حساب عميل', icon: Icons.person, color: AppColors.success, key: 'customer_statement'),
-          const ReportItem(name: 'كشف حساب مورد', icon: Icons.local_shipping, color: AppColors.error, key: 'supplier_statement'),
-          const ReportItem(name: 'تقرير المصروفات', icon: Icons.money_off, color: AppColors.warning, key: 'expenses'),
+          const ReportItem(
+              name: 'حركة حساب',
+              icon: Icons.swap_horiz,
+              color: AppColors.info,
+              key: 'account_movement'),
+          const ReportItem(
+              name: 'حركة جميع الحسابات',
+              icon: Icons.view_list,
+              color: AppColors.info,
+              key: 'all_account_movement'),
+          const ReportItem(
+              name: 'ميزان المراجعة',
+              icon: Icons.balance,
+              color: AppColors.primary,
+              key: 'trial_balance'),
+          const ReportItem(
+              name: 'ميزان المراجعة (شاشة كاملة)',
+              icon: Icons.balance,
+              color: AppColors.primary,
+              key: 'trial_balance_screen'),
+          const ReportItem(
+              name: 'القوائم المالية',
+              icon: Icons.account_balance,
+              color: AppColors.info,
+              key: 'financial_statements'),
+          const ReportItem(
+              name: 'حركة الصندوق',
+              icon: Icons.account_balance_wallet,
+              color: AppColors.success,
+              key: 'cash_box'),
+          const ReportItem(
+              name: 'حسابات بدون حركة',
+              icon: Icons.block,
+              color: AppColors.textHint,
+              key: 'accounts_no_movement'),
+          const ReportItem(
+              name: 'كشف حساب عميل',
+              icon: Icons.person,
+              color: AppColors.success,
+              key: 'customer_statement'),
+          const ReportItem(
+              name: 'كشف حساب مورد',
+              icon: Icons.local_shipping,
+              color: AppColors.error,
+              key: 'supplier_statement'),
+          const ReportItem(
+              name: 'تقرير المصروفات',
+              icon: Icons.money_off,
+              color: AppColors.warning,
+              key: 'expenses'),
         ],
       ),
       ReportGroup(
@@ -110,11 +182,31 @@ class _ReportsScreenState extends State<ReportsScreen>
         icon: Icons.inventory_2,
         color: AppColors.success,
         items: [
-          const ReportItem(name: 'تقرير المخزون', icon: Icons.inventory_2, color: AppColors.success, key: 'inventory'),
-          const ReportItem(name: 'حركة المخزون', icon: Icons.swap_vert, color: AppColors.primary, key: 'inventory_movement'),
-          const ReportItem(name: 'تكلفة المخزون', icon: Icons.attach_money, color: AppColors.warning, key: 'inventory_cost'),
-          const ReportItem(name: 'الأصناف المنتهية', icon: Icons.warning, color: AppColors.error, key: 'out_of_stock'),
-          const ReportItem(name: 'الأصناف قاربت على النفاد', icon: Icons.notification_important, color: AppColors.warning, key: 'low_stock'),
+          const ReportItem(
+              name: 'تقرير المخزون',
+              icon: Icons.inventory_2,
+              color: AppColors.success,
+              key: 'inventory'),
+          const ReportItem(
+              name: 'حركة المخزون',
+              icon: Icons.swap_vert,
+              color: AppColors.primary,
+              key: 'inventory_movement'),
+          const ReportItem(
+              name: 'تكلفة المخزون',
+              icon: Icons.attach_money,
+              color: AppColors.warning,
+              key: 'inventory_cost'),
+          const ReportItem(
+              name: 'الأصناف المنتهية',
+              icon: Icons.warning,
+              color: AppColors.error,
+              key: 'out_of_stock'),
+          const ReportItem(
+              name: 'الأصناف قاربت على النفاد',
+              icon: Icons.notification_important,
+              color: AppColors.warning,
+              key: 'low_stock'),
         ],
       ),
       ReportGroup(
@@ -122,8 +214,16 @@ class _ReportsScreenState extends State<ReportsScreen>
         icon: Icons.people,
         color: AppColors.warning,
         items: [
-          const ReportItem(name: 'ديون العملاء', icon: Icons.people, color: AppColors.warning, key: 'customer_debts'),
-          const ReportItem(name: 'ديون الموردين', icon: Icons.local_shipping, color: AppColors.error, key: 'supplier_debts'),
+          const ReportItem(
+              name: 'ديون العملاء',
+              icon: Icons.people,
+              color: AppColors.warning,
+              key: 'customer_debts'),
+          const ReportItem(
+              name: 'ديون الموردين',
+              icon: Icons.local_shipping,
+              color: AppColors.error,
+              key: 'supplier_debts'),
         ],
       ),
       ReportGroup(
@@ -131,10 +231,26 @@ class _ReportsScreenState extends State<ReportsScreen>
         icon: Icons.settings,
         color: AppColors.secondary,
         items: [
-          const ReportItem(name: 'تحويلات الصناديق', icon: Icons.swap_horiz, color: AppColors.info, key: 'cash_transfers'),
-          const ReportItem(name: 'صرافة العملات', icon: Icons.currency_exchange, color: AppColors.secondary, key: 'currency_exchanges'),
-          const ReportItem(name: 'السندات', icon: Icons.assignment, color: AppColors.primary, key: 'vouchers'),
-          const ReportItem(name: 'الورديات', icon: Icons.access_time, color: AppColors.info, key: 'shifts'),
+          const ReportItem(
+              name: 'تحويلات الصناديق',
+              icon: Icons.swap_horiz,
+              color: AppColors.info,
+              key: 'cash_transfers'),
+          const ReportItem(
+              name: 'صرافة العملات',
+              icon: Icons.currency_exchange,
+              color: AppColors.secondary,
+              key: 'currency_exchanges'),
+          const ReportItem(
+              name: 'السندات',
+              icon: Icons.assignment,
+              color: AppColors.primary,
+              key: 'vouchers'),
+          const ReportItem(
+              name: 'الورديات',
+              icon: Icons.access_time,
+              color: AppColors.info,
+              key: 'shifts'),
         ],
       ),
     ];
@@ -173,26 +289,38 @@ class _ReportsScreenState extends State<ReportsScreen>
     if (_selectedReportKey == null) return;
 
     // Validate required filters
-    if (_selectedReportKey == 'account_movement' && _selectedAccountId == null) {
+    if (_selectedReportKey == 'account_movement' &&
+        _selectedAccountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار الحساب أولاً'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('يرجى اختيار الحساب أولاً'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
-    if (_selectedReportKey == 'customer_statement' && _selectedCustomerId == null) {
+    if (_selectedReportKey == 'customer_statement' &&
+        _selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار العميل أولاً'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('يرجى اختيار العميل أولاً'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
-    if (_selectedReportKey == 'supplier_statement' && _selectedSupplierId == null) {
+    if (_selectedReportKey == 'supplier_statement' &&
+        _selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار المورد أولاً'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('يرجى اختيار المورد أولاً'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
 
-    setState(() { _isLoading = true; _hasData = false; });
+    setState(() {
+      _isLoading = true;
+      _hasData = false;
+    });
     try {
       final result = await ReportDataLoader.load(
         reportKey: _selectedReportKey!,
@@ -217,7 +345,8 @@ class _ReportsScreenState extends State<ReportsScreen>
         debugPrint('Report error ($_selectedReportKey): $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ أثناء تحميل التقرير: ${e.toString().length > 80 ? e.toString().substring(0, 80) + '...' : e.toString()}'),
+            content: Text(
+                'حدث خطأ أثناء تحميل التقرير: ${e.toString().length > 80 ? e.toString().substring(0, 80) + '...' : e.toString()}'),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 5),
           ),
@@ -232,11 +361,13 @@ class _ReportsScreenState extends State<ReportsScreen>
   void _onReportSelected(ReportItem item) {
     // Navigate to standalone screens for dedicated report views
     if (item.key == 'trial_balance_screen') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const TrialBalanceScreen()));
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const TrialBalanceScreen()));
       return;
     }
     if (item.key == 'financial_statements') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const FinancialStatementsScreen()));
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const FinancialStatementsScreen()));
       return;
     }
     setState(() {
@@ -285,7 +416,8 @@ class _ReportsScreenState extends State<ReportsScreen>
       expandedHeight: 60,
       backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
       foregroundColor: Colors.white,
-      title: const Text('التقارير', style: TextStyle(fontWeight: FontWeight.w700)),
+      title:
+          const Text('التقارير', style: TextStyle(fontWeight: FontWeight.w700)),
       centerTitle: false,
       bottom: TabBar(
         controller: _tabController,
@@ -295,13 +427,16 @@ class _ReportsScreenState extends State<ReportsScreen>
         labelColor: Colors.white,
         unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        unselectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
         tabAlignment: TabAlignment.start,
-        tabs: _groups.map((g) => Tab(
-          icon: Icon(g.icon, size: 18),
-          text: g.name,
-          height: 52,
-        )).toList(),
+        tabs: _groups
+            .map((g) => Tab(
+                  icon: Icon(g.icon, size: 18),
+                  text: g.name,
+                  height: 52,
+                ))
+            .toList(),
       ),
     );
   }
@@ -331,7 +466,8 @@ class _ReportsScreenState extends State<ReportsScreen>
             onReportSelected: _onReportSelected,
           ),
           // Filters section (only when a report is selected from this group)
-          if (_selectedReportKey != null && group.items.any((i) => i.key == _selectedReportKey)) ...[
+          if (_selectedReportKey != null &&
+              group.items.any((i) => i.key == _selectedReportKey)) ...[
             const SizedBox(height: 12),
             ReportFiltersSection(
               selectedReportKey: _selectedReportKey,
@@ -354,9 +490,11 @@ class _ReportsScreenState extends State<ReportsScreen>
               onCustomerChanged: (v) => setState(() => _selectedCustomerId = v),
               onSupplierChanged: (v) => setState(() => _selectedSupplierId = v),
               onCashBoxChanged: (v) => setState(() => _selectedCashBoxId = v),
-              onWarehouseChanged: (v) => setState(() => _selectedWarehouseId = v),
+              onWarehouseChanged: (v) =>
+                  setState(() => _selectedWarehouseId = v),
               onCategoryChanged: (v) => setState(() => _selectedCategoryId = v),
-              onAccountTypeChanged: (v) => setState(() => _selectedAccountType = v),
+              onAccountTypeChanged: (v) =>
+                  setState(() => _selectedAccountType = v),
             ),
             const SizedBox(height: 12),
             // Load button
@@ -366,13 +504,18 @@ class _ReportsScreenState extends State<ReportsScreen>
               child: ElevatedButton.icon(
                 onPressed: _isLoading ? null : _loadReport,
                 icon: _isLoading
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.search, size: 20),
                 label: Text(_isLoading ? 'جاري التحميل...' : 'عرض التقرير'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   elevation: 2,
                 ),
               ),

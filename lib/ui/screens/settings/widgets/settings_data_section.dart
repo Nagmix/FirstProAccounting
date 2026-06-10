@@ -71,7 +71,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
     // If the parent refreshed the initial values (e.g. after _loadSettings),
     // sync the local state so the UI stays consistent.
     if (oldWidget.initialAutoBackupEnabled != widget.initialAutoBackupEnabled ||
-        oldWidget.initialAutoBackupFrequencyIndex != widget.initialAutoBackupFrequencyIndex ||
+        oldWidget.initialAutoBackupFrequencyIndex !=
+            widget.initialAutoBackupFrequencyIndex ||
         oldWidget.initialLastBackupDate != widget.initialLastBackupDate) {
       setState(() {
         _autoBackupEnabled = widget.initialAutoBackupEnabled;
@@ -114,7 +115,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
   Future<void> _checkAndPerformAutoBackup() async {
     if (!_autoBackupEnabled) return;
 
-    final lastBackupStr = await locator<ReferenceDataRepository>().getSetting('last_backup_date');
+    final lastBackupStr =
+        await locator<ReferenceDataRepository>().getSetting('last_backup_date');
     if (lastBackupStr != null) {
       final lastBackup = DateTime.tryParse(lastBackupStr);
       if (lastBackup != null) {
@@ -160,19 +162,23 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
         await backupDir.create(recursive: true);
       }
 
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-      final autoBackupPath = p.join(backupDir.path, 'auto_backup_$timestamp.db');
+      final timestamp = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .split('.')
+          .first;
+      final autoBackupPath =
+          p.join(backupDir.path, 'auto_backup_$timestamp.db');
       await dbFile.copy(autoBackupPath);
 
       // Clean up old backups – keep only the last 5
-      final backupFiles = await backupDir
-          .list()
-          .where((f) => f.path.endsWith('.db'))
-          .toList();
+      final backupFiles =
+          await backupDir.list().where((f) => f.path.endsWith('.db')).toList();
       if (backupFiles.length > 5) {
         // Sort by modification time, oldest first
-        backupFiles.sort((a, b) =>
-            FileStat.statSync(a.path).modified.compareTo(FileStat.statSync(b.path).modified));
+        backupFiles.sort((a, b) => FileStat.statSync(a.path)
+            .modified
+            .compareTo(FileStat.statSync(b.path).modified));
         for (var i = 0; i < backupFiles.length - 5; i++) {
           await backupFiles[i].delete();
         }
@@ -213,7 +219,11 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
 
       // Create timestamped backup for sharing
       final dir = await getApplicationDocumentsDirectory();
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+      final timestamp = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .split('.')
+          .first;
       final backupPath = p.join(dir.path, 'firstpro_backup_$timestamp.db');
       await dbFile.copy(backupPath);
 
@@ -319,7 +329,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 48),
+        icon: const Icon(Icons.warning_amber_rounded,
+            color: AppColors.warning, size: 48),
         title: const Text('تحذير: استعادة البيانات'),
         content: const Text(
           'تحذير: ستتم استبدال جميع البيانات الحالية بالنسخة الاحتياطية. هل أنت متأكد؟\n\n'
@@ -377,7 +388,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
             Navigator.pop(context); // dismiss loading dialog
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('الملف المحدد تالف أو غير صالح. لا يمكن استعادة البيانات.'),
+                content: Text(
+                    'الملف المحدد تالف أو غير صالح. لا يمكن استعادة البيانات.'),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -424,7 +436,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            icon: const Icon(Icons.check_circle, color: AppColors.success, size: 48),
+            icon: const Icon(Icons.check_circle,
+                color: AppColors.success, size: 48),
             title: const Text('تمت الاستعادة بنجاح'),
             content: const Text(
               'تم استعادة البيانات من النسخة الاحتياطية بنجاح.\n'
@@ -469,29 +482,30 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
       if (!await backupDir.exists()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا توجد نسخ احتياطية تلقائية محفوظة')),
+            const SnackBar(
+                content: Text('لا توجد نسخ احتياطية تلقائية محفوظة')),
           );
         }
         return null;
       }
 
-      final files = await backupDir
-          .list()
-          .where((f) => f.path.endsWith('.db'))
-          .toList();
+      final files =
+          await backupDir.list().where((f) => f.path.endsWith('.db')).toList();
 
       if (files.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا توجد نسخ احتياطية تلقائية محفوظة')),
+            const SnackBar(
+                content: Text('لا توجد نسخ احتياطية تلقائية محفوظة')),
           );
         }
         return null;
       }
 
       // Sort by modification time, newest first
-      files.sort((a, b) =>
-          FileStat.statSync(b.path).modified.compareTo(FileStat.statSync(a.path).modified));
+      files.sort((a, b) => FileStat.statSync(b.path)
+          .modified
+          .compareTo(FileStat.statSync(a.path).modified));
 
       if (!mounted) return null;
 
@@ -510,10 +524,12 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
                 final stat = FileStat.statSync(file.path);
                 final modified = stat.modified;
                 final sizeKB = (stat.size / 1024).toStringAsFixed(1);
-                final dateStr = '${modified.year}/${modified.month.toString().padLeft(2, '0')}/${modified.day.toString().padLeft(2, '0')} '
+                final dateStr =
+                    '${modified.year}/${modified.month.toString().padLeft(2, '0')}/${modified.day.toString().padLeft(2, '0')} '
                     '${modified.hour.toString().padLeft(2, '0')}:${modified.minute.toString().padLeft(2, '0')}';
                 return ListTile(
-                  leading: const Icon(Icons.insert_drive_file, color: AppColors.primary),
+                  leading: const Icon(Icons.insert_drive_file,
+                      color: AppColors.primary),
                   title: Text(dateStr),
                   subtitle: Text('الحجم: ${sizeKB} ك.ب'),
                   onTap: () => Navigator.pop(ctx, file.path),
@@ -606,7 +622,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
           _ = await ExcelExporter.exportInventoryToExcel(products);
           break;
         case 'transactions':
-          final transactions = await locator<ReportService>().getAllTransactionsForExport();
+          final transactions =
+              await locator<ReportService>().getAllTransactionsForExport();
           _ = await ExcelExporter.exportTransactionsToExcel(transactions);
           break;
         default:

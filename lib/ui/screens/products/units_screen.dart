@@ -17,13 +17,21 @@ class UnitsScreen extends StatefulWidget {
   State<UnitsScreen> createState() => _UnitsScreenState();
 }
 
-class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStateMixin {
+class _UnitsScreenState extends State<UnitsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Unit> _allUnits = [];
   bool _isLoading = true;
   String _searchQuery = '';
 
-  static const _tabTypes = ['all', 'count', 'weight', 'liquid', 'packaging', 'pharmacy'];
+  static const _tabTypes = [
+    'all',
+    'count',
+    'weight',
+    'liquid',
+    'packaging',
+    'pharmacy'
+  ];
   static const _tabLabels = ['الكل', 'عد', 'وزن', 'سوائل', 'تغليف', 'صيدلية'];
 
   @override
@@ -52,7 +60,9 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -62,9 +72,12 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
     var filtered = _allUnits;
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery;
-      filtered = filtered.where((u) =>
-        u.nameAr.contains(q) || u.nameEn.toLowerCase().contains(q.toLowerCase()) || u.abbreviation.contains(q)
-      ).toList();
+      filtered = filtered
+          .where((u) =>
+              u.nameAr.contains(q) ||
+              u.nameEn.toLowerCase().contains(q.toLowerCase()) ||
+              u.abbreviation.contains(q))
+          .toList();
     }
     if (type != 'all') {
       filtered = filtered.where((u) => u.unitType == type).toList();
@@ -74,11 +87,16 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
   }
 
   Future<void> _showAddEditUnitDialog({Unit? existing}) async {
-    final nameArController = TextEditingController(text: existing?.nameAr ?? '');
-    final nameEnController = TextEditingController(text: existing?.nameEn ?? '');
-    final abbrController = TextEditingController(text: existing?.abbreviation ?? '');
-    final descController = TextEditingController(text: existing?.description ?? '');
-    final orderController = TextEditingController(text: (existing?.displayOrder ?? 0).toString());
+    final nameArController =
+        TextEditingController(text: existing?.nameAr ?? '');
+    final nameEnController =
+        TextEditingController(text: existing?.nameEn ?? '');
+    final abbrController =
+        TextEditingController(text: existing?.abbreviation ?? '');
+    final descController =
+        TextEditingController(text: existing?.description ?? '');
+    final orderController =
+        TextEditingController(text: (existing?.displayOrder ?? 0).toString());
 
     String selectedType = existing?.unitType ?? 'count';
     bool isActive = existing?.isActive ?? true;
@@ -99,7 +117,8 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                 children: [
                   Icon(Icons.straighten, color: AppColors.primary, size: 22),
                   const SizedBox(width: 8),
-                  Text(existing != null ? 'تعديل وحدة' : 'إضافة وحدة جديدة', style: const TextStyle(fontSize: 18)),
+                  Text(existing != null ? 'تعديل وحدة' : 'إضافة وحدة جديدة',
+                      style: const TextStyle(fontSize: 18)),
                 ],
               ),
               content: SingleChildScrollView(
@@ -117,7 +136,9 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                           labelText: 'اسم الوحدة بالعربي *',
                           prefixIcon: Icon(Icons.text_fields),
                         ),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'اسم الوحدة مطلوب' : null,
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'اسم الوحدة مطلوب'
+                            : null,
                       ),
                       const SizedBox(height: 12),
 
@@ -152,9 +173,11 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                           prefixIcon: Icon(Icons.category),
                         ),
                         items: Unit.unitTypeLabels.entries
-                            .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                            .map((e) => DropdownMenuItem(
+                                value: e.key, child: Text(e.value)))
                             .toList(),
-                        onChanged: (v) => setDialogState(() => selectedType = v ?? 'count'),
+                        onChanged: (v) =>
+                            setDialogState(() => selectedType = v ?? 'count'),
                       ),
                       const SizedBox(height: 12),
 
@@ -192,32 +215,38 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                           FilterChip(
                             label: const Text('مفعلة'),
                             selected: isActive,
-                            onSelected: (v) => setDialogState(() => isActive = v),
+                            onSelected: (v) =>
+                                setDialogState(() => isActive = v),
                             selectedColor: AppColors.successLight,
                           ),
                           FilterChip(
                             label: const Text('قابلة للبيع'),
                             selected: isSellable,
-                            onSelected: (v) => setDialogState(() => isSellable = v),
+                            onSelected: (v) =>
+                                setDialogState(() => isSellable = v),
                             selectedColor: AppColors.infoLight,
                           ),
                           FilterChip(
                             label: const Text('قابلة للشراء'),
                             selected: isPurchasable,
-                            onSelected: (v) => setDialogState(() => isPurchasable = v),
+                            onSelected: (v) =>
+                                setDialogState(() => isPurchasable = v),
                             selectedColor: AppColors.infoLight,
                           ),
                           FilterChip(
                             label: const Text('وحدة تغليف'),
                             selected: isPackaging,
-                            onSelected: (v) => setDialogState(() => isPackaging = v),
+                            onSelected: (v) =>
+                                setDialogState(() => isPackaging = v),
                             selectedColor: AppColors.warningLight,
                           ),
                           FilterChip(
                             label: const Text('وحدة أساسية'),
                             selected: isBaseUnit,
-                            onSelected: (v) => setDialogState(() => isBaseUnit = v),
-                            selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                            onSelected: (v) =>
+                                setDialogState(() => isBaseUnit = v),
+                            selectedColor:
+                                AppColors.primaryLight.withValues(alpha: 0.2),
                           ),
                         ],
                       ),
@@ -256,7 +285,9 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
         'name_en': nameEnController.text.trim(),
         'abbreviation': abbrController.text.trim(),
         'unit_type': selectedType,
-        'description': descController.text.trim().isNotEmpty ? descController.text.trim() : null,
+        'description': descController.text.trim().isNotEmpty
+            ? descController.text.trim()
+            : null,
         'is_active': isActive ? 1 : 0,
         'is_sellable': isSellable ? 1 : 0,
         'is_purchasable': isPurchasable ? 1 : 0,
@@ -277,7 +308,9 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(existing != null ? 'تم تعديل الوحدة بنجاح' : 'تم إضافة الوحدة بنجاح'),
+            content: Text(existing != null
+                ? 'تم تعديل الوحدة بنجاح'
+                : 'تم إضافة الوحدة بنجاح'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -285,7 +318,9 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ غير متوقع'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -300,14 +335,18 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
   Future<void> _deleteUnit(Unit unit) async {
     // Pre-check: verify no products reference this unit before showing confirmation
     try {
-      final productsWithUnit = await locator<ProductRepository>().getProductsByUnitId(unit.id!);
+      final productsWithUnit =
+          await locator<ProductRepository>().getProductsByUnitId(unit.id!);
       if (productsWithUnit.isNotEmpty) {
         if (!mounted) return;
-        final productNames = productsWithUnit.map((p) => p['name_ar'] as String? ?? '').join('، ');
+        final productNames = productsWithUnit
+            .map((p) => p['name_ar'] as String? ?? '')
+            .join('، ');
         final extra = productsWithUnit.length > 5 ? ' وغيرها...' : '';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('لا يمكن حذف الوحدة "${unit.nameAr}" لأنها مستخدمة في الأصناف: $productNames$extra'),
+            content: Text(
+                'لا يمكن حذف الوحدة "${unit.nameAr}" لأنها مستخدمة في الأصناف: $productNames$extra'),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 4),
           ),
@@ -326,7 +365,9 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
         title: const Text('تأكيد الحذف'),
         content: Text('هل أنت متأكد من حذف الوحدة "${unit.nameAr}"؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
@@ -341,13 +382,17 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
         await locator<ReferenceDataRepository>().deleteUnit(unit.id!);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم حذف الوحدة'), backgroundColor: AppColors.success),
+          const SnackBar(
+              content: Text('تم حذف الوحدة'),
+              backgroundColor: AppColors.success),
         );
         _loadUnits();
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ غير متوقع'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -382,7 +427,8 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                   child: SearchBar(
                     hintText: 'بحث بالاسم أو الاختصار...',
                     leading: const Icon(Icons.search),
-                    padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 16)),
+                    padding: WidgetStateProperty.all(
+                        const EdgeInsets.symmetric(horizontal: 16)),
                     onChanged: (v) => setState(() => _searchQuery = v.trim()),
                   ),
                 ),
@@ -397,9 +443,15 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.straighten, size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
+                              Icon(Icons.straighten,
+                                  size: 64,
+                                  color: AppColors.textHint
+                                      .withValues(alpha: 0.5)),
                               const SizedBox(height: 12),
-                              Text('لا توجد وحدات', style: TextStyle(color: AppColors.textSecondary, fontSize: 16)),
+                              Text('لا توجد وحدات',
+                                  style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 16)),
                             ],
                           ),
                         );
@@ -409,12 +461,14 @@ class _UnitsScreenState extends State<UnitsScreen> with SingleTickerProviderStat
                         child: ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                           itemCount: units.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final unit = units[index];
                             return _UnitCard(
                               unit: unit,
-                              onEdit: () => _showAddEditUnitDialog(existing: unit),
+                              onEdit: () =>
+                                  _showAddEditUnitDialog(existing: unit),
                               onDelete: () => _deleteUnit(unit),
                             );
                           },
@@ -441,7 +495,8 @@ class _UnitCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _UnitCard({required this.unit, required this.onEdit, required this.onDelete});
+  const _UnitCard(
+      {required this.unit, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -473,25 +528,34 @@ class _UnitCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(unit.nameAr, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700)),
+                        Text(unit.nameAr,
+                            style: theme.textTheme.bodyLarge
+                                ?.copyWith(fontWeight: FontWeight.w700)),
                         if (unit.abbreviation.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(unit.abbreviation, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary)),
+                            child: Text(unit.abbreviation,
+                                style: theme.textTheme.labelSmall
+                                    ?.copyWith(color: AppColors.primary)),
                           ),
                         ],
                         const SizedBox(width: 6),
-                        Text(Unit.unitTypeLabels[unit.unitType] ?? '', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+                        Text(Unit.unitTypeLabels[unit.unitType] ?? '',
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(color: AppColors.textSecondary)),
                       ],
                     ),
                     if (unit.nameEn.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(unit.nameEn, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                      Text(unit.nameEn,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary)),
                     ],
                     const SizedBox(height: 4),
                     // Flags row
@@ -499,10 +563,14 @@ class _UnitCard extends StatelessWidget {
                       spacing: 4,
                       runSpacing: 2,
                       children: [
-                        if (unit.isBaseUnit) _flagChip('أساسية', AppColors.primary),
-                        if (unit.isSellable) _flagChip('بيع', AppColors.success),
-                        if (unit.isPurchasable) _flagChip('شراء', AppColors.info),
-                        if (unit.isPackaging) _flagChip('تغليف', AppColors.warning),
+                        if (unit.isBaseUnit)
+                          _flagChip('أساسية', AppColors.primary),
+                        if (unit.isSellable)
+                          _flagChip('بيع', AppColors.success),
+                        if (unit.isPurchasable)
+                          _flagChip('شراء', AppColors.info),
+                        if (unit.isPackaging)
+                          _flagChip('تغليف', AppColors.warning),
                         if (!unit.isActive) _flagChip('معطلة', AppColors.error),
                       ],
                     ),
@@ -510,8 +578,15 @@ class _UnitCard extends StatelessWidget {
                 ),
               ),
               // Actions
-              IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: onEdit, tooltip: 'تعديل'),
-              IconButton(icon: Icon(Icons.delete, size: 20, color: AppColors.error.withValues(alpha: 0.7)), onPressed: onDelete, tooltip: 'حذف'),
+              IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  onPressed: onEdit,
+                  tooltip: 'تعديل'),
+              IconButton(
+                  icon: Icon(Icons.delete,
+                      size: 20, color: AppColors.error.withValues(alpha: 0.7)),
+                  onPressed: onDelete,
+                  tooltip: 'حذف'),
             ],
           ),
         ),
@@ -521,23 +596,35 @@ class _UnitCard extends StatelessWidget {
 
   Color get _typeColor {
     switch (unit.unitType) {
-      case 'count': return AppColors.primary;
-      case 'weight': return AppColors.secondary;
-      case 'liquid': return AppColors.info;
-      case 'packaging': return AppColors.warning;
-      case 'pharmacy': return AppColors.accentPink;
-      default: return AppColors.textSecondary;
+      case 'count':
+        return AppColors.primary;
+      case 'weight':
+        return AppColors.secondary;
+      case 'liquid':
+        return AppColors.info;
+      case 'packaging':
+        return AppColors.warning;
+      case 'pharmacy':
+        return AppColors.accentPink;
+      default:
+        return AppColors.textSecondary;
     }
   }
 
   IconData get _typeIcon {
     switch (unit.unitType) {
-      case 'count': return Icons.calculate;
-      case 'weight': return Icons.monitor_weight;
-      case 'liquid': return Icons.water_drop;
-      case 'packaging': return Icons.inventory_2;
-      case 'pharmacy': return Icons.medication;
-      default: return Icons.straighten;
+      case 'count':
+        return Icons.calculate;
+      case 'weight':
+        return Icons.monitor_weight;
+      case 'liquid':
+        return Icons.water_drop;
+      case 'packaging':
+        return Icons.inventory_2;
+      case 'pharmacy':
+        return Icons.medication;
+      default:
+        return Icons.straighten;
     }
   }
 
@@ -549,7 +636,9 @@ class _UnitCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
-      child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 10, color: color, fontWeight: FontWeight.w600)),
     );
   }
 }

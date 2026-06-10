@@ -1349,8 +1349,9 @@ class InvoiceRepository {
             final parts = entry.key.split('_');
             final inventoryAccountId = int.tryParse(parts[0]);
             final purchasesAccountId = int.tryParse(parts[1]);
-            if (inventoryAccountId == null || purchasesAccountId == null)
+            if (inventoryAccountId == null || purchasesAccountId == null) {
               continue;
+            }
 
             // Purchase: Debit Inventory (goods come in), Credit Purchases (transfer from purchases account)
             await txn.insert('transactions', {
@@ -1392,8 +1393,9 @@ class InvoiceRepository {
             final parts = entry.key.split('_');
             final inventoryAccountId = int.tryParse(parts[0]);
             final purchasesAccountId = int.tryParse(parts[1]);
-            if (inventoryAccountId == null || purchasesAccountId == null)
+            if (inventoryAccountId == null || purchasesAccountId == null) {
               continue;
+            }
 
             // Purchase return: Debit Purchases (reverse), Credit Inventory (reverse at cost)
             await txn.insert('transactions', {

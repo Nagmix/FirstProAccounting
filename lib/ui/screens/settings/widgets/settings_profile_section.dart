@@ -58,7 +58,9 @@ class SettingsProfileSection extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
               image: businessLogoPath != null
-                  ? DecorationImage(image: FileImage(File(businessLogoPath!)), fit: BoxFit.cover)
+                  ? DecorationImage(
+                      image: FileImage(File(businessLogoPath!)),
+                      fit: BoxFit.cover)
                   : null,
             ),
             child: businessLogoPath == null
@@ -127,30 +129,39 @@ class SettingsProfileSection extends StatelessWidget {
                 onTap: () async {
                   final navigator = Navigator.of(ctx);
                   final picker = ImagePicker();
-                  final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512);
+                  final picked = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 512,
+                      maxHeight: 512);
                   if (picked != null) {
                     // Save to app documents directory
                     final dir = await getApplicationDocumentsDirectory();
-                    final logoDir = p.join(dir.path, 'business_logo${p.extension(picked.path)}');
+                    final logoDir = p.join(
+                        dir.path, 'business_logo${p.extension(picked.path)}');
                     await File(picked.path).copy(logoDir);
                     onProfileUpdated();
                     if (!ctx.mounted) return;
                     navigator.pop();
                     if (!parentContext.mounted) return;
-                    _showEditProfileDialog(parentContext); // Reopen to reflect new logo
+                    _showEditProfileDialog(
+                        parentContext); // Reopen to reflect new logo
                   }
                 },
                 child: CircleAvatar(
                   radius: 40,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  backgroundImage: businessLogoPath != null ? FileImage(File(businessLogoPath!)) : null,
+                  backgroundImage: businessLogoPath != null
+                      ? FileImage(File(businessLogoPath!))
+                      : null,
                   child: businessLogoPath == null
-                      ? const Icon(Icons.add_a_photo, size: 32, color: AppColors.primary)
+                      ? const Icon(Icons.add_a_photo,
+                          size: 32, color: AppColors.primary)
                       : null,
                 ),
               ),
               const SizedBox(height: 4),
-              Text('اضغط لتغيير الشعار', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+              Text('اضغط لتغيير الشعار',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600])),
               if (businessLogoPath != null)
                 TextButton(
                   onPressed: () async {
@@ -162,7 +173,8 @@ class SettingsProfileSection extends StatelessWidget {
                     if (!parentContext.mounted) return;
                     _showEditProfileDialog(parentContext);
                   },
-                  child: const Text('إزالة الشعار', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                  child: const Text('إزالة الشعار',
+                      style: TextStyle(fontSize: 11, color: AppColors.error)),
                 ),
               const SizedBox(height: 12),
               TextField(

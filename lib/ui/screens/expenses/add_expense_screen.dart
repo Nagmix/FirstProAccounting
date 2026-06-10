@@ -423,7 +423,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: (iconColor ?? AppColors.primary).withValues(alpha: 0.1),
+                  color:
+                      (iconColor ?? AppColors.primary).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child:
@@ -579,7 +580,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 end: Alignment.centerLeft,
               ),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+              border:
+                  Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

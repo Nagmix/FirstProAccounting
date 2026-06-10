@@ -7,6 +7,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 /// to find vouchers created for specific employees.
 class MigrationV47 {
   static Future<void> migrate(Database db) async {
-    await db.execute('ALTER TABLE vouchers ADD COLUMN employee_id INTEGER REFERENCES employees (id)');
+    await db.execute(
+        'ALTER TABLE vouchers ADD COLUMN employee_id INTEGER REFERENCES employees (id)');
   }
 }

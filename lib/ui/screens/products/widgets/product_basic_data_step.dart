@@ -107,7 +107,8 @@ class ProductBasicDataStep extends StatelessWidget {
                         Text('صورة الصنف',
                             style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.primary.withValues(alpha: 0.7))),
+                                color:
+                                    AppColors.primary.withValues(alpha: 0.7))),
                       ],
                     ),
             ),
@@ -135,8 +136,9 @@ class ProductBasicDataStep extends StatelessWidget {
             labelText: 'اسم الصنف بالعربي *',
             prefixIcon: Icon(Icons.text_fields),
           ),
-          validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'اسم الصنف بالعربي مطلوب' : null,
+          validator: (v) => (v == null || v.trim().isEmpty)
+              ? 'اسم الصنف بالعربي مطلوب'
+              : null,
         ),
         const SizedBox(height: 14),
 

@@ -15,7 +15,8 @@ import '../../widgets/barcode_scanner_screen.dart';
 class AddInvoiceItemSheet extends StatefulWidget {
   final int? warehouseId;
   final String invoiceType; // 'sale' or 'purchase'
-  const AddInvoiceItemSheet({super.key, this.warehouseId, this.invoiceType = 'sale'});
+  const AddInvoiceItemSheet(
+      {super.key, this.warehouseId, this.invoiceType = 'sale'});
 
   @override
   State<AddInvoiceItemSheet> createState() => _AddInvoiceItemSheetState();
@@ -41,7 +42,8 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
   double get _unitPrice => double.tryParse(_priceController.text) ?? 0;
   double get _discount => double.tryParse(_discountController.text) ?? 0;
   double get _total => (_quantity * _unitPrice) - _discount;
-  double get _conversionFactor => (_selectedUnit?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+  double get _conversionFactor =>
+      (_selectedUnit?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
   double get _baseQuantity => _quantity * _conversionFactor;
   String get _unitName => (_selectedUnit?['unit_name'] as String?) ?? '';
 
@@ -68,9 +70,11 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
     setState(() => _isSearching = true);
     List<Map<String, dynamic>> maps;
     if (query.isEmpty) {
-      maps = await locator<ProductRepository>().getAllProducts(activeOnly: true);
+      maps =
+          await locator<ProductRepository>().getAllProducts(activeOnly: true);
     } else {
-      maps = await locator<ProductRepository>().searchProducts(query, warehouseId: widget.warehouseId);
+      maps = await locator<ProductRepository>()
+          .searchProducts(query, warehouseId: widget.warehouseId);
     }
     if (!mounted) return;
     setState(() {
@@ -81,7 +85,8 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
 
   Future<void> _loadUnitsForProduct(int productId) async {
     setState(() => _loadingUnits = true);
-    final units = await locator<ReferenceDataRepository>().getAvailableUnitsForProduct(productId);
+    final units = await locator<ReferenceDataRepository>()
+        .getAvailableUnitsForProduct(productId);
     if (!mounted) return;
     setState(() {
       _availableUnits = units;
@@ -98,9 +103,13 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
         // Use cost_price for purchase invoices, sell_price for sale invoices
         // Note: getAvailableUnitsForProduct already converts cents to doubles
         if (widget.invoiceType == 'purchase') {
-          _priceController.text = ((_selectedUnit?['cost_price'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+          _priceController.text =
+              ((_selectedUnit?['cost_price'] as num?)?.toDouble() ?? 0.0)
+                  .toStringAsFixed(2);
         } else {
-          _priceController.text = ((_selectedUnit?['sell_price'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+          _priceController.text =
+              ((_selectedUnit?['sell_price'] as num?)?.toDouble() ?? 0.0)
+                  .toStringAsFixed(2);
         }
       }
     });
@@ -135,17 +144,20 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
                 children: [
                   // Drag handle
                   Center(
                     child: Container(
-                      width: 40, height: 4,
+                      width: 40,
+                      height: 4,
                       margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkDivider : AppColors.divider,
+                        color:
+                            isDark ? AppColors.darkDivider : AppColors.divider,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -154,7 +166,8 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                   Row(
                     children: [
                       Container(
-                        width: 36, height: 36,
+                        width: 36,
+                        height: 36,
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
                             colors: [_accentBlue, _accentPurple],
@@ -163,27 +176,38 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                           ),
                           borderRadius: BorderRadius.all(Radius.circular(11)),
                         ),
-                        child: const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 18),
+                        child: const Icon(Icons.add_shopping_cart_rounded,
+                            color: Colors.white, size: 18),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text('إضافة صنف',
+                        child: Text(
+                          'إضافة صنف',
                           style: TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 18,
-                            color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : const Color(0xFF1E293B),
                           ),
                         ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
                         icon: Container(
-                          width: 32, height: 32,
+                          width: 32,
+                          height: 32,
                           decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                            color: isDark
+                                ? AppColors.darkSurfaceVariant
+                                : AppColors.surfaceVariant,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Icons.close_rounded, size: 16, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
+                          child: Icon(Icons.close_rounded,
+                              size: 16,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.textSecondary),
                         ),
                       ),
                     ],
@@ -194,23 +218,27 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'بحث بالاسم أو الباركود...',
-                      prefixIcon: Icon(Icons.search_rounded, color: _accentBlue, size: 20),
+                      prefixIcon: Icon(Icons.search_rounded,
+                          color: _accentBlue, size: 20),
                       suffixIcon: Container(
                         margin: const EdgeInsets.only(left: 4, right: 4),
                         child: IconButton(
                           icon: Container(
-                            width: 30, height: 30,
+                            width: 30,
+                            height: 30,
                             decoration: BoxDecoration(
                               color: _accentBlue.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.qr_code_scanner_rounded, size: 16, color: _accentBlue),
+                            child: Icon(Icons.qr_code_scanner_rounded,
+                                size: 16, color: _accentBlue),
                           ),
                           tooltip: 'مسح باركود',
                           onPressed: () async {
                             final result = await Navigator.push<String>(
                               context,
-                              MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const BarcodeScannerScreen()),
                             );
                             if (!mounted) return;
                             if (result != null && result.isNotEmpty) {
@@ -220,17 +248,24 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                           },
                         ),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
+                        borderSide: BorderSide(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _accentBlue, width: 1.5),
+                        borderSide:
+                            const BorderSide(color: _accentBlue, width: 1.5),
                       ),
                       filled: true,
-                      fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                      fillColor: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : AppColors.surfaceVariant.withValues(alpha: 0.3),
                     ),
                     onChanged: (value) => _searchProducts(value),
                   ),
@@ -241,7 +276,8 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
             // ── Scrollable content ───────────────────────────────────
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +288,10 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkSurface : Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+                        border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.border),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
@@ -262,47 +301,63 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                         ],
                       ),
                       child: _isSearching
-                          ? Center(child: Padding(
+                          ? Center(
+                              child: Padding(
                               padding: const EdgeInsets.all(20),
                               child: SizedBox(
-                                width: 24, height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: _accentBlue),
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: _accentBlue),
                               ),
                             ))
                           : _searchResults.isEmpty
-                              ? Center(child: Padding(
+                              ? Center(
+                                  child: Padding(
                                   padding: const EdgeInsets.all(20),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Container(
-                                        width: 48, height: 48,
+                                        width: 48,
+                                        height: 48,
                                         decoration: BoxDecoration(
-                                          color: _accentBlue.withValues(alpha: 0.06),
+                                          color: _accentBlue.withValues(
+                                              alpha: 0.06),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: Icon(Icons.search_off_rounded, size: 24, color: _accentBlue.withValues(alpha: 0.4)),
+                                        child: Icon(Icons.search_off_rounded,
+                                            size: 24,
+                                            color: _accentBlue.withValues(
+                                                alpha: 0.4)),
                                       ),
                                       const SizedBox(height: 8),
-                                      Text('لا توجد نتائج', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
+                                      Text('لا توجد نتائج',
+                                          style: context.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                  color: AppColors.textHint)),
                                     ],
                                   ),
                                 ))
                               : ListView.builder(
                                   shrinkWrap: true,
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4),
                                   itemCount: _searchResults.length,
                                   itemBuilder: (context, index) {
                                     final product = _searchResults[index];
-                                    final isSelected = _selectedProduct?.id == product.id;
-                                    return _buildProductTile(product, isSelected, isDark);
+                                    final isSelected =
+                                        _selectedProduct?.id == product.id;
+                                    return _buildProductTile(
+                                        product, isSelected, isDark);
                                   },
                                 ),
                     ),
                     const SizedBox(height: 12),
 
                     // Unit selection (if multiple units available)
-                    if (_selectedProduct != null && _availableUnits.length > 1) ...[
+                    if (_selectedProduct != null &&
+                        _availableUnits.length > 1) ...[
                       _buildUnitSelector(isDark),
                       const SizedBox(height: 12),
                     ],
@@ -311,9 +366,12 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                     if (_loadingUnits)
                       Padding(
                         padding: const EdgeInsets.all(8),
-                        child: Center(child: SizedBox(
-                          width: 20, height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: _accentBlue),
+                        child: Center(
+                            child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: _accentBlue),
                         )),
                       ),
 
@@ -322,9 +380,11 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                       children: [
                         Expanded(
                           child: _buildTextField(
-                            label: 'الكمية${_unitName.isNotEmpty ? ' ($_unitName)' : ''}',
+                            label:
+                                'الكمية${_unitName.isNotEmpty ? ' ($_unitName)' : ''}',
                             controller: _quantityController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
                             onChanged: (_) => setState(() {}),
                             isDark: isDark,
                           ),
@@ -332,9 +392,12 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildTextField(
-                            label: widget.invoiceType == 'purchase' ? 'سعر التكلفة${_unitName.isNotEmpty ? ' ($_unitName)' : ''}' : 'سعر البيع${_unitName.isNotEmpty ? ' ($_unitName)' : ''}',
+                            label: widget.invoiceType == 'purchase'
+                                ? 'سعر التكلفة${_unitName.isNotEmpty ? ' ($_unitName)' : ''}'
+                                : 'سعر البيع${_unitName.isNotEmpty ? ' ($_unitName)' : ''}',
                             controller: _priceController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
                             suffixText: AppConstants.currency,
                             onChanged: (_) => setState(() {}),
                             isDark: isDark,
@@ -347,26 +410,33 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                     // Show base quantity info
                     if (_selectedUnit != null && _conversionFactor != 1.0) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.info.withValues(alpha: isDark ? 0.12 : 0.06),
+                          color: AppColors.info
+                              .withValues(alpha: isDark ? 0.12 : 0.06),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                          border: Border.all(
+                              color: AppColors.info.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              width: 22, height: 22,
+                              width: 22,
+                              height: 22,
                               decoration: BoxDecoration(
                                 color: AppColors.info.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Icon(Icons.info_outline_rounded, size: 12, color: AppColors.info),
+                              child: Icon(Icons.info_outline_rounded,
+                                  size: 12, color: AppColors.info),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'الكمية بالوحدة الأساسية: ${_baseQuantity.toStringAsFixed(2)}',
-                              style: context.textTheme.bodySmall?.copyWith(color: AppColors.info, fontWeight: FontWeight.w600),
+                              style: context.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.info,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -377,14 +447,19 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                     _buildTextField(
                       label: 'خصم على الصنف',
                       controller: _discountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       suffixText: AppConstants.currency,
                       onChanged: (_) => setState(() {}),
                       isDark: isDark,
                     ),
                     const SizedBox(height: 12),
 
-                    _buildTextField(label: 'ملاحظات', controller: _notesController, maxLines: 2, isDark: isDark),
+                    _buildTextField(
+                        label: 'ملاحظات',
+                        controller: _notesController,
+                        maxLines: 2,
+                        isDark: isDark),
                     const SizedBox(height: 16),
 
                     // Total
@@ -395,13 +470,15 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                         gradient: LinearGradient(
                           colors: [
                             _accentBlue.withValues(alpha: isDark ? 0.15 : 0.08),
-                            _accentPurple.withValues(alpha: isDark ? 0.08 : 0.03),
+                            _accentPurple.withValues(
+                                alpha: isDark ? 0.08 : 0.03),
                           ],
                           begin: Alignment.centerRight,
                           end: Alignment.centerLeft,
                         ),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _accentBlue.withValues(alpha: 0.15)),
+                        border: Border.all(
+                            color: _accentBlue.withValues(alpha: 0.15)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -409,9 +486,12 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.calculate_rounded, size: 16, color: _accentBlue),
+                              Icon(Icons.calculate_rounded,
+                                  size: 16, color: _accentBlue),
                               const SizedBox(width: 6),
-                              Text('الإجمالي', style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                              Text('الإجمالي',
+                                  style: context.textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700)),
                             ],
                           ),
                           Text(CurrencyFormatter.format(_total),
@@ -453,9 +533,11 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.add_circle_rounded, size: 20, color: Colors.white),
+                                const Icon(Icons.add_circle_rounded,
+                                    size: 20, color: Colors.white),
                                 const SizedBox(width: 8),
-                                const Text('إضافة',
+                                const Text(
+                                  'إضافة',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w800,
@@ -469,7 +551,10 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                       ),
                     ),
                     // Bottom safe area
-                    SizedBox(height: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 8),
+                    SizedBox(
+                        height: MediaQuery.of(context).viewInsets.bottom +
+                            MediaQuery.of(context).padding.bottom +
+                            8),
                   ],
                 ),
               ),
@@ -499,24 +584,39 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
         decoration: BoxDecoration(
           color: isSelected ? _accentBlue.withValues(alpha: 0.06) : null,
           borderRadius: BorderRadius.circular(10),
-          border: isSelected ? Border.all(color: _accentBlue.withValues(alpha: 0.2)) : null,
+          border: isSelected
+              ? Border.all(color: _accentBlue.withValues(alpha: 0.2))
+              : null,
         ),
         child: Row(
           children: [
             // Product avatar
             Container(
-              width: 34, height: 34,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 gradient: isSelected
-                    ? const LinearGradient(colors: [_accentBlue, _accentPurple], begin: Alignment.topLeft, end: Alignment.bottomRight)
+                    ? const LinearGradient(
+                        colors: [_accentBlue, _accentPurple],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight)
                     : null,
-                color: isSelected ? null : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+                color: isSelected
+                    ? null
+                    : (isDark
+                        ? AppColors.darkSurfaceVariant
+                        : AppColors.surfaceVariant),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
                 child: isSelected
-                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
-                    : Icon(Icons.inventory_2_rounded, size: 16, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
+                    ? const Icon(Icons.check_rounded,
+                        color: Colors.white, size: 18)
+                    : Icon(Icons.inventory_2_rounded,
+                        size: 16,
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.textSecondary),
               ),
             ),
             const SizedBox(width: 10),
@@ -524,16 +624,19 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.nameAr,
+                  Text(
+                    product.nameAr,
                     style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
                       fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${CurrencyFormatter.format(product.sellPrice)} | المخزون: ${product.currentStock.toStringAsFixed(0)}',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    style:
+                        TextStyle(fontSize: 11, color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -566,15 +669,18 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
           Row(
             children: [
               Container(
-                width: 24, height: 24,
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
                   color: _accentBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(7),
                 ),
-                child: Icon(Icons.straighten_rounded, size: 14, color: _accentBlue),
+                child: Icon(Icons.straighten_rounded,
+                    size: 14, color: _accentBlue),
               ),
               const SizedBox(width: 8),
-              Text('اختر الوحدة',
+              Text(
+                'اختر الوحدة',
                 style: context.textTheme.titleSmall?.copyWith(
                   color: _accentBlue,
                   fontWeight: FontWeight.w700,
@@ -587,7 +693,8 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
             spacing: 8,
             runSpacing: 8,
             children: _availableUnits.map((unit) {
-              final isSelected = _selectedUnit?['unit_name'] == unit['unit_name'];
+              final isSelected =
+                  _selectedUnit?['unit_name'] == unit['unit_name'];
               // Show cost_price for purchase invoices, sell_price for sale invoices
               final price = widget.invoiceType == 'purchase'
                   ? MoneyHelper.readMoney(unit['cost_price'])
@@ -602,18 +709,26 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.fastOutSlowIn,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? _accentBlue.withValues(alpha: isDark ? 0.2 : 0.1)
                         : (isDark ? AppColors.darkSurface : Colors.white),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: isSelected ? _accentBlue : (isDark ? AppColors.darkBorder : AppColors.border),
+                      color: isSelected
+                          ? _accentBlue
+                          : (isDark ? AppColors.darkBorder : AppColors.border),
                       width: isSelected ? 1.5 : 1,
                     ),
                     boxShadow: isSelected
-                        ? [BoxShadow(color: _accentBlue.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))]
+                        ? [
+                            BoxShadow(
+                                color: _accentBlue.withValues(alpha: 0.08),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2))
+                          ]
                         : null,
                   ),
                   child: Row(
@@ -621,19 +736,26 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                     children: [
                       if (isSelected)
                         Container(
-                          width: 16, height: 16,
+                          width: 16,
+                          height: 16,
                           margin: const EdgeInsets.only(left: 4),
                           decoration: const BoxDecoration(
-                            gradient: LinearGradient(colors: [_accentBlue, _accentPurple]),
+                            gradient: LinearGradient(
+                                colors: [_accentBlue, _accentPurple]),
                             borderRadius: BorderRadius.all(Radius.circular(5)),
                           ),
-                          child: const Icon(Icons.check_rounded, size: 10, color: Colors.white),
+                          child: const Icon(Icons.check_rounded,
+                              size: 10, color: Colors.white),
                         ),
-                      Text('${unit['unit_name']} (${CurrencyFormatter.format(price)})',
+                      Text(
+                        '${unit['unit_name']} (${CurrencyFormatter.format(price)})',
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? _accentBlue : AppColors.textSecondary,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? _accentBlue
+                              : AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -667,14 +789,17 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
+          borderSide: BorderSide(
+              color: isDark ? AppColors.darkBorder : AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _accentBlue, width: 1.5),
         ),
         filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+        fillColor: isDark
+            ? AppColors.darkSurfaceVariant
+            : AppColors.surfaceVariant.withValues(alpha: 0.3),
       ),
     );
   }
@@ -703,7 +828,8 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
 
     // التحقق من المخزون المتاح للبيع (وليس المرتجع)
     if (widget.invoiceType == 'sale' && _selectedProduct!.currentStock > 0) {
-      if (_baseQuantity > _selectedProduct!.currentStock && !_selectedProduct!.allowNegative) {
+      if (_baseQuantity > _selectedProduct!.currentStock &&
+          !_selectedProduct!.allowNegative) {
         context.showErrorSnackBar(
           'الكمية المطلوبة ($_baseQuantity) تتجاوز المخزون المتاح (${_selectedProduct!.currentStock.toStringAsFixed(1)})',
         );

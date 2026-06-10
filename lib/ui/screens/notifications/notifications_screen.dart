@@ -23,7 +23,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _loadNotifications() async {
     try {
-      final notifications = await locator<ReferenceDataRepository>().getAllNotifications();
+      final notifications =
+          await locator<ReferenceDataRepository>().getAllNotifications();
 
       if (mounted) {
         setState(() {
@@ -35,7 +36,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -112,13 +115,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       Icon(
                         Icons.notifications_none,
                         size: 64,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.textHint,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'لا توجد إشعارات',
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textHint,
                         ),
                       ),
                     ],
@@ -140,7 +147,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: _colorForType(type).withValues(alpha: 0.15),
+                          backgroundColor:
+                              _colorForType(type).withValues(alpha: 0.15),
                           child: Icon(
                             _iconForType(type),
                             color: _colorForType(type),
@@ -150,7 +158,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         title: Text(
                           title,
                           style: TextStyle(
-                            fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                            fontWeight:
+                                isRead ? FontWeight.normal : FontWeight.bold,
                           ),
                         ),
                         subtitle: Text(
@@ -168,7 +177,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   shape: BoxShape.circle,
                                 ),
                               ),
-                        onTap: isRead ? null : () => _markAsRead(notif['id'] as int),
+                        onTap: isRead
+                            ? null
+                            : () => _markAsRead(notif['id'] as int),
                       );
                     },
                   ),

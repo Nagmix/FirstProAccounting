@@ -7,7 +7,8 @@ import '../../../../core/viewmodels/pos_viewmodel.dart';
 
 /// Shows the held orders bottom sheet dialog.
 /// [onRestore] is called after an order is restored (e.g., to animate the cart sheet).
-void showHeldOrdersDialog(BuildContext context, PosViewModel vm, VoidCallback onRestore) {
+void showHeldOrdersDialog(
+    BuildContext context, PosViewModel vm, VoidCallback onRestore) {
   if (vm.heldOrders.isEmpty) {
     context.showSnackBar('لا توجد طلبات معلقة');
     return;
@@ -39,7 +40,9 @@ void showHeldOrdersDialog(BuildContext context, PosViewModel vm, VoidCallback on
                   '${order.items.length} صنف – ${CurrencyFormatter.format(total)}',
                 ),
                 subtitle: Text(
-                  order.customerName.isNotEmpty ? 'العميل: ${order.customerName}' : 'بدون عميل',
+                  order.customerName.isNotEmpty
+                      ? 'العميل: ${order.customerName}'
+                      : 'بدون عميل',
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -50,8 +53,7 @@ void showHeldOrdersDialog(BuildContext context, PosViewModel vm, VoidCallback on
                         Navigator.pop(ctx);
                         onRestore();
                       },
-                      icon: const Icon(Icons.refresh,
-                          color: AppColors.primary),
+                      icon: const Icon(Icons.refresh, color: AppColors.primary),
                       tooltip: 'استرجاع',
                     ),
                     IconButton(

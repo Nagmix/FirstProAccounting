@@ -34,7 +34,8 @@ class LicenseService {
       LicenseApiClient.instance.init();
 
       // Get or create installation ID
-      final installationId = await DeviceFingerprint.instance.getInstallationId();
+      final installationId =
+          await DeviceFingerprint.instance.getInstallationId();
 
       // Get device fingerprint
       final deviceFingerprint = await DeviceFingerprint.instance.generate();
@@ -97,7 +98,8 @@ class LicenseService {
   Future<void> _tryServerValidation() async {
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
-      final hasInternet = connectivityResult.any((r) => r != ConnectivityResult.none);
+      final hasInternet =
+          connectivityResult.any((r) => r != ConnectivityResult.none);
 
       if (!hasInternet) {
         // No internet — check offline grace period
@@ -117,7 +119,8 @@ class LicenseService {
         if (result['success'] == true) {
           _state = _state.copyWith(
             status: LicenseStatus.active,
-            licenseType: LicenseType.fromString(result['license_type'] as String? ?? 'monthly'),
+            licenseType: LicenseType.fromString(
+                result['license_type'] as String? ?? 'monthly'),
             expiresAt: result['expires_at'] != null
                 ? DateTime.tryParse(result['expires_at'] as String)
                 : null,
@@ -255,7 +258,8 @@ class LicenseService {
       int total = 0;
 
       for (final table in tables) {
-        final result = await db.rawQuery('SELECT COUNT(*) as count FROM $table');
+        final result =
+            await db.rawQuery('SELECT COUNT(*) as count FROM $table');
         total += Sqflite.firstIntValue(result) ?? 0;
       }
 
@@ -289,7 +293,8 @@ class LicenseService {
 
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
-      final hasInternet = connectivityResult.any((r) => r != ConnectivityResult.none);
+      final hasInternet =
+          connectivityResult.any((r) => r != ConnectivityResult.none);
       if (!hasInternet) return;
 
       final count = await _getTotalRecordCount();

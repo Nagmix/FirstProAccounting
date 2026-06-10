@@ -51,13 +51,16 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           title: const Text('مسح الباركود'),
           actions: [
             TextButton.icon(
-              onPressed: () => setState(() => _showManualEntry = !_showManualEntry),
-              icon: Icon(_showManualEntry ? Icons.camera_alt : Icons.keyboard, size: 20),
+              onPressed: () =>
+                  setState(() => _showManualEntry = !_showManualEntry),
+              icon: Icon(_showManualEntry ? Icons.camera_alt : Icons.keyboard,
+                  size: 20),
               label: Text(_showManualEntry ? 'الكاميرا' : 'إدخال يدوي'),
             ),
           ],
         ),
-        body: _showManualEntry ? _buildManualEntry(theme) : _buildScanner(theme),
+        body:
+            _showManualEntry ? _buildManualEntry(theme) : _buildScanner(theme),
       ),
     );
   }
@@ -67,7 +70,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Icon(Icons.qr_code, size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
+          Icon(Icons.qr_code,
+              size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
           const SizedBox(height: 20),
           TextField(
             controller: _manualController,
@@ -110,7 +114,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           children: [
             Icon(Icons.warning, size: 64, color: AppColors.warning),
             const SizedBox(height: 16),
-            Text('لا يمكن الوصول إلى الكاميرا', style: theme.textTheme.titleMedium),
+            Text('لا يمكن الوصول إلى الكاميرا',
+                style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: () => setState(() => _showManualEntry = true),
@@ -155,14 +160,19 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               children: [
                 const Text(
                   'وجّه الكاميرا نحو الباركود',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: () => setState(() => _showManualEntry = true),
-                  icon: const Icon(Icons.keyboard, color: Colors.white70, size: 18),
-                  label: const Text('إدخال يدوي', style: TextStyle(color: Colors.white70)),
+                  icon: const Icon(Icons.keyboard,
+                      color: Colors.white70, size: 18),
+                  label: const Text('إدخال يدوي',
+                      style: TextStyle(color: Colors.white70)),
                 ),
               ],
             ),
@@ -220,17 +230,31 @@ class ScannerOverlayShape extends ShapeBorder {
       ..strokeCap = StrokeCap.round;
 
     // Top-left
-    canvas.drawLine(Offset(cutoutLeft, cutoutTop + bracketLen), Offset(cutoutLeft, cutoutTop), bracketPaint);
-    canvas.drawLine(Offset(cutoutLeft, cutoutTop), Offset(cutoutLeft + bracketLen, cutoutTop), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft, cutoutTop + bracketLen),
+        Offset(cutoutLeft, cutoutTop), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft, cutoutTop),
+        Offset(cutoutLeft + bracketLen, cutoutTop), bracketPaint);
     // Top-right
-    canvas.drawLine(Offset(cutoutLeft + cutoutWidth - bracketLen, cutoutTop), Offset(cutoutLeft + cutoutWidth, cutoutTop), bracketPaint);
-    canvas.drawLine(Offset(cutoutLeft + cutoutWidth, cutoutTop), Offset(cutoutLeft + cutoutWidth, cutoutTop + bracketLen), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft + cutoutWidth - bracketLen, cutoutTop),
+        Offset(cutoutLeft + cutoutWidth, cutoutTop), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft + cutoutWidth, cutoutTop),
+        Offset(cutoutLeft + cutoutWidth, cutoutTop + bracketLen), bracketPaint);
     // Bottom-left
-    canvas.drawLine(Offset(cutoutLeft, cutoutTop + cutoutHeight - bracketLen), Offset(cutoutLeft, cutoutTop + cutoutHeight), bracketPaint);
-    canvas.drawLine(Offset(cutoutLeft, cutoutTop + cutoutHeight), Offset(cutoutLeft + bracketLen, cutoutTop + cutoutHeight), bracketPaint);
+    canvas.drawLine(Offset(cutoutLeft, cutoutTop + cutoutHeight - bracketLen),
+        Offset(cutoutLeft, cutoutTop + cutoutHeight), bracketPaint);
+    canvas.drawLine(
+        Offset(cutoutLeft, cutoutTop + cutoutHeight),
+        Offset(cutoutLeft + bracketLen, cutoutTop + cutoutHeight),
+        bracketPaint);
     // Bottom-right
-    canvas.drawLine(Offset(cutoutLeft + cutoutWidth - bracketLen, cutoutTop + cutoutHeight), Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight), bracketPaint);
-    canvas.drawLine(Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight - bracketLen), Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight), bracketPaint);
+    canvas.drawLine(
+        Offset(cutoutLeft + cutoutWidth - bracketLen, cutoutTop + cutoutHeight),
+        Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight),
+        bracketPaint);
+    canvas.drawLine(
+        Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight - bracketLen),
+        Offset(cutoutLeft + cutoutWidth, cutoutTop + cutoutHeight),
+        bracketPaint);
   }
 
   @override

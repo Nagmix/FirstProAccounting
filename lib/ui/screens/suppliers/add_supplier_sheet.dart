@@ -47,14 +47,16 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       _phoneController.text = s.phone ?? '';
       _emailController.text = s.email ?? '';
       _addressController.text = s.address ?? '';
-      _balanceController.text = s.balance > 0 ? s.balance.toStringAsFixed(2) : '';
+      _balanceController.text =
+          s.balance > 0 ? s.balance.toStringAsFixed(2) : '';
       _balanceType = s.balanceType;
       // Currency is no longer tied to supplier permanently.
       // When editing, default to the supplier's stored currency since
       // that's likely the currency of the existing opening balance.
       // When adding new, default to YER.
       _currency = s.currency.isNotEmpty ? s.currency : 'YER';
-      _debtCeilingController.text = s.debtCeiling > 0 ? s.debtCeiling.toStringAsFixed(2) : '';
+      _debtCeilingController.text =
+          s.debtCeiling > 0 ? s.debtCeiling.toStringAsFixed(2) : '';
       _contactMethod = s.contactMethod ?? 'whatsapp';
       _notesController.text = s.notes ?? '';
     }
@@ -81,9 +83,15 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
 
     final supplierMap = {
       'name': _nameController.text.trim(),
-      'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-      'email': _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-      'address': _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+      'phone': _phoneController.text.trim().isEmpty
+          ? null
+          : _phoneController.text.trim(),
+      'email': _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
+      'address': _addressController.text.trim().isEmpty
+          ? null
+          : _addressController.text.trim(),
       'balance': balance,
       'balance_type': _balanceType,
       // Supplier is multi-currency — store the opening balance currency
@@ -92,7 +100,9 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
       'currency': _currency,
       // Pass the opening balance currency separately for the journal entry
       'opening_balance_currency': _currency,
-      'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      'notes': _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
       'debt_ceiling': double.tryParse(_debtCeilingController.text) ?? 0.0,
       'contact_method': _contactMethod,
       'updated_at': now,
@@ -142,15 +152,21 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.check, size: 20),
-            label: Text(_isSaving ? 'جاري الحفظ...' : _isEditing ? 'تعديل' : 'حفظ'),
+            label: Text(_isSaving
+                ? 'جاري الحفظ...'
+                : _isEditing
+                    ? 'تعديل'
+                    : 'حفظ'),
             style: TextButton.styleFrom(foregroundColor: Colors.white),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
+        padding:
+            EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
         child: Form(
           key: _formKey,
           child: Column(
@@ -197,8 +213,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                 ),
                 validator: (v) {
                   if (v != null && v.trim().isNotEmpty) {
-                    final regex =
-                        RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                    final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
                     if (!regex.hasMatch(v.trim())) {
                       return 'البريد الإلكتروني غير صالح';
                     }
@@ -236,8 +251,8 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                     // ── Amount field (full width) ─────────────────────
                     TextFormField(
                       controller: _balanceController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       textInputAction: TextInputAction.next,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
@@ -246,7 +261,8 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                       decoration: InputDecoration(
                         labelText: 'الرصيد الافتتاحي',
                         prefixIcon: const Icon(Icons.calculate),
-                        suffixText: _currencyInfo[_currency]?['symbol'] ?? AppConstants.currency,
+                        suffixText: _currencyInfo[_currency]?['symbol'] ??
+                            AppConstants.currency,
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -268,10 +284,13 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      items: _currencyInfo.entries.map((e) => DropdownMenuItem(
-                        value: e.key,
-                        child: Text('${e.value['label']} (${e.value['symbol']})'),
-                      )).toList(),
+                      items: _currencyInfo.entries
+                          .map((e) => DropdownMenuItem(
+                                value: e.key,
+                                child: Text(
+                                    '${e.value['label']} (${e.value['symbol']})'),
+                              ))
+                          .toList(),
                       onChanged: (v) => setState(() => _currency = v!),
                     ),
                     const SizedBox(height: 12),
@@ -304,8 +323,8 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                                     onTap: () =>
                                         setState(() => _balanceType = 'credit'),
                                     child: Container(
-                                      padding:
-                                          const EdgeInsets.symmetric(vertical: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
                                       decoration: BoxDecoration(
                                         color: _balanceType == 'credit'
                                             ? AppColors.success
@@ -334,8 +353,8 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                                     onTap: () =>
                                         setState(() => _balanceType = 'debit'),
                                     child: Container(
-                                      padding:
-                                          const EdgeInsets.symmetric(vertical: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
                                       decoration: BoxDecoration(
                                         color: _balanceType == 'debit'
                                             ? AppColors.error
@@ -404,7 +423,8 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
               // ── سقف المدينية (Debt Ceiling) — no currency suffix ──
               TextFormField(
                 controller: _debtCeilingController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.next,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
@@ -438,8 +458,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
                             color: _contactMethod == 'whatsapp'
-                                ? const Color(0xFF25D366)
-                                    .withValues(alpha: 0.1)
+                                ? const Color(0xFF25D366).withValues(alpha: 0.1)
                                 : Colors.transparent,
                             borderRadius: const BorderRadius.only(
                               topRight: Radius.circular(9),
@@ -474,8 +493,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                     ),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () =>
-                            setState(() => _contactMethod = 'phone'),
+                        onTap: () => setState(() => _contactMethod = 'phone'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(

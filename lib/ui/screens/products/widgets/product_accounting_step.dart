@@ -63,16 +63,26 @@ class ProductAccountingStep extends StatelessWidget {
     final showVatAccount = taxRate > 0;
 
     // Ensure selected IDs exist in their respective lists to avoid DropdownButton errors
-    final validSalesAccountId = revenueAccounts.any((a) => a['id'] == selectedSalesAccountId)
-        ? selectedSalesAccountId : null;
-    final validPurchaseAccountId = costAccounts.any((a) => a['id'] == selectedPurchaseAccountId)
-        ? selectedPurchaseAccountId : null;
-    final validInventoryAccountId = assetAccounts.any((a) => a['id'] == selectedInventoryAccountId)
-        ? selectedInventoryAccountId : null;
-    final validCogsAccountId = costAccounts.any((a) => a['id'] == selectedCogsAccountId)
-        ? selectedCogsAccountId : null;
-    final validVatAccountId = liabilityAccounts.any((a) => a['id'] == selectedVatAccountId)
-        ? selectedVatAccountId : null;
+    final validSalesAccountId =
+        revenueAccounts.any((a) => a['id'] == selectedSalesAccountId)
+            ? selectedSalesAccountId
+            : null;
+    final validPurchaseAccountId =
+        costAccounts.any((a) => a['id'] == selectedPurchaseAccountId)
+            ? selectedPurchaseAccountId
+            : null;
+    final validInventoryAccountId =
+        assetAccounts.any((a) => a['id'] == selectedInventoryAccountId)
+            ? selectedInventoryAccountId
+            : null;
+    final validCogsAccountId =
+        costAccounts.any((a) => a['id'] == selectedCogsAccountId)
+            ? selectedCogsAccountId
+            : null;
+    final validVatAccountId =
+        liabilityAccounts.any((a) => a['id'] == selectedVatAccountId)
+            ? selectedVatAccountId
+            : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -209,7 +219,8 @@ class ProductAccountingStep extends StatelessWidget {
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  icon: const Icon(Icons.warning, color: AppColors.warning, size: 40),
+                  icon: const Icon(Icons.warning,
+                      color: AppColors.warning, size: 40),
                   title: const Text('تنبيه'),
                   content: const Text(
                     'تنبيه: طريقة LIFO محظورة بموجب معايير IFRS (IAS 2). هذه الطريقة مسموحة فقط ضمن US GAAP. استخدامها قد يؤدي لقوائم مالية غير متوافقة مع المعايير الدولية.',
@@ -278,7 +289,8 @@ class ProductAccountingStep extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.info_outline, size: 18, color: AppColors.info),
+                    const Icon(Icons.info_outline,
+                        size: 18, color: AppColors.info),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

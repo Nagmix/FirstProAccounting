@@ -184,7 +184,8 @@ void main() {
     final totalDebit = result.first['total_debit'] as int;
     final totalCredit = result.first['total_credit'] as int;
     expect(totalDebit, equals(totalCredit),
-        reason: 'Journal $journalId: debits ($totalDebit) must equal credits ($totalCredit)');
+        reason:
+            'Journal $journalId: debits ($totalDebit) must equal credits ($totalCredit)');
   }
 
   /// Verify that total debits == total credits across ALL transactions.
@@ -197,7 +198,8 @@ void main() {
     final totalDebit = result.first['total_debit'] as int;
     final totalCredit = result.first['total_credit'] as int;
     expect(totalDebit, equals(totalCredit),
-        reason: 'Trial balance: total debits ($totalDebit) must equal total credits ($totalCredit)');
+        reason:
+            'Trial balance: total debits ($totalDebit) must equal total credits ($totalCredit)');
   }
 
   /// Apply a signed balance change to an entity (mirrors EntityBalanceHelper).
@@ -221,7 +223,8 @@ void main() {
     final currentType = rows.first['balance_type'] as String? ?? 'credit';
 
     // Convert to signed value
-    double signedBalance = currentType == 'credit' ? currentBalance : -currentBalance;
+    double signedBalance =
+        currentType == 'credit' ? currentBalance : -currentBalance;
 
     // Apply the change
     signedBalance += signedChange;
@@ -264,9 +267,11 @@ void main() {
         );
 
         // 2. Verify customer balance in DB
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
         expect(customer, isNotEmpty);
-        expect(MoneyHelper.readMoney(customer.first['balance']), equals(openingBalance));
+        expect(MoneyHelper.readMoney(customer.first['balance']),
+            equals(openingBalance));
         expect(customer.first['balance_type'], equals('debit'));
         expect(customer.first['currency'], equals('YER'));
 
@@ -275,8 +280,10 @@ void main() {
         //    Credit: Opening Balance Equity (2901)
         final customersAccount = await _findAccountByCode('1200');
         final obEquityAccount = await _findAccountByCode('2901');
-        expect(customersAccount, isNotNull, reason: 'Seeded account 1200 should exist');
-        expect(obEquityAccount, isNotNull, reason: 'Seeded account 2901 should exist');
+        expect(customersAccount, isNotNull,
+            reason: 'Seeded account 1200 should exist');
+        expect(obEquityAccount, isNotNull,
+            reason: 'Seeded account 2901 should exist');
 
         final amountCents = MoneyHelper.toCents(openingBalance);
         await _insertTransaction(
@@ -331,15 +338,19 @@ void main() {
         );
 
         // Verify customer record
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
-        expect(MoneyHelper.readMoney(customer.first['balance']), equals(openingBalance));
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
+        expect(MoneyHelper.readMoney(customer.first['balance']),
+            equals(openingBalance));
         expect(customer.first['currency'], equals('SAR'));
 
         // Verify correct account codes: SAR uses offset +1
         final customersSarAccount = await _findAccountByCode('1201');
         final obEquitySarAccount = await _findAccountByCode('2902');
-        expect(customersSarAccount, isNotNull, reason: 'Seeded account 1201 (SAR Customers) should exist');
-        expect(obEquitySarAccount, isNotNull, reason: 'Seeded account 2902 (SAR OB Equity) should exist');
+        expect(customersSarAccount, isNotNull,
+            reason: 'Seeded account 1201 (SAR Customers) should exist');
+        expect(obEquitySarAccount, isNotNull,
+            reason: 'Seeded account 2902 (SAR OB Equity) should exist');
 
         final amountCents = MoneyHelper.toCents(openingBalance);
         await _insertTransaction(
@@ -379,7 +390,8 @@ void main() {
           currency: 'YER',
         );
 
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
         expect(MoneyHelper.readMoney(customer.first['balance']), equals(0.0));
         // Default balance_type for customers is 'credit'
         expect(customer.first['balance_type'], equals('credit'));
@@ -406,9 +418,11 @@ void main() {
           signedChange: 4000.0, // receipt = credit effect
         );
 
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
         // Was debit 10000, credit effect +4000 → signed: -10000 + 4000 = -6000 → debit 6000
-        expect(MoneyHelper.readMoney(customer.first['balance']), equals(6000.0));
+        expect(
+            MoneyHelper.readMoney(customer.first['balance']), equals(6000.0));
         expect(customer.first['balance_type'], equals('debit'));
       },
     );
@@ -436,8 +450,10 @@ void main() {
         );
 
         // Verify supplier balance in DB
-        final supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
-        expect(MoneyHelper.readMoney(supplier.first['balance']), equals(openingBalance));
+        final supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        expect(MoneyHelper.readMoney(supplier.first['balance']),
+            equals(openingBalance));
         expect(supplier.first['balance_type'], equals('credit'));
         expect(supplier.first['currency'], equals('YER'));
 
@@ -499,15 +515,19 @@ void main() {
         );
 
         // Verify supplier record
-        final supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
-        expect(MoneyHelper.readMoney(supplier.first['balance']), equals(openingBalance));
+        final supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        expect(MoneyHelper.readMoney(supplier.first['balance']),
+            equals(openingBalance));
         expect(supplier.first['currency'], equals('USD'));
 
         // Verify correct account codes: USD uses offset +2
         final suppliersUsdAccount = await _findAccountByCode('2102');
         final obEquityUsdAccount = await _findAccountByCode('2903');
-        expect(suppliersUsdAccount, isNotNull, reason: 'Seeded account 2102 (USD Suppliers) should exist');
-        expect(obEquityUsdAccount, isNotNull, reason: 'Seeded account 2903 (USD OB Equity) should exist');
+        expect(suppliersUsdAccount, isNotNull,
+            reason: 'Seeded account 2102 (USD Suppliers) should exist');
+        expect(obEquityUsdAccount, isNotNull,
+            reason: 'Seeded account 2903 (USD OB Equity) should exist');
 
         final amountCents = MoneyHelper.toCents(openingBalance);
         await _insertTransaction(
@@ -547,8 +567,10 @@ void main() {
           currency: 'YER',
         );
 
-        final supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
-        expect(MoneyHelper.readMoney(supplier.first['balance']), equals(15000.0));
+        final supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        expect(
+            MoneyHelper.readMoney(supplier.first['balance']), equals(15000.0));
         expect(supplier.first['balance_type'], equals('credit'));
 
         // After we pay the supplier 5000, signed change = -5000 (debit effect)
@@ -559,8 +581,10 @@ void main() {
           signedChange: -5000.0,
         );
 
-        final afterPayment = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
-        expect(MoneyHelper.readMoney(afterPayment.first['balance']), equals(10000.0));
+        final afterPayment = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        expect(MoneyHelper.readMoney(afterPayment.first['balance']),
+            equals(10000.0));
         expect(afterPayment.first['balance_type'], equals('credit'));
       },
     );
@@ -577,7 +601,8 @@ void main() {
       'موظف بحساب مرتبط → يمكن تسجيل معاملات عليه',
       () async {
         final employeeAccountId = await _findAccountByCode('5100');
-        expect(employeeAccountId, isNotNull, reason: 'Seeded account 5100 (Employees) should exist');
+        expect(employeeAccountId, isNotNull,
+            reason: 'Seeded account 5100 (Employees) should exist');
 
         final employeeId = await _insertEmployee(
           name: 'أحمد الموظف',
@@ -587,7 +612,8 @@ void main() {
         );
 
         // Verify employee record
-        final employee = await db.query('employees', where: 'id = ?', whereArgs: [employeeId]);
+        final employee = await db
+            .query('employees', where: 'id = ?', whereArgs: [employeeId]);
         expect(employee, isNotEmpty);
         expect(employee.first['account_id'], equals(employeeAccountId['id']));
         expect(MoneyHelper.readMoney(employee.first['balance']), equals(0.0));
@@ -647,8 +673,10 @@ void main() {
         );
 
         // Verify employee balance
-        final employee = await db.query('employees', where: 'id = ?', whereArgs: [employeeId]);
-        expect(MoneyHelper.readMoney(employee.first['balance']), equals(openingBalance));
+        final employee = await db
+            .query('employees', where: 'id = ?', whereArgs: [employeeId]);
+        expect(MoneyHelper.readMoney(employee.first['balance']),
+            equals(openingBalance));
         expect(employee.first['balance_type'], equals('debit'));
 
         // Create OB journal: Debit 5100 (Employees expense), Credit 2901 (OB Equity)
@@ -709,10 +737,12 @@ void main() {
           linkedAccountId: cashAccount!['id'] as int,
         );
 
-        final cashBox = await db.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId]);
+        final cashBox = await db
+            .query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId]);
         expect(cashBox, isNotEmpty);
         expect(cashBox.first['linked_account_id'], equals(cashAccount['id']));
-        expect(MoneyHelper.readMoney(cashBox.first['balance']), equals(50000.0));
+        expect(
+            MoneyHelper.readMoney(cashBox.first['balance']), equals(50000.0));
         expect(cashBox.first['currency'], equals('YER'));
       },
     );
@@ -729,7 +759,8 @@ void main() {
         );
 
         // Verify raw integer value in DB is in cents
-        final cashBox = await db.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId]);
+        final cashBox = await db
+            .query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId]);
         final rawBalance = cashBox.first['balance'] as int;
         expect(rawBalance, equals(MoneyHelper.toCents(humanBalance)));
         expect(rawBalance, equals(1234567));
@@ -771,17 +802,21 @@ void main() {
         );
 
         // Verify all three cash boxes
-        final yerBox = await db.query('cash_boxes', where: 'id = ?', whereArgs: [yerBoxId]);
+        final yerBox = await db
+            .query('cash_boxes', where: 'id = ?', whereArgs: [yerBoxId]);
         expect(yerBox.first['currency'], equals('YER'));
-        expect(MoneyHelper.readMoney(yerBox.first['balance']), equals(100000.0));
+        expect(
+            MoneyHelper.readMoney(yerBox.first['balance']), equals(100000.0));
         expect(yerBox.first['linked_account_id'], equals(yerAccount['id']));
 
-        final sarBox = await db.query('cash_boxes', where: 'id = ?', whereArgs: [sarBoxId]);
+        final sarBox = await db
+            .query('cash_boxes', where: 'id = ?', whereArgs: [sarBoxId]);
         expect(sarBox.first['currency'], equals('SAR'));
         expect(MoneyHelper.readMoney(sarBox.first['balance']), equals(5000.0));
         expect(sarBox.first['linked_account_id'], equals(sarAccount['id']));
 
-        final usdBox = await db.query('cash_boxes', where: 'id = ?', whereArgs: [usdBoxId]);
+        final usdBox = await db
+            .query('cash_boxes', where: 'id = ?', whereArgs: [usdBoxId]);
         expect(usdBox.first['currency'], equals('USD'));
         expect(MoneyHelper.readMoney(usdBox.first['balance']), equals(2000.0));
         expect(usdBox.first['linked_account_id'], equals(usdAccount['id']));
@@ -794,7 +829,8 @@ void main() {
   //  حركات العميل / تأثير السندات
   // ══════════════════════════════════════════════════════════════════
 
-  group('Customer Movements / Voucher Impact — حركات العميل وتأثير السندات', () {
+  group('Customer Movements / Voucher Impact — حركات العميل وتأثير السندات',
+      () {
     test(
       'Receipt voucher for customer → creates balanced journal (debit cash 1100, credit customer 1200) / '
       'سند قبض من عميل → قيد متوازن (مدين الصندوق 1100، دائن العميل 1200)',
@@ -858,8 +894,10 @@ void main() {
         );
 
         // Verify customer balance decreased: 5000 - 3000 = 2000
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
-        expect(MoneyHelper.readMoney(customer.first['balance']), equals(2000.0));
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
+        expect(
+            MoneyHelper.readMoney(customer.first['balance']), equals(2000.0));
         expect(customer.first['balance_type'], equals('debit'));
       },
     );
@@ -908,8 +946,10 @@ void main() {
           signedChange: -paymentAmount, // debit effect
         );
 
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
-        expect(MoneyHelper.readMoney(customer.first['balance']), equals(paymentAmount));
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
+        expect(MoneyHelper.readMoney(customer.first['balance']),
+            equals(paymentAmount));
         expect(customer.first['balance_type'], equals('debit'));
       },
     );
@@ -963,9 +1003,11 @@ void main() {
           signedChange: -saleAmount, // debit effect = -signed
         );
 
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
         // Was debit 3000, sale adds debit effect 7500 → total debit = 3000 + 7500 = 10500
-        expect(MoneyHelper.readMoney(customer.first['balance']), equals(10500.0));
+        expect(
+            MoneyHelper.readMoney(customer.first['balance']), equals(10500.0));
         expect(customer.first['balance_type'], equals('debit'));
       },
     );
@@ -1020,8 +1062,10 @@ void main() {
           signedChange: purchaseAmount, // credit effect
         );
 
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
-        expect(MoneyHelper.readMoney(customer.first['balance']), equals(purchaseAmount));
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
+        expect(MoneyHelper.readMoney(customer.first['balance']),
+            equals(purchaseAmount));
         expect(customer.first['balance_type'], equals('credit'));
       },
     );
@@ -1032,7 +1076,8 @@ void main() {
   //  حركات المورد / تأثير السندات
   // ══════════════════════════════════════════════════════════════════
 
-  group('Supplier Movements / Voucher Impact — حركات المورد وتأثير السندات', () {
+  group('Supplier Movements / Voucher Impact — حركات المورد وتأثير السندات',
+      () {
     test(
       'Payment voucher for supplier → creates balanced journal (debit supplier 2100, credit cash 1100) / '
       'سند صرف للمورد → قيد متوازن (مدين المورد 2100، دائن الصندوق 1100)',
@@ -1088,8 +1133,10 @@ void main() {
         );
 
         // Was credit 10000, debit effect -6000 → signed: 10000 - 6000 = 4000 → credit 4000
-        final supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
-        expect(MoneyHelper.readMoney(supplier.first['balance']), equals(4000.0));
+        final supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        expect(
+            MoneyHelper.readMoney(supplier.first['balance']), equals(4000.0));
         expect(supplier.first['balance_type'], equals('credit'));
       },
     );
@@ -1142,8 +1189,10 @@ void main() {
         );
 
         // Was debit 5000, credit effect +3000 → signed: -5000 + 3000 = -2000 → debit 2000
-        final supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
-        expect(MoneyHelper.readMoney(supplier.first['balance']), equals(2000.0));
+        final supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        expect(
+            MoneyHelper.readMoney(supplier.first['balance']), equals(2000.0));
         expect(supplier.first['balance_type'], equals('debit'));
       },
     );
@@ -1258,7 +1307,8 @@ void main() {
           totalSignedBalance += balance * sign;
         }
         expect(totalSignedBalance, equals(0),
-            reason: 'Accounting equation: sum of signed account balances must be zero');
+            reason:
+                'Accounting equation: sum of signed account balances must be zero');
       },
     );
 
@@ -1275,8 +1325,10 @@ void main() {
         );
 
         // Verify initial state
-        var supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
-        expect(MoneyHelper.readMoney(supplier.first['balance']), equals(5000.0));
+        var supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        expect(
+            MoneyHelper.readMoney(supplier.first['balance']), equals(5000.0));
         expect(supplier.first['balance_type'], equals('credit'));
 
         // Pay 8000 (overpayment) → balance crosses zero → flips to debit
@@ -1286,9 +1338,11 @@ void main() {
           signedChange: -8000.0, // debit effect (payment)
         );
 
-        supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
         // Was credit 5000, signed: +5000, after -8000: +5000 - 8000 = -3000 → debit 3000
-        expect(MoneyHelper.readMoney(supplier.first['balance']), equals(3000.0));
+        expect(
+            MoneyHelper.readMoney(supplier.first['balance']), equals(3000.0));
         expect(supplier.first['balance_type'], equals('debit'));
 
         // Now supplier sends us goods worth 4000 (credit effect) → crosses back to credit
@@ -1298,9 +1352,11 @@ void main() {
           signedChange: 4000.0, // credit effect
         );
 
-        supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
         // Was debit 3000, signed: -3000, after +4000: -3000 + 4000 = +1000 → credit 1000
-        expect(MoneyHelper.readMoney(supplier.first['balance']), equals(1000.0));
+        expect(
+            MoneyHelper.readMoney(supplier.first['balance']), equals(1000.0));
         expect(supplier.first['balance_type'], equals('credit'));
 
         // Pay exactly 1000 → zero balance → defaults to credit
@@ -1310,8 +1366,10 @@ void main() {
           signedChange: -1000.0,
         );
 
-        supplier = await db.query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
-        expect(MoneyHelper.readMoney(supplier.first['balance']), closeTo(0.0, 0.01));
+        supplier = await db
+            .query('suppliers', where: 'id = ?', whereArgs: [supplierId]);
+        expect(MoneyHelper.readMoney(supplier.first['balance']),
+            closeTo(0.0, 0.01));
         expect(supplier.first['balance_type'], equals('credit'));
 
         // Test customer flip: start debit, cross to credit
@@ -1329,9 +1387,11 @@ void main() {
           signedChange: 8000.0, // credit effect (receipt)
         );
 
-        final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
+        final customer = await db
+            .query('customers', where: 'id = ?', whereArgs: [customerId]);
         // Was debit 3000, signed: -3000, after +8000: -3000 + 8000 = +5000 → credit 5000
-        expect(MoneyHelper.readMoney(customer.first['balance']), equals(5000.0));
+        expect(
+            MoneyHelper.readMoney(customer.first['balance']), equals(5000.0));
         expect(customer.first['balance_type'], equals('credit'));
       },
     );
@@ -1358,32 +1418,82 @@ void main() {
         // Create a series of balanced operations
         // OB: Debit Cash 100000, Credit OB Equity 100000
         final ob = MoneyHelper.toCents(100000.0);
-        await _insertTransaction(accountId: cashAccount!['id'] as int, journalId: journalId, debit: ob, credit: 0, description: 'رصيد افتتاحي');
-        await _insertTransaction(accountId: obEquityAccount!['id'] as int, journalId: journalId, debit: 0, credit: ob, description: 'رصيد افتتاحي');
+        await _insertTransaction(
+            accountId: cashAccount!['id'] as int,
+            journalId: journalId,
+            debit: ob,
+            credit: 0,
+            description: 'رصيد افتتاحي');
+        await _insertTransaction(
+            accountId: obEquityAccount!['id'] as int,
+            journalId: journalId,
+            debit: 0,
+            credit: ob,
+            description: 'رصيد افتتاحي');
 
         // Sale: Debit Customer 25000, Credit Sales 25000
         final journalId2 = journalId + 1;
         final sale = MoneyHelper.toCents(25000.0);
-        await _insertTransaction(accountId: customersAccount!['id'] as int, journalId: journalId2, debit: sale, credit: 0, description: 'مبيعات');
-        await _insertTransaction(accountId: salesAccount!['id'] as int, journalId: journalId2, debit: 0, credit: sale, description: 'مبيعات');
+        await _insertTransaction(
+            accountId: customersAccount!['id'] as int,
+            journalId: journalId2,
+            debit: sale,
+            credit: 0,
+            description: 'مبيعات');
+        await _insertTransaction(
+            accountId: salesAccount!['id'] as int,
+            journalId: journalId2,
+            debit: 0,
+            credit: sale,
+            description: 'مبيعات');
 
         // Purchase: Debit Expense 12000, Credit Supplier 12000
         final journalId3 = journalId + 2;
         final purchase = MoneyHelper.toCents(12000.0);
-        await _insertTransaction(accountId: expenseAccount!['id'] as int, journalId: journalId3, debit: purchase, credit: 0, description: 'مشتريات');
-        await _insertTransaction(accountId: suppliersAccount!['id'] as int, journalId: journalId3, debit: 0, credit: purchase, description: 'مشتريات');
+        await _insertTransaction(
+            accountId: expenseAccount!['id'] as int,
+            journalId: journalId3,
+            debit: purchase,
+            credit: 0,
+            description: 'مشتريات');
+        await _insertTransaction(
+            accountId: suppliersAccount!['id'] as int,
+            journalId: journalId3,
+            debit: 0,
+            credit: purchase,
+            description: 'مشتريات');
 
         // Receipt from customer: Debit Cash 10000, Credit Customer 10000
         final journalId4 = journalId + 3;
         final receipt = MoneyHelper.toCents(10000.0);
-        await _insertTransaction(accountId: cashAccount['id'] as int, journalId: journalId4, debit: receipt, credit: 0, description: 'قبض من عميل');
-        await _insertTransaction(accountId: customersAccount['id'] as int, journalId: journalId4, debit: 0, credit: receipt, description: 'قبض من عميل');
+        await _insertTransaction(
+            accountId: cashAccount['id'] as int,
+            journalId: journalId4,
+            debit: receipt,
+            credit: 0,
+            description: 'قبض من عميل');
+        await _insertTransaction(
+            accountId: customersAccount['id'] as int,
+            journalId: journalId4,
+            debit: 0,
+            credit: receipt,
+            description: 'قبض من عميل');
 
         // Payment to supplier: Debit Supplier 7000, Credit Cash 7000
         final journalId5 = journalId + 4;
         final payment = MoneyHelper.toCents(7000.0);
-        await _insertTransaction(accountId: suppliersAccount['id'] as int, journalId: journalId5, debit: payment, credit: 0, description: 'صرف للمورد');
-        await _insertTransaction(accountId: cashAccount['id'] as int, journalId: journalId5, debit: 0, credit: payment, description: 'صرف للمورد');
+        await _insertTransaction(
+            accountId: suppliersAccount['id'] as int,
+            journalId: journalId5,
+            debit: payment,
+            credit: 0,
+            description: 'صرف للمورد');
+        await _insertTransaction(
+            accountId: cashAccount['id'] as int,
+            journalId: journalId5,
+            debit: 0,
+            credit: payment,
+            description: 'صرف للمورد');
 
         // Verify global trial balance
         await _assertGlobalTrialBalance();
@@ -1404,13 +1514,33 @@ void main() {
         final amount2 = MoneyHelper.toCents(3000.0);
 
         // Sale 1
-        await _insertTransaction(accountId: cashAccount!['id'] as int, journalId: journalId, debit: amount1, credit: 0, description: 'نقدية 1');
-        await _insertTransaction(accountId: salesAccount!['id'] as int, journalId: journalId, debit: 0, credit: amount1, description: 'مبيعات 1');
+        await _insertTransaction(
+            accountId: cashAccount!['id'] as int,
+            journalId: journalId,
+            debit: amount1,
+            credit: 0,
+            description: 'نقدية 1');
+        await _insertTransaction(
+            accountId: salesAccount!['id'] as int,
+            journalId: journalId,
+            debit: 0,
+            credit: amount1,
+            description: 'مبيعات 1');
 
         // Sale 2
         final journalId2 = journalId + 1;
-        await _insertTransaction(accountId: cashAccount['id'] as int, journalId: journalId2, debit: amount2, credit: 0, description: 'نقدية 2');
-        await _insertTransaction(accountId: salesAccount['id'] as int, journalId: journalId2, debit: 0, credit: amount2, description: 'مبيعات 2');
+        await _insertTransaction(
+            accountId: cashAccount['id'] as int,
+            journalId: journalId2,
+            debit: amount2,
+            credit: 0,
+            description: 'نقدية 2');
+        await _insertTransaction(
+            accountId: salesAccount['id'] as int,
+            journalId: journalId2,
+            debit: 0,
+            credit: amount2,
+            description: 'مبيعات 2');
 
         // Check per-account totals for Cash (1100)
         final cashTotals = await db.rawQuery(
@@ -1462,15 +1592,45 @@ void main() {
 
         // OB in YER: Debit Cash 500000, Credit OB Equity 500000
         final obYer = MoneyHelper.toCents(500000.0);
-        await _insertTransaction(accountId: cashYerAccount!['id'] as int, journalId: journalId, debit: obYer, credit: 0, currencyCode: 'YER', amountBase: obYer, description: 'OB YER');
-        await _insertTransaction(accountId: obEquityAccount!['id'] as int, journalId: journalId, debit: 0, credit: obYer, currencyCode: 'YER', amountBase: obYer, description: 'OB YER');
+        await _insertTransaction(
+            accountId: cashYerAccount!['id'] as int,
+            journalId: journalId,
+            debit: obYer,
+            credit: 0,
+            currencyCode: 'YER',
+            amountBase: obYer,
+            description: 'OB YER');
+        await _insertTransaction(
+            accountId: obEquityAccount!['id'] as int,
+            journalId: journalId,
+            debit: 0,
+            credit: obYer,
+            currencyCode: 'YER',
+            amountBase: obYer,
+            description: 'OB YER');
 
         // OB in USD: Debit Cash-USD 1000, Credit OB Equity-USD 1000
         final journalId2 = journalId + 1;
         final obUsd = MoneyHelper.toCents(1000.0);
         final obUsdBase = obUsd * 530; // 1000 USD * 530 = 530000 YER base
-        await _insertTransaction(accountId: cashUsdAccount!['id'] as int, journalId: journalId2, debit: obUsd, credit: 0, currencyCode: 'USD', exchangeRate: 530.0, amountBase: obUsdBase, description: 'OB USD');
-        await _insertTransaction(accountId: obEquityUsdAccount!['id'] as int, journalId: journalId2, debit: 0, credit: obUsd, currencyCode: 'USD', exchangeRate: 530.0, amountBase: obUsdBase, description: 'OB USD');
+        await _insertTransaction(
+            accountId: cashUsdAccount!['id'] as int,
+            journalId: journalId2,
+            debit: obUsd,
+            credit: 0,
+            currencyCode: 'USD',
+            exchangeRate: 530.0,
+            amountBase: obUsdBase,
+            description: 'OB USD');
+        await _insertTransaction(
+            accountId: obEquityUsdAccount!['id'] as int,
+            journalId: journalId2,
+            debit: 0,
+            credit: obUsd,
+            currencyCode: 'USD',
+            exchangeRate: 530.0,
+            amountBase: obUsdBase,
+            description: 'OB USD');
 
         // Verify each journal balanced
         await _assertJournalBalanced(journalId);

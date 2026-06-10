@@ -101,40 +101,47 @@ void main() {
 
       // Verify key YER accounts
       final yerAssets = await db.query('accounts',
-          where: 'account_code = ? AND currency = ?', whereArgs: ['1000', 'YER']);
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: ['1000', 'YER']);
       expect(yerAssets.length, 1);
       expect(yerAssets.first['account_type'], 'ASSET');
       expect(yerAssets.first['balance_type'], 'debit');
 
       // Verify key SAR accounts
       final sarCashBanks = await db.query('accounts',
-          where: 'account_code = ? AND currency = ?', whereArgs: ['1101', 'SAR']);
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: ['1101', 'SAR']);
       expect(sarCashBanks.length, 1);
 
       // Verify key USD accounts
       final usdCustomers = await db.query('accounts',
-          where: 'account_code = ? AND currency = ?', whereArgs: ['1202', 'USD']);
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: ['1202', 'USD']);
       expect(usdCustomers.length, 1);
     });
 
     test('Balance type is correctly assigned by account type', () async {
       // Debit-balance types: ASSET, COST, EXPENSE
       final debitAccounts = await db.query('accounts',
-          where: "account_type IN ('ASSET', 'COST', 'EXPENSE') AND balance_type = 'debit'");
+          where:
+              "account_type IN ('ASSET', 'COST', 'EXPENSE') AND balance_type = 'debit'");
       expect(debitAccounts.length, greaterThan(0));
 
       // Credit-balance types: LIABILITY, EQUITY, REVENUE
       final creditAccounts = await db.query('accounts',
-          where: "account_type IN ('LIABILITY', 'EQUITY', 'REVENUE') AND balance_type = 'credit'");
+          where:
+              "account_type IN ('LIABILITY', 'EQUITY', 'REVENUE') AND balance_type = 'credit'");
       expect(creditAccounts.length, greaterThan(0));
 
       // No mismatches
       final mismatchedDebit = await db.query('accounts',
-          where: "account_type IN ('LIABILITY', 'EQUITY', 'REVENUE') AND balance_type = 'debit' AND is_system = 1");
+          where:
+              "account_type IN ('LIABILITY', 'EQUITY', 'REVENUE') AND balance_type = 'debit' AND is_system = 1");
       expect(mismatchedDebit.length, 0);
 
       final mismatchedCredit = await db.query('accounts',
-          where: "account_type IN ('ASSET', 'COST', 'EXPENSE') AND balance_type = 'credit' AND is_system = 1");
+          where:
+              "account_type IN ('ASSET', 'COST', 'EXPENSE') AND balance_type = 'credit' AND is_system = 1");
       expect(mismatchedCredit.length, 0);
     });
   });
@@ -160,7 +167,8 @@ void main() {
         'updated_at': now,
       });
 
-      final account = await db.query('accounts', where: 'id = ?', whereArgs: [id]);
+      final account =
+          await db.query('accounts', where: 'id = ?', whereArgs: [id]);
       expect(account.length, 1);
       expect(account.first['name_ar'], 'حساب اختبار');
       expect(MoneyHelper.readMoney(account.first['balance']), 1000.0);
@@ -198,18 +206,25 @@ void main() {
           updated_at = ?
         WHERE id = ?
       ''', [
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        now, id,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        now,
+        id,
       ]);
 
-      final updated = await db.query('accounts', where: 'id = ?', whereArgs: [id]);
+      final updated =
+          await db.query('accounts', where: 'id = ?', whereArgs: [id]);
       expect(MoneyHelper.readMoney(updated.first['balance']), 6500.0);
     });
 
-    test('Update credit-balance account with debit entry decreases balance', () async {
+    test('Update credit-balance account with debit entry decreases balance',
+        () async {
       final now = DateTime.now().toIso8601String();
       final id = await db.insert('accounts', {
         'name_ar': 'حساب دائن',
@@ -240,14 +255,20 @@ void main() {
           updated_at = ?
         WHERE id = ?
       ''', [
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        now, id,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        now,
+        id,
       ]);
 
-      final updated = await db.query('accounts', where: 'id = ?', whereArgs: [id]);
+      final updated =
+          await db.query('accounts', where: 'id = ?', whereArgs: [id]);
       // Credit account + debit entry = 3000 - 1000 = 2000
       expect(MoneyHelper.readMoney(updated.first['balance']), 2000.0);
     });
@@ -299,13 +320,13 @@ void main() {
       }
 
       // The 'عميل مؤقت' should NOT exist because the transaction rolled back
-      final tempCustomer = await db.query('customers',
-          where: 'name = ?', whereArgs: ['عميل مؤقت']);
+      final tempCustomer = await db
+          .query('customers', where: 'name = ?', whereArgs: ['عميل مؤقت']);
       expect(tempCustomer.length, 0);
 
       // The original customer should still exist
-      final original = await db.query('customers',
-          where: 'id = ?', whereArgs: [customerId]);
+      final original =
+          await db.query('customers', where: 'id = ?', whereArgs: [customerId]);
       expect(original.length, 1);
     });
 
@@ -393,8 +414,10 @@ void main() {
       });
 
       // Verify balances
-      final debitAccount = await db.query('accounts', where: 'id = ?', whereArgs: [debitAccountId]);
-      final creditAccount = await db.query('accounts', where: 'id = ?', whereArgs: [creditAccountId]);
+      final debitAccount = await db
+          .query('accounts', where: 'id = ?', whereArgs: [debitAccountId]);
+      final creditAccount = await db
+          .query('accounts', where: 'id = ?', whereArgs: [creditAccountId]);
 
       // Debit account (ASSET): balance should increase by amount
       expect(MoneyHelper.readMoney(debitAccount.first['balance']), 5000.0);
@@ -452,7 +475,8 @@ void main() {
         'updated_at': now,
       });
 
-      final cashBox = await db.query('cash_boxes', where: 'id = ?', whereArgs: [id]);
+      final cashBox =
+          await db.query('cash_boxes', where: 'id = ?', whereArgs: [id]);
       expect(cashBox.length, 1);
       expect(cashBox.first['name'], 'الصندوق الرئيسي');
       expect(MoneyHelper.readMoney(cashBox.first['balance']), 10000.0);
@@ -481,13 +505,14 @@ void main() {
       );
 
       // Verify the cash box still exists but is inactive
-      final cashBox = await db.query('cash_boxes', where: 'id = ?', whereArgs: [id]);
+      final cashBox =
+          await db.query('cash_boxes', where: 'id = ?', whereArgs: [id]);
       expect(cashBox.length, 1);
       expect(cashBox.first['is_active'], 0);
 
       // Verify it doesn't appear in active-only queries
-      final activeCashBoxes = await db.query('cash_boxes',
-          where: 'is_active = ?', whereArgs: [1]);
+      final activeCashBoxes =
+          await db.query('cash_boxes', where: 'is_active = ?', whereArgs: [1]);
       expect(activeCashBoxes.where((cb) => cb['id'] == id).length, 0);
     });
 
@@ -599,8 +624,10 @@ void main() {
         )
       ''', [cashBoxId, cashBoxId, cashBoxId]);
 
-      final totalInflows = MoneyHelper.readCalculatedMoney(result.first['total_inflows']);
-      final totalOutflows = MoneyHelper.readCalculatedMoney(result.first['total_outflows']);
+      final totalInflows =
+          MoneyHelper.readCalculatedMoney(result.first['total_inflows']);
+      final totalOutflows =
+          MoneyHelper.readCalculatedMoney(result.first['total_outflows']);
 
       // Inflows: opening 5000 + sale 3000 = 8000
       expect(totalInflows, 8000.0);
@@ -694,7 +721,8 @@ void main() {
       });
 
       // Read
-      final customer = await db.query('customers', where: 'id = ?', whereArgs: [id]);
+      final customer =
+          await db.query('customers', where: 'id = ?', whereArgs: [id]);
       expect(customer.length, 1);
       expect(customer.first['name'], 'أحمد محمد');
       expect(MoneyHelper.readMoney(customer.first['balance']), 2500.0);
@@ -710,12 +738,14 @@ void main() {
         whereArgs: [id],
       );
 
-      final updated = await db.query('customers', where: 'id = ?', whereArgs: [id]);
+      final updated =
+          await db.query('customers', where: 'id = ?', whereArgs: [id]);
       expect(MoneyHelper.readMoney(updated.first['balance']), 3000.0);
 
       // Delete (hard delete for customers with no invoices)
       await db.delete('customers', where: 'id = ?', whereArgs: [id]);
-      final deleted = await db.query('customers', where: 'id = ?', whereArgs: [id]);
+      final deleted =
+          await db.query('customers', where: 'id = ?', whereArgs: [id]);
       expect(deleted.length, 0);
     });
 
@@ -731,13 +761,15 @@ void main() {
         'updated_at': now,
       });
 
-      final customer = await db.query('customers', where: 'id = ?', whereArgs: [id]);
+      final customer =
+          await db.query('customers', where: 'id = ?', whereArgs: [id]);
       final currentBalance = MoneyHelper.readMoney(customer.first['balance']);
       final debtCeiling = MoneyHelper.readMoney(customer.first['debt_ceiling']);
 
       // Current: 8000, Ceiling: 10000
       expect(currentBalance + 3000, greaterThan(debtCeiling)); // Would exceed
-      expect(currentBalance + 1500, lessThanOrEqualTo(debtCeiling)); // Would not exceed
+      expect(currentBalance + 1500,
+          lessThanOrEqualTo(debtCeiling)); // Would not exceed
     });
   });
 
@@ -746,7 +778,8 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('Complex Balance Queries', () {
-    test('Account balance computed from transactions matches stored balance', () async {
+    test('Account balance computed from transactions matches stored balance',
+        () async {
       final now = DateTime.now().toIso8601String();
 
       // Create a test account
@@ -808,8 +841,10 @@ void main() {
         [accountId],
       );
 
-      final totalDebit = MoneyHelper.readCalculatedMoney(result.first['total_debit']);
-      final totalCredit = MoneyHelper.readCalculatedMoney(result.first['total_credit']);
+      final totalDebit =
+          MoneyHelper.readCalculatedMoney(result.first['total_debit']);
+      final totalCredit =
+          MoneyHelper.readCalculatedMoney(result.first['total_credit']);
 
       // For debit-balance account: balance = debit - credit = 8000 - 2000 = 6000
       final computedBalance = totalDebit - totalCredit;
@@ -856,7 +891,8 @@ void main() {
 
       // Compute running balance for debit-type account
       final allTxns = await db.query('transactions',
-          where: 'account_id = ?', whereArgs: [accountId],
+          where: 'account_id = ?',
+          whereArgs: [accountId],
           orderBy: 'date ASC, id ASC');
 
       double runningBalance = 0.0;

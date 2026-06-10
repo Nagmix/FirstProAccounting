@@ -76,8 +76,10 @@ void main() {
   group('Customer opening balance — currency_code / رصيد افتتاحي عميل', () {
     test('YER customer opening balance includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final accountId = await _insertAccount(code: '1200', type: 'ASSET', balanceType: 'debit', currency: 'YER');
-      final obAccountId = await _insertAccount(code: '2901', type: 'EQUITY', balanceType: 'credit', currency: 'YER');
+      final accountId = await _insertAccount(
+          code: '1200', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final obAccountId = await _insertAccount(
+          code: '2901', type: 'EQUITY', balanceType: 'credit', currency: 'YER');
 
       // Simulate customer opening balance: Debit Customers, Credit OB Equity
       final journalId = DateTime.now().microsecondsSinceEpoch;
@@ -115,7 +117,8 @@ void main() {
       });
 
       expect(await _countNullCurrencyCode(), 0,
-          reason: 'Customer opening balance should not produce NULL currency_code');
+          reason:
+              'Customer opening balance should not produce NULL currency_code');
 
       final txns = await db.query('transactions',
           where: 'reference_type = ? AND reference_id = ?',
@@ -128,8 +131,10 @@ void main() {
 
     test('USD customer opening balance includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final accountId = await _insertAccount(code: '1202', type: 'ASSET', balanceType: 'debit', currency: 'USD');
-      final obAccountId = await _insertAccount(code: '2903', type: 'EQUITY', balanceType: 'credit', currency: 'USD');
+      final accountId = await _insertAccount(
+          code: '1202', type: 'ASSET', balanceType: 'debit', currency: 'USD');
+      final obAccountId = await _insertAccount(
+          code: '2903', type: 'EQUITY', balanceType: 'credit', currency: 'USD');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 1;
       final amount = MoneyHelper.toCents(100.0);
@@ -181,8 +186,10 @@ void main() {
   group('Supplier opening balance — currency_code / رصيد افتتاحي مورد', () {
     test('YER supplier opening balance includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final accountId = await _insertAccount(code: '1300', type: 'ASSET', balanceType: 'debit', currency: 'YER');
-      final obAccountId = await _insertAccount(code: '2902', type: 'EQUITY', balanceType: 'credit', currency: 'YER');
+      final accountId = await _insertAccount(
+          code: '1300', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final obAccountId = await _insertAccount(
+          code: '2902', type: 'EQUITY', balanceType: 'credit', currency: 'YER');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 2;
       final amount = MoneyHelper.toCents(10000.0);
@@ -227,8 +234,10 @@ void main() {
 
     test('SAR supplier opening balance includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final accountId = await _insertAccount(code: '1301', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
-      final obAccountId = await _insertAccount(code: '2904', type: 'EQUITY', balanceType: 'credit', currency: 'SAR');
+      final accountId = await _insertAccount(
+          code: '1301', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
+      final obAccountId = await _insertAccount(
+          code: '2904', type: 'EQUITY', balanceType: 'credit', currency: 'SAR');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 3;
       final amount = MoneyHelper.toCents(500.0);
@@ -277,10 +286,13 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('Employee opening balance — currency_code / رصيد افتتاحي موظف', () {
-    test('Employee opening balance transactions include currency_code', () async {
+    test('Employee opening balance transactions include currency_code',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final accountId = await _insertAccount(code: '1500', type: 'ASSET', balanceType: 'debit', currency: 'YER');
-      final obAccountId = await _insertAccount(code: '2905', type: 'EQUITY', balanceType: 'credit', currency: 'YER');
+      final accountId = await _insertAccount(
+          code: '1500', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final obAccountId = await _insertAccount(
+          code: '2905', type: 'EQUITY', balanceType: 'credit', currency: 'YER');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 4;
       final amount = MoneyHelper.toCents(3000.0);
@@ -332,8 +344,10 @@ void main() {
   group('Expense transactions — currency_code / معاملات المصروفات', () {
     test('YER expense disbursement includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final expenseAccountId = await _insertAccount(code: '5000', type: 'EXPENSE', balanceType: 'debit', currency: 'YER');
-      final cashAccountId = await _insertAccount(code: '1100', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final expenseAccountId = await _insertAccount(
+          code: '5000', type: 'EXPENSE', balanceType: 'debit', currency: 'YER');
+      final cashAccountId = await _insertAccount(
+          code: '1100', type: 'ASSET', balanceType: 'debit', currency: 'YER');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 5;
       final amount = MoneyHelper.toCents(2000.0);
@@ -370,8 +384,10 @@ void main() {
 
     test('USD expense disbursement includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final expenseAccountId = await _insertAccount(code: '5001', type: 'EXPENSE', balanceType: 'debit', currency: 'YER');
-      final cashAccountId = await _insertAccount(code: '1102', type: 'ASSET', balanceType: 'debit', currency: 'USD');
+      final expenseAccountId = await _insertAccount(
+          code: '5001', type: 'EXPENSE', balanceType: 'debit', currency: 'YER');
+      final cashAccountId = await _insertAccount(
+          code: '1102', type: 'ASSET', balanceType: 'debit', currency: 'USD');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 6;
       final amount = MoneyHelper.toCents(50.0);
@@ -421,8 +437,10 @@ void main() {
   group('Voucher transactions — currency_code / معاملات السندات', () {
     test('Receipt voucher transactions include currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final cashAccountId = await _insertAccount(code: '1100', type: 'ASSET', balanceType: 'debit', currency: 'YER');
-      final customerAccountId = await _insertAccount(code: '1200', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final cashAccountId = await _insertAccount(
+          code: '1100', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final customerAccountId = await _insertAccount(
+          code: '1200', type: 'ASSET', balanceType: 'debit', currency: 'YER');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 7;
       final amount = MoneyHelper.toCents(7000.0);
@@ -459,8 +477,10 @@ void main() {
 
     test('Payment voucher in SAR includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final cashAccountId = await _insertAccount(code: '1101', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
-      final supplierAccountId = await _insertAccount(code: '1301', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
+      final cashAccountId = await _insertAccount(
+          code: '1101', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
+      final supplierAccountId = await _insertAccount(
+          code: '1301', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 8;
       final amount = MoneyHelper.toCents(1000.0);
@@ -506,15 +526,20 @@ void main() {
   //  Currency exchange transactions include currency_code
   // ══════════════════════════════════════════════════════════════
 
-  group('Currency exchange transactions — currency_code / معاملات صرافة العملات', () {
-    test('Exchange from YER to USD includes currency_code on both sides', () async {
+  group(
+      'Currency exchange transactions — currency_code / معاملات صرافة العملات',
+      () {
+    test('Exchange from YER to USD includes currency_code on both sides',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final yerCashAccountId = await _insertAccount(code: '1100', type: 'ASSET', balanceType: 'debit', currency: 'YER');
-      final usdCashAccountId = await _insertAccount(code: '1102', type: 'ASSET', balanceType: 'debit', currency: 'USD');
+      final yerCashAccountId = await _insertAccount(
+          code: '1100', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final usdCashAccountId = await _insertAccount(
+          code: '1102', type: 'ASSET', balanceType: 'debit', currency: 'USD');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 9;
       final fromAmount = MoneyHelper.toCents(53000.0); // 53000 YER
-      final toAmount = MoneyHelper.toCents(100.0);     // 100 USD
+      final toAmount = MoneyHelper.toCents(100.0); // 100 USD
 
       // Debit: USD cash received
       await db.insert('transactions', {
@@ -566,11 +591,14 @@ void main() {
   //  Cash transfer transactions include currency_code
   // ══════════════════════════════════════════════════════════════
 
-  group('Cash transfer transactions — currency_code / معاملات تحويل الصناديق', () {
+  group('Cash transfer transactions — currency_code / معاملات تحويل الصناديق',
+      () {
     test('Same-currency transfer includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final fromAccountId = await _insertAccount(code: '1100', type: 'ASSET', balanceType: 'debit', currency: 'YER');
-      final toAccountId = await _insertAccount(code: '1101', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final fromAccountId = await _insertAccount(
+          code: '1100', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final toAccountId = await _insertAccount(
+          code: '1101', type: 'ASSET', balanceType: 'debit', currency: 'YER');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 10;
       final amount = MoneyHelper.toCents(10000.0);
@@ -609,8 +637,10 @@ void main() {
 
     test('SAR cash transfer includes currency_code', () async {
       final now = DateTime.now().toIso8601String();
-      final fromAccountId = await _insertAccount(code: '1103', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
-      final toAccountId = await _insertAccount(code: '1104', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
+      final fromAccountId = await _insertAccount(
+          code: '1103', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
+      final toAccountId = await _insertAccount(
+          code: '1104', type: 'ASSET', balanceType: 'debit', currency: 'SAR');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 11;
       final amount = MoneyHelper.toCents(2000.0);
@@ -655,41 +685,159 @@ void main() {
   //  Comprehensive: No NULL currency_code across all operations
   // ══════════════════════════════════════════════════════════════
 
-  group('Comprehensive — all transaction types / شامل — جميع أنواع المعاملات', () {
-    test('No transaction in the database has NULL currency_code / لا توجد معاملة بقيمة currency_code فارغة', () async {
+  group('Comprehensive — all transaction types / شامل — جميع أنواع المعاملات',
+      () {
+    test(
+        'No transaction in the database has NULL currency_code / لا توجد معاملة بقيمة currency_code فارغة',
+        () async {
       // All the individual test groups above have inserted transactions.
       // We open a fresh database and insert all types, then verify.
       final now = DateTime.now().toIso8601String();
 
       // Create accounts
-      final acc1 = await _insertAccount(code: '9001', type: 'ASSET', balanceType: 'debit', currency: 'YER');
-      final acc2 = await _insertAccount(code: '9002', type: 'REVENUE', balanceType: 'credit', currency: 'YER');
-      final acc3 = await _insertAccount(code: '9003', type: 'EXPENSE', balanceType: 'debit', currency: 'YER');
-      final acc4 = await _insertAccount(code: '9004', type: 'LIABILITY', balanceType: 'credit', currency: 'YER');
-      final acc5 = await _insertAccount(code: '9005', type: 'EQUITY', balanceType: 'credit', currency: 'YER');
+      final acc1 = await _insertAccount(
+          code: '9001', type: 'ASSET', balanceType: 'debit', currency: 'YER');
+      final acc2 = await _insertAccount(
+          code: '9002',
+          type: 'REVENUE',
+          balanceType: 'credit',
+          currency: 'YER');
+      final acc3 = await _insertAccount(
+          code: '9003', type: 'EXPENSE', balanceType: 'debit', currency: 'YER');
+      final acc4 = await _insertAccount(
+          code: '9004',
+          type: 'LIABILITY',
+          balanceType: 'credit',
+          currency: 'YER');
+      final acc5 = await _insertAccount(
+          code: '9005', type: 'EQUITY', balanceType: 'credit', currency: 'YER');
 
       final baseJournal = DateTime.now().microsecondsSinceEpoch;
 
       // Simulate all transaction types with currency_code
       final transactionTypes = [
         // Customer opening balance
-        {'account_id': acc1, 'journal_id': baseJournal + 100, 'debit': 100000, 'credit': 0, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 100000, 'reference_type': 'opening_balance', 'reference_id': 'customer_test'},
-        {'account_id': acc5, 'journal_id': baseJournal + 100, 'debit': 0, 'credit': 100000, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 100000, 'reference_type': 'opening_balance', 'reference_id': 'customer_test'},
+        {
+          'account_id': acc1,
+          'journal_id': baseJournal + 100,
+          'debit': 100000,
+          'credit': 0,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 100000,
+          'reference_type': 'opening_balance',
+          'reference_id': 'customer_test'
+        },
+        {
+          'account_id': acc5,
+          'journal_id': baseJournal + 100,
+          'debit': 0,
+          'credit': 100000,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 100000,
+          'reference_type': 'opening_balance',
+          'reference_id': 'customer_test'
+        },
         // Supplier opening balance
-        {'account_id': acc4, 'journal_id': baseJournal + 200, 'debit': 0, 'credit': 50000, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 50000, 'reference_type': 'opening_balance', 'reference_id': 'supplier_test'},
-        {'account_id': acc5, 'journal_id': baseJournal + 200, 'debit': 50000, 'credit': 0, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 50000, 'reference_type': 'opening_balance', 'reference_id': 'supplier_test'},
+        {
+          'account_id': acc4,
+          'journal_id': baseJournal + 200,
+          'debit': 0,
+          'credit': 50000,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 50000,
+          'reference_type': 'opening_balance',
+          'reference_id': 'supplier_test'
+        },
+        {
+          'account_id': acc5,
+          'journal_id': baseJournal + 200,
+          'debit': 50000,
+          'credit': 0,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 50000,
+          'reference_type': 'opening_balance',
+          'reference_id': 'supplier_test'
+        },
         // Expense
-        {'account_id': acc3, 'journal_id': baseJournal + 300, 'debit': 20000, 'credit': 0, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 20000},
-        {'account_id': acc1, 'journal_id': baseJournal + 300, 'debit': 0, 'credit': 20000, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 20000},
+        {
+          'account_id': acc3,
+          'journal_id': baseJournal + 300,
+          'debit': 20000,
+          'credit': 0,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 20000
+        },
+        {
+          'account_id': acc1,
+          'journal_id': baseJournal + 300,
+          'debit': 0,
+          'credit': 20000,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 20000
+        },
         // Voucher
-        {'account_id': acc1, 'journal_id': baseJournal + 400, 'debit': 30000, 'credit': 0, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 30000},
-        {'account_id': acc2, 'journal_id': baseJournal + 400, 'debit': 0, 'credit': 30000, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 30000},
+        {
+          'account_id': acc1,
+          'journal_id': baseJournal + 400,
+          'debit': 30000,
+          'credit': 0,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 30000
+        },
+        {
+          'account_id': acc2,
+          'journal_id': baseJournal + 400,
+          'debit': 0,
+          'credit': 30000,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 30000
+        },
         // Exchange
-        {'account_id': acc1, 'journal_id': baseJournal + 500, 'debit': 0, 'credit': 40000, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 40000},
-        {'account_id': acc1, 'journal_id': baseJournal + 500, 'debit': 40000, 'credit': 0, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 40000},
+        {
+          'account_id': acc1,
+          'journal_id': baseJournal + 500,
+          'debit': 0,
+          'credit': 40000,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 40000
+        },
+        {
+          'account_id': acc1,
+          'journal_id': baseJournal + 500,
+          'debit': 40000,
+          'credit': 0,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 40000
+        },
         // Transfer
-        {'account_id': acc1, 'journal_id': baseJournal + 600, 'debit': 15000, 'credit': 0, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 15000},
-        {'account_id': acc1, 'journal_id': baseJournal + 600, 'debit': 0, 'credit': 15000, 'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': 15000},
+        {
+          'account_id': acc1,
+          'journal_id': baseJournal + 600,
+          'debit': 15000,
+          'credit': 0,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 15000
+        },
+        {
+          'account_id': acc1,
+          'journal_id': baseJournal + 600,
+          'debit': 0,
+          'credit': 15000,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': 15000
+        },
       ];
 
       for (final txn in transactionTypes) {
@@ -703,7 +851,8 @@ void main() {
 
       // Verify: no NULL currency_code
       expect(await _countNullCurrencyCode(), 0,
-          reason: 'No transaction should have NULL currency_code after comprehensive insert');
+          reason:
+              'No transaction should have NULL currency_code after comprehensive insert');
 
       // Verify: all have valid currency codes
       final allTxns = await db.query('transactions');

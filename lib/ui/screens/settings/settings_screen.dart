@@ -146,15 +146,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (phone != null) _phoneController.text = phone;
         if (email != null) _emailController.text = email;
         if (address != null) _addressController.text = address;
-        _businessLogoPath = (logoPath != null && logoPath.isNotEmpty) ? logoPath : null;
+        _businessLogoPath =
+            (logoPath != null && logoPath.isNotEmpty) ? logoPath : null;
         if (userName != null) _userNameController.text = userName;
         if (taxRate != null) _taxRate = double.tryParse(taxRate) ?? 15.0;
         if (autoInvoice != null) _autoInvoiceNumber = autoInvoice == '1';
-        if (invoicePrefix != null) _invoicePrefixController.text = invoicePrefix;
+        if (invoicePrefix != null) {
+          _invoicePrefixController.text = invoicePrefix;
+        }
         if (autoPrint != null) _autoPrintAfterSale = autoPrint == '1';
         if (showTax != null) _showTaxInInvoice = showTax == '1';
         if (stockAlert != null) _stockAlert = stockAlert == '1';
-        if (stockThreshold != null) _stockAlertThreshold = int.tryParse(stockThreshold) ?? 5;
+        if (stockThreshold != null) {
+          _stockAlertThreshold = int.tryParse(stockThreshold) ?? 5;
+        }
         if (trackExpiry != null) _trackExpiryDate = trackExpiry == '1';
         if (themeMode != null) _themeModeIndex = int.tryParse(themeMode) ?? 0;
         if (fontSize != null) _fontSizeIndex = int.tryParse(fontSize) ?? 1;
@@ -192,7 +197,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('الإعدادات'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: 32 + MediaQuery.of(context).viewPadding.bottom),
+        padding: EdgeInsets.only(
+            bottom: 32 + MediaQuery.of(context).viewPadding.bottom),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -221,7 +227,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   label: 'اسم المستخدم',
                   controller: _userNameController,
                   isDark: isDark,
-                  onSave: () => _saveSetting('user_name', _userNameController.text),
+                  onSave: () =>
+                      _saveSetting('user_name', _userNameController.text),
                 ),
                 TextSetting(
                   label: 'اسم النشاط التجاري',
@@ -285,7 +292,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'إعداد طابعة حرارية 80مم عبر البلوتوث',
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const BluetoothPrinterSettingsScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const BluetoothPrinterSettingsScreen()),
                   ),
                   isDark: isDark,
                 ),
@@ -300,7 +308,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 SwitchListTile(
                   title: const Text('تنبيه نفاد المخزون'),
-                  subtitle: const Text('إشعار عند وصول كمية المنتج للحد الأدنى'),
+                  subtitle:
+                      const Text('إشعار عند وصول كمية المنتج للحد الأدنى'),
                   value: _stockAlert,
                   activeColor: AppColors.primary,
                   onChanged: (v) {
@@ -319,7 +328,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SwitchListTile(
                   title: const Text('تتبع تاريخ الصلاحية'),
-                  subtitle: const Text('تنبيه عند اقتراب انتهاء صلاحية المنتجات'),
+                  subtitle:
+                      const Text('تنبيه عند اقتراب انتهاء صلاحية المنتجات'),
                   value: _trackExpiryDate,
                   activeColor: AppColors.primary,
                   onChanged: (v) {
@@ -331,7 +341,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.inventory,
                   title: 'سندات الجرد',
                   subtitle: 'تسوية كميات المخزون وضبط القيود المحاسبية',
-                  onTap: () => Navigator.pushNamed(context, AppConstants.inventoryVoucher),
+                  onTap: () => Navigator.pushNamed(
+                      context, AppConstants.inventoryVoucher),
                   isDark: isDark,
                 ),
               ],
@@ -360,7 +371,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'تحويل العملات بأسعار الصرف المحددة',
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CurrencyExchangeScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const CurrencyExchangeScreen()),
                   ),
                   isDark: isDark,
                 ),
@@ -370,7 +382,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'نقل الأموال بين الصناديق والخزائن',
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CashTransferScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const CashTransferScreen()),
                   ),
                   isDark: isDark,
                 ),
@@ -411,15 +424,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ActionTile(
                   icon: Icons.search,
                   title: 'التدقيق المحاسبي',
-                  subtitle: 'التحقق من توازن القيود وربط العمليات بدليل الحسابات',
-                  onTap: () => Navigator.pushNamed(context, AppConstants.accountingAudit),
+                  subtitle:
+                      'التحقق من توازن القيود وربط العمليات بدليل الحسابات',
+                  onTap: () => Navigator.pushNamed(
+                      context, AppConstants.accountingAudit),
                   isDark: isDark,
                 ),
                 ActionTile(
                   icon: Icons.published_with_changes,
                   title: 'الترحيل السنوي',
-                  subtitle: 'إقفال السنة المالية ونقل الأرباح إلى الأرباح المحتجزة',
-                  onTap: () => Navigator.pushNamed(context, AppConstants.annualPosting),
+                  subtitle:
+                      'إقفال السنة المالية ونقل الأرباح إلى الأرباح المحتجزة',
+                  onTap: () =>
+                      Navigator.pushNamed(context, AppConstants.annualPosting),
                   isDark: isDark,
                 ),
               ],
@@ -528,7 +545,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// Show exchange rates management dialog.
   Future<void> _showExchangeRatesDialog() async {
-    final currencies = await locator<ReferenceDataRepository>().getAllCurrencies();
+    final currencies =
+        await locator<ReferenceDataRepository>().getAllCurrencies();
 
     if (!mounted) return;
 
@@ -536,7 +554,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     for (final c in currencies) {
       final code = c['code'] as String;
       controllers[code] = TextEditingController(
-        text: (c['exchange_rate'] as num?)?.toDouble().toStringAsFixed(6) ?? '1.0',
+        text: (c['exchange_rate'] as num?)?.toDouble().toStringAsFixed(6) ??
+            '1.0',
       );
     }
 
@@ -557,13 +576,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: TextField(
                   controller: controllers[code],
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: '$code ($symbol)',
                     prefixIcon: const Icon(Icons.monetization_on, size: 20),
                     suffixText: isDefault ? 'افتراضي' : '',
                     enabled: !isDefault,
-                    helperText: isDefault ? 'العملة الافتراضية - سعر الصرف = 1' : 'سعر الصرف مقابل العملة الافتراضية',
+                    helperText: isDefault
+                        ? 'العملة الافتراضية - سعر الصرف = 1'
+                        : 'سعر الصرف مقابل العملة الافتراضية',
                   ),
                 ),
               );
@@ -583,15 +605,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final scaffoldMessenger = ScaffoldMessenger.of(context);
               for (final c in currencies) {
                 final code = c['code'] as String;
-                final rate = double.tryParse(controllers[code]?.text ?? '1.0') ?? 1.0;
-                await locator<ReferenceDataRepository>().updateCurrency(c['id'] as int, {
+                final rate =
+                    double.tryParse(controllers[code]?.text ?? '1.0') ?? 1.0;
+                await locator<ReferenceDataRepository>()
+                    .updateCurrency(c['id'] as int, {
                   'exchange_rate': rate,
                 });
               }
               if (!mounted) return;
               navigator.pop();
               scaffoldMessenger.showSnackBar(
-                const SnackBar(content: Text('تم تحديث أسعار الصرف بنجاح'), backgroundColor: AppColors.success),
+                const SnackBar(
+                    content: Text('تم تحديث أسعار الصرف بنجاح'),
+                    backgroundColor: AppColors.success),
               );
             },
             child: const Text('حفظ'),
@@ -753,13 +779,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       launchUrl(Uri.parse('market://details?id=com.nagmix.firstpro'));
     } catch (e) {
       // Fallback: open Play Store in browser
-      launchUrl(Uri.parse('https://play.google.com/store/apps/details?id=com.nagmix.firstpro'));
+      launchUrl(Uri.parse(
+          'https://play.google.com/store/apps/details?id=com.nagmix.firstpro'));
     }
   }
 
   void _onContactUs() {
     // Open email client to support@firstpro.com
-    launchUrl(Uri.parse('mailto:support@firstpro.com?subject=دعم%20فني%20-%20الأول%20برو'));
+    launchUrl(Uri.parse(
+        'mailto:support@firstpro.com?subject=دعم%20فني%20-%20الأول%20برو'));
   }
 
   void _onCallUs() {
@@ -769,7 +797,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _onWhatsApp() {
     // Open WhatsApp chat with the support number
-    launchUrl(Uri.parse('https://wa.me/967777777777?text=مرحباً،%20أحتاج%20مساعدة%20في%20تطبيق%20الأول%20برو'));
+    launchUrl(Uri.parse(
+        'https://wa.me/967777777777?text=مرحباً،%20أحتاج%20مساعدة%20في%20تطبيق%20الأول%20برو'));
   }
 
   void _onPrivacyPolicy() {

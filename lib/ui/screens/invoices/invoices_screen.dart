@@ -69,24 +69,29 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
   }
 
   double get _totalSales => _invoices
-      .where((i) => i['type'] == 'sale' || i['type'] == 'sale_return')
-      .fold(0.0, (sum, i) {
+          .where((i) => i['type'] == 'sale' || i['type'] == 'sale_return')
+          .fold(0.0, (sum, i) {
         final total = MoneyHelper.readMoney(i['total']);
-        final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'sale_return';
+        final isReturn = (i['is_return'] as int?) == 1 ||
+            (i['type'] as String? ?? '') == 'sale_return';
         return sum + (isReturn ? -total : total);
       });
   double get _totalPurchases => _invoices
-      .where((i) => i['type'] == 'purchase' || i['type'] == 'purchase_return')
-      .fold(0.0, (sum, i) {
+          .where(
+              (i) => i['type'] == 'purchase' || i['type'] == 'purchase_return')
+          .fold(0.0, (sum, i) {
         final total = MoneyHelper.readMoney(i['total']);
-        final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
+        final isReturn = (i['is_return'] as int?) == 1 ||
+            (i['type'] as String? ?? '') == 'purchase_return';
         return sum + (isReturn ? -total : total);
       });
   double get _totalPOS => _invoices
@@ -118,9 +123,17 @@ class _InvoicesScreenState extends State<InvoicesScreen>
 
     switch (_tabController.index) {
       case 1:
-        result = result.where((i) => i['type'] == AppConstants.saleInvoice || i['type'] == 'sale_return').toList();
+        result = result
+            .where((i) =>
+                i['type'] == AppConstants.saleInvoice ||
+                i['type'] == 'sale_return')
+            .toList();
       case 2:
-        result = result.where((i) => i['type'] == AppConstants.purchaseInvoice || i['type'] == 'purchase_return').toList();
+        result = result
+            .where((i) =>
+                i['type'] == AppConstants.purchaseInvoice ||
+                i['type'] == 'purchase_return')
+            .toList();
       case 3:
         result = result.where((i) => i['type'] == 'pos').toList();
       case 4:
@@ -128,28 +141,44 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     }
 
     if (_invoiceTypeFilter != 'الكل') {
-      final typeMap = {'مبيعات': 'sale', 'مشتريات': 'purchase', 'نقطة بيع': 'pos'};
+      final typeMap = {
+        'مبيعات': 'sale',
+        'مشتريات': 'purchase',
+        'نقطة بيع': 'pos'
+      };
       final typeVal = typeMap[_invoiceTypeFilter];
-      if (typeVal != null) result = result.where((i) => i['type'] == typeVal).toList();
+      if (typeVal != null) {
+        result = result.where((i) => i['type'] == typeVal).toList();
+      }
     }
 
     if (_paymentStatusFilter != 'الكل') {
-      final statusMap = {'مدفوع': 'paid', 'غير مدفوع': 'unpaid', 'مدفوع جزئياً': 'partial', 'معلق': 'pending'};
+      final statusMap = {
+        'مدفوع': 'paid',
+        'غير مدفوع': 'unpaid',
+        'مدفوع جزئياً': 'partial',
+        'معلق': 'pending'
+      };
       final status = statusMap[_paymentStatusFilter];
-      if (status != null) result = result.where((i) => i['status'] == status).toList();
+      if (status != null) {
+        result = result.where((i) => i['status'] == status).toList();
+      }
     }
 
     if (_paymentMechanismFilter != 'الكل') {
       final methodMap = {'نقداً': 'cash', 'آجل': 'credit'};
       final method = methodMap[_paymentMechanismFilter];
-      if (method != null) result = result.where((i) => i['payment_mechanism'] == method).toList();
+      if (method != null) {
+        result = result.where((i) => i['payment_mechanism'] == method).toList();
+      }
     }
 
     if (_dateRange != null) {
       result = result.where((i) {
         final createdAt = DateTime.tryParse(i['created_at'] as String? ?? '');
         if (createdAt == null) return false;
-        return !createdAt.isBefore(_dateRange!.start) && !createdAt.isAfter(_dateRange!.end);
+        return !createdAt.isBefore(_dateRange!.start) &&
+            !createdAt.isAfter(_dateRange!.end);
       }).toList();
     }
 
@@ -159,7 +188,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         final id = (i['id'] as String? ?? '').toLowerCase();
         final entityName = (i['entity_name'] as String? ?? '').toLowerCase();
         final cashierName = (i['cashier_name'] as String? ?? '').toLowerCase();
-        return id.contains(query) || entityName.contains(query) || cashierName.contains(query);
+        return id.contains(query) ||
+            entityName.contains(query) ||
+            cashierName.contains(query);
       }).toList();
     }
 
@@ -192,7 +223,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                                   invoiceData: _filteredInvoices[index],
                                   displayInvoiceId: _displayInvoiceId,
                                   invoiceTypeAr: _invoiceTypeAr,
-                                  onTap: () => _navigateToDetail(_filteredInvoices[index]),
+                                  onTap: () => _navigateToDetail(
+                                      _filteredInvoices[index]),
                                 );
                               },
                             ),
@@ -333,7 +365,10 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   }
 
   Widget _buildFilterBar() {
-    final hasActiveFilters = _paymentStatusFilter != 'الكل' || _paymentMechanismFilter != 'الكل' || _invoiceTypeFilter != 'الكل' || _dateRange != null;
+    final hasActiveFilters = _paymentStatusFilter != 'الكل' ||
+        _paymentMechanismFilter != 'الكل' ||
+        _invoiceTypeFilter != 'الكل' ||
+        _dateRange != null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: SingleChildScrollView(
@@ -341,7 +376,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
         child: Row(
           children: [
             _buildFilterChip(
-              label: _invoiceTypeFilter == 'الكل' ? 'النوع' : _invoiceTypeFilter,
+              label:
+                  _invoiceTypeFilter == 'الكل' ? 'النوع' : _invoiceTypeFilter,
               icon: Icons.receipt,
               items: const ['الكل', 'مبيعات', 'مشتريات', 'نقطة بيع'],
               selected: _invoiceTypeFilter,
@@ -350,16 +386,26 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             ),
             const SizedBox(width: 6),
             _buildFilterChip(
-              label: _paymentStatusFilter == 'الكل' ? 'حالة الدفع' : _paymentStatusFilter,
+              label: _paymentStatusFilter == 'الكل'
+                  ? 'حالة الدفع'
+                  : _paymentStatusFilter,
               icon: Icons.payments,
-              items: const ['الكل', 'مدفوع', 'غير مدفوع', 'مدفوع جزئياً', 'معلق'],
+              items: const [
+                'الكل',
+                'مدفوع',
+                'غير مدفوع',
+                'مدفوع جزئياً',
+                'معلق'
+              ],
               selected: _paymentStatusFilter,
               onChanged: (v) => setState(() => _paymentStatusFilter = v),
               isActive: _paymentStatusFilter != 'الكل',
             ),
             const SizedBox(width: 6),
             _buildFilterChip(
-              label: _paymentMechanismFilter == 'الكل' ? 'آلية الدفع' : _paymentMechanismFilter,
+              label: _paymentMechanismFilter == 'الكل'
+                  ? 'آلية الدفع'
+                  : _paymentMechanismFilter,
               icon: Icons.credit_card,
               items: const ['الكل', 'نقداً', 'آجل'],
               selected: _paymentMechanismFilter,
@@ -368,27 +414,35 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             ),
             const SizedBox(width: 6),
             ActionChip(
-              avatar: Icon(Icons.calendar_month, size: 16, color: _dateRange != null ? AppColors.primary : null),
+              avatar: Icon(Icons.calendar_month,
+                  size: 16,
+                  color: _dateRange != null ? AppColors.primary : null),
               label: Text(
                 _dateRange != null
                     ? '${DateFormatter.formatDate(_dateRange!.start)} – ${DateFormatter.formatDate(_dateRange!.end)}'
                     : 'الفترة',
-                style: TextStyle(fontSize: 12, color: _dateRange != null ? AppColors.primary : null),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: _dateRange != null ? AppColors.primary : null),
               ),
-              side: _dateRange != null ? BorderSide(color: AppColors.primary) : null,
+              side: _dateRange != null
+                  ? BorderSide(color: AppColors.primary)
+                  : null,
               onPressed: _pickDateRange,
             ),
             if (_dateRange != null) ...[
               const SizedBox(width: 2),
               GestureDetector(
                 onTap: () => setState(() => _dateRange = null),
-                child: const Icon(Icons.close, size: 16, color: AppColors.textHint),
+                child: const Icon(Icons.close,
+                    size: 16, color: AppColors.textHint),
               ),
             ],
             if (hasActiveFilters) ...[
               const SizedBox(width: 6),
               ActionChip(
-                label: const Text('مسح الكل', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                label: const Text('مسح الكل',
+                    style: TextStyle(fontSize: 11, color: AppColors.error)),
                 onPressed: () => setState(() {
                   _paymentStatusFilter = 'الكل';
                   _paymentMechanismFilter = 'الكل';
@@ -413,27 +467,44 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   }) {
     return ActionChip(
       avatar: Icon(icon, size: 16, color: isActive ? AppColors.primary : null),
-      label: Text(label, style: TextStyle(fontSize: 12, color: isActive ? AppColors.primary : null, fontWeight: isActive ? FontWeight.w600 : null)),
+      label: Text(label,
+          style: TextStyle(
+              fontSize: 12,
+              color: isActive ? AppColors.primary : null,
+              fontWeight: isActive ? FontWeight.w600 : null)),
       side: isActive ? BorderSide(color: AppColors.primary) : null,
       onPressed: () {
         showModalBottomSheet(
           context: context,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
           builder: (ctx) => SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 8),
-                Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+                Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 12),
                 ...items.map((item) => ListTile(
-                  title: Text(item, style: TextStyle(fontWeight: item == selected ? FontWeight.w700 : FontWeight.w400)),
-                  trailing: item == selected ? const Icon(Icons.check, color: AppColors.primary, size: 20) : null,
-                  onTap: () {
-                    onChanged(item);
-                    Navigator.pop(ctx);
-                  },
-                )),
+                      title: Text(item,
+                          style: TextStyle(
+                              fontWeight: item == selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w400)),
+                      trailing: item == selected
+                          ? const Icon(Icons.check,
+                              color: AppColors.primary, size: 20)
+                          : null,
+                      onTap: () {
+                        onChanged(item);
+                        Navigator.pop(ctx);
+                      },
+                    )),
               ],
             ),
           ),
@@ -447,11 +518,15 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 64, color: AppColors.textHint),
+          Icon(Icons.receipt_long_outlined,
+              size: 64, color: AppColors.textHint),
           const SizedBox(height: 12),
-          Text('لا توجد فواتير', style: context.textTheme.titleMedium?.copyWith(color: AppColors.textSecondary)),
+          Text('لا توجد فواتير',
+              style: context.textTheme.titleMedium
+                  ?.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 4),
-          Text('أضف فاتورة جديدة بالضغط على الزر +', style: context.textTheme.bodySmall),
+          Text('أضف فاتورة جديدة بالضغط على الزر +',
+              style: context.textTheme.bodySmall),
         ],
       ),
     );
@@ -470,16 +545,24 @@ class _InvoicesScreenState extends State<InvoicesScreen>
   void _showAddInvoiceMenu() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+              Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 16),
-              Text('إنشاء فاتورة جديدة', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text('إنشاء فاتورة جديدة',
+                  style: context.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
               // Sales invoice option
               GestureDetector(
@@ -487,7 +570,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                   Navigator.pop(ctx);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CreateInvoiceScreen(invoiceType: AppConstants.saleInvoice)),
+                    MaterialPageRoute(
+                        builder: (_) => const CreateInvoiceScreen(
+                            invoiceType: AppConstants.saleInvoice)),
                   ).then((_) => _loadInvoices());
                 },
                 child: Container(
@@ -495,7 +580,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+                    border: Border.all(
+                        color: AppColors.success.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -506,20 +592,27 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                           color: AppColors.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.receipt_long, color: AppColors.success, size: 24),
+                        child: const Icon(Icons.receipt_long,
+                            color: AppColors.success, size: 24),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('فاتورة مبيعات', style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+                            Text('فاتورة مبيعات',
+                                style: context.textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.success)),
                             const SizedBox(height: 2),
-                            Text('إنشاء فاتورة مبيعات جديدة', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                            Text('إنشاء فاتورة مبيعات جديدة',
+                                style: context.textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.textSecondary)),
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.success),
+                      const Icon(Icons.arrow_forward_ios,
+                          size: 16, color: AppColors.success),
                     ],
                   ),
                 ),
@@ -531,7 +624,9 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                   Navigator.pop(ctx);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CreateInvoiceScreen(invoiceType: AppConstants.purchaseInvoice)),
+                    MaterialPageRoute(
+                        builder: (_) => const CreateInvoiceScreen(
+                            invoiceType: AppConstants.purchaseInvoice)),
                   ).then((_) => _loadInvoices());
                 },
                 child: Container(
@@ -539,7 +634,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                   decoration: BoxDecoration(
                     color: AppColors.info.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                    border: Border.all(
+                        color: AppColors.info.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -550,20 +646,27 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                           color: AppColors.info.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.shopping_cart, color: AppColors.info, size: 24),
+                        child: const Icon(Icons.shopping_cart,
+                            color: AppColors.info, size: 24),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('فاتورة مشتريات', style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.info)),
+                            Text('فاتورة مشتريات',
+                                style: context.textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.info)),
                             const SizedBox(height: 2),
-                            Text('إنشاء فاتورة مشتريات جديدة', style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                            Text('إنشاء فاتورة مشتريات جديدة',
+                                style: context.textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.textSecondary)),
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.info),
+                      const Icon(Icons.arrow_forward_ios,
+                          size: 16, color: AppColors.info),
                     ],
                   ),
                 ),
@@ -581,16 +684,25 @@ class _InvoicesScreenState extends State<InvoicesScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)))),
+            Center(
+                child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
-            Text('تصفية الفواتير', style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            Text('تصفية الفواتير',
+                style: context.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 20),
             Text('نوع الفاتورة', style: context.textTheme.titleSmall),
             const SizedBox(height: 8),
@@ -609,7 +721,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: ['الكل', 'مدفوع', 'غير مدفوع', 'مدفوع جزئياً', 'معلق'].map((s) {
+              children: ['الكل', 'مدفوع', 'غير مدفوع', 'مدفوع جزئياً', 'معلق']
+                  .map((s) {
                 return ChoiceChip(
                   label: Text(s),
                   selected: _paymentStatusFilter == s,
@@ -626,7 +739,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                 return ChoiceChip(
                   label: Text(s),
                   selected: _paymentMechanismFilter == s,
-                  onSelected: (_) => setState(() => _paymentMechanismFilter = s),
+                  onSelected: (_) =>
+                      setState(() => _paymentMechanismFilter = s),
                 );
               }).toList(),
             ),
@@ -646,7 +760,8 @@ class _InvoicesScreenState extends State<InvoicesScreen>
       locale: const Locale('ar'),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: AppColors.primary),
+          colorScheme:
+              Theme.of(ctx).colorScheme.copyWith(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -677,9 +792,14 @@ class _MiniStatItem extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 16),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: color), textAlign: TextAlign.center),
+        Text(value,
+            style: TextStyle(
+                fontWeight: FontWeight.w700, fontSize: 12, color: color),
+            textAlign: TextAlign.center),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.7)), textAlign: TextAlign.center),
+        Text(label,
+            style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.7)),
+            textAlign: TextAlign.center),
       ],
     );
   }
@@ -704,14 +824,19 @@ class _InvoiceCard extends StatelessWidget {
   Future<void> _printInvoice(BuildContext context) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
+        const SnackBar(
+            content: Text('جاري إنشاء ملف PDF...'),
+            duration: Duration(seconds: 1)),
       );
-      final items = await locator<InvoiceRepository>().getInvoiceItems(invoiceData['id'] as String);
+      final items = await locator<InvoiceRepository>()
+          .getInvoiceItems(invoiceData['id'] as String);
       await InvoicePdfGenerator.printInvoice(invoiceData, items);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء الطباعة'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء الطباعة'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -726,7 +851,8 @@ class _InvoiceCard extends StatelessWidget {
     final remaining = MoneyHelper.readMoney(invoiceData['remaining']);
     final total = MoneyHelper.readMoney(invoiceData['total']);
     final paidAmount = MoneyHelper.readMoney(invoiceData['paid_amount']);
-    final paymentMechanism = invoiceData['payment_mechanism'] as String? ?? 'cash';
+    final paymentMechanism =
+        invoiceData['payment_mechanism'] as String? ?? 'cash';
     final currency = invoiceData['currency'] as String? ?? 'YER';
 
     // Type-specific colors
@@ -743,7 +869,9 @@ class _InvoiceCard extends StatelessWidget {
         color: context.surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isReturn ? AppColors.warning.withValues(alpha: 0.3) : AppColors.border.withValues(alpha: 0.5),
+          color: isReturn
+              ? AppColors.warning.withValues(alpha: 0.3)
+              : AppColors.border.withValues(alpha: 0.5),
           width: isReturn ? 1.5 : 0.5,
         ),
       ),
@@ -766,8 +894,10 @@ class _InvoiceCard extends StatelessWidget {
                           children: [
                             Flexible(
                               child: Text(
-                                displayInvoiceId(invoiceData['id'] as String?, type),
-                                style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                displayInvoiceId(
+                                    invoiceData['id'] as String?, type),
+                                style: context.textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -780,7 +910,8 @@ class _InvoiceCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           invoiceData['entity_name'] as String? ?? '—',
-                          style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                          style: context.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -791,13 +922,17 @@ class _InvoiceCard extends StatelessWidget {
                     children: [
                       Text(
                         CurrencyFormatter.format(total),
-                        style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: typeColor),
+                        style: context.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800, color: typeColor),
                       ),
                       if (currency != 'YER')
-                        Text(currency, style: context.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontSize: 9)),
+                        Text(currency,
+                            style: context.textTheme.labelSmall?.copyWith(
+                                color: AppColors.textHint, fontSize: 9)),
                       GestureDetector(
                         onTap: () => _printInvoice(context),
-                        child: Icon(Icons.print, size: 16, color: AppColors.textHint),
+                        child: Icon(Icons.print,
+                            size: 16, color: AppColors.textHint),
                       ),
                     ],
                   ),
@@ -812,30 +947,39 @@ class _InvoiceCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.access_time, size: 12, color: AppColors.textHint),
+                    Icon(Icons.access_time,
+                        size: 12, color: AppColors.textHint),
                     const SizedBox(width: 4),
                     Text(
-                      DateFormatter.formatDateTime(DateTime.tryParse(invoiceData['created_at'] as String? ?? '') ?? DateTime.now()),
-                      style: context.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontSize: 10),
+                      DateFormatter.formatDateTime(DateTime.tryParse(
+                              invoiceData['created_at'] as String? ?? '') ??
+                          DateTime.now()),
+                      style: context.textTheme.labelSmall
+                          ?.copyWith(color: AppColors.textHint, fontSize: 10),
                     ),
                     const Spacer(),
                     _buildStatusChip(status),
                     if (remaining > 0.005) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           'متبقي ${CurrencyFormatter.format(remaining)}',
-                          style: context.textTheme.labelSmall?.copyWith(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.w600),
+                          style: context.textTheme.labelSmall?.copyWith(
+                              color: AppColors.error,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600),
                         ),
                       ),
                     ] else if (status == 'paid' && paidAmount > 0) ...[
                       const SizedBox(width: 6),
-                      Icon(Icons.check_circle, size: 12, color: AppColors.success),
+                      Icon(Icons.check_circle,
+                          size: 12, color: AppColors.success),
                     ],
                   ],
                 ),
@@ -859,7 +1003,9 @@ class _InvoiceCard extends StatelessWidget {
     return Container(
       width: 40,
       height: 40,
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10)),
       child: Icon(icon, color: color, size: 20),
     );
   }
@@ -868,8 +1014,13 @@ class _InvoiceCard extends StatelessWidget {
     final label = invoiceTypeAr(type);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
-      child: Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color), overflow: TextOverflow.ellipsis),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(4)),
+      child: Text(label,
+          style:
+              TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color),
+          overflow: TextOverflow.ellipsis),
     );
   }
 
@@ -878,12 +1029,16 @@ class _InvoiceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: (isCash ? AppColors.success : AppColors.secondary).withValues(alpha: 0.08),
+        color: (isCash ? AppColors.success : AppColors.secondary)
+            .withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         isCash ? 'نقداً' : 'آجل',
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: isCash ? AppColors.success : AppColors.secondary),
+        style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            color: isCash ? AppColors.success : AppColors.secondary),
       ),
     );
   }
@@ -898,8 +1053,11 @@ class _InvoiceCard extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(10)),
-      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fgColor)),
+      decoration: BoxDecoration(
+          color: bgColor, borderRadius: BorderRadius.circular(10)),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.w700, color: fgColor)),
     );
   }
 }

@@ -100,7 +100,8 @@ void main() {
     if (baseQuantity <= 0.001) return 0.0;
 
     final layers = await db.query('inventory_cost_layers',
-        where: 'product_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0',
+        where:
+            'product_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0',
         whereArgs: [productId],
         orderBy: 'acquisition_date ASC, id ASC');
 
@@ -127,7 +128,8 @@ void main() {
       final qtyRemaining = (layerMap['quantity_remaining'] as num).toDouble();
       final unitCost = MoneyHelper.readMoney(layerMap['unit_cost']);
 
-      final qtyToConsume = remainingQty > qtyRemaining ? qtyRemaining : remainingQty;
+      final qtyToConsume =
+          remainingQty > qtyRemaining ? qtyRemaining : remainingQty;
       final layerCogs = unitCost * qtyToConsume;
       totalCogs += layerCogs;
       remainingQty -= qtyToConsume;
@@ -135,10 +137,14 @@ void main() {
       final newQtyRemaining = qtyRemaining - qtyToConsume;
       final isConsumed = newQtyRemaining < 0.001;
 
-      await db.update('inventory_cost_layers', {
-        'quantity_remaining': newQtyRemaining,
-        'is_fully_consumed': isConsumed ? 1 : 0,
-      }, where: 'id = ?', whereArgs: [layerId]);
+      await db.update(
+          'inventory_cost_layers',
+          {
+            'quantity_remaining': newQtyRemaining,
+            'is_fully_consumed': isConsumed ? 1 : 0,
+          },
+          where: 'id = ?',
+          whereArgs: [layerId]);
 
       await db.insert('movement_cost_allocations', {
         'product_id': productId,
@@ -175,7 +181,8 @@ void main() {
     if (baseQuantity <= 0.001) return 0.0;
 
     final layers = await db.query('inventory_cost_layers',
-        where: 'product_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0',
+        where:
+            'product_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0',
         whereArgs: [productId],
         orderBy: 'acquisition_date DESC, id DESC');
 
@@ -201,7 +208,8 @@ void main() {
       final qtyRemaining = (layerMap['quantity_remaining'] as num).toDouble();
       final unitCost = MoneyHelper.readMoney(layerMap['unit_cost']);
 
-      final qtyToConsume = remainingQty > qtyRemaining ? qtyRemaining : remainingQty;
+      final qtyToConsume =
+          remainingQty > qtyRemaining ? qtyRemaining : remainingQty;
       final layerCogs = unitCost * qtyToConsume;
       totalCogs += layerCogs;
       remainingQty -= qtyToConsume;
@@ -209,10 +217,14 @@ void main() {
       final newQtyRemaining = qtyRemaining - qtyToConsume;
       final isConsumed = newQtyRemaining < 0.001;
 
-      await db.update('inventory_cost_layers', {
-        'quantity_remaining': newQtyRemaining,
-        'is_fully_consumed': isConsumed ? 1 : 0,
-      }, where: 'id = ?', whereArgs: [layerId]);
+      await db.update(
+          'inventory_cost_layers',
+          {
+            'quantity_remaining': newQtyRemaining,
+            'is_fully_consumed': isConsumed ? 1 : 0,
+          },
+          where: 'id = ?',
+          whereArgs: [layerId]);
 
       await db.insert('movement_cost_allocations', {
         'product_id': productId,
@@ -302,11 +314,12 @@ void main() {
         invoiceId: 'INV-FIFO-001',
       );
 
-      expect(cogs, 300.0,
-          reason: 'FIFO: 30 units @ 10 = 300');
+      expect(cogs, 300.0, reason: 'FIFO: 30 units @ 10 = 300');
     });
 
-    test('Multiple layers: FIFO consumes oldest first / FIFO يستهلك الأقدم أولاً', () async {
+    test(
+        'Multiple layers: FIFO consumes oldest first / FIFO يستهلك الأقدم أولاً',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 200.0,
@@ -340,34 +353,49 @@ void main() {
       );
 
       // COGS = (100 * 10) + (20 * 15) = 1000 + 300 = 1300
-      expect(cogs, 1300.0,
-          reason: 'FIFO: 100@10 + 20@15 = 1300');
+      expect(cogs, 1300.0, reason: 'FIFO: 100@10 + 20@15 = 1300');
 
       // Verify Layer1 is fully consumed
       final layer1 = await db.query('inventory_cost_layers',
           where: 'reference_id = ?', whereArgs: ['PO-001']);
       expect(layer1.first['is_fully_consumed'], 1,
           reason: 'Layer1 should be fully consumed');
-      expect((layer1.first['quantity_remaining'] as num).toDouble(), lessThan(0.001));
+      expect((layer1.first['quantity_remaining'] as num).toDouble(),
+          lessThan(0.001));
 
       // Verify Layer2 is partially consumed
       final layer2 = await db.query('inventory_cost_layers',
           where: 'reference_id = ?', whereArgs: ['PO-002']);
       expect(layer2.first['is_fully_consumed'], 0,
           reason: 'Layer2 should not be fully consumed');
-      expect((layer2.first['quantity_remaining'] as num).toDouble(), closeTo(80.0, 0.01));
+      expect((layer2.first['quantity_remaining'] as num).toDouble(),
+          closeTo(80.0, 0.01));
     });
 
-    test('Three layers: FIFO cascading consumption / استهلاك متتالي عبر ثلاث طبقات', () async {
+    test(
+        'Three layers: FIFO cascading consumption / استهلاك متتالي عبر ثلاث طبقات',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 300.0,
         averageCost: 15.0,
       );
 
-      await _insertCostLayer(productId: productId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 10.0);
-      await _insertCostLayer(productId: productId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 12.0);
-      await _insertCostLayer(productId: productId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 15.0);
+      await _insertCostLayer(
+          productId: productId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 10.0);
+      await _insertCostLayer(
+          productId: productId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 12.0);
+      await _insertCostLayer(
+          productId: productId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 15.0);
 
       // Sell 250 units: 100@10 + 100@12 + 50@15
       final cogs = await _calculateFIFOCOGS(
@@ -408,7 +436,9 @@ void main() {
       expect(cogs, 300.0);
     });
 
-    test('Multiple layers: LIFO consumes newest first / LIFO يستهلك الأحدث أولاً', () async {
+    test(
+        'Multiple layers: LIFO consumes newest first / LIFO يستهلك الأحدث أولاً',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'lifo',
         currentStock: 200.0,
@@ -442,8 +472,7 @@ void main() {
       );
 
       // COGS = (100 * 15) + (20 * 10) = 1500 + 200 = 1700
-      expect(cogs, 1700.0,
-          reason: 'LIFO: 100@15 + 20@10 = 1700');
+      expect(cogs, 1700.0, reason: 'LIFO: 100@15 + 20@10 = 1700');
 
       // Verify Layer2 (newer) is fully consumed
       final layer2 = await db.query('inventory_cost_layers',
@@ -455,19 +484,34 @@ void main() {
       final layer1 = await db.query('inventory_cost_layers',
           where: 'reference_id = ?', whereArgs: ['PO-LIFO-001']);
       expect(layer1.first['is_fully_consumed'], 0);
-      expect((layer1.first['quantity_remaining'] as num).toDouble(), closeTo(80.0, 0.01));
+      expect((layer1.first['quantity_remaining'] as num).toDouble(),
+          closeTo(80.0, 0.01));
     });
 
-    test('Three layers: LIFO cascading from newest / استهلاك من الأحدث عبر ثلاث طبقات', () async {
+    test(
+        'Three layers: LIFO cascading from newest / استهلاك من الأحدث عبر ثلاث طبقات',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'lifo',
         currentStock: 300.0,
         averageCost: 15.0,
       );
 
-      await _insertCostLayer(productId: productId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 10.0);
-      await _insertCostLayer(productId: productId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 12.0);
-      await _insertCostLayer(productId: productId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 15.0);
+      await _insertCostLayer(
+          productId: productId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 10.0);
+      await _insertCostLayer(
+          productId: productId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 12.0);
+      await _insertCostLayer(
+          productId: productId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 15.0);
 
       // Sell 250 units: 100@15 + 100@12 + 50@10
       final cogs = await _calculateLIFOCOGS(
@@ -486,7 +530,9 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('Weighted Average costing — المتوسط المرجح', () {
-    test('Weighted average COGS uses average_cost / التكلفة المتوسطة تستخدم average_cost', () async {
+    test(
+        'Weighted average COGS uses average_cost / التكلفة المتوسطة تستخدم average_cost',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'weighted_average',
         currentStock: 200.0,
@@ -500,11 +546,12 @@ void main() {
       );
 
       // COGS = 50 * 12.5 = 625
-      expect(cogs, 625.0,
-          reason: 'Weighted Average: 50 @ 12.5 = 625');
+      expect(cogs, 625.0, reason: 'Weighted Average: 50 @ 12.5 = 625');
     });
 
-    test('Weighted average falls back to cost_price when average_cost is 0 / المتوسط يلجأ لسعر التكلفة عند صفر average_cost', () async {
+    test(
+        'Weighted average falls back to cost_price when average_cost is 0 / المتوسط يلجأ لسعر التكلفة عند صفر average_cost',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'weighted_average',
         currentStock: 100.0,
@@ -518,8 +565,7 @@ void main() {
       );
 
       // COGS = 20 * 15 = 300 (fallback to cost_price)
-      expect(cogs, 300.0,
-          reason: 'Weighted Average fallback: 20 @ 15 = 300');
+      expect(cogs, 300.0, reason: 'Weighted Average fallback: 20 @ 15 = 300');
     });
 
     test('Weighted average: selling all stock / بيع المخزون بالكامل', () async {
@@ -534,8 +580,7 @@ void main() {
         baseQuantity: 500.0,
       );
 
-      expect(cogs, 4000.0,
-          reason: 'Weighted Average: 500 @ 8 = 4000');
+      expect(cogs, 4000.0, reason: 'Weighted Average: 500 @ 8 = 4000');
     });
   });
 
@@ -544,7 +589,9 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('Cost layer consumption and reversal — استهلاك وعكس طبقات التكلفة', () {
-    test('Allocation records are created during consumption / إنشاء سجلات التخصيص أثناء الاستهلاك', () async {
+    test(
+        'Allocation records are created during consumption / إنشاء سجلات التخصيص أثناء الاستهلاك',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 100.0,
@@ -567,13 +614,16 @@ void main() {
       final allocations = await db.query('movement_cost_allocations',
           where: 'invoice_id = ?', whereArgs: ['INV-ALLOC-001']);
       expect(allocations.length, 1,
-          reason: 'One allocation should be created for single-layer consumption');
+          reason:
+              'One allocation should be created for single-layer consumption');
       expect(allocations.first['quantity_used'], 30.0);
       expect(MoneyHelper.readMoney(allocations.first['unit_cost']), 10.0);
       expect(MoneyHelper.readMoney(allocations.first['total_cost']), 300.0);
     });
 
-    test('Multi-layer consumption creates multiple allocations / الاستهلاك متعدد الطبقات ينشئ تخصيصات متعددة', () async {
+    test(
+        'Multi-layer consumption creates multiple allocations / الاستهلاك متعدد الطبقات ينشئ تخصيصات متعددة',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 200.0,
@@ -617,7 +667,9 @@ void main() {
       expect(MoneyHelper.readMoney(allocations[1]['unit_cost']), 15.0);
     });
 
-    test('Reversal restores consumed layers / عكس القيد يستعيد الطبقات المستهلكة', () async {
+    test(
+        'Reversal restores consumed layers / عكس القيد يستعيد الطبقات المستهلكة',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 100.0,
@@ -643,7 +695,8 @@ void main() {
       // Verify layer is partially consumed
       var layer = await db.query('inventory_cost_layers',
           where: 'reference_id = ?', whereArgs: ['PO-REV-001']);
-      expect((layer.first['quantity_remaining'] as num).toDouble(), closeTo(70.0, 0.01));
+      expect((layer.first['quantity_remaining'] as num).toDouble(),
+          closeTo(70.0, 0.01));
       expect(layer.first['is_fully_consumed'], 0);
 
       // Verify allocation exists
@@ -657,8 +710,10 @@ void main() {
       // Verify layer is restored
       layer = await db.query('inventory_cost_layers',
           where: 'reference_id = ?', whereArgs: ['PO-REV-001']);
-      expect((layer.first['quantity_remaining'] as num).toDouble(), closeTo(100.0, 0.01),
-          reason: 'After reversal, quantity_remaining should be restored to 100');
+      expect((layer.first['quantity_remaining'] as num).toDouble(),
+          closeTo(100.0, 0.01),
+          reason:
+              'After reversal, quantity_remaining should be restored to 100');
       expect(layer.first['is_fully_consumed'], 0,
           reason: 'After reversal, is_fully_consumed should be 0');
 
@@ -669,7 +724,9 @@ void main() {
           reason: 'After reversal, allocations should be deleted');
     });
 
-    test('Reversal of fully consumed layer restores it / عكس طبقة مستهلكة بالكامل يعيدها', () async {
+    test(
+        'Reversal of fully consumed layer restores it / عكس طبقة مستهلكة بالكامل يعيدها',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 50.0,
@@ -704,13 +761,16 @@ void main() {
       // Verify layer is restored
       layer = await db.query('inventory_cost_layers',
           where: 'reference_id = ?', whereArgs: ['PO-REV-002']);
-      expect((layer.first['quantity_remaining'] as num).toDouble(), closeTo(50.0, 0.01),
+      expect((layer.first['quantity_remaining'] as num).toDouble(),
+          closeTo(50.0, 0.01),
           reason: 'After reversal, quantity should be restored');
       expect(layer.first['is_fully_consumed'], 0,
           reason: 'After reversal, is_fully_consumed should be reset to 0');
     });
 
-    test('Multi-layer reversal restores all layers / عكس متعدد الطبقات يستعيد الكل', () async {
+    test(
+        'Multi-layer reversal restores all layers / عكس متعدد الطبقات يستعيد الكل',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 200.0,
@@ -747,7 +807,8 @@ void main() {
       var l2 = await db.query('inventory_cost_layers',
           where: 'reference_id = ?', whereArgs: ['PO-MREV-002']);
       expect(l1.first['is_fully_consumed'], 1);
-      expect((l2.first['quantity_remaining'] as num).toDouble(), closeTo(80.0, 0.01));
+      expect((l2.first['quantity_remaining'] as num).toDouble(),
+          closeTo(80.0, 0.01));
 
       // Reverse
       await _reverseCOGSAllocations('INV-MREV-001');
@@ -758,16 +819,20 @@ void main() {
       l2 = await db.query('inventory_cost_layers',
           where: 'reference_id = ?', whereArgs: ['PO-MREV-002']);
 
-      expect((l1.first['quantity_remaining'] as num).toDouble(), closeTo(100.0, 0.01),
+      expect((l1.first['quantity_remaining'] as num).toDouble(),
+          closeTo(100.0, 0.01),
           reason: 'Layer1 restored to 100');
       expect(l1.first['is_fully_consumed'], 0);
 
-      expect((l2.first['quantity_remaining'] as num).toDouble(), closeTo(100.0, 0.01),
+      expect((l2.first['quantity_remaining'] as num).toDouble(),
+          closeTo(100.0, 0.01),
           reason: 'Layer2 restored to 100');
       expect(l2.first['is_fully_consumed'], 0);
     });
 
-    test('No cost layers: FIFO falls back to average_cost / بدون طبقات: FIFO يلجأ للمتوسط المرجح', () async {
+    test(
+        'No cost layers: FIFO falls back to average_cost / بدون طبقات: FIFO يلجأ للمتوسط المرجح',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 100.0,
@@ -782,11 +847,12 @@ void main() {
         invoiceId: 'INV-FALLBACK-001',
       );
 
-      expect(cogs, 600.0,
-          reason: 'FIFO fallback: 50 @ 12 = 600');
+      expect(cogs, 600.0, reason: 'FIFO fallback: 50 @ 12 = 600');
     });
 
-    test('Selling more than available layers uses fallback for remainder / البيع أكثر من المتاح يستخدم الاحتياطي للباقي', () async {
+    test(
+        'Selling more than available layers uses fallback for remainder / البيع أكثر من المتاح يستخدم الاحتياطي للباقي',
+        () async {
       final productId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 150.0,
@@ -810,8 +876,7 @@ void main() {
       );
 
       // COGS = (100 * 10) + (20 * 12) = 1000 + 240 = 1240
-      expect(cogs, 1240.0,
-          reason: 'FIFO partial: 100@10 + 20@12avg = 1240');
+      expect(cogs, 1240.0, reason: 'FIFO partial: 100@10 + 20@12avg = 1240');
     });
   });
 
@@ -820,15 +885,25 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('FIFO vs LIFO comparison — مقارنة المتقدم والمتأخر أولاً', () {
-    test('In rising prices: FIFO COGS < LIFO COGS / أسعار متصاعدة: تكلفة FIFO أقل من LIFO', () async {
+    test(
+        'In rising prices: FIFO COGS < LIFO COGS / أسعار متصاعدة: تكلفة FIFO أقل من LIFO',
+        () async {
       // FIFO product
       final fifoProductId = await _insertProduct(
         costingMethod: 'fifo',
         currentStock: 200.0,
         averageCost: 12.5,
       );
-      await _insertCostLayer(productId: fifoProductId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 10.0);
-      await _insertCostLayer(productId: fifoProductId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 15.0);
+      await _insertCostLayer(
+          productId: fifoProductId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 10.0);
+      await _insertCostLayer(
+          productId: fifoProductId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 15.0);
 
       // LIFO product (same cost layers)
       final lifoProductId = await _insertProduct(
@@ -836,8 +911,16 @@ void main() {
         currentStock: 200.0,
         averageCost: 12.5,
       );
-      await _insertCostLayer(productId: lifoProductId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 10.0);
-      await _insertCostLayer(productId: lifoProductId, quantityOriginal: 100.0, quantityRemaining: 100.0, unitCost: 15.0);
+      await _insertCostLayer(
+          productId: lifoProductId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 10.0);
+      await _insertCostLayer(
+          productId: lifoProductId,
+          quantityOriginal: 100.0,
+          quantityRemaining: 100.0,
+          unitCost: 15.0);
 
       final fifoCogs = await _calculateFIFOCOGS(
         productId: fifoProductId,

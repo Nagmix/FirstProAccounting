@@ -48,7 +48,9 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
     _searchController.addListener(() {
       _searchDebounce?.cancel();
       _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+        if (mounted) {
+          setState(() => _searchQuery = _searchController.text.trim());
+        }
       });
     });
     _loadCashBoxes();
@@ -175,9 +177,12 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
       builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.warning, color: AppColors.error, size: 40),
         title: const Text('حذف الصندوق'),
-        content: Text('هل أنت متأكد من حذف "${cashBox.name}"؟\nسيتم تعطيل الصندوق إذا لم تكن هناك سجلات مرتبطة.'),
+        content: Text(
+            'هل أنت متأكد من حذف "${cashBox.name}"؟\nسيتم تعطيل الصندوق إذا لم تكن هناك سجلات مرتبطة.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(ctx, true),
@@ -191,7 +196,9 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
         await locator<CashBoxService>().deleteCashBox(cashBox.id!);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('تم تعطيل "${cashBox.name}"'), backgroundColor: AppColors.success),
+            SnackBar(
+                content: Text('تم تعطيل "${cashBox.name}"'),
+                backgroundColor: AppColors.success),
           );
         }
         _loadCashBoxes();
@@ -213,13 +220,13 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
   void _openDetail(CashBox cashBox) {
     Navigator.of(context)
         .push(
-      MaterialPageRoute(
-        builder: (_) => CashBoxDetailScreen(
-          cashBox: cashBox,
-          initialCurrency: _selectedCurrency,
-        ),
-      ),
-    )
+          MaterialPageRoute(
+            builder: (_) => CashBoxDetailScreen(
+              cashBox: cashBox,
+              initialCurrency: _selectedCurrency,
+            ),
+          ),
+        )
         .then((_) => _loadCashBoxes());
   }
 
@@ -227,7 +234,8 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final currentSymbol = CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
+    final currentSymbol =
+        CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي';
 
     return Scaffold(
       appBar: AppBar(
@@ -237,10 +245,14 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: ActionChip(
-              avatar: Icon(Icons.currency_exchange, size: 16, color: AppColors.primary),
+              avatar: Icon(Icons.currency_exchange,
+                  size: 16, color: AppColors.primary),
               label: Text(
                 '$currentSymbol $_selectedCurrency',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary),
               ),
               onPressed: () => CurrencyConstants.showCurrencyFilterPopup(
                 context: context,
@@ -287,16 +299,24 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
 
                 // ── Summary bar ───────────────────────────────────────
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    color: isLight
+                        ? AppColors.surfaceVariant
+                        : AppColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isLight ? AppColors.border : AppColors.darkBorder, width: 0.5),
+                    border: Border.all(
+                        color:
+                            isLight ? AppColors.border : AppColors.darkBorder,
+                        width: 0.5),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.account_balance_wallet, size: 18, color: AppColors.primary),
+                      Icon(Icons.account_balance_wallet,
+                          size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text(
                         '${_cashBoxes.length} صندوق وبنك',
@@ -307,9 +327,13 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
                       ),
                       const Spacer(),
                       if (_isBalancesLoading)
-                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                       else ...[
-                        Icon(Icons.account_balance_wallet, size: 16, color: AppColors.textHint),
+                        Icon(Icons.account_balance_wallet,
+                            size: 16, color: AppColors.textHint),
                         const SizedBox(width: 4),
                         Text(
                           'العملة: $_selectedCurrency',
@@ -319,7 +343,8 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Icon(Icons.calculate, size: 16, color: AppColors.primary),
+                        Icon(Icons.calculate,
+                            size: 16, color: AppColors.primary),
                         const SizedBox(width: 4),
                         Text(
                           'الإجمالي: ${CurrencyFormatter.formatValue(_currencyBalances.values.fold(0.0, (sum, b) => sum + b))} $currentSymbol',
@@ -355,32 +380,38 @@ class _CashBoxesScreenState extends State<CashBoxesScreen>
                           subtitle: tabIndex == 0
                               ? 'قم بإضافة صناديق أو بنوك جديدة لبدء إدارة أموالك'
                               : 'لم يتم العثور على نتائج مطابقة',
-                          actionLabel: tabIndex == 0 ? 'إضافة صندوق أو بنك' : null,
-                          onAction: tabIndex == 0 ? () => _showAddSheet() : null,
+                          actionLabel:
+                              tabIndex == 0 ? 'إضافة صندوق أو بنك' : null,
+                          onAction:
+                              tabIndex == 0 ? () => _showAddSheet() : null,
                         );
                       }
 
                       return RefreshIndicator(
-                        onRefresh: _loadCashBoxes,
-                        color: AppColors.primary,
-                        child: ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 80, top: 2),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                          final cashBox = filtered[index];
-                          return _CashBoxCard(
-                            cashBox: cashBox,
-                            avatarColor: AvatarHelper.avatarColor(cashBox.name),
-                            displayBalance: _currencyBalances[cashBox.id] ?? 0.0,
-                            currencySymbol: CurrencyConstants.currencyInfo[_selectedCurrency]?['symbol'] ?? 'ر.ي',
-                            isLight: isLight,
-                            onTap: () => _openDetail(cashBox),
-                            onDelete: () => _deleteCashBox(cashBox),
-                          );
-                        },
-                        )
-                      );
+                          onRefresh: _loadCashBoxes,
+                          color: AppColors.primary,
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.only(bottom: 80, top: 2),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final cashBox = filtered[index];
+                              return _CashBoxCard(
+                                cashBox: cashBox,
+                                avatarColor:
+                                    AvatarHelper.avatarColor(cashBox.name),
+                                displayBalance:
+                                    _currencyBalances[cashBox.id] ?? 0.0,
+                                currencySymbol: CurrencyConstants
+                                            .currencyInfo[_selectedCurrency]
+                                        ?['symbol'] ??
+                                    'ر.ي',
+                                isLight: isLight,
+                                onTap: () => _openDetail(cashBox),
+                                onDelete: () => _deleteCashBox(cashBox),
+                              );
+                            },
+                          ));
                     }),
                   ),
                 ),
@@ -441,7 +472,9 @@ class _CashBoxCard extends StatelessWidget {
         color: isLight ? AppColors.surface : AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLight ? AppColors.border.withValues(alpha: 0.5) : AppColors.darkBorder.withValues(alpha: 0.5),
+          color: isLight
+              ? AppColors.border.withValues(alpha: 0.5)
+              : AppColors.darkBorder.withValues(alpha: 0.5),
           width: 0.5,
         ),
         boxShadow: [
@@ -511,34 +544,44 @@ class _CashBoxCard extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: cashBox.isBank
                                   ? AppColors.info.withValues(alpha: 0.1)
-                                  : AppColors.secondaryDark.withValues(alpha: 0.1),
+                                  : AppColors.secondaryDark
+                                      .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               cashBox.typeAr,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: cashBox.isBank ? AppColors.info : AppColors.secondaryDark,
+                                color: cashBox.isBank
+                                    ? AppColors.info
+                                    : AppColors.secondaryDark,
                               ),
                             ),
                           ),
-                          if (cashBox.isBank && cashBox.bankName != null && cashBox.bankName!.isNotEmpty) ...[
+                          if (cashBox.isBank &&
+                              cashBox.bankName != null &&
+                              cashBox.bankName!.isNotEmpty) ...[
                             const SizedBox(width: 6),
                             Icon(
                               Icons.business,
                               size: 13,
-                              color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                              color: isLight
+                                  ? AppColors.textHint
+                                  : AppColors.darkTextSecondary,
                             ),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
                                 cashBox.bankName!,
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+                                  color: isLight
+                                      ? AppColors.textSecondary
+                                      : AppColors.darkTextSecondary,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -555,18 +598,27 @@ class _CashBoxCard extends StatelessWidget {
 
                 // ── Balance Section with gradient ──────────────────
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: displayBalance != 0
-                          ? [balanceColor.withValues(alpha: 0.12), balanceColor.withValues(alpha: 0.04)]
-                          : [Colors.grey.withValues(alpha: 0.06), Colors.grey.withValues(alpha: 0.02)],
+                          ? [
+                              balanceColor.withValues(alpha: 0.12),
+                              balanceColor.withValues(alpha: 0.04)
+                            ]
+                          : [
+                              Colors.grey.withValues(alpha: 0.06),
+                              Colors.grey.withValues(alpha: 0.02)
+                            ],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,
                     ),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: displayBalance != 0 ? balanceColor.withValues(alpha: 0.25) : AppColors.border.withValues(alpha: 0.3),
+                      color: displayBalance != 0
+                          ? balanceColor.withValues(alpha: 0.25)
+                          : AppColors.border.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -574,9 +626,15 @@ class _CashBoxCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isDebit ? Icons.trending_down : isCredit ? Icons.trending_up : Icons.remove,
+                        isDebit
+                            ? Icons.trending_down
+                            : isCredit
+                                ? Icons.trending_up
+                                : Icons.remove,
                         size: 14,
-                        color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                        color: displayBalance != 0
+                            ? balanceColor
+                            : AppColors.textHint,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -584,7 +642,9 @@ class _CashBoxCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
-                          color: displayBalance != 0 ? balanceColor : AppColors.textHint,
+                          color: displayBalance != 0
+                              ? balanceColor
+                              : AppColors.textHint,
                         ),
                       ),
                     ],
@@ -597,13 +657,17 @@ class _CashBoxCard extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
+                    color: isLight
+                        ? AppColors.surfaceVariant
+                        : AppColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.arrow_back_ios,
                     size: 12,
-                    color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
+                    color: isLight
+                        ? AppColors.textHint
+                        : AppColors.darkTextSecondary,
                   ),
                 ),
               ],

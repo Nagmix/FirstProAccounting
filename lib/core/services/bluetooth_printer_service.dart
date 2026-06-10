@@ -94,15 +94,18 @@ class BluetoothPrinterService {
     try {
       final devices = await _invokeBluetoothMethod('getBondedDevices');
       if (devices is List) {
-        return devices.map((d) {
-          if (d is Map) {
-            return BluetoothPrinterDevice(
-              name: d['name']?.toString() ?? 'جهاز غير معروف',
-              address: d['address']?.toString() ?? '',
-            );
-          }
-          return null;
-        }).whereType<BluetoothPrinterDevice>().toList();
+        return devices
+            .map((d) {
+              if (d is Map) {
+                return BluetoothPrinterDevice(
+                  name: d['name']?.toString() ?? 'جهاز غير معروف',
+                  address: d['address']?.toString() ?? '',
+                );
+              }
+              return null;
+            })
+            .whereType<BluetoothPrinterDevice>()
+            .toList();
       }
       return [];
     } on PlatformException catch (_) {
@@ -121,7 +124,8 @@ class BluetoothPrinterService {
     }
 
     try {
-      final result = await _invokeBluetoothMethod('connect', {'address': address});
+      final result =
+          await _invokeBluetoothMethod('connect', {'address': address});
       if (result == true) {
         _isConnected = true;
         _connectedAddress = address;
@@ -132,15 +136,18 @@ class BluetoothPrinterService {
         _connectedName = device?.name ?? 'طابعة';
 
         // Save as default printer
-        await locator<ReferenceDataRepository>().setSetting('default_printer_address', address);
-        await locator<ReferenceDataRepository>().setSetting('default_printer_name', _connectedName);
+        await locator<ReferenceDataRepository>()
+            .setSetting('default_printer_address', address);
+        await locator<ReferenceDataRepository>()
+            .setSetting('default_printer_name', _connectedName);
 
         return true;
       }
       return false;
     } on PlatformException catch (e) {
       _isConnected = false;
-      throw PrinterException('فشل الاتصال بالطابعة: ${e.message ?? e.toString()}');
+      throw PrinterException(
+          'فشل الاتصال بالطابعة: ${e.message ?? e.toString()}');
     } on MissingPluginException catch (_) {
       throw const PrinterException('خدمة البلوتوث غير متاحة على هذا الجهاز');
     } catch (e) {
@@ -177,7 +184,8 @@ class BluetoothPrinterService {
         'data': data,
       });
     } on PlatformException catch (e) {
-      throw PrinterException('فشل إرسال البيانات: ${e.message ?? e.toString()}');
+      throw PrinterException(
+          'فشل إرسال البيانات: ${e.message ?? e.toString()}');
     } on MissingPluginException catch (_) {
       throw const PrinterException('حزمة البلوتوث غير متاحة');
     } catch (e) {
@@ -187,9 +195,15 @@ class BluetoothPrinterService {
 
   /// Print a receipt from structured data.
   Future<void> printReceipt(Map<String, dynamic> receiptData) async {
-    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو';
-    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
-    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address') ?? '';
+    final businessName =
+        await locator<ReferenceDataRepository>().getSetting('business_name') ??
+            'الأول برو';
+    final businessPhone =
+        await locator<ReferenceDataRepository>().getSetting('business_phone') ??
+            '';
+    final businessAddress = await locator<ReferenceDataRepository>()
+            .getSetting('business_address') ??
+        '';
 
     final cmds = EscPosCommands.buildReceipt(
       businessName: businessName,
@@ -199,7 +213,8 @@ class BluetoothPrinterService {
       invoiceType: receiptData['invoice_type']?.toString() ?? 'فاتورة',
       date: receiptData['date'] as DateTime? ?? DateTime.now(),
       customerName: receiptData['customer_name']?.toString() ?? 'بدون عميل',
-      items: (receiptData['items'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      items:
+          (receiptData['items'] as List?)?.cast<Map<String, dynamic>>() ?? [],
       subtotal: MoneyHelper.readMoney(receiptData['subtotal']),
       discount: MoneyHelper.readMoney(receiptData['discount']),
       tax: MoneyHelper.readMoney(receiptData['tax']),
@@ -217,7 +232,8 @@ class BluetoothPrinterService {
 
   /// Print an invoice using data from the database.
   Future<void> printInvoice(String invoiceId) async {
-    final invoiceItems = await locator<InvoiceRepository>().getInvoiceItems(invoiceId);
+    final invoiceItems =
+        await locator<InvoiceRepository>().getInvoiceItems(invoiceId);
     final invoices = await locator<InvoiceRepository>().getAllInvoices();
     final invoice = invoices.where((i) => i['id'] == invoiceId).firstOrNull;
 
@@ -225,9 +241,15 @@ class BluetoothPrinterService {
       throw const PrinterException('الفاتورة غير موجودة');
     }
 
-    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو';
-    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
-    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address') ?? '';
+    final businessName =
+        await locator<ReferenceDataRepository>().getSetting('business_name') ??
+            'الأول برو';
+    final businessPhone =
+        await locator<ReferenceDataRepository>().getSetting('business_phone') ??
+            '';
+    final businessAddress = await locator<ReferenceDataRepository>()
+            .getSetting('business_address') ??
+        '';
 
     final type = invoice['type'] as String? ?? 'sale';
     final isReturn = (invoice['is_return'] as int? ?? 0) == 1;
@@ -237,7 +259,9 @@ class BluetoothPrinterService {
             ? 'فاتورة مبيعات'
             : 'فاتورة مشتريات';
 
-    final createdAt = DateTime.tryParse(invoice['created_at'] as String? ?? '') ?? DateTime.now();
+    final createdAt =
+        DateTime.tryParse(invoice['created_at'] as String? ?? '') ??
+            DateTime.now();
 
     await printReceipt({
       'business_name': businessName,
@@ -267,7 +291,9 @@ class BluetoothPrinterService {
 
   /// Print a customer statement.
   Future<void> printCustomerStatement(Map<String, dynamic> customerData) async {
-    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو';
+    final businessName =
+        await locator<ReferenceDataRepository>().getSetting('business_name') ??
+            'الأول برو';
 
     final cmds = <int>[];
     cmds.addAll(EscPosCommands.init());
@@ -293,8 +319,10 @@ class BluetoothPrinterService {
     final currency = customerData['currency'] as String? ?? 'YER';
 
     cmds.addAll(EscPosCommands.printlnArabic('العميل: $name'));
-    cmds.addAll(EscPosCommands.printlnArabic('الرصيد: ${balance.toStringAsFixed(2)} $currency'));
-    cmds.addAll(EscPosCommands.printlnArabic('الحالة: ${bt == 'credit' ? 'له' : 'عليه'}'));
+    cmds.addAll(EscPosCommands.printlnArabic(
+        'الرصيد: ${balance.toStringAsFixed(2)} $currency'));
+    cmds.addAll(EscPosCommands.printlnArabic(
+        'الحالة: ${bt == 'credit' ? 'له' : 'عليه'}'));
 
     cmds.addAll(EscPosCommands.feedLines(3));
     cmds.addAll(EscPosCommands.cutPaper());
@@ -307,9 +335,12 @@ class BluetoothPrinterService {
   /// Load printer settings from database.
   Future<void> loadSettings() async {
     try {
-      final paperWidthStr = await locator<ReferenceDataRepository>().getSetting('printer_paper_width');
-      final autoCutStr = await locator<ReferenceDataRepository>().getSetting('printer_auto_cut');
-      final fontSizeStr = await locator<ReferenceDataRepository>().getSetting('printer_font_size');
+      final paperWidthStr = await locator<ReferenceDataRepository>()
+          .getSetting('printer_paper_width');
+      final autoCutStr = await locator<ReferenceDataRepository>()
+          .getSetting('printer_auto_cut');
+      final fontSizeStr = await locator<ReferenceDataRepository>()
+          .getSetting('printer_font_size');
 
       if (paperWidthStr != null) {
         final pw = int.tryParse(paperWidthStr) ?? 80;
@@ -329,9 +360,12 @@ class BluetoothPrinterService {
 
   Future<void> _saveSettings() async {
     try {
-      await locator<ReferenceDataRepository>().setSetting('printer_paper_width', _paperWidth.toString());
-      await locator<ReferenceDataRepository>().setSetting('printer_auto_cut', _autoCut ? '1' : '0');
-      await locator<ReferenceDataRepository>().setSetting('printer_font_size', _fontSize.toString());
+      await locator<ReferenceDataRepository>()
+          .setSetting('printer_paper_width', _paperWidth.toString());
+      await locator<ReferenceDataRepository>()
+          .setSetting('printer_auto_cut', _autoCut ? '1' : '0');
+      await locator<ReferenceDataRepository>()
+          .setSetting('printer_font_size', _fontSize.toString());
     } catch (_) {
       // Ignore save errors
     }
@@ -340,7 +374,8 @@ class BluetoothPrinterService {
   /// Try to auto-connect to the default printer.
   Future<bool> autoConnect() async {
     try {
-      final address = await locator<ReferenceDataRepository>().getSetting('default_printer_address');
+      final address = await locator<ReferenceDataRepository>()
+          .getSetting('default_printer_address');
       if (address != null && address.isNotEmpty) {
         return await connect(address);
       }
@@ -355,7 +390,8 @@ class BluetoothPrinterService {
   /// The native Android side must register a MethodCallHandler for the
   /// 'bluetooth_printer' channel. Throws MissingPluginException if the
   /// native handler is not registered.
-  static Future<dynamic> _invokeBluetoothMethod(String method, [dynamic arguments]) async {
+  static Future<dynamic> _invokeBluetoothMethod(String method,
+      [dynamic arguments]) async {
     // Use a custom MethodChannel for Bluetooth SPP communication
     const channel = MethodChannel('bluetooth_printer');
 

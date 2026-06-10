@@ -11,7 +11,8 @@ class Customer {
   final String? notes;
   final double balance;
   final String balanceType; // 'debit' or 'credit'
-  final String? currency; // nullable — customer is multi-currency; currency is only for opening balance
+  final String?
+      currency; // nullable — customer is multi-currency; currency is only for opening balance
   final double debtCeiling; // was creditLimit (سقف المدينية)
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -31,8 +32,8 @@ class Customer {
     this.debtCeiling = 0.0,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+  })  : createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -66,28 +67,44 @@ class Customer {
       balance: MoneyHelper.readMoney(map['balance']),
       balanceType: map['balance_type'] ?? 'credit',
       currency: map['currency'] as String?,
-      debtCeiling: MoneyHelper.readMoney(map['debt_ceiling'] ?? map['credit_limit']),
+      debtCeiling:
+          MoneyHelper.readMoney(map['debt_ceiling'] ?? map['credit_limit']),
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
     );
   }
 
   Customer copyWith({
-    int? id, String? name, String? phone, String? address, String? address2,
-    String? email, String? contactMethod, String? notes,
-    double? balance, String? balanceType, Object? currency = _sentinel,
-    double? debtCeiling, DateTime? createdAt, DateTime? updatedAt,
+    int? id,
+    String? name,
+    String? phone,
+    String? address,
+    String? address2,
+    String? email,
+    String? contactMethod,
+    String? notes,
+    double? balance,
+    String? balanceType,
+    Object? currency = _sentinel,
+    double? debtCeiling,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Customer(
-      id: id ?? this.id, name: name ?? this.name, phone: phone ?? this.phone,
-      address: address ?? this.address, address2: address2 ?? this.address2,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      address: address ?? this.address,
+      address2: address2 ?? this.address2,
       email: email ?? this.email,
       contactMethod: contactMethod ?? this.contactMethod,
-      notes: notes ?? this.notes, balance: balance ?? this.balance,
+      notes: notes ?? this.notes,
+      balance: balance ?? this.balance,
       balanceType: balanceType ?? this.balanceType,
       currency: currency == _sentinel ? this.currency : currency as String?,
       debtCeiling: debtCeiling ?? this.debtCeiling,
-      createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

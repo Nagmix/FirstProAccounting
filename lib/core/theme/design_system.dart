@@ -35,37 +35,43 @@ class DesignSystem {
   static const double radius24 = 24.0;
   static const double radius28 = 28.0;
 
-  static const BorderRadius borderRadius8 = BorderRadius.all(Radius.circular(8));
-  static const BorderRadius borderRadius12 = BorderRadius.all(Radius.circular(12));
-  static const BorderRadius borderRadius14 = BorderRadius.all(Radius.circular(14));
-  static const BorderRadius borderRadius16 = BorderRadius.all(Radius.circular(16));
-  static const BorderRadius borderRadius20 = BorderRadius.all(Radius.circular(20));
-  static const BorderRadius borderRadius24 = BorderRadius.all(Radius.circular(24));
+  static const BorderRadius borderRadius8 =
+      BorderRadius.all(Radius.circular(8));
+  static const BorderRadius borderRadius12 =
+      BorderRadius.all(Radius.circular(12));
+  static const BorderRadius borderRadius14 =
+      BorderRadius.all(Radius.circular(14));
+  static const BorderRadius borderRadius16 =
+      BorderRadius.all(Radius.circular(16));
+  static const BorderRadius borderRadius20 =
+      BorderRadius.all(Radius.circular(20));
+  static const BorderRadius borderRadius24 =
+      BorderRadius.all(Radius.circular(24));
 
   // ══════════════════════════════════════════════════════════════════
   //  SHADOWS
   // ══════════════════════════════════════════════════════════════════
   static List<BoxShadow> cardShadow({bool isLight = true}) => [
-    BoxShadow(
-      color: isLight
-          ? AppColors.primary.withValues(alpha: 0.06)
-          : Colors.black.withValues(alpha: 0.2),
-      offset: const Offset(0, 4),
-      blurRadius: 16,
-      spreadRadius: 0,
-    ),
-  ];
+        BoxShadow(
+          color: isLight
+              ? AppColors.primary.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.2),
+          offset: const Offset(0, 4),
+          blurRadius: 16,
+          spreadRadius: 0,
+        ),
+      ];
 
   static List<BoxShadow> elevatedShadow({bool isLight = true}) => [
-    BoxShadow(
-      color: isLight
-          ? AppColors.primary.withValues(alpha: 0.12)
-          : Colors.black.withValues(alpha: 0.3),
-      offset: const Offset(0, 8),
-      blurRadius: 24,
-      spreadRadius: 0,
-    ),
-  ];
+        BoxShadow(
+          color: isLight
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : Colors.black.withValues(alpha: 0.3),
+          offset: const Offset(0, 8),
+          blurRadius: 24,
+          spreadRadius: 0,
+        ),
+      ];
 
   static List<BoxShadow> fabShadow = [
     BoxShadow(
@@ -121,7 +127,8 @@ class DesignSystem {
   // ══════════════════════════════════════════════════════════════════
   //  ASYMMETRIC BORDER RADIUS (inspired by fitness app)
   // ══════════════════════════════════════════════════════════════════
-  static BorderRadius asymmetricTopRight({double large = 68, double small = 12}) {
+  static BorderRadius asymmetricTopRight(
+      {double large = 68, double small = 12}) {
     return BorderRadius.only(
       topLeft: Radius.circular(small),
       topRight: Radius.circular(large),

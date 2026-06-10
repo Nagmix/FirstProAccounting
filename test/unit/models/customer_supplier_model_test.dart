@@ -22,8 +22,12 @@ void main() {
 
       test('creates customer with all fields', () {
         final customer = Customer(
-          id: 1, name: 'أحمد محمد', phone: '777123456',
-          balance: 5000.0, balanceType: 'debit', currency: 'YER',
+          id: 1,
+          name: 'أحمد محمد',
+          phone: '777123456',
+          balance: 5000.0,
+          balanceType: 'debit',
+          currency: 'YER',
           debtCeiling: 10000.0,
         );
         expect(customer.id, equals(1));
@@ -35,7 +39,8 @@ void main() {
 
     group('serialization', () {
       test('toMap converts balance to cents', () {
-        final customer = Customer(name: 'أحمد', balance: 150.75, debtCeiling: 5000.50);
+        final customer =
+            Customer(name: 'أحمد', balance: 150.75, debtCeiling: 5000.50);
         final map = customer.toMap();
         expect(map['balance'], equals(MoneyHelper.toCents(150.75)));
         expect(map['debt_ceiling'], equals(MoneyHelper.toCents(5000.50)));
@@ -43,10 +48,18 @@ void main() {
 
       test('fromMap reads cents correctly', () {
         final map = {
-          'id': 1, 'name': 'أحمد', 'phone': null, 'address': null,
-          'address2': null, 'email': null, 'contact_method': null,
-          'notes': null, 'balance': 15075, 'balance_type': 'debit',
-          'currency': 'YER', 'debt_ceiling': 500050,
+          'id': 1,
+          'name': 'أحمد',
+          'phone': null,
+          'address': null,
+          'address2': null,
+          'email': null,
+          'contact_method': null,
+          'notes': null,
+          'balance': 15075,
+          'balance_type': 'debit',
+          'currency': 'YER',
+          'debt_ceiling': 500050,
           'created_at': '2026-01-01T00:00:00.000',
           'updated_at': '2026-01-01T00:00:00.000',
         };
@@ -56,13 +69,24 @@ void main() {
         expect(customer.balanceType, equals('debit'));
       });
 
-      test('fromMap handles legacy field names (notification_method, credit_limit)', () {
+      test(
+          'fromMap handles legacy field names (notification_method, credit_limit)',
+          () {
         final map = {
-          'id': 1, 'name': 'أحمد', 'phone': null, 'address': null,
-          'address2': null, 'email': null,
-          'contact_method': null, 'notification_method': 'whatsapp',
-          'notes': null, 'balance': 15075, 'balance_type': 'credit',
-          'currency': 'YER', 'debt_ceiling': 500050, 'credit_limit': 10000,
+          'id': 1,
+          'name': 'أحمد',
+          'phone': null,
+          'address': null,
+          'address2': null,
+          'email': null,
+          'contact_method': null,
+          'notification_method': 'whatsapp',
+          'notes': null,
+          'balance': 15075,
+          'balance_type': 'credit',
+          'currency': 'YER',
+          'debt_ceiling': 500050,
+          'credit_limit': 10000,
           'created_at': '2026-01-01T00:00:00.000',
           'updated_at': '2026-01-01T00:00:00.000',
         };
@@ -73,9 +97,13 @@ void main() {
 
       test('round-trip preserves monetary values', () {
         final original = Customer(
-          id: 1, name: 'أحمد', balance: 5000.75,
-          debtCeiling: 10000.50, balanceType: 'debit',
-          createdAt: DateTime(2026, 1, 1), updatedAt: DateTime(2026, 1, 1),
+          id: 1,
+          name: 'أحمد',
+          balance: 5000.75,
+          debtCeiling: 10000.50,
+          balanceType: 'debit',
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
         );
         final restored = Customer.fromMap(original.toMap());
         expect(restored.balance, closeTo(original.balance, 0.01));
@@ -119,7 +147,8 @@ void main() {
 
     group('getDynamicBalanceLabel', () {
       test('zero balance returns متساوي', () {
-        expect(Supplier.getDynamicBalanceLabel(0.0, 'credit'), equals('متساوي'));
+        expect(
+            Supplier.getDynamicBalanceLabel(0.0, 'credit'), equals('متساوي'));
         expect(Supplier.getDynamicBalanceLabel(0.0, 'debit'), equals('متساوي'));
       });
 
@@ -128,11 +157,13 @@ void main() {
       });
 
       test('positive balance with debit type returns عليه', () {
-        expect(Supplier.getDynamicBalanceLabel(5000.0, 'debit'), equals('عليه'));
+        expect(
+            Supplier.getDynamicBalanceLabel(5000.0, 'debit'), equals('عليه'));
       });
 
       test('negative balance with credit type returns عليه', () {
-        expect(Supplier.getDynamicBalanceLabel(-5000.0, 'credit'), equals('عليه'));
+        expect(
+            Supplier.getDynamicBalanceLabel(-5000.0, 'credit'), equals('عليه'));
       });
 
       test('negative balance with debit type returns له', () {
@@ -140,13 +171,15 @@ void main() {
       });
 
       test('near-zero balance returns متساوي', () {
-        expect(Supplier.getDynamicBalanceLabel(0.003, 'credit'), equals('متساوي'));
+        expect(
+            Supplier.getDynamicBalanceLabel(0.003, 'credit'), equals('متساوي'));
       });
     });
 
     group('serialization', () {
       test('toMap converts balance to cents', () {
-        final supplier = Supplier(name: 'شركة التوريد', balance: 250.50, debtCeiling: 10000.0);
+        final supplier = Supplier(
+            name: 'شركة التوريد', balance: 250.50, debtCeiling: 10000.0);
         final map = supplier.toMap();
         expect(map['balance'], equals(MoneyHelper.toCents(250.50)));
         expect(map['debt_ceiling'], equals(MoneyHelper.toCents(10000.0)));
@@ -154,9 +187,14 @@ void main() {
 
       test('round-trip preserves values', () {
         final original = Supplier(
-          id: 1, name: 'شركة التوريد', phone: '777654321',
-          balance: 3000.75, balanceType: 'debit', currency: 'SAR',
-          createdAt: DateTime(2026, 1, 1), updatedAt: DateTime(2026, 1, 1),
+          id: 1,
+          name: 'شركة التوريد',
+          phone: '777654321',
+          balance: 3000.75,
+          balanceType: 'debit',
+          currency: 'SAR',
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
         );
         final restored = Supplier.fromMap(original.toMap());
         expect(restored.balance, closeTo(original.balance, 0.01));

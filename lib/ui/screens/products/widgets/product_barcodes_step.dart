@@ -110,11 +110,13 @@ class ProductBarcodesStep extends StatelessWidget {
               child: Column(
                 children: [
                   Icon(Icons.qr_code,
-                      size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
+                      size: 40,
+                      color: AppColors.textTertiary.withValues(alpha: 0.4)),
                   const SizedBox(height: 8),
                   Text('لا توجد وحدات أخرى',
                       style: TextStyle(
-                          color: AppColors.textTertiary.withValues(alpha: 0.6))),
+                          color:
+                              AppColors.textTertiary.withValues(alpha: 0.6))),
                   const SizedBox(height: 4),
                   Text('أضف وحدات أكبر في خطوة الوحدات أولاً',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -134,8 +136,16 @@ class ProductBarcodesStep extends StatelessWidget {
             ),
             child: const Row(
               children: [
-                Expanded(flex: 2, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
-                Expanded(flex: 3, child: Text('باركود', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
+                Expanded(
+                    flex: 2,
+                    child: Text('الوحدة',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 13))),
+                Expanded(
+                    flex: 3,
+                    child: Text('باركود',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 13))),
               ],
             ),
           ),
@@ -157,7 +167,8 @@ class ProductBarcodesStep extends StatelessWidget {
                     flex: 2,
                     child: Text(
                       entry.unitName,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -170,13 +181,15 @@ class ProductBarcodesStep extends StatelessWidget {
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: 'أدخل الباركود',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 8),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.camera_alt, size: 16),
                           onPressed: () async {
                             final result = await Navigator.push<String>(
                               context,
-                              MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const BarcodeScannerScreen()),
                             );
                             if (result != null && result.isNotEmpty) {
                               if (entry.conversionRow != null) {

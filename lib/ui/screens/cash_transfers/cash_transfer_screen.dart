@@ -67,7 +67,8 @@ class _CashTransferScreenState extends State<CashTransferScreen>
   //  DATA LOADING
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _loadData() async {
-    final currencies = await locator<ReferenceDataRepository>().getAllCurrencies();
+    final currencies =
+        await locator<ReferenceDataRepository>().getAllCurrencies();
     final transfers = await locator<CashBoxService>().getAllCashTransfers();
 
     if (!mounted) return;
@@ -82,7 +83,8 @@ class _CashTransferScreenState extends State<CashTransferScreen>
   }
 
   Future<void> _loadCashBoxes() async {
-    final boxes = await locator<CashBoxService>().getCashBoxesByCurrency(_selectedCurrency);
+    final boxes = await locator<CashBoxService>()
+        .getCashBoxesByCurrency(_selectedCurrency);
 
     if (!mounted) return;
 
@@ -162,7 +164,8 @@ class _CashTransferScreenState extends State<CashTransferScreen>
     setState(() => _isSaving = true);
 
     try {
-      final transferNumber = await locator<CashBoxService>().getNextTransferNumber();
+      final transferNumber =
+          await locator<CashBoxService>().getNextTransferNumber();
       final now = DateTime.now().toIso8601String();
 
       final transferMap = <String, dynamic>{
@@ -262,8 +265,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                 text: 'تحويل',
               ),
               Tab(
-                icon:
-                    Icon(Icons.history, size: 20),
+                icon: Icon(Icons.history, size: 20),
                 text: 'السجل',
               ),
             ],
@@ -317,8 +319,8 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               hintText: 'أضف ملاحظات على العملية (اختياري)',
               prefixIcon: const Icon(Icons.edit_note),
               alignLabelWithHint: true,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: AppColors.border),
@@ -381,18 +383,16 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               value: _selectedCurrency,
               decoration: InputDecoration(
                 hintText: 'اختر العملة',
-                prefixIcon:
-                    const Icon(Icons.attach_money, size: 20),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.attach_money, size: 20),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      BorderSide(color: AppColors.primary, width: 2),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
                 ),
               ),
               items: _currencies.map((c) {
@@ -483,23 +483,21 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               decoration: InputDecoration(
                 hintText: 'اختر صندوق المصدر',
                 prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      BorderSide(color: AppColors.primary, width: 2),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
                 ),
               ),
               items: _cashBoxes.map((cb) {
                 final id = cb['id'] as int;
                 final name = cb['name'] as String;
-                final balance =
-                    MoneyHelper.readMoney(cb['balance']);
+                final balance = MoneyHelper.readMoney(cb['balance']);
                 final isDisabled = id == _toCashBoxId;
                 return DropdownMenuItem<int>(
                   value: id,
@@ -511,9 +509,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                           name,
                           style: TextStyle(
                             fontSize: 13,
-                            color: isDisabled
-                                ? AppColors.textHint
-                                : null,
+                            color: isDisabled ? AppColors.textHint : null,
                           ),
                         ),
                       ),
@@ -618,23 +614,21 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               decoration: InputDecoration(
                 hintText: 'اختر صندوق الوجهة',
                 prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      BorderSide(color: AppColors.primary, width: 2),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
                 ),
               ),
               items: _cashBoxes.map((cb) {
                 final id = cb['id'] as int;
                 final name = cb['name'] as String;
-                final balance =
-                    MoneyHelper.readMoney(cb['balance']);
+                final balance = MoneyHelper.readMoney(cb['balance']);
                 final isDisabled = id == _fromCashBoxId;
                 return DropdownMenuItem<int>(
                   value: id,
@@ -646,9 +640,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                           name,
                           style: TextStyle(
                             fontSize: 13,
-                            color: isDisabled
-                                ? AppColors.textHint
-                                : null,
+                            color: isDisabled ? AppColors.textHint : null,
                           ),
                         ),
                       ),
@@ -695,8 +687,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning,
-                          size: 16, color: AppColors.error),
+                      Icon(Icons.warning, size: 16, color: AppColors.error),
                       const SizedBox(width: 8),
                       Text(
                         'لا يمكن التحويل من وإلى نفس الصندوق',
@@ -776,16 +767,15 @@ class _CashTransferScreenState extends State<CashTransferScreen>
               decoration: InputDecoration(
                 hintText: 'أدخل المبلغ',
                 prefixIcon: const Icon(Icons.payments, size: 20),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      BorderSide(color: AppColors.primary, width: 2),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
                 ),
               ),
             ),
@@ -828,9 +818,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
       child: Row(
         children: [
           Icon(
-            isInsufficient
-                ? Icons.warning
-                : Icons.info,
+            isInsufficient ? Icons.warning : Icons.info,
             size: 16,
             color: isInsufficient ? AppColors.error : AppColors.info,
           ),
@@ -897,8 +885,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
         Expanded(
           child: OutlinedButton.icon(
             onPressed: _isSaving ? null : _resetForm,
-            icon: const Icon(Icons.refresh,
-                size: 18),
+            icon: const Icon(Icons.refresh, size: 18),
             label: const Text('مسح'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -926,8 +913,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-            color: AppColors.success.withValues(alpha: 0.4)),
+        side: BorderSide(color: AppColors.success.withValues(alpha: 0.4)),
       ),
       color: AppColors.success.withValues(alpha: 0.04),
       child: Padding(
@@ -939,8 +925,8 @@ class _CashTransferScreenState extends State<CashTransferScreen>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
@@ -961,8 +947,8 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
@@ -1094,8 +1080,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
     required bool isDebit,
   }) {
     final color = isDebit ? AppColors.primary : AppColors.error;
-    final icon =
-        isDebit ? Icons.south_west : Icons.arrow_outward;
+    final icon = isDebit ? Icons.south_west : Icons.arrow_outward;
 
     return Row(
       children: [
@@ -1155,11 +1140,9 @@ class _CashTransferScreenState extends State<CashTransferScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.swap_horiz,
-                size: 56, color: AppColors.textHint),
+            Icon(Icons.swap_horiz, size: 56, color: AppColors.textHint),
             const SizedBox(height: 12),
-            Text('لا توجد عمليات تحويل',
-                style: theme.textTheme.titleMedium),
+            Text('لا توجد عمليات تحويل', style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text('ستظهر هنا عمليات التحويل بين الصناديق',
                 style: theme.textTheme.bodySmall),
@@ -1307,8 +1290,7 @@ class _CashTransferScreenState extends State<CashTransferScreen>
                           color: AppColors.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color:
-                                  AppColors.primary.withValues(alpha: 0.2)),
+                              color: AppColors.primary.withValues(alpha: 0.2)),
                         ),
                         child: Text(
                           '${CurrencyFormatter.format(amount)} $symbol',

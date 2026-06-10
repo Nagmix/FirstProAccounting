@@ -29,8 +29,8 @@ class CashBox {
     this.isActive = true,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+  })  : createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now();
 
   bool get isBank => type == 'bank';
   bool get isCashBox => type == 'cash_box';
@@ -74,18 +74,34 @@ class CashBox {
   }
 
   CashBox copyWith({
-    int? id, String? name, String? type, String? bankAccountNumber,
-    String? bankName, String? bankBranch, String? currency, double? balance, String? balanceType,
-    int? linkedAccountId, bool? isActive, DateTime? createdAt, DateTime? updatedAt,
+    int? id,
+    String? name,
+    String? type,
+    String? bankAccountNumber,
+    String? bankName,
+    String? bankBranch,
+    String? currency,
+    double? balance,
+    String? balanceType,
+    int? linkedAccountId,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return CashBox(
-      id: id ?? this.id, name: name ?? this.name, type: type ?? this.type,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
-      bankName: bankName ?? this.bankName, bankBranch: bankBranch ?? this.bankBranch,
-      currency: currency ?? this.currency, balance: balance ?? this.balance, balanceType: balanceType ?? this.balanceType,
+      bankName: bankName ?? this.bankName,
+      bankBranch: bankBranch ?? this.bankBranch,
+      currency: currency ?? this.currency,
+      balance: balance ?? this.balance,
+      balanceType: balanceType ?? this.balanceType,
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
       isActive: isActive ?? this.isActive,
-      createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

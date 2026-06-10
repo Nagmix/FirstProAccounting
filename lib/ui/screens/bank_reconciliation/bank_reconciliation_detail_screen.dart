@@ -34,7 +34,8 @@ class _BankReconciliationDetailScreenState
     setState(() => _isLoading = true);
     try {
       final service = locator<BankReconciliationService>();
-      final reconInfo = await service.getReconciliationWithInfo(widget.reconciliationId);
+      final reconInfo =
+          await service.getReconciliationWithInfo(widget.reconciliationId);
       final recon = await service.getReconciliation(widget.reconciliationId);
       if (recon == null) {
         if (mounted) Navigator.pop(context);
@@ -72,17 +73,15 @@ class _BankReconciliationDetailScreenState
     final endDate = _reconciliation!.statementDate;
     final startDate = endDate.subtract(const Duration(days: 30));
 
-    await service.loadBookTransactionsAsStatementLines(
-        widget.reconciliationId,
-        _reconciliation!.cashBoxId,
-        startDate,
-        endDate);
+    await service.loadBookTransactionsAsStatementLines(widget.reconciliationId,
+        _reconciliation!.cashBoxId, startDate, endDate);
 
     _loadData();
   }
 
   Future<void> _autoMatch() async {
-    final count = await locator<BankReconciliationService>().autoMatch(widget.reconciliationId);
+    final count = await locator<BankReconciliationService>()
+        .autoMatch(widget.reconciliationId);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -161,7 +160,8 @@ class _BankReconciliationDetailScreenState
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: amountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
                       labelText: 'المبلغ',
                       prefixIcon: Icon(Icons.attach_money),
@@ -194,7 +194,8 @@ class _BankReconciliationDetailScreenState
                 onPressed: () async {
                   final amount = double.tryParse(amountController.text) ?? 0;
                   if (amount <= 0) return;
-                  await locator<BankReconciliationService>().addStatementLine(BankStatementLine(
+                  await locator<BankReconciliationService>()
+                      .addStatementLine(BankStatementLine(
                     reconciliationId: widget.reconciliationId,
                     cashBoxId: _reconciliation!.cashBoxId,
                     transactionDate: selectedDate,
@@ -229,7 +230,8 @@ class _BankReconciliationDetailScreenState
   Future<void> _calculateBalances() async {
     if (_reconciliation == null) return;
     final service = locator<BankReconciliationService>();
-    final calculated = await service.calculateAdjustedBalances(_reconciliation!);
+    final calculated =
+        await service.calculateAdjustedBalances(_reconciliation!);
     await service.updateReconciliation(calculated);
     _loadData();
   }
@@ -240,9 +242,11 @@ class _BankReconciliationDetailScreenState
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          icon: const Icon(Icons.check_circle, color: AppColors.success, size: 40),
+          icon: const Icon(Icons.check_circle,
+              color: AppColors.success, size: 40),
           title: const Text('إكمال التسوية'),
-          content: const Text('سيتم ترحيل القيود المحاسبية للتسوية (رسوم بنكية، فوائد). هل أنت متأكد؟'),
+          content: const Text(
+              'سيتم ترحيل القيود المحاسبية للتسوية (رسوم بنكية، فوائد). هل أنت متأكد؟'),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
@@ -250,7 +254,8 @@ class _BankReconciliationDetailScreenState
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success, foregroundColor: Colors.white),
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white),
               child: const Text('إكمال'),
             ),
           ],
@@ -262,7 +267,8 @@ class _BankReconciliationDetailScreenState
 
     setState(() => _isCompleting = true);
     try {
-      await locator<BankReconciliationService>().completeReconciliation(widget.reconciliationId);
+      await locator<BankReconciliationService>()
+          .completeReconciliation(widget.reconciliationId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -372,14 +378,12 @@ class _BankReconciliationDetailScreenState
                                       decoration: BoxDecoration(
                                         color: _statusColor(recon.status)
                                             .withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(recon.statusAr,
                                           style: theme.textTheme.labelSmall
                                               ?.copyWith(
-                                            color:
-                                                _statusColor(recon.status),
+                                            color: _statusColor(recon.status),
                                             fontWeight: FontWeight.w600,
                                           )),
                                     ),
@@ -391,8 +395,8 @@ class _BankReconciliationDetailScreenState
                                     Expanded(
                                       child: _infoField(
                                           'تاريخ الكشف',
-                                          _formatDate(
-                                              recon.statementDate.toIso8601String())),
+                                          _formatDate(recon.statementDate
+                                              .toIso8601String())),
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(
@@ -511,24 +515,40 @@ class _BankReconciliationDetailScreenState
                                   ],
                                 ),
                                 const Divider(height: 20),
-                                _summaryRow('رصيد كشف البنك',
-                                    CurrencyFormatter.format(recon.statementBalance)),
-                                _summaryRow('+ إيداعات تحت التسوية',
-                                    CurrencyFormatter.format(recon.depositsInTransit)),
-                                _summaryRow('- شيكات معلقة',
-                                    CurrencyFormatter.format(recon.outstandingChecks)),
-                                _summaryRow('= الرصيد المعدّل بنكي',
-                                    CurrencyFormatter.format(recon.adjustedBankBalance),
+                                _summaryRow(
+                                    'رصيد كشف البنك',
+                                    CurrencyFormatter.format(
+                                        recon.statementBalance)),
+                                _summaryRow(
+                                    '+ إيداعات تحت التسوية',
+                                    CurrencyFormatter.format(
+                                        recon.depositsInTransit)),
+                                _summaryRow(
+                                    '- شيكات معلقة',
+                                    CurrencyFormatter.format(
+                                        recon.outstandingChecks)),
+                                _summaryRow(
+                                    '= الرصيد المعدّل بنكي',
+                                    CurrencyFormatter.format(
+                                        recon.adjustedBankBalance),
                                     bold: true),
                                 const Divider(height: 16),
-                                _summaryRow('الرصيد الدفتري',
-                                    CurrencyFormatter.format(recon.bookBalance)),
-                                _summaryRow('+ فوائد بنكية',
-                                    CurrencyFormatter.format(recon.interestEarned)),
-                                _summaryRow('- رسوم بنكية',
-                                    CurrencyFormatter.format(recon.bankCharges)),
-                                _summaryRow('= الرصيد المعدّل دفتري',
-                                    CurrencyFormatter.format(recon.adjustedBookBalance),
+                                _summaryRow(
+                                    'الرصيد الدفتري',
+                                    CurrencyFormatter.format(
+                                        recon.bookBalance)),
+                                _summaryRow(
+                                    '+ فوائد بنكية',
+                                    CurrencyFormatter.format(
+                                        recon.interestEarned)),
+                                _summaryRow(
+                                    '- رسوم بنكية',
+                                    CurrencyFormatter.format(
+                                        recon.bankCharges)),
+                                _summaryRow(
+                                    '= الرصيد المعدّل دفتري',
+                                    CurrencyFormatter.format(
+                                        recon.adjustedBookBalance),
                                     bold: true),
                                 const Divider(height: 16),
                                 _summaryRow(
@@ -576,8 +596,7 @@ class _BankReconciliationDetailScreenState
                                       width: 18,
                                       height: 18,
                                       child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white),
+                                          strokeWidth: 2, color: Colors.white),
                                     )
                                   : const Icon(Icons.check_circle, size: 20),
                               label: Text(_isCompleting
@@ -602,7 +621,8 @@ class _BankReconciliationDetailScreenState
                               color: AppColors.success.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                  color: AppColors.success.withValues(alpha: 0.3)),
+                                  color:
+                                      AppColors.success.withValues(alpha: 0.3)),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -629,7 +649,8 @@ class _BankReconciliationDetailScreenState
     );
   }
 
-  Widget _linesPanel(String title, IconData icon, List<BankStatementLine> lines) {
+  Widget _linesPanel(
+      String title, IconData icon, List<BankStatementLine> lines) {
     final theme = Theme.of(context);
     return Card(
       elevation: 2,
@@ -646,11 +667,12 @@ class _BankReconciliationDetailScreenState
                 Expanded(
                   child: Text(title,
                       style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700, color: AppColors.primary)),
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
                 ),
                 Text('${lines.length}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.textHint)),
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: AppColors.textHint)),
               ],
             ),
           ),
@@ -681,8 +703,8 @@ class _BankReconciliationDetailScreenState
                         ),
                         subtitle: Text(
                           '${_formatDate(line.transactionDate.toIso8601String())} • ${line.transactionType == 'credit' ? 'إيداع' : 'سحب'}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppColors.textHint),
+                          style: theme.textTheme.labelSmall
+                              ?.copyWith(color: AppColors.textHint),
                         ),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -698,7 +720,8 @@ class _BankReconciliationDetailScreenState
                               ),
                             ),
                             GestureDetector(
-                              onTap: line.isMatched && _reconciliation?.status != 'completed'
+                              onTap: line.isMatched &&
+                                      _reconciliation?.status != 'completed'
                                   ? () => _unmatchLine(line.id!)
                                   : null,
                               child: Container(

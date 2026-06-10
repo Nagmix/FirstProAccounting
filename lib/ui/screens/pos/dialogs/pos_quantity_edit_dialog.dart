@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import '../../../../core/viewmodels/pos_viewmodel.dart';
 
 /// Shows the edit quantity dialog for a cart item.
-Future<void> showEditQuantityDialog(BuildContext context, PosViewModel vm, int index) async {
-  final controller = TextEditingController(text: '${vm.cartItems[index].quantity}');
+Future<void> showEditQuantityDialog(
+    BuildContext context, PosViewModel vm, int index) async {
+  final controller =
+      TextEditingController(text: '${vm.cartItems[index].quantity}');
   final result = await showDialog<int>(
     context: context,
     builder: (ctx) => Directionality(

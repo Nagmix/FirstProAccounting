@@ -907,7 +907,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       children: [
@@ -1293,7 +1294,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                           children: [
                             Icon(Icons.account_balance_wallet,
                                 size: 64,
-                                color: AppColors.textHint.withValues(alpha: 0.3)),
+                                color:
+                                    AppColors.textHint.withValues(alpha: 0.3)),
                             const SizedBox(height: 16),
                             Text('لا توجد حركات',
                                 style: theme.textTheme.titleMedium
@@ -1347,7 +1349,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                       color: AppColors.success.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppColors.success.withValues(alpha: 0.25), width: 1),
+                          color: AppColors.success.withValues(alpha: 0.25),
+                          width: 1),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -1384,7 +1387,8 @@ class _CashBoxDetailScreenState extends State<CashBoxDetailScreen> {
                       color: AppColors.error.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppColors.error.withValues(alpha: 0.25), width: 1),
+                          color: AppColors.error.withValues(alpha: 0.25),
+                          width: 1),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,

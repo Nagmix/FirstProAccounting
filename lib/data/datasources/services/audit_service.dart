@@ -66,7 +66,8 @@ class AuditService {
 
   /// ملخص الحسابات حسب النوع والعملة — account summary by currency and type.
   /// Returns rows with: currency, account_type, count, total_balance.
-  Future<List<Map<String, dynamic>>> getAccountSummaryByCurrencyAndType() async {
+  Future<List<Map<String, dynamic>>>
+      getAccountSummaryByCurrencyAndType() async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT a.currency, a.account_type,
@@ -83,7 +84,8 @@ class AuditService {
   /// Uses LIKE matching on transaction descriptions since the transactions
   /// table does not have reference_type/reference_id columns.
   /// Returns up to [limit] rows.
-  Future<List<Map<String, dynamic>>> getOrphanedInvoices({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getOrphanedInvoices(
+      {int limit = 20}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT i.id, i.type, i.total, i.currency, i.created_at,
@@ -103,7 +105,8 @@ class AuditService {
 
   /// مصروفات بدون حساب محاسبي — orphaned expenses (no linked accounts).
   /// Returns up to [limit] rows.
-  Future<List<Map<String, dynamic>>> getOrphanedExpenses({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getOrphanedExpenses(
+      {int limit = 20}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT e.id, e.title, e.amount, e.currency, e.expense_date, e.operation_type
@@ -116,7 +119,8 @@ class AuditService {
 
   /// قيود غير متوازنة — unbalanced journal entries (debit ≠ credit).
   /// Returns up to [limit] rows.
-  Future<List<Map<String, dynamic>>> getUnbalancedJournals({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getUnbalancedJournals(
+      {int limit = 20}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT t.journal_id,
@@ -136,14 +140,16 @@ class AuditService {
   /// عدد القيود — total transaction count.
   Future<int> getTransactionCount() async {
     final db = await _db;
-    final result = await db.rawQuery('SELECT COUNT(*) AS cnt FROM transactions');
+    final result =
+        await db.rawQuery('SELECT COUNT(*) AS cnt FROM transactions');
     return (result.first['cnt'] as int?) ?? 0;
   }
 
   /// عدد الحسابات النشطة — active account count.
   Future<int> getActiveAccountCount() async {
     final db = await _db;
-    final result = await db.rawQuery('SELECT COUNT(*) AS cnt FROM accounts WHERE is_active = 1');
+    final result = await db
+        .rawQuery('SELECT COUNT(*) AS cnt FROM accounts WHERE is_active = 1');
     return (result.first['cnt'] as int?) ?? 0;
   }
 

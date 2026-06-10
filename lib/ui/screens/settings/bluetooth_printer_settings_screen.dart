@@ -48,7 +48,8 @@ class _BluetoothPrinterSettingsScreenState
     final available = await _printerService.isBluetoothAvailable();
     setState(() {
       _isBluetoothAvailable = available;
-      _statusMessage = available ? 'البلوتوث متاح' : 'البلوتوث غير متاح على هذا الجهاز';
+      _statusMessage =
+          available ? 'البلوتوث متاح' : 'البلوتوث غير متاح على هذا الجهاز';
     });
 
     if (available) {
@@ -95,9 +96,8 @@ class _BluetoothPrinterSettingsScreenState
         setState(() {
           _isConnecting = false;
           _selectedAddress = address;
-          _statusMessage = success
-              ? 'تم الاتصال بنجاح بـ $name'
-              : 'فشل الاتصال بـ $name';
+          _statusMessage =
+              success ? 'تم الاتصال بنجاح بـ $name' : 'فشل الاتصال بـ $name';
         });
 
         if (success) {
@@ -178,7 +178,9 @@ class _BluetoothPrinterSettingsScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('حدث خطأ غير متوقع'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: const Text('حدث خطأ غير متوقع'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -221,8 +223,7 @@ class _BluetoothPrinterSettingsScreenState
               const SizedBox(height: 16),
 
               // ── Bluetooth Availability Warning ──────────────────
-              if (!_isBluetoothAvailable)
-                _buildUnavailableCard(theme, isDark),
+              if (!_isBluetoothAvailable) _buildUnavailableCard(theme, isDark),
 
               // ── Paired Devices ──────────────────────────────────
               _buildDevicesSection(theme, isDark),
@@ -272,7 +273,9 @@ class _BluetoothPrinterSettingsScreenState
                 end: Alignment.bottomLeft,
               )
             : null,
-        color: isConnected ? null : (isDark ? AppColors.darkSurface : AppColors.surface),
+        color: isConnected
+            ? null
+            : (isDark ? AppColors.darkSurface : AppColors.surface),
         borderRadius: DesignSystem.borderRadius16,
         boxShadow: DesignSystem.cardShadow(isLight: !isDark),
       ),
@@ -284,11 +287,14 @@ class _BluetoothPrinterSettingsScreenState
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: isConnected ? 0.2 : 0.1),
+                  color:
+                      Colors.white.withValues(alpha: isConnected ? 0.2 : 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
+                  isConnected
+                      ? Icons.bluetooth_connected
+                      : Icons.bluetooth_disabled,
                   color: isConnected ? Colors.white : statusColor,
                   size: 28,
                 ),
@@ -313,7 +319,9 @@ class _BluetoothPrinterSettingsScreenState
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: isConnected
                             ? Colors.white70
-                            : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
+                            : (isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -347,7 +355,8 @@ class _BluetoothPrinterSettingsScreenState
       ),
       child: Column(
         children: [
-          const Icon(Icons.bluetooth_disabled, size: 40, color: AppColors.warning),
+          const Icon(Icons.bluetooth_disabled,
+              size: 40, color: AppColors.warning),
           const SizedBox(height: 12),
           Text(
             'البلوتوث غير متاح',
@@ -360,7 +369,9 @@ class _BluetoothPrinterSettingsScreenState
           Text(
             'تأكد من تفعيل البلوتوث على جهازك وأن التطبيق يمتلك صلاحية الوصول للبلوتوث',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -382,19 +393,20 @@ class _BluetoothPrinterSettingsScreenState
             const SizedBox(width: 8),
             Text(
               'الأجهزة المقترنة',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
             const Spacer(),
             if (_isScanning)
               const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.primary),
               ),
           ],
         ),
         const SizedBox(height: 12),
-
         if (_devices.isEmpty && !_isScanning)
           Container(
             width: double.infinity,
@@ -405,16 +417,19 @@ class _BluetoothPrinterSettingsScreenState
             ),
             child: Column(
               children: [
-                Icon(Icons.bluetooth_searching, size: 36, color: AppColors.textHint),
+                Icon(Icons.bluetooth_searching,
+                    size: 36, color: AppColors.textHint),
                 const SizedBox(height: 8),
                 Text(
                   'لا توجد أجهزة مقترنة',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: AppColors.textHint),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'تأكد من تشغيل الطابعة واقترانها مع الجهاز',
-                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: AppColors.textHint),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -424,7 +439,8 @@ class _BluetoothPrinterSettingsScreenState
           ..._devices.map((device) {
             final isSelected = _selectedAddress == device.address ||
                 _printerService.connectedAddress == device.address;
-            final isCurrentConnection = _printerService.connectedAddress == device.address;
+            final isCurrentConnection =
+                _printerService.connectedAddress == device.address;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -454,14 +470,18 @@ class _BluetoothPrinterSettingsScreenState
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppColors.primary.withValues(alpha: 0.1)
-                              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+                              : (isDark
+                                  ? AppColors.darkSurfaceVariant
+                                  : AppColors.surfaceVariant),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           isCurrentConnection
                               ? Icons.bluetooth_connected
                               : Icons.print,
-                          color: isSelected ? AppColors.primary : AppColors.textHint,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.textHint,
                           size: 22,
                         ),
                       ),
@@ -480,7 +500,9 @@ class _BluetoothPrinterSettingsScreenState
                             Text(
                               device.address,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textHint,
                                 fontFamily: 'monospace',
                               ),
                             ),
@@ -489,7 +511,8 @@ class _BluetoothPrinterSettingsScreenState
                       ),
                       if (isCurrentConnection)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppColors.success.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
@@ -503,17 +526,21 @@ class _BluetoothPrinterSettingsScreenState
                             ),
                           ),
                         )
-                      else if (_isConnecting && _selectedAddress == device.address)
+                      else if (_isConnecting &&
+                          _selectedAddress == device.address)
                         const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.primary),
                         )
                       else
                         Icon(
                           Icons.arrow_back_ios,
                           size: 16,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textHint,
                         ),
                     ],
                   ),
@@ -538,7 +565,8 @@ class _BluetoothPrinterSettingsScreenState
             const SizedBox(width: 8),
             Text(
               'إعدادات الطباعة',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -557,15 +585,22 @@ class _BluetoothPrinterSettingsScreenState
               // Paper width selector
               Row(
                 children: [
-                  const Icon(Icons.straighten, size: 20, color: AppColors.primary),
+                  const Icon(Icons.straighten,
+                      size: 20, color: AppColors.primary),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text('عرض الورقة', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    child: Text('عرض الورقة',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
                   ),
                   SegmentedButton<int>(
                     segments: const [
-                      ButtonSegment(value: 80, label: Text('80مم', style: TextStyle(fontSize: 12))),
-                      ButtonSegment(value: 58, label: Text('58مم', style: TextStyle(fontSize: 12))),
+                      ButtonSegment(
+                          value: 80,
+                          label: Text('80مم', style: TextStyle(fontSize: 12))),
+                      ButtonSegment(
+                          value: 58,
+                          label: Text('58مم', style: TextStyle(fontSize: 12))),
                     ],
                     selected: {_paperWidth},
                     onSelectionChanged: (v) {
@@ -583,15 +618,22 @@ class _BluetoothPrinterSettingsScreenState
               // Font size selector
               Row(
                 children: [
-                  const Icon(Icons.text_fields, size: 20, color: AppColors.primary),
+                  const Icon(Icons.text_fields,
+                      size: 20, color: AppColors.primary),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text('حجم الخط', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    child: Text('حجم الخط',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
                   ),
                   SegmentedButton<int>(
                     segments: const [
-                      ButtonSegment(value: 0, label: Text('عادي', style: TextStyle(fontSize: 12))),
-                      ButtonSegment(value: 1, label: Text('كبير', style: TextStyle(fontSize: 12))),
+                      ButtonSegment(
+                          value: 0,
+                          label: Text('عادي', style: TextStyle(fontSize: 12))),
+                      ButtonSegment(
+                          value: 1,
+                          label: Text('كبير', style: TextStyle(fontSize: 12))),
                     ],
                     selected: {_fontSize},
                     onSelectionChanged: (v) {

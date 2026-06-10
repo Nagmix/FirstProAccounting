@@ -6,15 +6,19 @@ import 'migration_helpers.dart';
 class MigrationV31ToV43 {
   /// v31: Add original_invoice_id to invoices
   static Future<void> migrateV31(Database db) async {
-      try {
-        await db.execute('ALTER TABLE invoices ADD COLUMN original_invoice_id TEXT');
-      } catch (e) { MigrationHelpers.logMigrationError("migration", e); }
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
+    try {
+      await db
+          .execute('ALTER TABLE invoices ADD COLUMN original_invoice_id TEXT');
+    } catch (e) {
+      MigrationHelpers.logMigrationError("migration", e);
+    }
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
   }
 
   /// v32: Ensure stock_movements and unit_conversions exist, add cost_price
   static Future<void> migrateV32(Database db) async {
-      await db.execute('''
+    await db.execute('''
         CREATE TABLE IF NOT EXISTS stock_movements (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           product_id INTEGER NOT NULL,
@@ -28,11 +32,14 @@ class MigrationV31ToV43 {
           FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
         )
       ''');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements (product_id)');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements (movement_type)');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements (product_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_movements_type ON stock_movements (movement_type)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
 
-      await db.execute('''
+    await db.execute('''
         CREATE TABLE IF NOT EXISTS unit_conversions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           product_id INTEGER NOT NULL,
@@ -50,19 +57,22 @@ class MigrationV31ToV43 {
           FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
         )
       ''');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_unit_conversions_product ON unit_conversions (product_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_unit_conversions_product ON unit_conversions (product_id)');
 
-      // Add cost_price column to unit_conversions if it doesn't exist
-      try {
-        await db.execute('ALTER TABLE unit_conversions ADD COLUMN cost_price REAL NOT NULL DEFAULT 0.0');
-      } catch (e) { MigrationHelpers.logMigrationError("alter", e);
-        // Column already exists, ignore
-      }
+    // Add cost_price column to unit_conversions if it doesn't exist
+    try {
+      await db.execute(
+          'ALTER TABLE unit_conversions ADD COLUMN cost_price REAL NOT NULL DEFAULT 0.0');
+    } catch (e) {
+      MigrationHelpers.logMigrationError("alter", e);
+      // Column already exists, ignore
+    }
   }
 
   /// v33: Add held_orders table for POS held orders
   static Future<void> migrateV33(Database db) async {
-      await db.execute('''
+    await db.execute('''
         CREATE TABLE IF NOT EXISTS held_orders (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           shift_id INTEGER,
@@ -77,115 +87,134 @@ class MigrationV31ToV43 {
           FOREIGN KEY (shift_id) REFERENCES shifts (id) ON DELETE CASCADE
         )
       ''');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_held_orders_shift ON held_orders (shift_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_held_orders_shift ON held_orders (shift_id)');
   }
 
   /// v34: Convert REAL monetary columns to INTEGER (cents)
   static Future<void> migrateV34(Database db) async {
-      await migrateV34RealToInteger(db);
-      // M-05: Add unique constraint on (account_code, currency)
-      try { await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_code_currency ON accounts (account_code, currency)'); } catch (e) { MigrationHelpers.logMigrationError("migration", e); }
+    await migrateV34RealToInteger(db);
+    // M-05: Add unique constraint on (account_code, currency)
+    try {
+      await db.execute(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_code_currency ON accounts (account_code, currency)');
+    } catch (e) {
+      MigrationHelpers.logMigrationError("migration", e);
+    }
   }
 
   /// v35: Fix EXPENSE balance_type, add EQUITY type, move accounts
   static Future<void> migrateV35(Database db) async {
-      // Fix EXPENSE accounts that have incorrect 'credit' balance_type
-      await db.execute(
-        "UPDATE accounts SET balance_type = 'debit' WHERE account_type = 'EXPENSE' AND balance_type != 'debit'",
-      );
+    // Fix EXPENSE accounts that have incorrect 'credit' balance_type
+    await db.execute(
+      "UPDATE accounts SET balance_type = 'debit' WHERE account_type = 'EXPENSE' AND balance_type != 'debit'",
+    );
 
-      // Recalculate balances for EXPENSE accounts from journal entries
-      final expenseAccounts = await db.query(
+    // Recalculate balances for EXPENSE accounts from journal entries
+    final expenseAccounts = await db.query(
+      'accounts',
+      columns: ['id'],
+      where: "account_type = 'EXPENSE'",
+    );
+    for (final row in expenseAccounts) {
+      final accountId = row['id'] as int;
+      final txResult = await db.rawQuery(
+        'SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit FROM transactions WHERE account_id = ?',
+        [accountId],
+      );
+      final totalDebit =
+          MoneyHelper.readCalculatedMoney(txResult.first['total_debit']);
+      final totalCredit =
+          MoneyHelper.readCalculatedMoney(txResult.first['total_credit']);
+      // EXPENSE is debit-nature: balance = debit - credit
+      final correctBalance = totalDebit - totalCredit;
+      await db.update(
         'accounts',
-        columns: ['id'],
-        where: "account_type = 'EXPENSE'",
+        {
+          'balance': MoneyHelper.toCents(correctBalance),
+          'updated_at': DateTime.now().toIso8601String()
+        },
+        where: 'id = ?',
+        whereArgs: [accountId],
       );
-      for (final row in expenseAccounts) {
-        final accountId = row['id'] as int;
-        final txResult = await db.rawQuery(
-          'SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit FROM transactions WHERE account_id = ?',
-          [accountId],
-        );
-        final totalDebit = MoneyHelper.readCalculatedMoney(txResult.first['total_debit']);
-        final totalCredit = MoneyHelper.readCalculatedMoney(txResult.first['total_credit']);
-        // EXPENSE is debit-nature: balance = debit - credit
-        final correctBalance = totalDebit - totalCredit;
-        await db.update(
-          'accounts',
-          {'balance': MoneyHelper.toCents(correctBalance), 'updated_at': DateTime.now().toIso8601String()},
-          where: 'id = ?',
-          whereArgs: [accountId],
-        );
-      }
+    }
 
-      // Move Opening Balance Equity (code 2200/2201/2202) and
-      // Retained Earnings (code 2900/2901/2902) from LIABILITY to EQUITY
-      await db.execute(
-        "UPDATE accounts SET account_type = 'EQUITY' WHERE account_code IN ('2200','2201','2202','2900','2901','2902') AND account_type = 'LIABILITY'",
+    // Move Opening Balance Equity (code 2200/2201/2202) and
+    // Retained Earnings (code 2900/2901/2902) from LIABILITY to EQUITY
+    await db.execute(
+      "UPDATE accounts SET account_type = 'EQUITY' WHERE account_code IN ('2200','2201','2202','2900','2901','2902') AND account_type = 'LIABILITY'",
+    );
+
+    // Fix any existing EQUITY accounts that may have wrong balance_type
+    // EQUITY is credit-nature (like LIABILITY)
+    await db.execute(
+      "UPDATE accounts SET balance_type = 'credit' WHERE account_type = 'EQUITY' AND balance_type != 'credit'",
+    );
+
+    // Recalculate balances for migrated EQUITY accounts
+    final equityAccounts = await db.query(
+      'accounts',
+      columns: ['id'],
+      where: "account_type = 'EQUITY'",
+    );
+    for (final row in equityAccounts) {
+      final accountId = row['id'] as int;
+      final txResult = await db.rawQuery(
+        'SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit FROM transactions WHERE account_id = ?',
+        [accountId],
       );
-
-      // Fix any existing EQUITY accounts that may have wrong balance_type
-      // EQUITY is credit-nature (like LIABILITY)
-      await db.execute(
-        "UPDATE accounts SET balance_type = 'credit' WHERE account_type = 'EQUITY' AND balance_type != 'credit'",
-      );
-
-      // Recalculate balances for migrated EQUITY accounts
-      final equityAccounts = await db.query(
+      final totalDebit =
+          MoneyHelper.readCalculatedMoney(txResult.first['total_debit']);
+      final totalCredit =
+          MoneyHelper.readCalculatedMoney(txResult.first['total_credit']);
+      // EQUITY is credit-nature: balance = credit - debit
+      final correctBalance = totalCredit - totalDebit;
+      await db.update(
         'accounts',
-        columns: ['id'],
-        where: "account_type = 'EQUITY'",
+        {
+          'balance': MoneyHelper.toCents(correctBalance),
+          'updated_at': DateTime.now().toIso8601String()
+        },
+        where: 'id = ?',
+        whereArgs: [accountId],
       );
-      for (final row in equityAccounts) {
-        final accountId = row['id'] as int;
-        final txResult = await db.rawQuery(
-          'SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit FROM transactions WHERE account_id = ?',
-          [accountId],
-        );
-        final totalDebit = MoneyHelper.readCalculatedMoney(txResult.first['total_debit']);
-        final totalCredit = MoneyHelper.readCalculatedMoney(txResult.first['total_credit']);
-        // EQUITY is credit-nature: balance = credit - debit
-        final correctBalance = totalCredit - totalDebit;
-        await db.update(
-          'accounts',
-          {'balance': MoneyHelper.toCents(correctBalance), 'updated_at': DateTime.now().toIso8601String()},
-          where: 'id = ?',
-          whereArgs: [accountId],
-        );
-      }
+    }
   }
 
   /// v36: Add unit_cost column to invoice_items
   static Future<void> migrateV36(Database db) async {
-      // Add unit_cost column for accurate COGS on deferred POS posting
-      try {
-        await db.execute('ALTER TABLE invoice_items ADD COLUMN unit_cost INTEGER NOT NULL DEFAULT 0');
-      } catch (e) {
-        MigrationHelpers.logMigrationError("migration v36 unit_cost", e);
-      }
+    // Add unit_cost column for accurate COGS on deferred POS posting
+    try {
+      await db.execute(
+          'ALTER TABLE invoice_items ADD COLUMN unit_cost INTEGER NOT NULL DEFAULT 0');
+    } catch (e) {
+      MigrationHelpers.logMigrationError("migration v36 unit_cost", e);
+    }
   }
 
   /// v37: Add currency column to products
   static Future<void> migrateV37(Database db) async {
-      try {
-        await db.execute("ALTER TABLE products ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'");
-      } catch (e) {
-        MigrationHelpers.logMigrationError("migration", e);
-      }
+    try {
+      await db.execute(
+          "ALTER TABLE products ADD COLUMN currency TEXT NOT NULL DEFAULT 'YER'");
+    } catch (e) {
+      MigrationHelpers.logMigrationError("migration", e);
+    }
   }
 
   /// v38: FIFO/LIFO costing, Bank Reconciliation
   static Future<void> migrateV38(Database db) async {
-      // 1A: Add costing_method to products
-      try {
-        await db.execute("ALTER TABLE products ADD COLUMN costing_method TEXT NOT NULL DEFAULT 'weighted_average'");
-      } catch (e) {
-        MigrationHelpers.logMigrationError("migration v38 costing_method", e);
-      }
+    // 1A: Add costing_method to products
+    try {
+      await db.execute(
+          "ALTER TABLE products ADD COLUMN costing_method TEXT NOT NULL DEFAULT 'weighted_average'");
+    } catch (e) {
+      MigrationHelpers.logMigrationError("migration v38 costing_method", e);
+    }
 
-      // 1B: Create inventory_cost_layers table
-      try {
-        await db.execute('''
+    // 1B: Create inventory_cost_layers table
+    try {
+      await db.execute('''
           CREATE TABLE IF NOT EXISTS inventory_cost_layers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id INTEGER NOT NULL,
@@ -201,16 +230,20 @@ class MigrationV31ToV43 {
             FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
           )
         ''');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_cost_layers_product ON inventory_cost_layers (product_id)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_cost_layers_fifo ON inventory_cost_layers (product_id, acquisition_date, quantity_remaining) WHERE is_fully_consumed = 0');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_cost_layers_consumed ON inventory_cost_layers (is_fully_consumed)');
-      } catch (e) {
-        MigrationHelpers.logMigrationError("migration v38 inventory_cost_layers", e);
-      }
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_cost_layers_product ON inventory_cost_layers (product_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_cost_layers_fifo ON inventory_cost_layers (product_id, acquisition_date, quantity_remaining) WHERE is_fully_consumed = 0');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_cost_layers_consumed ON inventory_cost_layers (is_fully_consumed)');
+    } catch (e) {
+      MigrationHelpers.logMigrationError(
+          "migration v38 inventory_cost_layers", e);
+    }
 
-      // 1C: Create movement_cost_allocations table
-      try {
-        await db.execute('''
+    // 1C: Create movement_cost_allocations table
+    try {
+      await db.execute('''
           CREATE TABLE IF NOT EXISTS movement_cost_allocations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id INTEGER NOT NULL,
@@ -224,16 +257,20 @@ class MigrationV31ToV43 {
             FOREIGN KEY (cost_layer_id) REFERENCES inventory_cost_layers (id)
           )
         ''');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_mca_product ON movement_cost_allocations (product_id)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_mca_layer ON movement_cost_allocations (cost_layer_id)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_mca_invoice ON movement_cost_allocations (invoice_id)');
-      } catch (e) {
-        MigrationHelpers.logMigrationError("migration v38 movement_cost_allocations", e);
-      }
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_mca_product ON movement_cost_allocations (product_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_mca_layer ON movement_cost_allocations (cost_layer_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_mca_invoice ON movement_cost_allocations (invoice_id)');
+    } catch (e) {
+      MigrationHelpers.logMigrationError(
+          "migration v38 movement_cost_allocations", e);
+    }
 
-      // 2A: Create bank_reconciliations table
-      try {
-        await db.execute('''
+    // 2A: Create bank_reconciliations table
+    try {
+      await db.execute('''
           CREATE TABLE IF NOT EXISTS bank_reconciliations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             reconciliation_number TEXT NOT NULL,
@@ -257,16 +294,20 @@ class MigrationV31ToV43 {
             FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
           )
         ''');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_recon_cash_box ON bank_reconciliations (cash_box_id)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_recon_status ON bank_reconciliations (status)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_recon_number ON bank_reconciliations (reconciliation_number)');
-      } catch (e) {
-        MigrationHelpers.logMigrationError("migration v38 bank_reconciliations", e);
-      }
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_bank_recon_cash_box ON bank_reconciliations (cash_box_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_bank_recon_status ON bank_reconciliations (status)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_bank_recon_number ON bank_reconciliations (reconciliation_number)');
+    } catch (e) {
+      MigrationHelpers.logMigrationError(
+          "migration v38 bank_reconciliations", e);
+    }
 
-      // 2A: Create bank_statement_lines table
-      try {
-        await db.execute('''
+    // 2A: Create bank_statement_lines table
+    try {
+      await db.execute('''
           CREATE TABLE IF NOT EXISTS bank_statement_lines (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             reconciliation_id INTEGER,
@@ -284,362 +325,462 @@ class MigrationV31ToV43 {
             created_at TEXT NOT NULL
           )
         ''');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_stmt_recon ON bank_statement_lines (reconciliation_id)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_stmt_cash_box ON bank_statement_lines (cash_box_id)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_stmt_status ON bank_statement_lines (match_status)');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_bank_stmt_date ON bank_statement_lines (transaction_date)');
-      } catch (e) {
-        MigrationHelpers.logMigrationError("migration v38 bank_statement_lines", e);
-      }
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_bank_stmt_recon ON bank_statement_lines (reconciliation_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_bank_stmt_cash_box ON bank_statement_lines (cash_box_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_bank_stmt_status ON bank_statement_lines (match_status)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_bank_stmt_date ON bank_statement_lines (transaction_date)');
+    } catch (e) {
+      MigrationHelpers.logMigrationError(
+          "migration v38 bank_statement_lines", e);
+    }
 
-      // Initialize cost layers for existing products
-      // CostingEngineService requires DatabaseHelper instance - skip during migration
-      // This will be initialized on first app launch instead
+    // Initialize cost layers for existing products
+    // CostingEngineService requires DatabaseHelper instance - skip during migration
+    // This will be initialized on first app launch instead
   }
 
   /// v39: Fix balance_type for all accounts
   static Future<void> migrateV39(Database db) async {
-      await db.transaction((txn) async {
-        // Fix balance_type for ASSET accounts
-        try {
-          await txn.execute(
-            "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('ASSET') AND balance_type != 'debit'",
-          );
-        } catch (e) {
-          MigrationHelpers.logMigrationError("migration v39 fix_asset_balance_type", e);
-        }
+    await db.transaction((txn) async {
+      // Fix balance_type for ASSET accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('ASSET') AND balance_type != 'debit'",
+        );
+      } catch (e) {
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_asset_balance_type", e);
+      }
 
-        // Fix balance_type for EXPENSE accounts
-        try {
-          await txn.execute(
-            "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('EXPENSE') AND balance_type != 'debit'",
-          );
-        } catch (e) {
-          MigrationHelpers.logMigrationError("migration v39 fix_expense_balance_type", e);
-        }
+      // Fix balance_type for EXPENSE accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('EXPENSE') AND balance_type != 'debit'",
+        );
+      } catch (e) {
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_expense_balance_type", e);
+      }
 
-        // Fix balance_type for LIABILITY accounts
-        try {
-          await txn.execute(
-            "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('LIABILITY') AND balance_type != 'credit'",
-          );
-        } catch (e) {
-          MigrationHelpers.logMigrationError("migration v39 fix_liability_balance_type", e);
-        }
+      // Fix balance_type for LIABILITY accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('LIABILITY') AND balance_type != 'credit'",
+        );
+      } catch (e) {
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_liability_balance_type", e);
+      }
 
-        // Fix balance_type for REVENUE accounts
-        try {
-          await txn.execute(
-            "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('REVENUE') AND balance_type != 'credit'",
-          );
-        } catch (e) {
-          MigrationHelpers.logMigrationError("migration v39 fix_revenue_balance_type", e);
-        }
+      // Fix balance_type for REVENUE accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('REVENUE') AND balance_type != 'credit'",
+        );
+      } catch (e) {
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_revenue_balance_type", e);
+      }
 
-        // Fix balance_type for EQUITY accounts
-        try {
-          await txn.execute(
-            "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('EQUITY') AND balance_type != 'credit'",
-          );
-        } catch (e) {
-          MigrationHelpers.logMigrationError("migration v39 fix_equity_balance_type", e);
-        }
+      // Fix balance_type for EQUITY accounts
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('EQUITY') AND balance_type != 'credit'",
+        );
+      } catch (e) {
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_equity_balance_type", e);
+      }
 
-        // Fix old exchange account (5300) that was EXPENSE/credit → now should be EXPENSE/debit
-        try {
-          await txn.execute(
-            "UPDATE accounts SET balance_type = 'debit' WHERE account_code = '5300' AND account_type = 'EXPENSE' AND balance_type = 'credit'",
-          );
-        } catch (e) {
-          MigrationHelpers.logMigrationError("migration v39 fix_exchange_account", e);
-        }
-      });
+      // Fix old exchange account (5300) that was EXPENSE/credit → now should be EXPENSE/debit
+      try {
+        await txn.execute(
+          "UPDATE accounts SET balance_type = 'debit' WHERE account_code = '5300' AND account_type = 'EXPENSE' AND balance_type = 'credit'",
+        );
+      } catch (e) {
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_exchange_account", e);
+      }
+    });
   }
 
   /// v40: Add UNIQUE constraint on invoice numbers, add balance_type to transactions
   static Future<void> migrateV40(Database db) async {
-      try {
-        // C-05: Add UNIQUE index on invoice id to prevent duplicates
-        // Since id is already PRIMARY KEY, we add a UNIQUE index on a composite to catch duplicates
-        await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_unique_id ON invoices(id)');
-        
-        // C-07: Add balance_type column to transactions table
-        // Records the account's balance_type at the time of the transaction,
-        // preventing historical data corruption if account balance_type changes later
-        await db.execute('ALTER TABLE transactions ADD COLUMN balance_type TEXT');
-        
-        // Backfill balance_type from accounts table
-        await db.execute('''
+    try {
+      // C-05: Add UNIQUE index on invoice id to prevent duplicates
+      // Since id is already PRIMARY KEY, we add a UNIQUE index on a composite to catch duplicates
+      await db.execute(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_unique_id ON invoices(id)');
+
+      // C-07: Add balance_type column to transactions table
+      // Records the account's balance_type at the time of the transaction,
+      // preventing historical data corruption if account balance_type changes later
+      await db.execute('ALTER TABLE transactions ADD COLUMN balance_type TEXT');
+
+      // Backfill balance_type from accounts table
+      await db.execute('''
           UPDATE transactions SET balance_type = (
             SELECT a.balance_type FROM accounts a WHERE a.id = transactions.account_id
           )
         ''');
-        
-        // B-01: Create Bank Charges Expense account (5250) for each currency
-        // This separates bank charges from transport charges (5200)
-        final currencies = ['YER', 'SAR', 'USD'];
-        // ignore: unused_local_variable
-        final currencySymbols = {'YER': 'ر.ي', 'SAR': 'ر.س', 'USD': r'$'};
-        for (int i = 0; i < currencies.length; i++) {
-          final currency = currencies[i];
-          final codeOffset = i;
-          final bankChargesCode = (5250 + codeOffset).toString();
-          // Check if account already exists
-          final existing = await db.rawQuery(
-            'SELECT id FROM accounts WHERE account_code = ? AND currency = ?',
-            [bankChargesCode, currency],
-          );
-          if (existing.isEmpty) {
-            await db.insert('accounts', {
-              'name_ar': 'رسوم بنكية ($currency)',
-              'name_en': 'Bank Charges Expense ($currency)',
-              'account_code': bankChargesCode,
-              'account_type': 'EXPENSE',
-              'balance': 0,
-              'currency': currency,
-              'balance_type': 'debit',
-              'is_active': 1,
-              'is_system': 1,
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            });
-          }
+
+      // B-01: Create Bank Charges Expense account (5250) for each currency
+      // This separates bank charges from transport charges (5200)
+      final currencies = ['YER', 'SAR', 'USD'];
+      // ignore: unused_local_variable
+      final currencySymbols = {'YER': 'ر.ي', 'SAR': 'ر.س', 'USD': r'$'};
+      for (int i = 0; i < currencies.length; i++) {
+        final currency = currencies[i];
+        final codeOffset = i;
+        final bankChargesCode = (5250 + codeOffset).toString();
+        // Check if account already exists
+        final existing = await db.rawQuery(
+          'SELECT id FROM accounts WHERE account_code = ? AND currency = ?',
+          [bankChargesCode, currency],
+        );
+        if (existing.isEmpty) {
+          await db.insert('accounts', {
+            'name_ar': 'رسوم بنكية ($currency)',
+            'name_en': 'Bank Charges Expense ($currency)',
+            'account_code': bankChargesCode,
+            'account_type': 'EXPENSE',
+            'balance': 0,
+            'currency': currency,
+            'balance_type': 'debit',
+            'is_active': 1,
+            'is_system': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
         }
-      } catch (e) {
-        MigrationHelpers.logMigrationError('v40', e);
       }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v40', e);
+    }
   }
 
   /// v41: Accounting tree hierarchy, rename VAT 3300→2300
   static Future<void> migrateV41(Database db) async {
-      final now = DateTime.now().toIso8601String();
-      final currencies = ['YER', 'SAR', 'USD'];
-      final offsets = [0, 1, 2];
+    final now = DateTime.now().toIso8601String();
+    final currencies = ['YER', 'SAR', 'USD'];
+    final offsets = [0, 1, 2];
 
-      for (int i = 0; i < currencies.length; i++) {
-        final currency = currencies[i];
-        final offset = offsets[i];
+    for (int i = 0; i < currencies.length; i++) {
+      final currency = currencies[i];
+      final offset = offsets[i];
 
-        // ── 1. Rename VAT from 3300+offset → 2300+offset (move to LIABILITY range) ──
-        final oldVatCode = (3300 + offset).toString();
-        final newVatCode = (2300 + offset).toString();
-        final vatRows = await db.query('accounts',
-            where: 'account_code = ? AND currency = ?', whereArgs: [oldVatCode, currency]);
-        if (vatRows.isNotEmpty) {
-          final newCodeExists = await db.query('accounts',
-              where: 'account_code = ? AND currency = ?', whereArgs: [newVatCode, currency]);
-          if (newCodeExists.isEmpty) {
-            await db.update('accounts',
-                {'account_code': newVatCode, 'updated_at': now},
-                where: 'id = ?', whereArgs: [vatRows.first['id']]);
-          }
-        }
-
-        // ── 2. Rename Retained Earnings from 2900+offset → 2910+offset ──
-        final oldRetainedCode = (2900 + offset).toString();
-        final newRetainedCode = (2910 + offset).toString();
-        final retainedRows = await db.query('accounts',
-            where: 'account_code = ? AND currency = ?', whereArgs: [oldRetainedCode, currency]);
-        if (retainedRows.isNotEmpty) {
-          final newCodeExists = await db.query('accounts',
-              where: 'account_code = ? AND currency = ?', whereArgs: [newRetainedCode, currency]);
-          if (newCodeExists.isEmpty) {
-            await db.update('accounts',
-                {'account_code': newRetainedCode, 'updated_at': now},
-                where: 'id = ?', whereArgs: [retainedRows.first['id']]);
-          }
-        }
-
-        // ── 3. Add missing group/parent accounts if they don't exist ──
-        final groupAccounts = [
-          {'code': (2000 + offset).toString(), 'name_ar': 'حساب الخصوم', 'name_en': 'Liabilities Account', 'type': 'LIABILITY'},
-          {'code': (2900 + offset).toString(), 'name_ar': 'حقوق الملكية', 'name_en': 'Equity Account', 'type': 'EQUITY'},
-          {'code': (3000 + offset).toString(), 'name_ar': 'حساب التكاليف', 'name_en': 'Cost Account', 'type': 'COST'},
-          {'code': (4000 + offset).toString(), 'name_ar': 'حساب الإيرادات', 'name_en': 'Revenue Account', 'type': 'REVENUE'},
-        ];
-        for (final group in groupAccounts) {
-          final exists = await db.query('accounts',
-              where: 'account_code = ? AND currency = ?',
-              whereArgs: [group['code'], currency]);
-          if (exists.isEmpty) {
-            await db.insert('accounts', {
-              'name_ar': '${group['name_ar']} (${currency == 'YER' ? 'ر.ي' : currency == 'SAR' ? 'ر.س' : r'$'})',
-              'name_en': '${group['name_en']} ($currency)',
-              'account_code': group['code'],
-              'account_type': group['type'],
-              'balance': 0,
-              'currency': currency,
-              'balance_type': (group['type'] == 'ASSET' || group['type'] == 'COST' || group['type'] == 'EXPENSE') ? 'debit' : 'credit',
-              'parent_id': null,
-              'is_active': 1,
-              'is_system': 1,
-              'created_at': now,
-              'updated_at': now,
-            });
-          }
-        }
-
-        // ── 4. Set parent_id for child accounts ──
-        final parentMappings = {
-          (1100 + offset).toString(): (1000 + offset).toString(), // Cash&Banks → Assets
-          (1200 + offset).toString(): (1000 + offset).toString(), // Customers → Assets
-          (1300 + offset).toString(): (1000 + offset).toString(), // Inventory → Assets
-          (2100 + offset).toString(): (2000 + offset).toString(), // Suppliers → Liabilities
-          (2300 + offset).toString(): (2000 + offset).toString(), // VAT → Liabilities (new code)
-          (2901 + offset).toString(): (2900 + offset).toString(), // Opening Balance → Equity
-          (2910 + offset).toString(): (2900 + offset).toString(), // Retained Earnings → Equity (new code)
-          (3100 + offset).toString(): (3000 + offset).toString(), // Purchases → Costs
-          (3200 + offset).toString(): (3000 + offset).toString(), // COGS → Costs
-          (4100 + offset).toString(): (4000 + offset).toString(), // Sales → Revenue
-          (4400 + offset).toString(): (4000 + offset).toString(), // Variance Income → Revenue
-          (5100 + offset).toString(): (5000 + offset).toString(), // Employees → Expenses
-          (5200 + offset).toString(): (5000 + offset).toString(), // Transport → Expenses
-          (5250 + offset).toString(): (5000 + offset).toString(), // Bank Charges → Expenses
-          (5500 + offset).toString(): (5000 + offset).toString(), // Variance Loss → Expenses
-        };
-
-        for (final entry in parentMappings.entries) {
-          final childCode = entry.key;
-          final parentCode = entry.value;
-          final childRows = await db.query('accounts',
-              where: 'account_code = ? AND currency = ?', whereArgs: [childCode, currency]);
-          final parentRows = await db.query('accounts',
-              where: 'account_code = ? AND currency = ?', whereArgs: [parentCode, currency]);
-          if (childRows.isNotEmpty && parentRows.isNotEmpty) {
-            final parentId = parentRows.first['id'];
-            await db.update('accounts',
-                {'parent_id': parentId, 'updated_at': now},
-                where: 'id = ?', whereArgs: [childRows.first['id']]);
-          }
+      // ── 1. Rename VAT from 3300+offset → 2300+offset (move to LIABILITY range) ──
+      final oldVatCode = (3300 + offset).toString();
+      final newVatCode = (2300 + offset).toString();
+      final vatRows = await db.query('accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [oldVatCode, currency]);
+      if (vatRows.isNotEmpty) {
+        final newCodeExists = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [newVatCode, currency]);
+        if (newCodeExists.isEmpty) {
+          await db.update(
+              'accounts', {'account_code': newVatCode, 'updated_at': now},
+              where: 'id = ?', whereArgs: [vatRows.first['id']]);
         }
       }
+
+      // ── 2. Rename Retained Earnings from 2900+offset → 2910+offset ──
+      final oldRetainedCode = (2900 + offset).toString();
+      final newRetainedCode = (2910 + offset).toString();
+      final retainedRows = await db.query('accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [oldRetainedCode, currency]);
+      if (retainedRows.isNotEmpty) {
+        final newCodeExists = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [newRetainedCode, currency]);
+        if (newCodeExists.isEmpty) {
+          await db.update(
+              'accounts', {'account_code': newRetainedCode, 'updated_at': now},
+              where: 'id = ?', whereArgs: [retainedRows.first['id']]);
+        }
+      }
+
+      // ── 3. Add missing group/parent accounts if they don't exist ──
+      final groupAccounts = [
+        {
+          'code': (2000 + offset).toString(),
+          'name_ar': 'حساب الخصوم',
+          'name_en': 'Liabilities Account',
+          'type': 'LIABILITY'
+        },
+        {
+          'code': (2900 + offset).toString(),
+          'name_ar': 'حقوق الملكية',
+          'name_en': 'Equity Account',
+          'type': 'EQUITY'
+        },
+        {
+          'code': (3000 + offset).toString(),
+          'name_ar': 'حساب التكاليف',
+          'name_en': 'Cost Account',
+          'type': 'COST'
+        },
+        {
+          'code': (4000 + offset).toString(),
+          'name_ar': 'حساب الإيرادات',
+          'name_en': 'Revenue Account',
+          'type': 'REVENUE'
+        },
+      ];
+      for (final group in groupAccounts) {
+        final exists = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [group['code'], currency]);
+        if (exists.isEmpty) {
+          await db.insert('accounts', {
+            'name_ar':
+                '${group['name_ar']} (${currency == 'YER' ? 'ر.ي' : currency == 'SAR' ? 'ر.س' : r'$'})',
+            'name_en': '${group['name_en']} ($currency)',
+            'account_code': group['code'],
+            'account_type': group['type'],
+            'balance': 0,
+            'currency': currency,
+            'balance_type': (group['type'] == 'ASSET' ||
+                    group['type'] == 'COST' ||
+                    group['type'] == 'EXPENSE')
+                ? 'debit'
+                : 'credit',
+            'parent_id': null,
+            'is_active': 1,
+            'is_system': 1,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+      }
+
+      // ── 4. Set parent_id for child accounts ──
+      final parentMappings = {
+        (1100 + offset).toString():
+            (1000 + offset).toString(), // Cash&Banks → Assets
+        (1200 + offset).toString():
+            (1000 + offset).toString(), // Customers → Assets
+        (1300 + offset).toString():
+            (1000 + offset).toString(), // Inventory → Assets
+        (2100 + offset).toString():
+            (2000 + offset).toString(), // Suppliers → Liabilities
+        (2300 + offset).toString():
+            (2000 + offset).toString(), // VAT → Liabilities (new code)
+        (2901 + offset).toString():
+            (2900 + offset).toString(), // Opening Balance → Equity
+        (2910 + offset).toString():
+            (2900 + offset).toString(), // Retained Earnings → Equity (new code)
+        (3100 + offset).toString():
+            (3000 + offset).toString(), // Purchases → Costs
+        (3200 + offset).toString(): (3000 + offset).toString(), // COGS → Costs
+        (4100 + offset).toString():
+            (4000 + offset).toString(), // Sales → Revenue
+        (4400 + offset).toString():
+            (4000 + offset).toString(), // Variance Income → Revenue
+        (5100 + offset).toString():
+            (5000 + offset).toString(), // Employees → Expenses
+        (5200 + offset).toString():
+            (5000 + offset).toString(), // Transport → Expenses
+        (5250 + offset).toString():
+            (5000 + offset).toString(), // Bank Charges → Expenses
+        (5500 + offset).toString():
+            (5000 + offset).toString(), // Variance Loss → Expenses
+      };
+
+      for (final entry in parentMappings.entries) {
+        final childCode = entry.key;
+        final parentCode = entry.value;
+        final childRows = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [childCode, currency]);
+        final parentRows = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [parentCode, currency]);
+        if (childRows.isNotEmpty && parentRows.isNotEmpty) {
+          final parentId = parentRows.first['id'];
+          await db.update(
+              'accounts', {'parent_id': parentId, 'updated_at': now},
+              where: 'id = ?', whereArgs: [childRows.first['id']]);
+        }
+      }
+    }
   }
 
   /// v42: Fix account codes and hierarchy
   static Future<void> migrateV42(Database db) async {
-      final now = DateTime.now().toIso8601String();
+    final now = DateTime.now().toIso8601String();
 
-      // 1. Rename exchange gains account code 5310 → 4700
-      try {
-        final oldGainRows = await db.query('accounts', where: 'account_code = ?', whereArgs: ['5310']);
-        for (final row in oldGainRows) {
-          final newCodeExists = await db.query('accounts', where: 'account_code = ?', whereArgs: ['4700'], limit: 1);
-          if (newCodeExists.isEmpty) {
-            await db.update('accounts', {'account_code': '4700', 'updated_at': now}, where: 'id = ?', whereArgs: [row['id']]);
-          }
+    // 1. Rename exchange gains account code 5310 → 4700
+    try {
+      final oldGainRows = await db
+          .query('accounts', where: 'account_code = ?', whereArgs: ['5310']);
+      for (final row in oldGainRows) {
+        final newCodeExists = await db.query('accounts',
+            where: 'account_code = ?', whereArgs: ['4700'], limit: 1);
+        if (newCodeExists.isEmpty) {
+          await db.update(
+              'accounts', {'account_code': '4700', 'updated_at': now},
+              where: 'id = ?', whereArgs: [row['id']]);
         }
-      } catch (e) { MigrationHelpers.logMigrationError('v42_exchange_gains', e); }
+      }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_exchange_gains', e);
+    }
 
-      // 2. Rename discount allowed account code 4500 → 5400
-      try {
-        final oldDiscountRows = await db.query('accounts', where: 'account_code = ?', whereArgs: ['4500']);
-        for (final row in oldDiscountRows) {
-          final newCodeExists = await db.query('accounts', where: 'account_code = ?', whereArgs: ['5400'], limit: 1);
-          if (newCodeExists.isEmpty) {
-            await db.update('accounts', {'account_code': '5400', 'updated_at': now}, where: 'id = ?', whereArgs: [row['id']]);
-          }
+    // 2. Rename discount allowed account code 4500 → 5400
+    try {
+      final oldDiscountRows = await db
+          .query('accounts', where: 'account_code = ?', whereArgs: ['4500']);
+      for (final row in oldDiscountRows) {
+        final newCodeExists = await db.query('accounts',
+            where: 'account_code = ?', whereArgs: ['5400'], limit: 1);
+        if (newCodeExists.isEmpty) {
+          await db.update(
+              'accounts', {'account_code': '5400', 'updated_at': now},
+              where: 'id = ?', whereArgs: [row['id']]);
         }
-      } catch (e) { MigrationHelpers.logMigrationError('v42_discount_code', e); }
+      }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_discount_code', e);
+    }
 
-      // 3. Set parent_id for orphaned dynamic accounts (5250, 5300, 5400 → parent 5000)
-      try {
-        final expenseRoot = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['5000', 'EXPENSE'], limit: 1);
-        if (expenseRoot.isNotEmpty) {
-          final expenseParentId = expenseRoot.first['id'];
-          final orphanCodes = ['5250', '5300', '5400'];
-          for (final code in orphanCodes) {
-            await db.update('accounts', {'parent_id': expenseParentId, 'updated_at': now},
-              where: 'account_code = ? AND parent_id IS NULL AND account_type = ?', whereArgs: [code, 'EXPENSE']);
-          }
+    // 3. Set parent_id for orphaned dynamic accounts (5250, 5300, 5400 → parent 5000)
+    try {
+      final expenseRoot = await db.query('accounts',
+          where: 'account_code = ? AND account_type = ?',
+          whereArgs: ['5000', 'EXPENSE'],
+          limit: 1);
+      if (expenseRoot.isNotEmpty) {
+        final expenseParentId = expenseRoot.first['id'];
+        final orphanCodes = ['5250', '5300', '5400'];
+        for (final code in orphanCodes) {
+          await db.update(
+              'accounts', {'parent_id': expenseParentId, 'updated_at': now},
+              where:
+                  'account_code = ? AND parent_id IS NULL AND account_type = ?',
+              whereArgs: [code, 'EXPENSE']);
         }
-      } catch (e) { MigrationHelpers.logMigrationError('v42_expense_parent', e); }
+      }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_expense_parent', e);
+    }
 
-      // 4. Set parent_id for revenue dynamic accounts (4600, 4700 → parent 4000)
-      try {
-        final revenueRoot = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['4000', 'REVENUE'], limit: 1);
-        if (revenueRoot.isNotEmpty) {
-          final revenueParentId = revenueRoot.first['id'];
-          final orphanCodes = ['4600', '4700'];
-          for (final code in orphanCodes) {
-            await db.update('accounts', {'parent_id': revenueParentId, 'updated_at': now},
-              where: 'account_code = ? AND parent_id IS NULL AND account_type = ?', whereArgs: [code, 'REVENUE']);
-          }
+    // 4. Set parent_id for revenue dynamic accounts (4600, 4700 → parent 4000)
+    try {
+      final revenueRoot = await db.query('accounts',
+          where: 'account_code = ? AND account_type = ?',
+          whereArgs: ['4000', 'REVENUE'],
+          limit: 1);
+      if (revenueRoot.isNotEmpty) {
+        final revenueParentId = revenueRoot.first['id'];
+        final orphanCodes = ['4600', '4700'];
+        for (final code in orphanCodes) {
+          await db.update(
+              'accounts', {'parent_id': revenueParentId, 'updated_at': now},
+              where:
+                  'account_code = ? AND parent_id IS NULL AND account_type = ?',
+              whereArgs: [code, 'REVENUE']);
         }
-      } catch (e) { MigrationHelpers.logMigrationError('v42_revenue_parent', e); }
+      }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_revenue_parent', e);
+    }
 
-      // 5. Seed missing accounts from updated templates (4600, 4700, 5250, 5300, 5400)
-      try {
-        await DatabaseSeeds.seedDefaultAccounts(db);
-      } catch (e) { MigrationHelpers.logMigrationError('v42_seed_accounts', e); }
+    // 5. Seed missing accounts from updated templates (4600, 4700, 5250, 5300, 5400)
+    try {
+      await DatabaseSeeds.seedDefaultAccounts(db);
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_seed_accounts', e);
+    }
   }
 
   /// v43: Rename Opening Balance Equity code 2200→2901
   static Future<void> migrateV43(Database db) async {
-      final now = DateTime.now().toIso8601String();
-      final codeOffsets = [0, 1, 2]; // YER, SAR, USD
+    final now = DateTime.now().toIso8601String();
+    final codeOffsets = [0, 1, 2]; // YER, SAR, USD
 
-      // ── Step 1: Rename Opening Balance Equity 2200 → 2901 ──
-      for (final offset in codeOffsets) {
-        final oldCode = (2200 + offset).toString();
-        final newCode = (2901 + offset).toString();
+    // ── Step 1: Rename Opening Balance Equity 2200 → 2901 ──
+    for (final offset in codeOffsets) {
+      final oldCode = (2200 + offset).toString();
+      final newCode = (2901 + offset).toString();
 
-        try {
-          final oldRows = await db.query('accounts', where: 'account_code = ?', whereArgs: [oldCode]);
-          for (final row in oldRows) {
-            final currency = row['currency'] as String? ?? 'YER';
-            final newCodeExists = await db.query('accounts',
-                where: 'account_code = ? AND currency = ?', whereArgs: [newCode, currency], limit: 1);
-
-            if (newCodeExists.isEmpty) {
-              await db.update('accounts',
-                  {'account_code': newCode, 'updated_at': now},
-                  where: 'id = ?', whereArgs: [row['id']]);
-            } else {
-              final oldAccountId = row['id'] as int;
-              final newAccountId = newCodeExists.first['id'] as int;
-              await db.update('transactions',
-                  {'account_id': newAccountId},
-                  where: 'account_id = ?', whereArgs: [oldAccountId]);
-              await db.delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
-            }
-          }
-        } catch (e) { MigrationHelpers.logMigrationError('v43_rename_2200_$offset', e); }
-      }
-
-      // ── Step 2: Rename Inventory Variance Loss 5400 → 5500 ──
-      for (final offset in codeOffsets) {
-        final oldCode = (5400 + offset).toString();
-        final newCode = (5500 + offset).toString();
-
-        try {
-          final oldRows = await db.query('accounts',
-              where: "account_code = ? AND (name_ar LIKE '%تفاوت%' OR name_en LIKE '%Variance%')",
-              whereArgs: [oldCode]);
-          for (final row in oldRows) {
-            final currency = row['currency'] as String? ?? 'YER';
-            final newCodeExists = await db.query('accounts',
-                where: 'account_code = ? AND currency = ?', whereArgs: [newCode, currency], limit: 1);
-
-            if (newCodeExists.isEmpty) {
-              await db.update('accounts',
-                  {'account_code': newCode, 'updated_at': now},
-                  where: 'id = ?', whereArgs: [row['id']]);
-            } else {
-              final oldAccountId = row['id'] as int;
-              final newAccountId = newCodeExists.first['id'] as int;
-              await db.update('transactions',
-                  {'account_id': newAccountId},
-                  where: 'account_id = ?', whereArgs: [oldAccountId]);
-              await db.delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
-            }
-          }
-        } catch (e) { MigrationHelpers.logMigrationError('v43_rename_variance_5400_$offset', e); }
-      }
-
-      // ── Step 3: Seed new/missing accounts from updated templates ──
       try {
-        await DatabaseSeeds.seedDefaultAccounts(db);
-      } catch (e) { MigrationHelpers.logMigrationError('v43_seed_accounts', e); }
+        final oldRows = await db
+            .query('accounts', where: 'account_code = ?', whereArgs: [oldCode]);
+        for (final row in oldRows) {
+          final currency = row['currency'] as String? ?? 'YER';
+          final newCodeExists = await db.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [newCode, currency],
+              limit: 1);
+
+          if (newCodeExists.isEmpty) {
+            await db.update(
+                'accounts', {'account_code': newCode, 'updated_at': now},
+                where: 'id = ?', whereArgs: [row['id']]);
+          } else {
+            final oldAccountId = row['id'] as int;
+            final newAccountId = newCodeExists.first['id'] as int;
+            await db.update('transactions', {'account_id': newAccountId},
+                where: 'account_id = ?', whereArgs: [oldAccountId]);
+            await db
+                .delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
+          }
+        }
+      } catch (e) {
+        MigrationHelpers.logMigrationError('v43_rename_2200_$offset', e);
+      }
+    }
+
+    // ── Step 2: Rename Inventory Variance Loss 5400 → 5500 ──
+    for (final offset in codeOffsets) {
+      final oldCode = (5400 + offset).toString();
+      final newCode = (5500 + offset).toString();
+
+      try {
+        final oldRows = await db.query('accounts',
+            where:
+                "account_code = ? AND (name_ar LIKE '%تفاوت%' OR name_en LIKE '%Variance%')",
+            whereArgs: [oldCode]);
+        for (final row in oldRows) {
+          final currency = row['currency'] as String? ?? 'YER';
+          final newCodeExists = await db.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [newCode, currency],
+              limit: 1);
+
+          if (newCodeExists.isEmpty) {
+            await db.update(
+                'accounts', {'account_code': newCode, 'updated_at': now},
+                where: 'id = ?', whereArgs: [row['id']]);
+          } else {
+            final oldAccountId = row['id'] as int;
+            final newAccountId = newCodeExists.first['id'] as int;
+            await db.update('transactions', {'account_id': newAccountId},
+                where: 'account_id = ?', whereArgs: [oldAccountId]);
+            await db
+                .delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
+          }
+        }
+      } catch (e) {
+        MigrationHelpers.logMigrationError(
+            'v43_rename_variance_5400_$offset', e);
+      }
+    }
+
+    // ── Step 3: Seed new/missing accounts from updated templates ──
+    try {
+      await DatabaseSeeds.seedDefaultAccounts(db);
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v43_seed_accounts', e);
+    }
   }
 
   /// C-06: Migrate all REAL monetary columns to INTEGER (cents).
@@ -681,8 +822,10 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE accounts');
       await txn.execute('ALTER TABLE temp_accounts RENAME TO accounts');
-      await txn.execute('CREATE INDEX idx_accounts_account_code ON accounts (account_code)');
-      await txn.execute('CREATE INDEX idx_accounts_account_type ON accounts (account_type)');
+      await txn.execute(
+          'CREATE INDEX idx_accounts_account_code ON accounts (account_code)');
+      await txn.execute(
+          'CREATE INDEX idx_accounts_account_type ON accounts (account_type)');
 
       // ── products ──
       await txn.execute('''
@@ -756,9 +899,12 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE products');
       await txn.execute('ALTER TABLE temp_products RENAME TO products');
-      await txn.execute('CREATE INDEX idx_products_barcode ON products (barcode)');
-      await txn.execute('CREATE INDEX idx_products_item_code ON products (item_code)');
-      await txn.execute('CREATE INDEX idx_products_category_id ON products (category_id)');
+      await txn
+          .execute('CREATE INDEX idx_products_barcode ON products (barcode)');
+      await txn.execute(
+          'CREATE INDEX idx_products_item_code ON products (item_code)');
+      await txn.execute(
+          'CREATE INDEX idx_products_category_id ON products (category_id)');
 
       // ── customers ──
       await txn.execute('''
@@ -846,12 +992,18 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE invoices');
       await txn.execute('ALTER TABLE temp_invoices RENAME TO invoices');
-      await txn.execute('CREATE INDEX idx_invoices_customer_id ON invoices (customer_id)');
-      await txn.execute('CREATE INDEX idx_invoices_created_at ON invoices (created_at)');
-      await txn.execute('CREATE INDEX idx_invoices_status ON invoices (status)');
-      await txn.execute('CREATE INDEX idx_invoices_shift_id ON invoices (shift_id)');
-      await txn.execute('CREATE INDEX idx_invoices_is_posted ON invoices (is_posted)');
-      await txn.execute('CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
+      await txn.execute(
+          'CREATE INDEX idx_invoices_customer_id ON invoices (customer_id)');
+      await txn.execute(
+          'CREATE INDEX idx_invoices_created_at ON invoices (created_at)');
+      await txn
+          .execute('CREATE INDEX idx_invoices_status ON invoices (status)');
+      await txn
+          .execute('CREATE INDEX idx_invoices_shift_id ON invoices (shift_id)');
+      await txn.execute(
+          'CREATE INDEX idx_invoices_is_posted ON invoices (is_posted)');
+      await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
 
       // ── invoice_items ──
       await txn.execute('''
@@ -880,8 +1032,10 @@ class MigrationV31ToV43 {
         FROM invoice_items
       ''');
       await txn.execute('DROP TABLE invoice_items');
-      await txn.execute('ALTER TABLE temp_invoice_items RENAME TO invoice_items');
-      await txn.execute('CREATE INDEX idx_invoice_items_invoice_id ON invoice_items (invoice_id)');
+      await txn
+          .execute('ALTER TABLE temp_invoice_items RENAME TO invoice_items');
+      await txn.execute(
+          'CREATE INDEX idx_invoice_items_invoice_id ON invoice_items (invoice_id)');
 
       // ── transactions ──
       await txn.execute('''
@@ -907,9 +1061,12 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE transactions');
       await txn.execute('ALTER TABLE temp_transactions RENAME TO transactions');
-      await txn.execute('CREATE INDEX idx_transactions_account_id ON transactions (account_id)');
-      await txn.execute('CREATE INDEX idx_transactions_journal_id ON transactions (journal_id)');
-      await txn.execute('CREATE INDEX idx_transactions_date ON transactions (date)');
+      await txn.execute(
+          'CREATE INDEX idx_transactions_account_id ON transactions (account_id)');
+      await txn.execute(
+          'CREATE INDEX idx_transactions_journal_id ON transactions (journal_id)');
+      await txn
+          .execute('CREATE INDEX idx_transactions_date ON transactions (date)');
 
       // ── cash_boxes ──
       await txn.execute('''
@@ -939,7 +1096,8 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE cash_boxes');
       await txn.execute('ALTER TABLE temp_cash_boxes RENAME TO cash_boxes');
-      await txn.execute('CREATE INDEX idx_cash_boxes_type ON cash_boxes (type)');
+      await txn
+          .execute('CREATE INDEX idx_cash_boxes_type ON cash_boxes (type)');
 
       // ── suppliers ──
       await txn.execute('''
@@ -1011,10 +1169,14 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE expenses');
       await txn.execute('ALTER TABLE temp_expenses RENAME TO expenses');
-      await txn.execute('CREATE INDEX idx_expenses_category ON expenses (category)');
-      await txn.execute('CREATE INDEX idx_expenses_expense_date ON expenses (expense_date)');
-      await txn.execute('CREATE INDEX idx_expenses_account_id ON expenses (account_id)');
-      await txn.execute('CREATE INDEX idx_expenses_expense_account_id ON expenses (expense_account_id)');
+      await txn
+          .execute('CREATE INDEX idx_expenses_category ON expenses (category)');
+      await txn.execute(
+          'CREATE INDEX idx_expenses_expense_date ON expenses (expense_date)');
+      await txn.execute(
+          'CREATE INDEX idx_expenses_account_id ON expenses (account_id)');
+      await txn.execute(
+          'CREATE INDEX idx_expenses_expense_account_id ON expenses (expense_account_id)');
 
       // ── employees ──
       await txn.execute('''
@@ -1044,7 +1206,8 @@ class MigrationV31ToV43 {
       await txn.execute('DROP TABLE employees');
       await txn.execute('ALTER TABLE temp_employees RENAME TO employees');
       await txn.execute('CREATE INDEX idx_employees_name ON employees (name)');
-      await txn.execute('CREATE INDEX idx_employees_is_active ON employees (is_active)');
+      await txn.execute(
+          'CREATE INDEX idx_employees_is_active ON employees (is_active)');
 
       // ── quotations ──
       await txn.execute('''
@@ -1083,8 +1246,10 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE quotations');
       await txn.execute('ALTER TABLE temp_quotations RENAME TO quotations');
-      await txn.execute('CREATE INDEX idx_quotations_customer_id ON quotations (customer_id)');
-      await txn.execute('CREATE INDEX idx_quotations_status ON quotations (status)');
+      await txn.execute(
+          'CREATE INDEX idx_quotations_customer_id ON quotations (customer_id)');
+      await txn
+          .execute('CREATE INDEX idx_quotations_status ON quotations (status)');
 
       // ── quotation_items ──
       await txn.execute('''
@@ -1109,8 +1274,10 @@ class MigrationV31ToV43 {
         FROM quotation_items
       ''');
       await txn.execute('DROP TABLE quotation_items');
-      await txn.execute('ALTER TABLE temp_quotation_items RENAME TO quotation_items');
-      await txn.execute('CREATE INDEX idx_quotation_items_quotation_id ON quotation_items (quotation_id)');
+      await txn.execute(
+          'ALTER TABLE temp_quotation_items RENAME TO quotation_items');
+      await txn.execute(
+          'CREATE INDEX idx_quotation_items_quotation_id ON quotation_items (quotation_id)');
 
       // ── purchase_orders ──
       await txn.execute('''
@@ -1150,9 +1317,12 @@ class MigrationV31ToV43 {
         FROM purchase_orders
       ''');
       await txn.execute('DROP TABLE purchase_orders');
-      await txn.execute('ALTER TABLE temp_purchase_orders RENAME TO purchase_orders');
-      await txn.execute('CREATE INDEX idx_purchase_orders_supplier_id ON purchase_orders (supplier_id)');
-      await txn.execute('CREATE INDEX idx_purchase_orders_status ON purchase_orders (status)');
+      await txn.execute(
+          'ALTER TABLE temp_purchase_orders RENAME TO purchase_orders');
+      await txn.execute(
+          'CREATE INDEX idx_purchase_orders_supplier_id ON purchase_orders (supplier_id)');
+      await txn.execute(
+          'CREATE INDEX idx_purchase_orders_status ON purchase_orders (status)');
 
       // ── purchase_order_items ──
       await txn.execute('''
@@ -1177,8 +1347,10 @@ class MigrationV31ToV43 {
         FROM purchase_order_items
       ''');
       await txn.execute('DROP TABLE purchase_order_items');
-      await txn.execute('ALTER TABLE temp_purchase_order_items RENAME TO purchase_order_items');
-      await txn.execute('CREATE INDEX idx_purchase_order_items_po_id ON purchase_order_items (purchase_order_id)');
+      await txn.execute(
+          'ALTER TABLE temp_purchase_order_items RENAME TO purchase_order_items');
+      await txn.execute(
+          'CREATE INDEX idx_purchase_order_items_po_id ON purchase_order_items (purchase_order_id)');
 
       // ── sales_orders ──
       await txn.execute('''
@@ -1220,8 +1392,10 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE sales_orders');
       await txn.execute('ALTER TABLE temp_sales_orders RENAME TO sales_orders');
-      await txn.execute('CREATE INDEX idx_sales_orders_customer_id ON sales_orders (customer_id)');
-      await txn.execute('CREATE INDEX idx_sales_orders_status ON sales_orders (status)');
+      await txn.execute(
+          'CREATE INDEX idx_sales_orders_customer_id ON sales_orders (customer_id)');
+      await txn.execute(
+          'CREATE INDEX idx_sales_orders_status ON sales_orders (status)');
 
       // ── sales_order_items ──
       await txn.execute('''
@@ -1246,8 +1420,10 @@ class MigrationV31ToV43 {
         FROM sales_order_items
       ''');
       await txn.execute('DROP TABLE sales_order_items');
-      await txn.execute('ALTER TABLE temp_sales_order_items RENAME TO sales_order_items');
-      await txn.execute('CREATE INDEX idx_sales_order_items_so_id ON sales_order_items (sales_order_id)');
+      await txn.execute(
+          'ALTER TABLE temp_sales_order_items RENAME TO sales_order_items');
+      await txn.execute(
+          'CREATE INDEX idx_sales_order_items_so_id ON sales_order_items (sales_order_id)');
 
       // ── shifts ──
       await txn.execute('''
@@ -1292,8 +1468,10 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE shifts');
       await txn.execute('ALTER TABLE temp_shifts RENAME TO shifts');
-      await txn.execute('CREATE INDEX idx_shifts_cashier_id ON shifts (cashier_id)');
-      await txn.execute('CREATE INDEX idx_shifts_cash_box_id ON shifts (cash_box_id)');
+      await txn
+          .execute('CREATE INDEX idx_shifts_cashier_id ON shifts (cashier_id)');
+      await txn.execute(
+          'CREATE INDEX idx_shifts_cash_box_id ON shifts (cash_box_id)');
       await txn.execute('CREATE INDEX idx_shifts_status ON shifts (status)');
 
       // ── currency_exchanges ──
@@ -1327,9 +1505,12 @@ class MigrationV31ToV43 {
         FROM currency_exchanges
       ''');
       await txn.execute('DROP TABLE currency_exchanges');
-      await txn.execute('ALTER TABLE temp_currency_exchanges RENAME TO currency_exchanges');
-      await txn.execute('CREATE INDEX idx_currency_exchanges_number ON currency_exchanges (exchange_number)');
-      await txn.execute('CREATE INDEX idx_currency_exchanges_created_at ON currency_exchanges (created_at)');
+      await txn.execute(
+          'ALTER TABLE temp_currency_exchanges RENAME TO currency_exchanges');
+      await txn.execute(
+          'CREATE INDEX idx_currency_exchanges_number ON currency_exchanges (exchange_number)');
+      await txn.execute(
+          'CREATE INDEX idx_currency_exchanges_created_at ON currency_exchanges (created_at)');
 
       // ── cash_transfers ──
       await txn.execute('''
@@ -1353,9 +1534,12 @@ class MigrationV31ToV43 {
         FROM cash_transfers
       ''');
       await txn.execute('DROP TABLE cash_transfers');
-      await txn.execute('ALTER TABLE temp_cash_transfers RENAME TO cash_transfers');
-      await txn.execute('CREATE INDEX idx_cash_transfers_number ON cash_transfers (transfer_number)');
-      await txn.execute('CREATE INDEX idx_cash_transfers_created_at ON cash_transfers (created_at)');
+      await txn
+          .execute('ALTER TABLE temp_cash_transfers RENAME TO cash_transfers');
+      await txn.execute(
+          'CREATE INDEX idx_cash_transfers_number ON cash_transfers (transfer_number)');
+      await txn.execute(
+          'CREATE INDEX idx_cash_transfers_created_at ON cash_transfers (created_at)');
 
       // ── vouchers ──
       await txn.execute('''
@@ -1387,10 +1571,13 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE vouchers');
       await txn.execute('ALTER TABLE temp_vouchers RENAME TO vouchers');
-      await txn.execute('CREATE INDEX idx_vouchers_voucher_number ON vouchers (voucher_number)');
-      await txn.execute('CREATE INDEX idx_vouchers_voucher_type ON vouchers (voucher_type)');
+      await txn.execute(
+          'CREATE INDEX idx_vouchers_voucher_number ON vouchers (voucher_number)');
+      await txn.execute(
+          'CREATE INDEX idx_vouchers_voucher_type ON vouchers (voucher_type)');
       await txn.execute('CREATE INDEX idx_vouchers_date ON vouchers (date)');
-      await txn.execute('CREATE INDEX idx_vouchers_created_at ON vouchers (created_at)');
+      await txn.execute(
+          'CREATE INDEX idx_vouchers_created_at ON vouchers (created_at)');
 
       // ── voucher_items ──
       await txn.execute('''
@@ -1415,9 +1602,12 @@ class MigrationV31ToV43 {
         FROM voucher_items
       ''');
       await txn.execute('DROP TABLE voucher_items');
-      await txn.execute('ALTER TABLE temp_voucher_items RENAME TO voucher_items');
-      await txn.execute('CREATE INDEX idx_voucher_items_voucher_id ON voucher_items (voucher_id)');
-      await txn.execute('CREATE INDEX idx_voucher_items_account_id ON voucher_items (account_id)');
+      await txn
+          .execute('ALTER TABLE temp_voucher_items RENAME TO voucher_items');
+      await txn.execute(
+          'CREATE INDEX idx_voucher_items_voucher_id ON voucher_items (voucher_id)');
+      await txn.execute(
+          'CREATE INDEX idx_voucher_items_account_id ON voucher_items (account_id)');
 
       // ── inventory_vouchers ──
       await txn.execute('''
@@ -1442,11 +1632,16 @@ class MigrationV31ToV43 {
         FROM inventory_vouchers
       ''');
       await txn.execute('DROP TABLE inventory_vouchers');
-      await txn.execute('ALTER TABLE temp_inventory_vouchers RENAME TO inventory_vouchers');
-      await txn.execute('CREATE INDEX idx_inventory_vouchers_number ON inventory_vouchers (voucher_number)');
-      await txn.execute('CREATE INDEX idx_inventory_vouchers_date ON inventory_vouchers (date)');
-      await txn.execute('CREATE INDEX idx_inventory_vouchers_warehouse ON inventory_vouchers (warehouse_id)');
-      await txn.execute('CREATE INDEX idx_inventory_vouchers_status ON inventory_vouchers (status)');
+      await txn.execute(
+          'ALTER TABLE temp_inventory_vouchers RENAME TO inventory_vouchers');
+      await txn.execute(
+          'CREATE INDEX idx_inventory_vouchers_number ON inventory_vouchers (voucher_number)');
+      await txn.execute(
+          'CREATE INDEX idx_inventory_vouchers_date ON inventory_vouchers (date)');
+      await txn.execute(
+          'CREATE INDEX idx_inventory_vouchers_warehouse ON inventory_vouchers (warehouse_id)');
+      await txn.execute(
+          'CREATE INDEX idx_inventory_vouchers_status ON inventory_vouchers (status)');
 
       // ── inventory_voucher_items ──
       await txn.execute('''
@@ -1473,9 +1668,12 @@ class MigrationV31ToV43 {
         FROM inventory_voucher_items
       ''');
       await txn.execute('DROP TABLE inventory_voucher_items');
-      await txn.execute('ALTER TABLE temp_inventory_voucher_items RENAME TO inventory_voucher_items');
-      await txn.execute('CREATE INDEX idx_inventory_voucher_items_voucher ON inventory_voucher_items (voucher_id)');
-      await txn.execute('CREATE INDEX idx_inventory_voucher_items_product ON inventory_voucher_items (product_id)');
+      await txn.execute(
+          'ALTER TABLE temp_inventory_voucher_items RENAME TO inventory_voucher_items');
+      await txn.execute(
+          'CREATE INDEX idx_inventory_voucher_items_voucher ON inventory_voucher_items (voucher_id)');
+      await txn.execute(
+          'CREATE INDEX idx_inventory_voucher_items_product ON inventory_voucher_items (product_id)');
 
       // ── fiscal_years ──
       await txn.execute('''
@@ -1502,8 +1700,10 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE fiscal_years');
       await txn.execute('ALTER TABLE temp_fiscal_years RENAME TO fiscal_years');
-      await txn.execute('CREATE INDEX idx_fiscal_years_year ON fiscal_years (year)');
-      await txn.execute('CREATE INDEX idx_fiscal_years_status ON fiscal_years (status)');
+      await txn
+          .execute('CREATE INDEX idx_fiscal_years_year ON fiscal_years (year)');
+      await txn.execute(
+          'CREATE INDEX idx_fiscal_years_status ON fiscal_years (status)');
 
       // ── unit_conversions ──
       await txn.execute('''
@@ -1533,8 +1733,10 @@ class MigrationV31ToV43 {
         FROM unit_conversions
       ''');
       await txn.execute('DROP TABLE unit_conversions');
-      await txn.execute('ALTER TABLE temp_unit_conversions RENAME TO unit_conversions');
-      await txn.execute('CREATE INDEX idx_unit_conversions_product ON unit_conversions (product_id)');
+      await txn.execute(
+          'ALTER TABLE temp_unit_conversions RENAME TO unit_conversions');
+      await txn.execute(
+          'CREATE INDEX idx_unit_conversions_product ON unit_conversions (product_id)');
 
       // ── stock_movements ──
       await txn.execute('''
@@ -1559,10 +1761,14 @@ class MigrationV31ToV43 {
         FROM stock_movements
       ''');
       await txn.execute('DROP TABLE stock_movements');
-      await txn.execute('ALTER TABLE temp_stock_movements RENAME TO stock_movements');
-      await txn.execute('CREATE INDEX idx_stock_movements_product ON stock_movements (product_id)');
-      await txn.execute('CREATE INDEX idx_stock_movements_type ON stock_movements (movement_type)');
-      await txn.execute('CREATE INDEX idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
+      await txn.execute(
+          'ALTER TABLE temp_stock_movements RENAME TO stock_movements');
+      await txn.execute(
+          'CREATE INDEX idx_stock_movements_product ON stock_movements (product_id)');
+      await txn.execute(
+          'CREATE INDEX idx_stock_movements_type ON stock_movements (movement_type)');
+      await txn.execute(
+          'CREATE INDEX idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
 
       // ── held_orders ──
       await txn.execute('''
@@ -1589,7 +1795,8 @@ class MigrationV31ToV43 {
       ''');
       await txn.execute('DROP TABLE held_orders');
       await txn.execute('ALTER TABLE temp_held_orders RENAME TO held_orders');
-      await txn.execute('CREATE INDEX idx_held_orders_shift ON held_orders (shift_id)');
+      await txn.execute(
+          'CREATE INDEX idx_held_orders_shift ON held_orders (shift_id)');
     });
   }
 
@@ -1602,7 +1809,8 @@ class MigrationV31ToV43 {
           "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('ASSET') AND balance_type != 'debit'",
         );
       } catch (e) {
-        MigrationHelpers.logMigrationError("migration v39 fix_asset_balance_type", e);
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_asset_balance_type", e);
       }
 
       // Fix balance_type for EXPENSE accounts
@@ -1611,7 +1819,8 @@ class MigrationV31ToV43 {
           "UPDATE accounts SET balance_type = 'debit' WHERE account_type IN ('EXPENSE') AND balance_type != 'debit'",
         );
       } catch (e) {
-        MigrationHelpers.logMigrationError("migration v39 fix_expense_balance_type", e);
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_expense_balance_type", e);
       }
 
       // Fix balance_type for LIABILITY accounts
@@ -1620,7 +1829,8 @@ class MigrationV31ToV43 {
           "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('LIABILITY') AND balance_type != 'credit'",
         );
       } catch (e) {
-        MigrationHelpers.logMigrationError("migration v39 fix_liability_balance_type", e);
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_liability_balance_type", e);
       }
 
       // Fix balance_type for REVENUE accounts
@@ -1629,7 +1839,8 @@ class MigrationV31ToV43 {
           "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('REVENUE') AND balance_type != 'credit'",
         );
       } catch (e) {
-        MigrationHelpers.logMigrationError("migration v39 fix_revenue_balance_type", e);
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_revenue_balance_type", e);
       }
 
       // Fix balance_type for EQUITY accounts
@@ -1638,7 +1849,8 @@ class MigrationV31ToV43 {
           "UPDATE accounts SET balance_type = 'credit' WHERE account_type IN ('EQUITY') AND balance_type != 'credit'",
         );
       } catch (e) {
-        MigrationHelpers.logMigrationError("migration v39 fix_equity_balance_type", e);
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_equity_balance_type", e);
       }
 
       // Fix old exchange account (5300) that was EXPENSE/credit → now should be EXPENSE/debit
@@ -1650,7 +1862,8 @@ class MigrationV31ToV43 {
           "UPDATE accounts SET balance_type = 'debit' WHERE account_code = '5300' AND account_type = 'EXPENSE' AND balance_type = 'credit'",
         );
       } catch (e) {
-        MigrationHelpers.logMigrationError("migration v39 fix_exchange_account", e);
+        MigrationHelpers.logMigrationError(
+            "migration v39 fix_exchange_account", e);
       }
     });
   }
@@ -1669,14 +1882,16 @@ class MigrationV31ToV43 {
       final oldVatCode = (3300 + offset).toString();
       final newVatCode = (2300 + offset).toString();
       final vatRows = await db.query('accounts',
-          where: 'account_code = ? AND currency = ?', whereArgs: [oldVatCode, currency]);
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [oldVatCode, currency]);
       if (vatRows.isNotEmpty) {
         // Check if new code already exists
         final newCodeExists = await db.query('accounts',
-            where: 'account_code = ? AND currency = ?', whereArgs: [newVatCode, currency]);
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [newVatCode, currency]);
         if (newCodeExists.isEmpty) {
-          await db.update('accounts',
-              {'account_code': newVatCode, 'updated_at': now},
+          await db.update(
+              'accounts', {'account_code': newVatCode, 'updated_at': now},
               where: 'id = ?', whereArgs: [vatRows.first['id']]);
         }
       }
@@ -1686,23 +1901,45 @@ class MigrationV31ToV43 {
       final oldRetainedCode = (2900 + offset).toString();
       final newRetainedCode = (2910 + offset).toString();
       final retainedRows = await db.query('accounts',
-          where: 'account_code = ? AND currency = ?', whereArgs: [oldRetainedCode, currency]);
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [oldRetainedCode, currency]);
       if (retainedRows.isNotEmpty) {
         final newCodeExists = await db.query('accounts',
-            where: 'account_code = ? AND currency = ?', whereArgs: [newRetainedCode, currency]);
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [newRetainedCode, currency]);
         if (newCodeExists.isEmpty) {
-          await db.update('accounts',
-              {'account_code': newRetainedCode, 'updated_at': now},
+          await db.update(
+              'accounts', {'account_code': newRetainedCode, 'updated_at': now},
               where: 'id = ?', whereArgs: [retainedRows.first['id']]);
         }
       }
 
       // ── 3. Add missing group/parent accounts if they don't exist ──
       final groupAccounts = [
-        {'code': (2000 + offset).toString(), 'name_ar': 'حساب الخصوم', 'name_en': 'Liabilities Account', 'type': 'LIABILITY'},
-        {'code': (2900 + offset).toString(), 'name_ar': 'حقوق الملكية', 'name_en': 'Equity Account', 'type': 'EQUITY'},
-        {'code': (3000 + offset).toString(), 'name_ar': 'حساب التكاليف', 'name_en': 'Cost Account', 'type': 'COST'},
-        {'code': (4000 + offset).toString(), 'name_ar': 'حساب الإيرادات', 'name_en': 'Revenue Account', 'type': 'REVENUE'},
+        {
+          'code': (2000 + offset).toString(),
+          'name_ar': 'حساب الخصوم',
+          'name_en': 'Liabilities Account',
+          'type': 'LIABILITY'
+        },
+        {
+          'code': (2900 + offset).toString(),
+          'name_ar': 'حقوق الملكية',
+          'name_en': 'Equity Account',
+          'type': 'EQUITY'
+        },
+        {
+          'code': (3000 + offset).toString(),
+          'name_ar': 'حساب التكاليف',
+          'name_en': 'Cost Account',
+          'type': 'COST'
+        },
+        {
+          'code': (4000 + offset).toString(),
+          'name_ar': 'حساب الإيرادات',
+          'name_en': 'Revenue Account',
+          'type': 'REVENUE'
+        },
       ];
       for (final group in groupAccounts) {
         final exists = await db.query('accounts',
@@ -1710,13 +1947,18 @@ class MigrationV31ToV43 {
             whereArgs: [group['code'], currency]);
         if (exists.isEmpty) {
           await db.insert('accounts', {
-            'name_ar': '${group['name_ar']} (${currency == 'YER' ? 'ر.ي' : currency == 'SAR' ? 'ر.س' : r'$'})',
+            'name_ar':
+                '${group['name_ar']} (${currency == 'YER' ? 'ر.ي' : currency == 'SAR' ? 'ر.س' : r'$'})',
             'name_en': '${group['name_en']} ($currency)',
             'account_code': group['code'],
             'account_type': group['type'],
             'balance': 0,
             'currency': currency,
-            'balance_type': (group['type'] == 'ASSET' || group['type'] == 'COST' || group['type'] == 'EXPENSE') ? 'debit' : 'credit',
+            'balance_type': (group['type'] == 'ASSET' ||
+                    group['type'] == 'COST' ||
+                    group['type'] == 'EXPENSE')
+                ? 'debit'
+                : 'credit',
             'parent_id': null,
             'is_active': 1,
             'is_system': 1,
@@ -1728,34 +1970,50 @@ class MigrationV31ToV43 {
 
       // ── 4. Set parent_id for child accounts ──
       final parentMappings = {
-        (1100 + offset).toString(): (1000 + offset).toString(), // Cash&Banks → Assets
-        (1200 + offset).toString(): (1000 + offset).toString(), // Customers → Assets
-        (1300 + offset).toString(): (1000 + offset).toString(), // Inventory → Assets
-        (2100 + offset).toString(): (2000 + offset).toString(), // Suppliers → Liabilities
-        (2300 + offset).toString(): (2000 + offset).toString(), // VAT → Liabilities (new code)
-        (2901 + offset).toString(): (2900 + offset).toString(), // Opening Balance → Equity
-        (2910 + offset).toString(): (2900 + offset).toString(), // Retained Earnings → Equity (new code)
-        (3100 + offset).toString(): (3000 + offset).toString(), // Purchases → Costs
+        (1100 + offset).toString():
+            (1000 + offset).toString(), // Cash&Banks → Assets
+        (1200 + offset).toString():
+            (1000 + offset).toString(), // Customers → Assets
+        (1300 + offset).toString():
+            (1000 + offset).toString(), // Inventory → Assets
+        (2100 + offset).toString():
+            (2000 + offset).toString(), // Suppliers → Liabilities
+        (2300 + offset).toString():
+            (2000 + offset).toString(), // VAT → Liabilities (new code)
+        (2901 + offset).toString():
+            (2900 + offset).toString(), // Opening Balance → Equity
+        (2910 + offset).toString():
+            (2900 + offset).toString(), // Retained Earnings → Equity (new code)
+        (3100 + offset).toString():
+            (3000 + offset).toString(), // Purchases → Costs
         (3200 + offset).toString(): (3000 + offset).toString(), // COGS → Costs
-        (4100 + offset).toString(): (4000 + offset).toString(), // Sales → Revenue
-        (4400 + offset).toString(): (4000 + offset).toString(), // Variance Income → Revenue
-        (5100 + offset).toString(): (5000 + offset).toString(), // Employees → Expenses
-        (5200 + offset).toString(): (5000 + offset).toString(), // Transport → Expenses
-        (5250 + offset).toString(): (5000 + offset).toString(), // Bank Charges → Expenses
-        (5500 + offset).toString(): (5000 + offset).toString(), // Variance Loss → Expenses
+        (4100 + offset).toString():
+            (4000 + offset).toString(), // Sales → Revenue
+        (4400 + offset).toString():
+            (4000 + offset).toString(), // Variance Income → Revenue
+        (5100 + offset).toString():
+            (5000 + offset).toString(), // Employees → Expenses
+        (5200 + offset).toString():
+            (5000 + offset).toString(), // Transport → Expenses
+        (5250 + offset).toString():
+            (5000 + offset).toString(), // Bank Charges → Expenses
+        (5500 + offset).toString():
+            (5000 + offset).toString(), // Variance Loss → Expenses
       };
 
       for (final entry in parentMappings.entries) {
         final childCode = entry.key;
         final parentCode = entry.value;
         final childRows = await db.query('accounts',
-            where: 'account_code = ? AND currency = ?', whereArgs: [childCode, currency]);
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [childCode, currency]);
         final parentRows = await db.query('accounts',
-            where: 'account_code = ? AND currency = ?', whereArgs: [parentCode, currency]);
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [parentCode, currency]);
         if (childRows.isNotEmpty && parentRows.isNotEmpty) {
           final parentId = parentRows.first['id'];
-          await db.update('accounts',
-              {'parent_id': parentId, 'updated_at': now},
+          await db.update(
+              'accounts', {'parent_id': parentId, 'updated_at': now},
               where: 'id = ?', whereArgs: [childRows.first['id']]);
         }
       }
@@ -1768,56 +2026,86 @@ class MigrationV31ToV43 {
 
     // 1. Rename exchange gains account code 5310 → 4700
     try {
-      final oldGainRows = await db.query('accounts', where: 'account_code = ?', whereArgs: ['5310']);
+      final oldGainRows = await db
+          .query('accounts', where: 'account_code = ?', whereArgs: ['5310']);
       for (final row in oldGainRows) {
-        final newCodeExists = await db.query('accounts', where: 'account_code = ?', whereArgs: ['4700'], limit: 1);
+        final newCodeExists = await db.query('accounts',
+            where: 'account_code = ?', whereArgs: ['4700'], limit: 1);
         if (newCodeExists.isEmpty) {
-          await db.update('accounts', {'account_code': '4700', 'updated_at': now}, where: 'id = ?', whereArgs: [row['id']]);
+          await db.update(
+              'accounts', {'account_code': '4700', 'updated_at': now},
+              where: 'id = ?', whereArgs: [row['id']]);
         }
       }
-    } catch (e) { MigrationHelpers.logMigrationError('v42_exchange_gains', e); }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_exchange_gains', e);
+    }
 
     // 2. Rename discount allowed account code 4500 → 5400
     try {
-      final oldDiscountRows = await db.query('accounts', where: 'account_code = ?', whereArgs: ['4500']);
+      final oldDiscountRows = await db
+          .query('accounts', where: 'account_code = ?', whereArgs: ['4500']);
       for (final row in oldDiscountRows) {
-        final newCodeExists = await db.query('accounts', where: 'account_code = ?', whereArgs: ['5400'], limit: 1);
+        final newCodeExists = await db.query('accounts',
+            where: 'account_code = ?', whereArgs: ['5400'], limit: 1);
         if (newCodeExists.isEmpty) {
-          await db.update('accounts', {'account_code': '5400', 'updated_at': now}, where: 'id = ?', whereArgs: [row['id']]);
+          await db.update(
+              'accounts', {'account_code': '5400', 'updated_at': now},
+              where: 'id = ?', whereArgs: [row['id']]);
         }
       }
-    } catch (e) { MigrationHelpers.logMigrationError('v42_discount_code', e); }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_discount_code', e);
+    }
 
     // 3. Set parent_id for orphaned dynamic accounts (5250, 5300, 5400 → parent 5000)
     try {
-      final expenseRoot = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['5000', 'EXPENSE'], limit: 1);
+      final expenseRoot = await db.query('accounts',
+          where: 'account_code = ? AND account_type = ?',
+          whereArgs: ['5000', 'EXPENSE'],
+          limit: 1);
       if (expenseRoot.isNotEmpty) {
         final expenseParentId = expenseRoot.first['id'];
         final orphanCodes = ['5250', '5300', '5400'];
         for (final code in orphanCodes) {
-          await db.update('accounts', {'parent_id': expenseParentId, 'updated_at': now},
-            where: 'account_code = ? AND parent_id IS NULL AND account_type = ?', whereArgs: [code, 'EXPENSE']);
+          await db.update(
+              'accounts', {'parent_id': expenseParentId, 'updated_at': now},
+              where:
+                  'account_code = ? AND parent_id IS NULL AND account_type = ?',
+              whereArgs: [code, 'EXPENSE']);
         }
       }
-    } catch (e) { MigrationHelpers.logMigrationError('v42_expense_parent', e); }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_expense_parent', e);
+    }
 
     // 4. Set parent_id for revenue dynamic accounts (4600, 4700 → parent 4000)
     try {
-      final revenueRoot = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['4000', 'REVENUE'], limit: 1);
+      final revenueRoot = await db.query('accounts',
+          where: 'account_code = ? AND account_type = ?',
+          whereArgs: ['4000', 'REVENUE'],
+          limit: 1);
       if (revenueRoot.isNotEmpty) {
         final revenueParentId = revenueRoot.first['id'];
         final orphanCodes = ['4600', '4700'];
         for (final code in orphanCodes) {
-          await db.update('accounts', {'parent_id': revenueParentId, 'updated_at': now},
-            where: 'account_code = ? AND parent_id IS NULL AND account_type = ?', whereArgs: [code, 'REVENUE']);
+          await db.update(
+              'accounts', {'parent_id': revenueParentId, 'updated_at': now},
+              where:
+                  'account_code = ? AND parent_id IS NULL AND account_type = ?',
+              whereArgs: [code, 'REVENUE']);
         }
       }
-    } catch (e) { MigrationHelpers.logMigrationError('v42_revenue_parent', e); }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_revenue_parent', e);
+    }
 
     // 5. Seed missing accounts from updated templates (4600, 4700, 5250, 5300, 5400)
     try {
       await DatabaseSeeds.seedDefaultAccounts(db);
-    } catch (e) { MigrationHelpers.logMigrationError('v42_seed_accounts', e); }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v42_seed_accounts', e);
+    }
   }
 
   /// Migration v43 helper: Rename Opening Balance Equity
@@ -1831,26 +2119,31 @@ class MigrationV31ToV43 {
       final newCode = (2901 + offset).toString();
 
       try {
-        final oldRows = await db.query('accounts', where: 'account_code = ?', whereArgs: [oldCode]);
+        final oldRows = await db
+            .query('accounts', where: 'account_code = ?', whereArgs: [oldCode]);
         for (final row in oldRows) {
           final currency = row['currency'] as String? ?? 'YER';
           final newCodeExists = await db.query('accounts',
-              where: 'account_code = ? AND currency = ?', whereArgs: [newCode, currency], limit: 1);
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [newCode, currency],
+              limit: 1);
 
           if (newCodeExists.isEmpty) {
-            await db.update('accounts',
-                {'account_code': newCode, 'updated_at': now},
+            await db.update(
+                'accounts', {'account_code': newCode, 'updated_at': now},
                 where: 'id = ?', whereArgs: [row['id']]);
           } else {
             final oldAccountId = row['id'] as int;
             final newAccountId = newCodeExists.first['id'] as int;
-            await db.update('transactions',
-                {'account_id': newAccountId},
+            await db.update('transactions', {'account_id': newAccountId},
                 where: 'account_id = ?', whereArgs: [oldAccountId]);
-            await db.delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
+            await db
+                .delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
           }
         }
-      } catch (e) { MigrationHelpers.logMigrationError('v43_rename_2200_$offset', e); }
+      } catch (e) {
+        MigrationHelpers.logMigrationError('v43_rename_2200_$offset', e);
+      }
     }
 
     // ── Step 2: Rename Inventory Variance Loss 5400 → 5500 ──
@@ -1862,32 +2155,40 @@ class MigrationV31ToV43 {
 
       try {
         final oldRows = await db.query('accounts',
-            where: "account_code = ? AND (name_ar LIKE '%تفاوت%' OR name_en LIKE '%Variance%')",
+            where:
+                "account_code = ? AND (name_ar LIKE '%تفاوت%' OR name_en LIKE '%Variance%')",
             whereArgs: [oldCode]);
         for (final row in oldRows) {
           final currency = row['currency'] as String? ?? 'YER';
           final newCodeExists = await db.query('accounts',
-              where: 'account_code = ? AND currency = ?', whereArgs: [newCode, currency], limit: 1);
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [newCode, currency],
+              limit: 1);
 
           if (newCodeExists.isEmpty) {
-            await db.update('accounts',
-                {'account_code': newCode, 'updated_at': now},
+            await db.update(
+                'accounts', {'account_code': newCode, 'updated_at': now},
                 where: 'id = ?', whereArgs: [row['id']]);
           } else {
             final oldAccountId = row['id'] as int;
             final newAccountId = newCodeExists.first['id'] as int;
-            await db.update('transactions',
-                {'account_id': newAccountId},
+            await db.update('transactions', {'account_id': newAccountId},
                 where: 'account_id = ?', whereArgs: [oldAccountId]);
-            await db.delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
+            await db
+                .delete('accounts', where: 'id = ?', whereArgs: [oldAccountId]);
           }
         }
-      } catch (e) { MigrationHelpers.logMigrationError('v43_rename_variance_5400_$offset', e); }
+      } catch (e) {
+        MigrationHelpers.logMigrationError(
+            'v43_rename_variance_5400_$offset', e);
+      }
     }
 
     // ── Step 3: Seed new/missing accounts from updated templates ──
     try {
       await DatabaseSeeds.seedDefaultAccounts(db);
-    } catch (e) { MigrationHelpers.logMigrationError('v43_seed_accounts', e); }
+    } catch (e) {
+      MigrationHelpers.logMigrationError('v43_seed_accounts', e);
+    }
   }
 }

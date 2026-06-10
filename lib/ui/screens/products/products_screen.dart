@@ -49,7 +49,9 @@ class _ProductsScreenState extends State<ProductsScreen>
     _searchController.addListener(() {
       _searchDebounce?.cancel();
       _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _searchQuery = _searchController.text.trim());
+        if (mounted) {
+          setState(() => _searchQuery = _searchController.text.trim());
+        }
       });
     });
     _loadData();
@@ -78,8 +80,7 @@ class _ProductsScreenState extends State<ProductsScreen>
       final productsRaw = results[0];
       final categoriesRaw = results[1];
 
-      final products =
-          productsRaw.map((m) => Product.fromMap(m)).toList();
+      final products = productsRaw.map((m) => Product.fromMap(m)).toList();
 
       // Build category name lookup
       final catNames = <int, String>{};
@@ -99,7 +100,9 @@ class _ProductsScreenState extends State<ProductsScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -131,9 +134,9 @@ class _ProductsScreenState extends State<ProductsScreen>
 
     // Category
     if (_selectedCategoryIndex > 0 && _categories.isNotEmpty) {
-      final selectedCatId = _categories[_selectedCategoryIndex - 1]['id'] as int;
-      filtered =
-          filtered.where((p) => p.categoryId == selectedCatId).toList();
+      final selectedCatId =
+          _categories[_selectedCategoryIndex - 1]['id'] as int;
+      filtered = filtered.where((p) => p.categoryId == selectedCatId).toList();
     }
 
     // Tab filter
@@ -177,7 +180,8 @@ class _ProductsScreenState extends State<ProductsScreen>
 
   // ── Category management dialog ────────────────────────────────
   Future<void> _showCategoryManagement() async {
-    final categories = await locator<ReferenceDataRepository>().getAllCategories();
+    final categories =
+        await locator<ReferenceDataRepository>().getAllCategories();
 
     if (!mounted) return;
 
@@ -209,18 +213,21 @@ class _ProductsScreenState extends State<ProductsScreen>
                     IconButton(
                       onPressed: () async {
                         if (nameController.text.trim().isEmpty) return;
-                        await locator<ReferenceDataRepository>().insertCategory({
+                        await locator<ReferenceDataRepository>()
+                            .insertCategory({
                           'name': nameController.text.trim(),
                           'is_active': 1,
                           'created_at': DateTime.now().toIso8601String(),
                         });
                         nameController.clear();
-                        final updated = await locator<ReferenceDataRepository>().getAllCategories();
+                        final updated = await locator<ReferenceDataRepository>()
+                            .getAllCategories();
                         setDialogState(() => categories.clear());
                         setDialogState(() => categories.addAll(updated));
                         _loadData();
                       },
-                      icon: const Icon(Icons.add_circle, color: AppColors.primary),
+                      icon: const Icon(Icons.add_circle,
+                          color: AppColors.primary),
                     ),
                   ],
                 ),
@@ -238,25 +245,38 @@ class _ProductsScreenState extends State<ProductsScreen>
                             final cat = categories[index];
                             return ListTile(
                               dense: true,
-                              leading: const Icon(Icons.folder, size: 20, color: AppColors.secondary),
+                              leading: const Icon(Icons.folder,
+                                  size: 20, color: AppColors.secondary),
                               title: Text(cat['name'] as String),
                               trailing: IconButton(
-                                icon: const Icon(Icons.delete, size: 18, color: AppColors.error),
+                                icon: const Icon(Icons.delete,
+                                    size: 18, color: AppColors.error),
                                 onPressed: () async {
                                   // Check if any products use this category before deleting
                                   final catId = cat['id'] as int;
-                                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                  final scaffoldMessenger =
+                                      ScaffoldMessenger.of(context);
                                   try {
-                                    final productsWithCategory = await locator<ProductRepository>().getProductsByCategoryId(catId);
+                                    final productsWithCategory =
+                                        await locator<ProductRepository>()
+                                            .getProductsByCategoryId(catId);
                                     if (productsWithCategory.isNotEmpty) {
-                                      final productNames = productsWithCategory.map((p) => p['name_ar'] as String? ?? '').join('، ');
-                                      final extra = productsWithCategory.length > 5 ? ' وغيرها...' : '';
+                                      final productNames = productsWithCategory
+                                          .map((p) =>
+                                              p['name_ar'] as String? ?? '')
+                                          .join('، ');
+                                      final extra =
+                                          productsWithCategory.length > 5
+                                              ? ' وغيرها...'
+                                              : '';
                                       if (context.mounted) {
                                         scaffoldMessenger.showSnackBar(
                                           SnackBar(
-                                            content: Text('لا يمكن حذف التصنيف لأنه مستخدم في الأصناف: $productNames$extra'),
+                                            content: Text(
+                                                'لا يمكن حذف التصنيف لأنه مستخدم في الأصناف: $productNames$extra'),
                                             backgroundColor: AppColors.error,
-                                            duration: const Duration(seconds: 4),
+                                            duration:
+                                                const Duration(seconds: 4),
                                           ),
                                         );
                                       }
@@ -264,15 +284,20 @@ class _ProductsScreenState extends State<ProductsScreen>
                                     }
                                   } catch (e) {
                                     if (kDebugMode) {
-                                    debugPrint('ProductsScreen._deleteCategory: $e');
-                                  }
+                                      debugPrint(
+                                          'ProductsScreen._deleteCategory: $e');
+                                    }
                                     // If check fails, proceed with delete attempt
                                   }
 
-                                  await locator<ReferenceDataRepository>().deleteCategory(catId);
-                                  final updated = await locator<ReferenceDataRepository>().getAllCategories();
+                                  await locator<ReferenceDataRepository>()
+                                      .deleteCategory(catId);
+                                  final updated =
+                                      await locator<ReferenceDataRepository>()
+                                          .getAllCategories();
                                   setDialogState(() => categories.clear());
-                                  setDialogState(() => categories.addAll(updated));
+                                  setDialogState(
+                                      () => categories.addAll(updated));
                                   _loadData();
                                 },
                               ),
@@ -353,8 +378,8 @@ class _ProductsScreenState extends State<ProductsScreen>
                   height: 48,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     itemCount: _categoryChipLabels.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 8),
                     itemBuilder: (context, index) {
@@ -402,18 +427,15 @@ class _ProductsScreenState extends State<ProductsScreen>
                           subtitle: tabIndex == 0
                               ? 'قم بإضافة أصناف جديدة لبدء إدارة المخزون'
                               : 'لم يتم العثور على نتائج مطابقة',
-                          actionLabel:
-                              tabIndex == 0 ? 'إضافة صنف' : null,
-                          onAction:
-                              tabIndex == 0 ? _showAddProductSheet : null,
+                          actionLabel: tabIndex == 0 ? 'إضافة صنف' : null,
+                          onAction: tabIndex == 0 ? _showAddProductSheet : null,
                         );
                       }
 
                       return RefreshIndicator(
                         onRefresh: _loadData,
                         child: GridView.builder(
-                          padding:
-                              const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
@@ -425,12 +447,13 @@ class _ProductsScreenState extends State<ProductsScreen>
                           itemBuilder: (context, index) {
                             return _ProductCard(
                               product: filtered[index],
-                              categoryName:
-                                  _getCategoryName(filtered[index]),
+                              categoryName: _getCategoryName(filtered[index]),
                               onTap: () async {
-                                final result = await Navigator.of(context).push<bool>(
+                                final result =
+                                    await Navigator.of(context).push<bool>(
                                   MaterialPageRoute(
-                                    builder: (_) => AddProductSheet(existing: filtered[index]),
+                                    builder: (_) => AddProductSheet(
+                                        existing: filtered[index]),
                                   ),
                                 );
                                 if (!mounted) return;
@@ -582,8 +605,8 @@ class _ProductCard extends StatelessWidget {
                 children: [
                   // Stock badge
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: stockBgColor.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(6),

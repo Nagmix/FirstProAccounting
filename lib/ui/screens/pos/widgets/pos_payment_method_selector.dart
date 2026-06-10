@@ -37,7 +37,8 @@ class PosPaymentMethodSelector extends StatelessWidget {
               const SizedBox(width: 4),
               _payMethodChip(context, 'بطاقة', 'card', Icons.credit_card),
               const SizedBox(width: 4),
-              _payMethodChip(context, 'محفظة', 'ewallet', Icons.account_balance_wallet),
+              _payMethodChip(
+                  context, 'محفظة', 'ewallet', Icons.account_balance_wallet),
               const SizedBox(width: 4),
               _payMethodChip(context, 'تحويل', 'bank_transfer', Icons.business),
             ],
@@ -47,7 +48,8 @@ class PosPaymentMethodSelector extends StatelessWidget {
     );
   }
 
-  Widget _payMethodChip(BuildContext context, String label, String method, IconData icon) {
+  Widget _payMethodChip(
+      BuildContext context, String label, String method, IconData icon) {
     final selected = activeMethod == method;
     return Expanded(
       child: SizedBox(
@@ -55,12 +57,14 @@ class PosPaymentMethodSelector extends StatelessWidget {
         child: OutlinedButton(
           onPressed: () => onMethodChanged(method),
           style: OutlinedButton.styleFrom(
-            backgroundColor: selected ? AppColors.primary.withValues(alpha: 0.1) : null,
+            backgroundColor:
+                selected ? AppColors.primary.withValues(alpha: 0.1) : null,
             side: BorderSide(
               color: selected ? AppColors.primary : AppColors.border,
               width: selected ? 2 : 1,
             ),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             padding: const EdgeInsets.symmetric(horizontal: 4),
           ),
           child: Row(

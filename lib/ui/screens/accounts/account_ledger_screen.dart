@@ -39,9 +39,13 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   /// the default YER symbol.
   String get _currencySymbol {
     switch (widget.account.currency) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return r'$';
-      case 'YER': default: return 'ر.ي';
+      case 'SAR':
+        return 'ر.س';
+      case 'USD':
+        return r'$';
+      case 'YER':
+      default:
+        return 'ر.ي';
     }
   }
 
@@ -81,11 +85,14 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
         // TypeError when the DB returns date/created_at as a non-String type
         // (e.g. int). Use a safe string conversion instead.
         maps.sort((a, b) {
-          final dateA = _safeString(a['date']) ?? _safeString(a['created_at']) ?? '';
-          final dateB = _safeString(b['date']) ?? _safeString(b['created_at']) ?? '';
+          final dateA =
+              _safeString(a['date']) ?? _safeString(a['created_at']) ?? '';
+          final dateB =
+              _safeString(b['date']) ?? _safeString(b['created_at']) ?? '';
           final cmp = dateA.compareTo(dateB);
           if (cmp != 0) return cmp;
-          return (_safeString(a['created_at']) ?? '').compareTo(_safeString(b['created_at']) ?? '');
+          return (_safeString(a['created_at']) ?? '')
+              .compareTo(_safeString(b['created_at']) ?? '');
         });
         if (mounted) {
           setState(() {
@@ -98,7 +105,12 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
       }
     } catch (e) {
       debugPrint('AccountLedgerScreen._loadTransactions: $e');
-      if (mounted) setState(() { _isLoading = false; _hasError = true; });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+      }
     }
   }
 
@@ -115,9 +127,14 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
   List<Map<String, dynamic>> get _filteredTransactions {
     if (_fromDate == null && _toDate == null) return _transactions;
     return _transactions.where((tx) {
-      final dateStr = _safeString(tx['date']) ?? _safeString(tx['created_at']) ?? '';
+      final dateStr =
+          _safeString(tx['date']) ?? _safeString(tx['created_at']) ?? '';
       DateTime? txDate;
-      try { txDate = DateTime.parse(dateStr); } catch (_) { return true; }
+      try {
+        txDate = DateTime.parse(dateStr);
+      } catch (_) {
+        return true;
+      }
       if (_fromDate != null && txDate.isBefore(_fromDate!)) return false;
       if (_toDate != null && txDate.isAfter(_toDate!)) return false;
       return true;
@@ -167,7 +184,8 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     final filteredTx = _filteredTransactions;
 
     // Apply sort order for display
-    final displayTx = _sortDescending ? filteredTx.reversed.toList() : filteredTx;
+    final displayTx =
+        _sortDescending ? filteredTx.reversed.toList() : filteredTx;
 
     // Compute summary totals (always from ALL transactions for correct running balance)
     double totalDebit = 0;
@@ -178,9 +196,8 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     }
     // For debit-balance accounts: net = debit - credit (debit increases balance)
     // For credit-balance accounts: net = credit - debit (credit increases balance)
-    final netBalance = _isCreditBalance
-        ? totalCredit - totalDebit
-        : totalDebit - totalCredit;
+    final netBalance =
+        _isCreditBalance ? totalCredit - totalDebit : totalDebit - totalCredit;
 
     // Compute running balances from ascending-order data
     // Start from opening balance so final running balance matches account's current balance
@@ -193,20 +210,35 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
       double preFilterDebit = 0;
       double preFilterCredit = 0;
       for (final tx in _transactions) {
-        final dateStr = _safeString(tx['date']) ?? _safeString(tx['created_at']) ?? '';
+        final dateStr =
+            _safeString(tx['date']) ?? _safeString(tx['created_at']) ?? '';
         DateTime? txDate;
-        try { txDate = DateTime.parse(dateStr); } catch (_) { txDate = null; }
-        if (txDate != null && _fromDate != null && txDate.isBefore(_fromDate!)) {
+        try {
+          txDate = DateTime.parse(dateStr);
+        } catch (_) {
+          txDate = null;
+        }
+        if (txDate != null &&
+            _fromDate != null &&
+            txDate.isBefore(_fromDate!)) {
           preFilterDebit += MoneyHelper.readMoney(tx['debit']);
           preFilterCredit += MoneyHelper.readMoney(tx['credit']);
         }
       }
       // Calculate total net movement from ALL transactions in the account's perspective
       final totalNet = _isCreditBalance
-          ? _transactions.fold<double>(0, (sum, tx) =>
-              sum + MoneyHelper.readMoney(tx['credit']) - MoneyHelper.readMoney(tx['debit']))
-          : _transactions.fold<double>(0, (sum, tx) =>
-              sum + MoneyHelper.readMoney(tx['debit']) - MoneyHelper.readMoney(tx['credit']));
+          ? _transactions.fold<double>(
+              0,
+              (sum, tx) =>
+                  sum +
+                  MoneyHelper.readMoney(tx['credit']) -
+                  MoneyHelper.readMoney(tx['debit']))
+          : _transactions.fold<double>(
+              0,
+              (sum, tx) =>
+                  sum +
+                  MoneyHelper.readMoney(tx['debit']) -
+                  MoneyHelper.readMoney(tx['credit']));
       final preFilterNet = _isCreditBalance
           ? preFilterCredit - preFilterDebit
           : preFilterDebit - preFilterCredit;
@@ -234,9 +266,11 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
           title: Text('دفتر حساب: ${widget.account.nameAr}'),
           actions: [
             IconButton(
-              icon: Icon(_sortDescending ? Icons.arrow_downward : Icons.arrow_upward),
+              icon: Icon(
+                  _sortDescending ? Icons.arrow_downward : Icons.arrow_upward),
               tooltip: _sortDescending ? 'ترتيب تنازلي' : 'ترتيب تصاعدي',
-              onPressed: () => setState(() => _sortDescending = !_sortDescending),
+              onPressed: () =>
+                  setState(() => _sortDescending = !_sortDescending),
             ),
           ],
         ),
@@ -247,9 +281,11 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                        Icon(Icons.error_outline,
+                            size: 48, color: AppColors.error),
                         const SizedBox(height: 16),
-                        Text('حدث خطأ أثناء تحميل البيانات', style: theme.textTheme.titleMedium),
+                        Text('حدث خطأ أثناء تحميل البيانات',
+                            style: theme.textTheme.titleMedium),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: _loadTransactions,
@@ -259,72 +295,72 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
                       ],
                     ),
                   )
-            : RefreshIndicator(
-                onRefresh: _loadTransactions,
-                child: CustomScrollView(
-                  slivers: [
-                    // ── Account Header ────────────────────────────
-                    SliverToBoxAdapter(
-                      child: _AccountHeader(
-                        account: widget.account,
-                        color: color,
-                        icon: icon,
-                        isDark: isDark,
-                      ),
-                    ),
-
-                    // ── Summary Row ───────────────────────────────
-                    SliverToBoxAdapter(
-                      child: _SummaryRow(
-                        totalDebit: totalDebit,
-                        totalCredit: totalCredit,
-                        netBalance: netBalance,
-                        isDark: isDark,
-                        currencySymbol: _currencySymbol,
-                      ),
-                    ),
-
-                    // ── Date Filter Bar ──────────────────────────────
-                    SliverToBoxAdapter(
-                      child: _DateFilterBar(
-                        fromDate: _fromDate,
-                        toDate: _toDate,
-                        onFromTap: _pickFromDate,
-                        onToTap: _pickToDate,
-                        onClear: _clearDateFilter,
-                        isDark: isDark,
-                      ),
-                    ),
-
-                    // ── Transactions List or Empty State ───────────
-                    if (displayTx.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _EmptyState(color: color),
-                      )
-                    else
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final tx = displayTx[index];
-                            // Look up running balance by transaction id
-                            final running = runningById[tx['id']] ?? 0.0;
-                            return _TransactionCard(
-                              transaction: tx,
-                              runningBalance: running,
-                              isDark: isDark,
-                              isLast: index == displayTx.length - 1,
-                              currencySymbol: _currencySymbol,
-                            );
-                          },
-                          childCount: displayTx.length,
+                : RefreshIndicator(
+                    onRefresh: _loadTransactions,
+                    child: CustomScrollView(
+                      slivers: [
+                        // ── Account Header ────────────────────────────
+                        SliverToBoxAdapter(
+                          child: _AccountHeader(
+                            account: widget.account,
+                            color: color,
+                            icon: icon,
+                            isDark: isDark,
+                          ),
                         ),
-                      ),
 
-                    const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                  ],
-                ),
-              ),
+                        // ── Summary Row ───────────────────────────────
+                        SliverToBoxAdapter(
+                          child: _SummaryRow(
+                            totalDebit: totalDebit,
+                            totalCredit: totalCredit,
+                            netBalance: netBalance,
+                            isDark: isDark,
+                            currencySymbol: _currencySymbol,
+                          ),
+                        ),
+
+                        // ── Date Filter Bar ──────────────────────────────
+                        SliverToBoxAdapter(
+                          child: _DateFilterBar(
+                            fromDate: _fromDate,
+                            toDate: _toDate,
+                            onFromTap: _pickFromDate,
+                            onToTap: _pickToDate,
+                            onClear: _clearDateFilter,
+                            isDark: isDark,
+                          ),
+                        ),
+
+                        // ── Transactions List or Empty State ───────────
+                        if (displayTx.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _EmptyState(color: color),
+                          )
+                        else
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final tx = displayTx[index];
+                                // Look up running balance by transaction id
+                                final running = runningById[tx['id']] ?? 0.0;
+                                return _TransactionCard(
+                                  transaction: tx,
+                                  runningBalance: running,
+                                  isDark: isDark,
+                                  isLast: index == displayTx.length - 1,
+                                  currencySymbol: _currencySymbol,
+                                );
+                              },
+                              childCount: displayTx.length,
+                            ),
+                          ),
+
+                        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                      ],
+                    ),
+                  ),
       ),
     );
   }
@@ -393,7 +429,8 @@ class _AccountHeader extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
@@ -409,7 +446,8 @@ class _AccountHeader extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
@@ -437,7 +475,9 @@ class _AccountHeader extends StatelessWidget {
             children: [
               Text('الرصيد الحالي',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textSecondary,
                     fontWeight: FontWeight.w600,
                   )),
               Text(
@@ -490,7 +530,8 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: _SummaryItem(
               label: 'مدين',
-              value: CurrencyFormatter.format(totalDebit, symbol: currencySymbol),
+              value:
+                  CurrencyFormatter.format(totalDebit, symbol: currencySymbol),
               color: AppColors.error,
               icon: Icons.north_west,
             ),
@@ -504,7 +545,8 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: _SummaryItem(
               label: 'دائن',
-              value: CurrencyFormatter.format(totalCredit, symbol: currencySymbol),
+              value:
+                  CurrencyFormatter.format(totalCredit, symbol: currencySymbol),
               color: AppColors.success,
               icon: Icons.south_east,
             ),
@@ -518,7 +560,8 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: _SummaryItem(
               label: 'الصافي',
-              value: CurrencyFormatter.format(netBalance, symbol: currencySymbol),
+              value:
+                  CurrencyFormatter.format(netBalance, symbol: currencySymbol),
               color: netBalance >= 0 ? AppColors.primary : AppColors.error,
               icon: Icons.balance,
             ),
@@ -611,7 +654,9 @@ class _DateFilterBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: hasFilter
             ? AppColors.primary.withValues(alpha: 0.06)
-            : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
+            : (isDark
+                ? AppColors.darkSurfaceVariant
+                : AppColors.surfaceVariant),
         borderRadius: BorderRadius.circular(12),
         border: hasFilter
             ? Border.all(color: AppColors.primary.withValues(alpha: 0.3))
@@ -619,7 +664,9 @@ class _DateFilterBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.filter_list, size: 18, color: hasFilter ? AppColors.primary : AppColors.textHint),
+          Icon(Icons.filter_list,
+              size: 18,
+              color: hasFilter ? AppColors.primary : AppColors.textHint),
           const SizedBox(width: 8),
           // From date button
           Expanded(
@@ -637,14 +684,23 @@ class _DateFilterBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.calendar_today, size: 14,
-                      color: fromDate != null ? AppColors.primary : AppColors.textHint),
+                    Icon(Icons.calendar_today,
+                        size: 14,
+                        color: fromDate != null
+                            ? AppColors.primary
+                            : AppColors.textHint),
                     const SizedBox(width: 4),
                     Text(
-                      fromDate != null ? dateFormat.format(fromDate!) : 'من تاريخ',
+                      fromDate != null
+                          ? dateFormat.format(fromDate!)
+                          : 'من تاريخ',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: fromDate != null ? AppColors.primary : AppColors.textHint,
-                        fontWeight: fromDate != null ? FontWeight.w700 : FontWeight.w500,
+                        color: fromDate != null
+                            ? AppColors.primary
+                            : AppColors.textHint,
+                        fontWeight: fromDate != null
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         fontFamily: 'Cairo',
                       ),
                     ),
@@ -654,7 +710,9 @@ class _DateFilterBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Text('—', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+          Text('—',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textHint)),
           const SizedBox(width: 4),
           // To date button
           Expanded(
@@ -672,14 +730,20 @@ class _DateFilterBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.calendar_today, size: 14,
-                      color: toDate != null ? AppColors.primary : AppColors.textHint),
+                    Icon(Icons.calendar_today,
+                        size: 14,
+                        color: toDate != null
+                            ? AppColors.primary
+                            : AppColors.textHint),
                     const SizedBox(width: 4),
                     Text(
                       toDate != null ? dateFormat.format(toDate!) : 'إلى تاريخ',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: toDate != null ? AppColors.primary : AppColors.textHint,
-                        fontWeight: toDate != null ? FontWeight.w700 : FontWeight.w500,
+                        color: toDate != null
+                            ? AppColors.primary
+                            : AppColors.textHint,
+                        fontWeight:
+                            toDate != null ? FontWeight.w700 : FontWeight.w500,
                         fontFamily: 'Cairo',
                       ),
                     ),
@@ -749,8 +813,10 @@ class _TransactionCard extends StatelessWidget {
       }
     }
 
-    final formattedDate = txDate != null ? DateFormatter.formatDate(txDate) : '';
-    final formattedTime = txDate != null ? DateFormatter.formatTime(txDate) : '';
+    final formattedDate =
+        txDate != null ? DateFormatter.formatDate(txDate) : '';
+    final formattedTime =
+        txDate != null ? DateFormatter.formatTime(txDate) : '';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -787,7 +853,8 @@ class _TransactionCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.calendar_today, size: 12, color: AppColors.primary),
+                    const Icon(Icons.calendar_today,
+                        size: 12, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
                       formattedDate,
@@ -816,14 +883,20 @@ class _TransactionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (runningBalance >= 0 ? AppColors.primary : AppColors.error).withValues(alpha: 0.08),
+                  color: (runningBalance >= 0
+                          ? AppColors.primary
+                          : AppColors.error)
+                      .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  CurrencyFormatter.format(runningBalance, symbol: currencySymbol),
+                  CurrencyFormatter.format(runningBalance,
+                      symbol: currencySymbol),
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: runningBalance >= 0 ? AppColors.primary : AppColors.error,
+                    color: runningBalance >= 0
+                        ? AppColors.primary
+                        : AppColors.error,
                     fontFamily: 'Cairo',
                   ),
                 ),
@@ -835,14 +908,17 @@ class _TransactionCard extends StatelessWidget {
           // Row 2: Description
           Row(
             children: [
-              const Icon(Icons.article, size: 16, color: AppColors.textSecondary),
+              const Icon(Icons.article,
+                  size: 16, color: AppColors.textSecondary),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   description,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -859,7 +935,8 @@ class _TransactionCard extends StatelessWidget {
               Expanded(
                 child: debit > 0
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
@@ -876,7 +953,8 @@ class _TransactionCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              CurrencyFormatter.format(debit, symbol: currencySymbol),
+                              CurrencyFormatter.format(debit,
+                                  symbol: currencySymbol),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.error,
                                 fontWeight: FontWeight.w700,
@@ -893,7 +971,8 @@ class _TransactionCard extends StatelessWidget {
               Expanded(
                 child: credit > 0
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: AppColors.success.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
@@ -910,7 +989,8 @@ class _TransactionCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              CurrencyFormatter.format(credit, symbol: currencySymbol),
+                              CurrencyFormatter.format(credit,
+                                  symbol: currencySymbol),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.success,
                                 fontWeight: FontWeight.w700,

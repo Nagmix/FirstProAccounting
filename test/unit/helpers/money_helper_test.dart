@@ -120,7 +120,8 @@ void main() {
         expect(MoneyHelper.readCalculatedMoney(15075), closeTo(150.75, 0.001));
       });
 
-      test('reads double as cents (unlike readMoney which treats as legacy)', () {
+      test('reads double as cents (unlike readMoney which treats as legacy)',
+          () {
         // readCalculatedMoney ALWAYS divides by 100, even for doubles
         // This is for SQL-calculated values like SUM(base_quantity * unit_cost)
         expect(MoneyHelper.readCalculatedMoney(67500.0), closeTo(675.0, 0.01));
@@ -281,17 +282,30 @@ void main() {
     // ═══════════════════════════════════════════════════════════
     group('Money field constants', () {
       test('invoiceMoneyFields contains expected fields', () {
-        expect(MoneyHelper.invoiceMoneyFields, containsAll([
-          'subtotal', 'discount_amount', 'tax_amount', 'total',
-          'paid_amount', 'remaining', 'transport_charges',
-        ]));
+        expect(
+            MoneyHelper.invoiceMoneyFields,
+            containsAll([
+              'subtotal',
+              'discount_amount',
+              'tax_amount',
+              'total',
+              'paid_amount',
+              'remaining',
+              'transport_charges',
+            ]));
       });
 
       test('productMoneyFields contains expected fields', () {
-        expect(MoneyHelper.productMoneyFields, containsAll([
-          'sell_price', 'cost_price', 'average_cost',
-          'wholesale_price', 'special_wholesale_price', 'minimum_sale_price',
-        ]));
+        expect(
+            MoneyHelper.productMoneyFields,
+            containsAll([
+              'sell_price',
+              'cost_price',
+              'average_cost',
+              'wholesale_price',
+              'special_wholesale_price',
+              'minimum_sale_price',
+            ]));
       });
 
       test('accountMoneyFields contains expected fields', () {

@@ -24,11 +24,17 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   /// Exchange rates loaded from DB: currency code → rate vs YER (functional currency)
   /// YER rate is always 1.0; SAR and USD rates are loaded from currencies table.
   final Map<String, double> _exchangeRates = {'YER': 1.0};
+
   /// Currency symbols loaded from DB: currency code → symbol
   final Map<String, String> _currencySymbols = {'YER': 'ر.ي'};
 
   final _currencyOptions = ['الكل', 'YER', 'SAR', 'USD'];
-  final _currencyLabels = {'الكل': 'الكل', 'YER': 'ريال يمني (ر.ي)', 'SAR': 'ريال سعودي (ر.س)', 'USD': 'دولار أمريكي (\$)'};
+  final _currencyLabels = {
+    'الكل': 'الكل',
+    'YER': 'ريال يمني (ر.ي)',
+    'SAR': 'ريال سعودي (ر.س)',
+    'USD': 'دولار أمريكي (\$)'
+  };
 
   final _accountTypes = [
     AccountType.ASSET,
@@ -87,7 +93,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   /// functional currency (YER) when displaying aggregated totals.
   Future<void> _loadExchangeRates() async {
     try {
-      final currencies = await locator<ReferenceDataRepository>().getAllCurrencies();
+      final currencies =
+          await locator<ReferenceDataRepository>().getAllCurrencies();
       for (final c in currencies) {
         final code = c['code'] as String? ?? '';
         final rate = (c['exchange_rate'] as num?)?.toDouble() ?? 1.0;
@@ -123,7 +130,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
 
   /// Format an amount with the correct currency symbol for the given currency code.
   String _formatWithCurrency(double amount, String currencyCode) {
-    return CurrencyFormatter.format(amount, symbol: _getCurrencySymbol(currencyCode));
+    return CurrencyFormatter.format(amount,
+        symbol: _getCurrencySymbol(currencyCode));
   }
 
   /// Convert an amount from its native currency to the functional currency (YER).
@@ -146,7 +154,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
 
   /// Convert an amount from one currency to another via the functional currency.
   // ignore: unused_element
-  double _convertCurrency(double amount, String fromCurrency, String toCurrency) {
+  double _convertCurrency(
+      double amount, String fromCurrency, String toCurrency) {
     if (fromCurrency == toCurrency) return amount;
     final amountInYER = _convertToFunctionalCurrency(amount, fromCurrency);
     return _convertFromFunctionalCurrency(amountInYER, toCurrency);
@@ -199,15 +208,18 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     }
 
     // Sort roots by account code
-    roots.sort((a, b) => a.account.accountCode.compareTo(b.account.accountCode));
+    roots
+        .sort((a, b) => a.account.accountCode.compareTo(b.account.accountCode));
 
     // Sort children recursively
     void sortChildren(_AccountNode node) {
-      node.children.sort((a, b) => a.account.accountCode.compareTo(b.account.accountCode));
+      node.children.sort(
+          (a, b) => a.account.accountCode.compareTo(b.account.accountCode));
       for (final child in node.children) {
         sortChildren(child);
       }
     }
+
     for (final root in roots) {
       sortChildren(root);
     }
@@ -231,7 +243,9 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   Future<void> _deleteAccount(Account account) async {
     if (account.isSystem) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن حذف حسابات النظام'), backgroundColor: AppColors.error),
+        const SnackBar(
+            content: Text('لا يمكن حذف حسابات النظام'),
+            backgroundColor: AppColors.error),
       );
       return;
     }
@@ -242,7 +256,9 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         title: const Text('حذف الحساب'),
         content: Text('هل أنت متأكد من حذف "${account.nameAr}"؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(ctx, true),
@@ -252,29 +268,38 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
       ),
     );
     if (confirmed == true) {
-      final result = await locator<AccountRepository>().deleteAccount(account.id!);
+      final result =
+          await locator<AccountRepository>().deleteAccount(account.id!);
       if (result == -1) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا يمكن حذف حسابات النظام'), backgroundColor: AppColors.error),
+            const SnackBar(
+                content: Text('لا يمكن حذف حسابات النظام'),
+                backgroundColor: AppColors.error),
           );
         }
       } else if (result == -2) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا يمكن حذف حساب لديه حسابات فرعية'), backgroundColor: AppColors.error),
+            const SnackBar(
+                content: Text('لا يمكن حذف حساب لديه حسابات فرعية'),
+                backgroundColor: AppColors.error),
           );
         }
       } else if (result == -3) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا يمكن حذف حساب مرتبط بمعاملات محاسبية'), backgroundColor: AppColors.error),
+            const SnackBar(
+                content: Text('لا يمكن حذف حساب مرتبط بمعاملات محاسبية'),
+                backgroundColor: AppColors.error),
           );
         }
       } else if (result == -4) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا يمكن حذف حساب مرتبط ببنود سندات'), backgroundColor: AppColors.error),
+            const SnackBar(
+                content: Text('لا يمكن حذف حساب مرتبط ببنود سندات'),
+                backgroundColor: AppColors.error),
           );
         }
       } else {
@@ -299,10 +324,13 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               value: _selectedCurrency,
               underline: const SizedBox.shrink(),
               icon: const Icon(Icons.arrow_drop_down, size: 16),
-              items: _currencyOptions.map((c) => DropdownMenuItem<String>(
-                value: c,
-                child: Text(_currencyLabels[c] ?? c, style: const TextStyle(fontSize: 12)),
-              )).toList(),
+              items: _currencyOptions
+                  .map((c) => DropdownMenuItem<String>(
+                        value: c,
+                        child: Text(_currencyLabels[c] ?? c,
+                            style: const TextStyle(fontSize: 12)),
+                      ))
+                  .toList(),
               onChanged: (val) {
                 if (val != null) {
                   setState(() => _selectedCurrency = val);
@@ -363,7 +391,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: !_isHierarchical ? AppColors.primary : Colors.transparent,
+                  color:
+                      !_isHierarchical ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
@@ -373,14 +402,18 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
                     Icon(
                       Icons.view_list,
                       size: 18,
-                      color: !_isHierarchical ? Colors.white : AppColors.textSecondary,
+                      color: !_isHierarchical
+                          ? Colors.white
+                          : AppColors.textSecondary,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'عرض مسطح',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: !_isHierarchical ? Colors.white : AppColors.textSecondary,
+                        color: !_isHierarchical
+                            ? Colors.white
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -394,7 +427,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: _isHierarchical ? AppColors.primary : Colors.transparent,
+                  color:
+                      _isHierarchical ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
@@ -404,14 +438,18 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
                     Icon(
                       Icons.account_tree,
                       size: 18,
-                      color: _isHierarchical ? Colors.white : AppColors.textSecondary,
+                      color: _isHierarchical
+                          ? Colors.white
+                          : AppColors.textSecondary,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'عرض هرمي',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: _isHierarchical ? Colors.white : AppColors.textSecondary,
+                        color: _isHierarchical
+                            ? Colors.white
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -450,7 +488,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
           tilePadding: const EdgeInsets.symmetric(horizontal: 16),
           childrenPadding: const EdgeInsets.only(bottom: 8),
           leading: Container(
-            width: 40, height: 40,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
@@ -458,9 +497,11 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
             child: Icon(icon, color: color, size: 20),
           ),
           title: Text(Account.accountTypeAr(type),
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: color)),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700, color: color)),
           subtitle: _buildFlatViewSubtitle(theme, accounts, byCurrency),
-          children: _buildFlatViewChildren(theme, isDark, accounts, byCurrency, color),
+          children: _buildFlatViewChildren(
+              theme, isDark, accounts, byCurrency, color),
         );
       }).toList(),
     );
@@ -469,12 +510,15 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   /// Build the subtitle for a type group in flat view.
   /// Shows account count and per-currency subtotals (when "All" is selected)
   /// or a single total (when a specific currency is selected).
-  Widget _buildFlatViewSubtitle(ThemeData theme, List<Account> accounts, Map<String, List<Account>> byCurrency) {
+  Widget _buildFlatViewSubtitle(ThemeData theme, List<Account> accounts,
+      Map<String, List<Account>> byCurrency) {
     if (_selectedCurrency != 'الكل') {
       // Single currency selected - show simple total in that currency
       final total = accounts.fold<double>(0.0, (sum, a) => sum + a.balance);
-      return Text('${accounts.length} حساب | الرصيد: ${_formatWithCurrency(total.abs(), _selectedCurrency)}',
-          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary));
+      return Text(
+          '${accounts.length} حساب | الرصيد: ${_formatWithCurrency(total.abs(), _selectedCurrency)}',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: AppColors.textSecondary));
     }
 
     // "All" currencies - show per-currency subtotals
@@ -486,14 +530,18 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     }
 
     return Text('${accounts.length} حساب | ${parts.join(' | ')}',
-        style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary));
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: AppColors.textSecondary));
   }
 
   /// Build the children (account tiles) for a type group in flat view.
   /// When "All" currencies is selected, includes currency separator headers.
   List<Widget> _buildFlatViewChildren(
-    ThemeData theme, bool isDark, List<Account> accounts,
-    Map<String, List<Account>> byCurrency, Color color,
+    ThemeData theme,
+    bool isDark,
+    List<Account> accounts,
+    Map<String, List<Account>> byCurrency,
+    Color color,
   ) {
     if (_selectedCurrency != 'الكل') {
       // Single currency - simple list
@@ -545,7 +593,9 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               const Spacer(),
               Text(
                 _formatWithCurrency(
-                  currencyAccounts.fold<double>(0.0, (sum, a) => sum + a.balance).abs(),
+                  currencyAccounts
+                      .fold<double>(0.0, (sum, a) => sum + a.balance)
+                      .abs(),
                   currency,
                 ),
                 style: theme.textTheme.labelSmall?.copyWith(
@@ -593,9 +643,12 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.account_tree, size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
+            Icon(Icons.account_tree,
+                size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
-            Text('لا توجد حسابات', style: theme.textTheme.titleMedium?.copyWith(color: AppColors.textHint)),
+            Text('لا توجد حسابات',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(color: AppColors.textHint)),
           ],
         ),
       );
@@ -603,7 +656,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 80, top: 4),
-      children: tree.map((node) => _buildTreeNode(theme, isDark, node, 0)).toList(),
+      children:
+          tree.map((node) => _buildTreeNode(theme, isDark, node, 0)).toList(),
     );
   }
 
@@ -616,7 +670,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     void addBalance(_AccountNode n) {
       final acc = n.account;
       final curr = acc.currency;
-      balancesByCurrency[curr] = (balancesByCurrency[curr] ?? 0.0) + acc.balance;
+      balancesByCurrency[curr] =
+          (balancesByCurrency[curr] ?? 0.0) + acc.balance;
       for (final child in n.children) {
         addBalance(child);
       }
@@ -624,7 +679,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
 
     // Include the parent's own balance
     balancesByCurrency[node.account.currency] =
-        (balancesByCurrency[node.account.currency] ?? 0.0) + node.account.balance;
+        (balancesByCurrency[node.account.currency] ?? 0.0) +
+            node.account.balance;
 
     // Add children balances
     for (final child in node.children) {
@@ -645,11 +701,13 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   }
 
   /// بناء نص الأرصدة المتعددة العملات للعرض
-  String _buildMultiCurrencyBalanceText(Map<String, double> balancesByCurrency) {
+  String _buildMultiCurrencyBalanceText(
+      Map<String, double> balancesByCurrency) {
     if (balancesByCurrency.length <= 1) {
       // عملة واحدة فقط
       final entry = balancesByCurrency.entries.first;
-      return CurrencyFormatter.format(entry.value.abs(), symbol: _getCurrencySymbol(entry.key));
+      return CurrencyFormatter.format(entry.value.abs(),
+          symbol: _getCurrencySymbol(entry.key));
     }
     // عدة عملات: عرض كل عملة بشكل منفصل
     final parts = <String>[];
@@ -662,14 +720,16 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     for (final curr in sortedCurrencies) {
       final balance = balancesByCurrency[curr]!;
       if (balance.abs() > 0.001) {
-        parts.add('${CurrencyFormatter.formatValue(balance.abs())} ${_getCurrencySymbol(curr)}');
+        parts.add(
+            '${CurrencyFormatter.formatValue(balance.abs())} ${_getCurrencySymbol(curr)}');
       }
     }
     if (parts.isEmpty) return '0';
     return parts.join(' | ');
   }
 
-  Widget _buildTreeNode(ThemeData theme, bool isDark, _AccountNode node, int depth) {
+  Widget _buildTreeNode(
+      ThemeData theme, bool isDark, _AccountNode node, int depth) {
     final account = node.account;
     final color = _typeColors[account.accountType] ?? AppColors.primary;
     final hasChildren = node.children.isNotEmpty;
@@ -685,7 +745,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     // For display: use per-currency breakdown if mixed, otherwise simple total
     final balanceDisplayText = hasMixedCurrencies
         ? _buildMultiCurrencyBalanceText(balancesByCurrency)
-        : CurrencyFormatter.format(balancesByCurrency.values.first.abs(), symbol: currencySymbol);
+        : CurrencyFormatter.format(balancesByCurrency.values.first.abs(),
+            symbol: currencySymbol);
 
     // Total in functional currency for the trailing display
     final functionalTotalDisplay = hasMixedCurrencies
@@ -698,24 +759,28 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         tilePadding: EdgeInsets.only(left: 16.0 + depth * 20.0, right: 16),
         childrenPadding: EdgeInsets.only(right: 8),
         leading: Container(
-          width: 36, height: 36,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             _typeIcons[account.accountType] ?? Icons.account_balance,
-            color: color, size: 18,
+            color: color,
+            size: 18,
           ),
         ),
         title: Row(
           children: [
             Text(account.accountCode,
-                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: color)),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(fontWeight: FontWeight.w700, color: color)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(account.nameAr,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis),
             ),
@@ -724,7 +789,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
         subtitle: Text(
           '${node.children.length} حساب فرعي | الرصيد: $balanceDisplayText',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+            color:
+                isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
           ),
         ),
         trailing: Row(
@@ -738,8 +804,11 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
                     color: AppColors.primary,
                   )),
             if (functionalTotalDisplay == null)
-              Text(CurrencyFormatter.format(account.balance, symbol: currencySymbol),
-                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                  CurrencyFormatter.format(account.balance,
+                      symbol: currencySymbol),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(fontWeight: FontWeight.w600)),
             if (!account.isSystem)
               IconButton(
                 icon: const Icon(Icons.edit, size: 16),
@@ -763,10 +832,15 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
           InkWell(
             onTap: () => AppRouter.pushAccountLedger(context, account),
             child: Padding(
-              padding: EdgeInsets.only(left: 16.0 + (depth + 1) * 20.0, right: 16, top: 4, bottom: 4),
+              padding: EdgeInsets.only(
+                  left: 16.0 + (depth + 1) * 20.0,
+                  right: 16,
+                  top: 4,
+                  bottom: 4),
               child: Row(
                 children: [
-                  Icon(Icons.subdirectory_arrow_left, size: 18, color: color.withValues(alpha: 0.6)),
+                  Icon(Icons.subdirectory_arrow_left,
+                      size: 18, color: color.withValues(alpha: 0.6)),
                   const SizedBox(width: 8),
                   Text('عرض أستاذ الحساب',
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -774,14 +848,19 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
                         fontWeight: FontWeight.w600,
                       )),
                   const Spacer(),
-                  Text(CurrencyFormatter.format(account.balance, symbol: currencySymbol),
-                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                      CurrencyFormatter.format(account.balance,
+                          symbol: currencySymbol),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
           ),
           // Children
-          ...node.children.map((child) => _buildTreeNode(theme, isDark, child, depth + 1)).toList(),
+          ...node.children
+              .map((child) => _buildTreeNode(theme, isDark, child, depth + 1))
+              .toList(),
         ],
       );
     }
@@ -847,13 +926,16 @@ class _AccountTile extends StatelessWidget {
           : Icon(Icons.circle, size: 10, color: color),
       title: Row(
         children: [
-          Text(account.accountCode, style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600, color: color,
-          )),
+          Text(account.accountCode,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: color,
+              )),
           const SizedBox(width: 8),
           Expanded(
             child: Text(account.nameAr,
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
           ),
@@ -862,8 +944,10 @@ class _AccountTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(CurrencyFormatter.format(account.balance, symbol: currencySymbol),
-              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+              CurrencyFormatter.format(account.balance, symbol: currencySymbol),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w600)),
           if (onEdit != null)
             IconButton(
               icon: const Icon(Icons.edit, size: 16),

@@ -37,7 +37,8 @@ class CartItemTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+          color:
+              isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(

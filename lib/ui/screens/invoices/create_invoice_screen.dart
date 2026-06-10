@@ -32,7 +32,8 @@ import 'widgets/invoice_items_section.dart';
 import 'widgets/invoice_summary_section.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
-  const CreateInvoiceScreen({super.key, required this.invoiceType, this.existingInvoice});
+  const CreateInvoiceScreen(
+      {super.key, required this.invoiceType, this.existingInvoice});
 
   final String invoiceType;
   final Invoice? existingInvoice;
@@ -66,8 +67,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     _paidController.text = '0.00';
   }
 
-
-
   @override
   void dispose() {
     _notesController.dispose();
@@ -97,7 +96,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   /// Sync controller text to ViewModel values and trigger auto-pay update.
   void _syncControllersToVm() {
     _vm.setDiscount(double.tryParse(_discountController.text) ?? 0);
-    _vm.setTransportCharges(double.tryParse(_transportChargesController.text) ?? 0);
+    _vm.setTransportCharges(
+        double.tryParse(_transportChargesController.text) ?? 0);
     _vm.setPaidAmount(double.tryParse(_paidController.text) ?? 0);
     _vm.updateAutoPay();
     // Sync auto-pay paid amount back to controller
@@ -109,7 +109,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // ── Image picker helpers ─────────────────────────────────────
   Future<void> _pickImageFromGallery() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final picked =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
       final savedPath = await _saveImageLocally(picked);
       if (savedPath != null) {
@@ -120,7 +121,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   Future<void> _pickImageFromCamera() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    final picked =
+        await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
     if (picked != null) {
       final savedPath = await _saveImageLocally(picked);
       if (savedPath != null) {
@@ -136,7 +138,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       if (!await attachmentsDir.exists()) {
         await attachmentsDir.create(recursive: true);
       }
-      final fileName = 'inv_${DateTime.now().millisecondsSinceEpoch}${p.extension(image.path)}';
+      final fileName =
+          'inv_${DateTime.now().millisecondsSinceEpoch}${p.extension(image.path)}';
       final newPath = '${attachmentsDir.path}/$fileName';
       await File(image.path).copy(newPath);
       return newPath;
@@ -153,10 +156,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   static const Color _accentPurple = Color(0xFF7C3AED);
 
   LinearGradient get _primaryGradient => const LinearGradient(
-    colors: [_accentBlue, _accentPurple],
-    begin: Alignment.centerRight,
-    end: Alignment.centerLeft,
-  );
+        colors: [_accentBlue, _accentPurple],
+        begin: Alignment.centerRight,
+        end: Alignment.centerLeft,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -164,14 +167,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return ListenableBuilder(
       listenable: _vm,
       builder: (context, _) => Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
-      appBar: _buildAppBar(isDark),
-      body: _vm.isLoading
+        backgroundColor:
+            isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
+        appBar: _buildAppBar(isDark),
+        body: _vm.isLoading
             ? Center(child: CircularProgressIndicator(color: _accentBlue))
             : Form(
                 key: _formKey,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -186,7 +191,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         selectedExchangeRate: _vm.selectedExchangeRate,
                         selectedCashBoxId: _vm.selectedCashBoxId,
                         selectedEwalletProvider: _vm.selectedEwalletProvider,
-                        selectedBankTransferProvider: _vm.selectedBankTransferProvider,
+                        selectedBankTransferProvider:
+                            _vm.selectedBankTransferProvider,
                         attachmentPath: _vm.attachmentPath,
                         originalInvoiceId: _vm.originalInvoiceId,
                         originalInvoiceDisplay: _vm.originalInvoiceDisplay,
@@ -198,7 +204,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         paidAmount: _paidAmount,
                         remaining: _remaining,
                         isSale: _isSale,
-                        showPartialPaymentWarning: _vm.showPartialPaymentWarning,
+                        showPartialPaymentWarning:
+                            _vm.showPartialPaymentWarning,
                         onToggleReturn: () => _vm.toggleReturn(),
                         onSetCashMechanism: () => _vm.setCashMechanism(),
                         onSetCreditMechanism: () {
@@ -213,8 +220,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         },
                         onCurrencyChanged: (val) => _vm.setCurrency(val),
                         onCashBoxChanged: (val) => _vm.setCashBox(val),
-                        onEwalletProviderChanged: (val) => _vm.setEwalletProvider(val),
-                        onBankTransferProviderChanged: (val) => _vm.setBankTransferProvider(val),
+                        onEwalletProviderChanged: (val) =>
+                            _vm.setEwalletProvider(val),
+                        onBankTransferProviderChanged: (val) =>
+                            _vm.setBankTransferProvider(val),
                         onPickImageFromGallery: _pickImageFromGallery,
                         onPickImageFromCamera: _pickImageFromCamera,
                         onRemoveAttachment: () => _vm.setAttachmentPath(null),
@@ -224,8 +233,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                             _paidController.text = _vm.total.toStringAsFixed(2);
                           }
                         },
-                        onShowOriginalInvoiceSelector: _showOriginalInvoiceSelector,
-                        onClearOriginalInvoice: () => _vm.clearOriginalInvoice(),
+                        onShowOriginalInvoiceSelector:
+                            _showOriginalInvoiceSelector,
+                        onClearOriginalInvoice: () =>
+                            _vm.clearOriginalInvoice(),
                         onPaidChanged: () => _syncControllersToVm(),
                       ),
                       const SizedBox(height: 16),
@@ -327,7 +338,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
+            child: const Icon(Icons.arrow_back_ios_new,
+                size: 16, color: Colors.white),
           ),
         ),
       ),
@@ -335,19 +347,24 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 32, height: 32,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              _isSale ? Icons.receipt_long_rounded : Icons.shopping_cart_rounded,
-              color: Colors.white, size: 18,
+              _isSale
+                  ? Icons.receipt_long_rounded
+                  : Icons.shopping_cart_rounded,
+              color: Colors.white,
+              size: 18,
             ),
           ),
           const SizedBox(width: 10),
           Flexible(
-            child: Text(_title,
+            child: Text(
+              _title,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -364,8 +381,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('مرتجع',
-                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+              child: const Text(
+                'مرتجع',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -382,7 +403,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             child: const Icon(Icons.more_horiz, size: 20, color: Colors.white),
           ),
           tooltip: 'إجراءات',
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           color: isDark ? AppColors.darkSurface : Colors.white,
           onSelected: (value) {
             switch (value) {
@@ -401,10 +423,22 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             }
           },
           itemBuilder: (context) => [
-            PopupMenuItem(value: 'print', child: _popupItem(Icons.print_rounded, 'طباعة PDF', const Color(0xFF4F6AF0))),
-            PopupMenuItem(value: 'bluetooth', child: _popupItem(Icons.bluetooth_rounded, 'طباعة حرارية', const Color(0xFF3B82F6))),
-            PopupMenuItem(value: 'share', child: _popupItem(Icons.share_rounded, 'مشاركة', const Color(0xFFF97316))),
-            PopupMenuItem(value: 'whatsapp', child: _popupItem(Icons.chat_rounded, 'واتساب', const Color(0xFF25D366))),
+            PopupMenuItem(
+                value: 'print',
+                child: _popupItem(
+                    Icons.print_rounded, 'طباعة PDF', const Color(0xFF4F6AF0))),
+            PopupMenuItem(
+                value: 'bluetooth',
+                child: _popupItem(Icons.bluetooth_rounded, 'طباعة حرارية',
+                    const Color(0xFF3B82F6))),
+            PopupMenuItem(
+                value: 'share',
+                child: _popupItem(
+                    Icons.share_rounded, 'مشاركة', const Color(0xFFF97316))),
+            PopupMenuItem(
+                value: 'whatsapp',
+                child: _popupItem(
+                    Icons.chat_rounded, 'واتساب', const Color(0xFF25D366))),
           ],
         ),
         const SizedBox(width: 4),
@@ -412,7 +446,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           margin: const EdgeInsets.only(left: 8, top: 12, bottom: 12, right: 4),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.white.withValues(alpha: 0.25), Colors.white.withValues(alpha: 0.1)],
+              colors: [
+                Colors.white.withValues(alpha: 0.25),
+                Colors.white.withValues(alpha: 0.1)
+              ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -425,13 +462,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               onTap: _saveInvoice,
               borderRadius: BorderRadius.circular(12),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                    const Icon(Icons.save_rounded,
+                        size: 18, color: Colors.white),
                     const SizedBox(width: 6),
-                    const Text('حفظ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                    const Text('حفظ',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14)),
                   ],
                 ),
               ),
@@ -446,7 +489,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return Row(
       children: [
         Container(
-          width: 30, height: 30,
+          width: 30,
+          height: 30,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
@@ -454,7 +498,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           child: Icon(icon, size: 16, color: color),
         ),
         const SizedBox(width: 10),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        Text(label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
       ],
     );
   }
@@ -462,7 +507,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // ── Original invoice selector dialog ─────────────────────────────
   void _showOriginalInvoiceSelector() async {
     // Get recent non-return invoices of the same type (sale or purchase)
-    final invoices = await locator<InvoiceRepository>().getInvoicesByType(widget.invoiceType);
+    final invoices = await locator<InvoiceRepository>()
+        .getInvoicesByType(widget.invoiceType);
 
     // Filter to only non-return invoices
     final nonReturnInvoices = invoices.where((inv) {
@@ -478,19 +524,24 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
               Container(
-                width: 32, height: 32,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
                   color: _accentBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.link_rounded, color: _accentBlue, size: 18),
+                child: const Icon(Icons.link_rounded,
+                    color: _accentBlue, size: 18),
               ),
               const SizedBox(width: 10),
-              Text('اختر الفاتورة الأصلية', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text('اختر الفاتورة الأصلية',
+                  style: context.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
             ],
           ),
           content: SizedBox(
@@ -502,45 +553,66 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 60, height: 60,
+                          width: 60,
+                          height: 60,
                           decoration: BoxDecoration(
                             color: _accentBlue.withValues(alpha: 0.06),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.receipt_long_rounded, size: 28, color: _accentBlue.withValues(alpha: 0.4)),
+                          child: Icon(Icons.receipt_long_rounded,
+                              size: 28,
+                              color: _accentBlue.withValues(alpha: 0.4)),
                         ),
                         const SizedBox(height: 12),
-                        Text('لا توجد فواتير أصلية', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
+                        Text('لا توجد فواتير أصلية',
+                            style: context.textTheme.bodyMedium
+                                ?.copyWith(color: AppColors.textHint)),
                       ],
                     ),
                   )
                 : ListView.separated(
                     shrinkWrap: true,
                     itemCount: nonReturnInvoices.length,
-                    separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.divider),
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: AppColors.divider),
                     itemBuilder: (context, index) {
                       final inv = nonReturnInvoices[index];
                       final invId = inv['id'] as String? ?? '';
                       final entityName = inv['entity_name'] as String? ?? '—';
                       final total = MoneyHelper.readMoney(inv['total']);
-                      final createdAt = DateTime.tryParse(inv['created_at'] as String? ?? '');
-                      final dateStr = createdAt != null ? DateFormatter.formatDateTime(createdAt) : '';
-                      final displayId = invId.length > 12 ? '...${invId.substring(invId.length - 8)}' : invId;
-                      final isSelected = _vm.originalInvoiceId != null && invId == _vm.originalInvoiceId;
+                      final createdAt =
+                          DateTime.tryParse(inv['created_at'] as String? ?? '');
+                      final dateStr = createdAt != null
+                          ? DateFormatter.formatDateTime(createdAt)
+                          : '';
+                      final displayId = invId.length > 12
+                          ? '...${invId.substring(invId.length - 8)}'
+                          : invId;
+                      final isSelected = _vm.originalInvoiceId != null &&
+                          invId == _vm.originalInvoiceId;
 
                       return ListTile(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         selected: isSelected,
                         selectedTileColor: _accentBlue.withValues(alpha: 0.06),
                         leading: Container(
-                          width: 34, height: 34,
+                          width: 34,
+                          height: 34,
                           decoration: BoxDecoration(
-                            color: (isSelected ? _accentBlue : AppColors.textSecondary).withValues(alpha: 0.1),
+                            color: (isSelected
+                                    ? _accentBlue
+                                    : AppColors.textSecondary)
+                                .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            _isSale ? Icons.receipt_rounded : Icons.shopping_cart_rounded,
-                            color: isSelected ? _accentBlue : AppColors.textSecondary,
+                            _isSale
+                                ? Icons.receipt_rounded
+                                : Icons.shopping_cart_rounded,
+                            color: isSelected
+                                ? _accentBlue
+                                : AppColors.textSecondary,
                             size: 16,
                           ),
                         ),
@@ -553,7 +625,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         ),
                         subtitle: Text(
                           '$entityName • ${CurrencyFormatter.format(total)} • $dateStr',
-                          style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                          style: context.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
                         ),
                         trailing: isSelected
                             ? Container(
@@ -562,11 +635,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                                   color: _accentBlue.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.check_rounded, color: _accentBlue, size: 16),
+                                child: const Icon(Icons.check_rounded,
+                                    color: _accentBlue, size: 16),
                               )
                             : null,
                         onTap: () {
-                          _vm.setOriginalInvoice(invId, '# $displayId • $entityName • ${CurrencyFormatter.format(total)}');
+                          _vm.setOriginalInvoice(invId,
+                              '# $displayId • $entityName • ${CurrencyFormatter.format(total)}');
                           Navigator.pop(ctx);
                         },
                       );
@@ -577,7 +652,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               style: TextButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               child: const Text('إلغاء'),
             ),
@@ -616,7 +692,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddInvoiceItemSheet(warehouseId: _vm.selectedWarehouseId, invoiceType: widget.invoiceType),
+      builder: (_) => AddInvoiceItemSheet(
+          warehouseId: _vm.selectedWarehouseId,
+          invoiceType: widget.invoiceType),
     );
     if (result != null) {
       _vm.addItem(result);
@@ -706,15 +784,18 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
     // Check return limits if this is a return invoice with an original invoice linked
     if (_vm.isReturn && _vm.originalInvoiceId != null) {
-      final itemsMaps = _vm.items.map((item) => <String, dynamic>{
-        'product_id': item.productId,
-        'product_name': item.productName,
-        'quantity': item.quantity,
-        'base_quantity': item.baseQuantity,
-        'unit_price': item.unitPrice,
-        'total_price': item.totalPrice,
-      }).toList();
-      final limitErrors = await locator<InvoiceRepository>().checkReturnLimits(_vm.originalInvoiceId!, itemsMaps);
+      final itemsMaps = _vm.items
+          .map((item) => <String, dynamic>{
+                'product_id': item.productId,
+                'product_name': item.productName,
+                'quantity': item.quantity,
+                'base_quantity': item.baseQuantity,
+                'unit_price': item.unitPrice,
+                'total_price': item.totalPrice,
+              })
+          .toList();
+      final limitErrors = await locator<InvoiceRepository>()
+          .checkReturnLimits(_vm.originalInvoiceId!, itemsMaps);
       if (limitErrors.isNotEmpty && mounted) {
         final errorMessages = limitErrors.values.join('\n');
         showDialog(
@@ -722,7 +803,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           builder: (ctx) => Directionality(
             textDirection: TextDirection.rtl,
             child: AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: const Row(
                 children: [
                   Icon(Icons.warning_amber_rounded, color: AppColors.error),
@@ -746,7 +828,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
     // Determine effective payment mechanism for journal entries
     final effectivePaymentMechanism = _vm.paymentMechanism;
-    final effectivePaidAmount = _vm.paymentMechanism == 'credit' ? 0.0 : _paidAmount;
+    final effectivePaidAmount =
+        _vm.paymentMechanism == 'credit' ? 0.0 : _paidAmount;
 
     final invoiceId = const Uuid().v4();
     final invoice = Invoice(
@@ -756,8 +839,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       paymentMethod: _vm.paymentMethod,
       isReturn: _vm.isReturn,
       cashBoxId: _vm.paymentMechanism == 'cash' ? _vm.selectedCashBoxId : null,
-      customerId: _vm.selectedEntityType == 'customer' ? _vm.selectedEntityId : null,
-      supplierId: _vm.selectedEntityType == 'supplier' ? _vm.selectedEntityId : null,
+      customerId:
+          _vm.selectedEntityType == 'customer' ? _vm.selectedEntityId : null,
+      supplierId:
+          _vm.selectedEntityType == 'supplier' ? _vm.selectedEntityId : null,
       subtotal: _subtotal,
       discountRate: _subtotal > 0 ? (_discountAmount / _subtotal) * 100 : 0.0,
       discountAmount: _discountAmount,
@@ -765,34 +850,45 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       total: _total,
       paidAmount: _paidAmount,
       remaining: _remaining,
-      status: _remaining <= 0.005 ? 'paid' : _paidAmount > 0.005 ? 'partial' : 'unpaid',
+      status: _remaining <= 0.005
+          ? 'paid'
+          : _paidAmount > 0.005
+              ? 'partial'
+              : 'unpaid',
       warehouseId: _vm.selectedWarehouseId,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
       currency: _vm.selectedCurrency,
       exchangeRate: _vm.selectedExchangeRate,
-      ewalletProvider: _vm.paymentMethod == 'ewallet' ? _vm.selectedEwalletProvider : null,
-      bankTransferProvider: _vm.paymentMethod == 'bank_transfer' ? _vm.selectedBankTransferProvider : null,
-      transferNumber: _vm.paymentMethod == 'bank_transfer' && _transferNumberController.text.isNotEmpty
+      ewalletProvider:
+          _vm.paymentMethod == 'ewallet' ? _vm.selectedEwalletProvider : null,
+      bankTransferProvider: _vm.paymentMethod == 'bank_transfer'
+          ? _vm.selectedBankTransferProvider
+          : null,
+      transferNumber: _vm.paymentMethod == 'bank_transfer' &&
+              _transferNumberController.text.isNotEmpty
           ? _transferNumberController.text
           : null,
-      attachmentPath: (_vm.paymentMethod == 'ewallet' || _vm.paymentMethod == 'bank_transfer')
+      attachmentPath: (_vm.paymentMethod == 'ewallet' ||
+              _vm.paymentMethod == 'bank_transfer')
           ? _vm.attachmentPath
           : null,
       originalInvoiceId: _vm.isReturn ? _vm.originalInvoiceId : null,
     );
 
-    final itemsMaps = _vm.items.map((item) => {
-      'invoice_id': invoiceId,
-      'product_id': item.productId,
-      'product_name': item.productName,
-      'quantity': item.quantity,
-      'unit_price': item.unitPrice,
-      'total_price': item.totalPrice,
-      'unit_name': item.unitName,
-      'conversion_factor': item.conversionFactor,
-      'base_quantity': item.baseQuantity,
-      'notes': item.notes,
-    }).toList();
+    final itemsMaps = _vm.items
+        .map((item) => {
+              'invoice_id': invoiceId,
+              'product_id': item.productId,
+              'product_name': item.productName,
+              'quantity': item.quantity,
+              'unit_price': item.unitPrice,
+              'total_price': item.totalPrice,
+              'unit_name': item.unitName,
+              'conversion_factor': item.conversionFactor,
+              'base_quantity': item.baseQuantity,
+              'notes': item.notes,
+            })
+        .toList();
 
     await locator<InvoiceRepository>().saveInvoiceWithJournalEntries(
       invoice.toMap(),
@@ -808,10 +904,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     // Update shift totals if this is a return invoice and a shift is active
     if (_vm.isReturn && _vm.selectedCashBoxId != null) {
       try {
-        final activeShift = await locator<ShiftService>().getActiveShift(_vm.selectedCashBoxId!);
+        final activeShift = await locator<ShiftService>()
+            .getActiveShift(_vm.selectedCashBoxId!);
         if (activeShift != null) {
           final shiftId = activeShift['id'] as int;
-          await locator<ShiftService>().updateShiftTotals(shiftId, 0.0, _total, 0.0);
+          await locator<ShiftService>()
+              .updateShiftTotals(shiftId, 0.0, _total, 0.0);
         }
       } catch (e) {
         debugPrint('Warning: Could not update shift totals for return: $e');
@@ -836,18 +934,28 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     buffer.writeln('──────────────────');
     buffer.writeln('الحساب: $entityName');
     buffer.writeln('المجموع الفرعي: ${CurrencyFormatter.format(_subtotal)}');
-    if (_discountAmount > 0) buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
-    if (_taxAmount > 0) buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
-    if (_transportCharges > 0) buffer.writeln('أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
+    if (_discountAmount > 0) {
+      buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
+    }
+    if (_taxAmount > 0) {
+      buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
+    }
+    if (_transportCharges > 0) {
+      buffer.writeln(
+          'أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
+    }
     buffer.writeln('الإجمالي: ${CurrencyFormatter.format(_total)}');
     buffer.writeln('المدفوع: ${CurrencyFormatter.format(_paidAmount)}');
     buffer.writeln('المتبقي: ${CurrencyFormatter.format(_remaining)}');
     buffer.writeln('──────────────────');
     buffer.writeln('الأصناف:');
     for (final item in _vm.items) {
-      buffer.writeln('  ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
+      buffer.writeln(
+          '  ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
     }
-    if (_notesController.text.isNotEmpty) buffer.writeln('ملاحظات: ${_notesController.text}');
+    if (_notesController.text.isNotEmpty) {
+      buffer.writeln('ملاحظات: ${_notesController.text}');
+    }
     Share.share(buffer.toString(), subject: _title);
   }
 
@@ -863,18 +971,28 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     buffer.writeln('━━━━━━━━━━━━━━━━━━');
     buffer.writeln('الحساب: *$entityName*');
     buffer.writeln('المجموع الفرعي: ${CurrencyFormatter.format(_subtotal)}');
-    if (_discountAmount > 0) buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
-    if (_taxAmount > 0) buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
-    if (_transportCharges > 0) buffer.writeln('أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
+    if (_discountAmount > 0) {
+      buffer.writeln('الخصم: ${CurrencyFormatter.format(_discountAmount)}');
+    }
+    if (_taxAmount > 0) {
+      buffer.writeln('الضريبة: ${CurrencyFormatter.format(_taxAmount)}');
+    }
+    if (_transportCharges > 0) {
+      buffer.writeln(
+          'أجور النقل: ${CurrencyFormatter.format(_transportCharges)}');
+    }
     buffer.writeln('*الإجمالي: ${CurrencyFormatter.format(_total)}*');
     buffer.writeln('المدفوع: ${CurrencyFormatter.format(_paidAmount)}');
     buffer.writeln('المتبقي: ${CurrencyFormatter.format(_remaining)}');
     buffer.writeln('━━━━━━━━━━━━━━━━━━');
     buffer.writeln('*الأصناف:*');
     for (final item in _vm.items) {
-      buffer.writeln('▫️ ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
+      buffer.writeln(
+          '▫️ ${item.productName} × ${item.quantity} = ${CurrencyFormatter.format(item.totalPrice)}');
     }
-    if (_notesController.text.isNotEmpty) buffer.writeln('ملاحظات: ${_notesController.text}');
+    if (_notesController.text.isNotEmpty) {
+      buffer.writeln('ملاحظات: ${_notesController.text}');
+    }
     Share.share(buffer.toString(), subject: _title);
   }
 
@@ -886,7 +1004,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
     try {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
+        const SnackBar(
+            content: Text('جاري إنشاء ملف PDF...'),
+            duration: Duration(seconds: 1)),
       );
       final entityName = _selectedEntityName ?? '—';
 
@@ -910,14 +1030,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final itemsMap = _vm.items.map((item) => <String, dynamic>{
-        'product_name': item.productName,
-        'quantity': item.quantity,
-        'unit_price': item.unitPrice,
-        'total_price': item.totalPrice,
-        'unit_name': item.unitName,
-        'base_quantity': item.baseQuantity,
-      }).toList();
+      final itemsMap = _vm.items
+          .map((item) => <String, dynamic>{
+                'product_name': item.productName,
+                'quantity': item.quantity,
+                'unit_price': item.unitPrice,
+                'total_price': item.totalPrice,
+                'unit_name': item.unitName,
+                'base_quantity': item.baseQuantity,
+              })
+          .toList();
 
       await InvoicePdfGenerator.printInvoice(invoiceMap, itemsMap);
     } catch (e) {
@@ -940,13 +1062,18 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
+              content: const Text(
+                  'الطابعة غير متصلة. يرجى الذهاب إلى الإعدادات لتوصيلها'),
               backgroundColor: AppColors.warning,
               action: SnackBarAction(
                 label: 'الإعدادات',
                 textColor: Colors.white,
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const BluetoothPrinterSettingsScreen()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const BluetoothPrinterSettingsScreen()));
                 },
               ),
             ),
@@ -958,21 +1085,27 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
     try {
       final entityName = _selectedEntityName ?? '—';
-      final currencySymbol = _vm.selectedCurrency == 'SAR' ? 'ر.س' : _vm.selectedCurrency == 'USD' ? r'$' : 'ر.ي';
+      final currencySymbol = _vm.selectedCurrency == 'SAR'
+          ? 'ر.س'
+          : _vm.selectedCurrency == 'USD'
+              ? r'$'
+              : 'ر.ي';
 
       await printerService.printReceipt({
         'invoice_number': '—',
         'invoice_type': _isSale ? 'فاتورة مبيعات' : 'فاتورة مشتريات',
         'date': DateTime.now(),
         'customer_name': entityName,
-        'items': _vm.items.map((item) => <String, dynamic>{
-          'product_name': item.productName,
-          'quantity': item.quantity,
-          'unit_price': item.unitPrice,
-          'total_price': item.totalPrice,
-          'unit_name': item.unitName,
-          'base_quantity': item.baseQuantity,
-        }).toList(),
+        'items': _vm.items
+            .map((item) => <String, dynamic>{
+                  'product_name': item.productName,
+                  'quantity': item.quantity,
+                  'unit_price': item.unitPrice,
+                  'total_price': item.totalPrice,
+                  'unit_name': item.unitName,
+                  'base_quantity': item.baseQuantity,
+                })
+            .toList(),
         'subtotal': _subtotal,
         'discount': _discountAmount,
         'tax': _taxAmount,
@@ -985,7 +1118,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إرسال الفاتورة للطابعة الحرارية'), backgroundColor: AppColors.success),
+          const SnackBar(
+              content: Text('تم إرسال الفاتورة للطابعة الحرارية'),
+              backgroundColor: AppColors.success),
         );
       }
     } on PrinterException catch (e) {

@@ -21,7 +21,8 @@ class StatisticsScreen extends StatefulWidget {
   State<StatisticsScreen> createState() => _StatisticsScreenState();
 }
 
-class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerProviderStateMixin {
+class _StatisticsScreenState extends State<StatisticsScreen>
+    with SingleTickerProviderStateMixin {
   double _monthSales = 0.0;
   double _monthPurchases = 0.0;
   double _monthExpenses = 0.0;
@@ -59,22 +60,30 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
         locator<CustomerRepository>().getCustomerCount(),
         invoiceRepo.getCashBalance(),
         invoiceRepo.getRecentInvoices(limit: 5),
-        invoiceRepo.getCOGSThisMonth(),  // Real COGS from invoice_items
+        invoiceRepo.getCOGSThisMonth(), // Real COGS from invoice_items
       ]);
 
       final now = DateTime.now();
-      final monthStart = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
-      final topCustomersResult = await reportService.getTopCustomersBySales(monthStart);
+      final monthStart =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
+      final topCustomersResult =
+          await reportService.getTopCustomersBySales(monthStart);
 
-      final currencyBreakdownResult = await reportService.getInvoiceCurrencyBreakdown(monthStart);
+      final currencyBreakdownResult =
+          await reportService.getInvoiceCurrencyBreakdown(monthStart);
 
       if (mounted) {
         setState(() {
-          _monthSales = results[0] as double; // already converted by getTotalSalesThisMonth
-          _monthPurchases = results[1] as double; // already converted by getTotalPurchasesThisMonth
-          _monthExpenses = results[2] as double; // already converted by getTotalExpensesThisMonth
-          _monthCOGS = results[6] as double; // Real COGS from invoice_items (already converted by repository)
-          _cashBalance = results[4] as double; // already converted by getCashBalance
+          _monthSales = results[0]
+              as double; // already converted by getTotalSalesThisMonth
+          _monthPurchases = results[1]
+              as double; // already converted by getTotalPurchasesThisMonth
+          _monthExpenses = results[2]
+              as double; // already converted by getTotalExpensesThisMonth
+          _monthCOGS = results[6]
+              as double; // Real COGS from invoice_items (already converted by repository)
+          _cashBalance =
+              results[4] as double; // already converted by getCashBalance
           _recentActivity = results[5] as List<Map<String, dynamic>>;
           _topCustomers = topCustomersResult;
           _currencyBreakdown = currencyBreakdownResult;
@@ -189,7 +198,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: DesignSystem.asymmetricTopRight(large: 50, small: 14),
+              borderRadius:
+                  DesignSystem.asymmetricTopRight(large: 50, small: 14),
             ),
             child: Row(
               children: [
@@ -207,9 +217,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    _netProfit >= 0
-                        ? Icons.trending_up
-                        : Icons.trending_down,
+                    _netProfit >= 0 ? Icons.trending_up : Icons.trending_down,
                     color: Colors.white,
                     size: 20,
                   ),
@@ -238,7 +246,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
@@ -272,8 +281,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
               dividerColor: Colors.transparent,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
-              labelStyle: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
-              unselectedLabelStyle: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500),
+              labelStyle: theme.textTheme.labelMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+              unselectedLabelStyle: theme.textTheme.labelMedium
+                  ?.copyWith(fontWeight: FontWeight.w500),
               tabs: const [
                 Tab(text: 'ملخص'),
                 Tab(text: 'رسوم بيانية'),
@@ -501,7 +512,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                       child: Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [AppColors.accentBlue, AppColors.primaryLight],
+                            colors: [
+                              AppColors.accentBlue,
+                              AppColors.primaryLight
+                            ],
                           ),
                         ),
                       ),
@@ -646,7 +660,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     }
 
     final maxSale = _topCustomers.isNotEmpty
-        ? MoneyHelper.readCalculatedMoney(_topCustomers.first['total_sales'], fallback: 1.0)
+        ? MoneyHelper.readCalculatedMoney(_topCustomers.first['total_sales'],
+            fallback: 1.0)
         : 1.0;
 
     return Padding(
@@ -663,7 +678,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
             final index = entry.key;
             final customer = entry.value;
             final name = customer['name'] as String? ?? '—';
-            final sales = MoneyHelper.readCalculatedMoney(customer['total_sales']);
+            final sales =
+                MoneyHelper.readCalculatedMoney(customer['total_sales']);
             final progress = maxSale > 0 ? sales / maxSale : 0.0;
             final rankColor = index == 0
                 ? AppColors.warning
@@ -822,7 +838,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                   Icon(
                     Icons.arrow_back_ios,
                     size: 16,
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textHint,
                   ),
                 ],
               ),
@@ -880,11 +898,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
             final type = invoice['type'] as String? ?? 'sale';
             final entityName = invoice['entity_name'] as String? ?? '—';
             final total = MoneyHelper.readMoney(invoice['total']);
-            final createdAt = DateTime.tryParse(
-                    invoice['created_at'] as String? ?? '') ??
-                DateTime.now();
+            final createdAt =
+                DateTime.tryParse(invoice['created_at'] as String? ?? '') ??
+                    DateTime.now();
             final isSale = type == 'sale';
-            final iconColor = isSale ? AppColors.accentBlue : AppColors.accentPink;
+            final iconColor =
+                isSale ? AppColors.accentBlue : AppColors.accentPink;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -937,7 +956,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                         CurrencyFormatter.format(total),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: isSale ? AppColors.accentBlue : AppColors.accentPink,
+                          color: isSale
+                              ? AppColors.accentBlue
+                              : AppColors.accentPink,
                         ),
                       ),
                       const SizedBox(height: 2),

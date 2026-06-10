@@ -9,7 +9,8 @@ class AddAccountSheet extends StatefulWidget {
   final Account? existing;
   final List<Account> allAccounts;
 
-  const AddAccountSheet({super.key, this.existing, this.allAccounts = const []});
+  const AddAccountSheet(
+      {super.key, this.existing, this.allAccounts = const []});
 
   @override
   State<AddAccountSheet> createState() => _AddAccountSheetState();
@@ -59,11 +60,14 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
           }
         }
       }
+
       if (widget.existing!.id != null) {
         descendantIds.add(widget.existing!.id!);
         collectDescendants(widget.existing!.id!);
       }
-      return widget.allAccounts.where((a) => a.id != null && !descendantIds.contains(a.id)).toList();
+      return widget.allAccounts
+          .where((a) => a.id != null && !descendantIds.contains(a.id))
+          .toList();
     }
     return widget.allAccounts;
   }
@@ -90,7 +94,8 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   Future<void> _generateCode() async {
     if (_isEdit) return;
-    final code = await locator<AccountRepository>().getNextAccountCode(_selectedType.name);
+    final code = await locator<AccountRepository>()
+        .getNextAccountCode(_selectedType.name);
     if (mounted) {
       _codeController.text = code;
     }
@@ -116,7 +121,12 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
       accountType: _selectedType,
       currency: _currency,
       balance: widget.existing?.balance ?? 0.0,
-      balanceType: widget.existing?.balanceType ?? (_selectedType == AccountType.ASSET || _selectedType == AccountType.COST || _selectedType == AccountType.EXPENSE ? 'debit' : 'credit'),
+      balanceType: widget.existing?.balanceType ??
+          (_selectedType == AccountType.ASSET ||
+                  _selectedType == AccountType.COST ||
+                  _selectedType == AccountType.EXPENSE
+              ? 'debit'
+              : 'credit'),
       linkedCashBoxId: _selectedCashBoxId,
       isSystem: widget.existing?.isSystem ?? false,
       isActive: widget.existing?.isActive ?? true,
@@ -126,7 +136,8 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     );
 
     if (_isEdit) {
-      await locator<AccountRepository>().updateAccount(account.id!, account.toMap());
+      await locator<AccountRepository>()
+          .updateAccount(account.id!, account.toMap());
     } else {
       await locator<AccountRepository>().insertAccount(account.toMap());
     }
@@ -135,7 +146,9 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     setState(() => _isSaving = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} الحساب بنجاح'), backgroundColor: AppColors.success),
+      SnackBar(
+          content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} الحساب بنجاح'),
+          backgroundColor: AppColors.success),
     );
     Navigator.of(context).pop();
   }
@@ -156,12 +169,15 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(_isEdit ? 'تعديل حساب' : 'إضافة حساب جديد',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),
 
               // Main account type
-              Text('الحساب الرئيسي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text('الحساب الرئيسي',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -190,7 +206,8 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                   labelText: 'اسم الحساب',
                   prefixIcon: Icon(Icons.text_fields),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'اسم الحساب مطلوب' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'اسم الحساب مطلوب' : null,
               ),
               const SizedBox(height: 14),
 
@@ -207,16 +224,21 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                     onPressed: _generateCode,
                   ),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'رقم الترتيب مطلوب' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'رقم الترتيب مطلوب'
+                    : null,
               ),
               const SizedBox(height: 14),
 
               // Parent account dropdown
               Builder(builder: (context) {
                 // Ensure selected value exists in items to avoid assertion error
-                final validParentIds = _parentCandidates.map((a) => a.id).toSet();
-                final effectiveParentId = (_selectedParentId != null && validParentIds.contains(_selectedParentId))
-                    ? _selectedParentId : null;
+                final validParentIds =
+                    _parentCandidates.map((a) => a.id).toSet();
+                final effectiveParentId = (_selectedParentId != null &&
+                        validParentIds.contains(_selectedParentId))
+                    ? _selectedParentId
+                    : null;
                 return DropdownButtonFormField<int>(
                   value: effectiveParentId,
                   decoration: const InputDecoration(
@@ -224,14 +246,15 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                     prefixIcon: Icon(Icons.account_tree),
                   ),
                   items: [
-                    const DropdownMenuItem<int>(value: null, child: Text('حساب رئيسي (بدون أب)')),
+                    const DropdownMenuItem<int>(
+                        value: null, child: Text('حساب رئيسي (بدون أب)')),
                     ..._parentCandidates.map((account) => DropdownMenuItem<int>(
-                      value: account.id,
-                      child: Text(
-                        '${account.accountCode} - ${account.nameAr}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )),
+                          value: account.id,
+                          child: Text(
+                            '${account.accountCode} - ${account.nameAr}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )),
                   ],
                   onChanged: (v) => setState(() => _selectedParentId = v),
                 );
@@ -265,11 +288,13 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                   prefixIcon: Icon(Icons.link),
                 ),
                 items: [
-                  const DropdownMenuItem<int>(value: null, child: Text('بدون ربط')),
+                  const DropdownMenuItem<int>(
+                      value: null, child: Text('بدون ربط')),
                   ..._cashBoxes.map((cb) => DropdownMenuItem<int>(
-                    value: cb['id'] as int,
-                    child: Text(cb['name'] as String, overflow: TextOverflow.ellipsis),
-                  )),
+                        value: cb['id'] as int,
+                        child: Text(cb['name'] as String,
+                            overflow: TextOverflow.ellipsis),
+                      )),
                 ],
                 onChanged: (v) => setState(() => _selectedCashBoxId = v),
               ),
@@ -283,7 +308,11 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                     child: ElevatedButton.icon(
                       onPressed: _isSaving ? null : _save,
                       icon: _isSaving
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                       style: ElevatedButton.styleFrom(
@@ -296,8 +325,10 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      onPressed:
+                          _isSaving ? null : () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14)),
                       child: const Text('إلغاء'),
                     ),
                   ),

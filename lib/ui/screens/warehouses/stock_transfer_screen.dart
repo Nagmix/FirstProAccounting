@@ -45,9 +45,11 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+    final warehouses =
+        await locator<ReferenceDataRepository>().getAllWarehouses();
     if (!mounted) return;
-    final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
+    final products =
+        await locator<ProductRepository>().getAllProducts(activeOnly: true);
     if (!mounted) return;
     final transfers = await locator<StockService>().getAllStockTransfers();
     if (!mounted) return;
@@ -79,32 +81,42 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
   Future<void> _submitTransfer() async {
     if (_fromWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار مخزن المصدر'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('يرجى اختيار مخزن المصدر'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
     if (_toWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار مخزن الوجهة'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('يرجى اختيار مخزن الوجهة'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
     if (_fromWarehouseId == _toWarehouseId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن التحويل لنفس المخزن'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('لا يمكن التحويل لنفس المخزن'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
     if (_selectedProductId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار المنتج'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('يرجى اختيار المنتج'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
     final quantity = double.tryParse(_quantityController.text) ?? 0;
     if (quantity <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال كمية صحيحة'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('يرجى إدخال كمية صحيحة'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
@@ -114,28 +126,38 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
     if (_fromWarehouseId != null) {
       final scaffoldMessenger = ScaffoldMessenger.of(context);
       // Query stock in the specific source warehouse
-      final warehouseStock = await locator<ProductRepository>().getProductStockInWarehouse(_selectedProductId!, _fromWarehouseId!);
+      final warehouseStock = await locator<ProductRepository>()
+          .getProductStockInWarehouse(_selectedProductId!, _fromWarehouseId!);
       if (!mounted) return;
       if (warehouseStock == null) {
         scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('المنتج غير موجود في مخزن المصدر'), backgroundColor: AppColors.warning),
+          const SnackBar(
+              content: Text('المنتج غير موجود في مخزن المصدر'),
+              backgroundColor: AppColors.warning),
         );
         return;
       }
       if (quantity > warehouseStock) {
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('الكمية المتاحة في المخزن $warehouseStock فقط'), backgroundColor: AppColors.warning),
+          SnackBar(
+              content: Text('الكمية المتاحة في المخزن $warehouseStock فقط'),
+              backgroundColor: AppColors.warning),
         );
         return;
       }
     } else {
       // Fallback: check total stock (no specific warehouse selected)
-      final sourceProduct = _products.where((p) => p['id'] == _selectedProductId).toList();
+      final sourceProduct =
+          _products.where((p) => p['id'] == _selectedProductId).toList();
       if (sourceProduct.isNotEmpty) {
-        final currentStock = (sourceProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+        final currentStock =
+            (sourceProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
         if (quantity > currentStock) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('الكمية المتاحة $currentStock فقط (إجمالي المخزون)'), backgroundColor: AppColors.warning),
+            SnackBar(
+                content:
+                    Text('الكمية المتاحة $currentStock فقط (إجمالي المخزون)'),
+                backgroundColor: AppColors.warning),
           );
           return;
         }
@@ -147,8 +169,10 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
     final now = DateTime.now();
 
     // توليد رقم التحويل
-    final existingTransfers = await locator<StockService>().getAllStockTransfers();
-    final transferNumber = 'ST-${(existingTransfers.length + 1).toString().padLeft(4, '0')}';
+    final existingTransfers =
+        await locator<StockService>().getAllStockTransfers();
+    final transferNumber =
+        'ST-${(existingTransfers.length + 1).toString().padLeft(4, '0')}';
 
     final transferMap = {
       'transfer_number': transferNumber,
@@ -156,7 +180,9 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
       'to_warehouse_id': _toWarehouseId,
       'product_id': _selectedProductId,
       'quantity': quantity,
-      'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      'notes': _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
       'date': now.toIso8601String().substring(0, 10),
       'created_at': now.toIso8601String(),
     };
@@ -176,7 +202,9 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم التحويل بنجاح'), backgroundColor: AppColors.success),
+        const SnackBar(
+            content: Text('تم التحويل بنجاح'),
+            backgroundColor: AppColors.success),
       );
 
       _loadData();
@@ -220,7 +248,8 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                             label: 'من مخزن',
                             value: _fromWarehouseId,
                             items: _warehouses,
-                            onChanged: (v) => setState(() => _fromWarehouseId = v),
+                            onChanged: (v) =>
+                                setState(() => _fromWarehouseId = v),
                             isDark: isDark,
                           ),
                           const SizedBox(height: 12),
@@ -247,7 +276,8 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                             label: 'إلى مخزن',
                             value: _toWarehouseId,
                             items: _warehouses,
-                            onChanged: (v) => setState(() => _toWarehouseId = v),
+                            onChanged: (v) =>
+                                setState(() => _toWarehouseId = v),
                             isDark: isDark,
                           ),
                           const SizedBox(height: 16),
@@ -262,15 +292,21 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                           ),
                           const SizedBox(height: 6),
                           InkWell(
-                            onTap: () => setState(() => _showProductSearch = !_showProductSearch),
+                            onTap: () => setState(
+                                () => _showProductSearch = !_showProductSearch),
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
                               decoration: BoxDecoration(
-                                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                                color: isDark
+                                    ? AppColors.darkSurfaceVariant
+                                    : AppColors.surfaceVariant,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: _selectedProductId != null ? AppColors.primary : AppColors.border,
+                                  color: _selectedProductId != null
+                                      ? AppColors.primary
+                                      : AppColors.border,
                                 ),
                               ),
                               child: Row(
@@ -278,7 +314,9 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                   Icon(
                                     Icons.inventory_2,
                                     size: 20,
-                                    color: _selectedProductId != null ? AppColors.primary : AppColors.textHint,
+                                    color: _selectedProductId != null
+                                        ? AppColors.primary
+                                        : AppColors.textHint,
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -286,13 +324,18 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                       _selectedProductId != null
                                           ? _getProductName(_selectedProductId)!
                                           : 'اختر المنتج',
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: _selectedProductId != null ? null : AppColors.textHint,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        color: _selectedProductId != null
+                                            ? null
+                                            : AppColors.textHint,
                                       ),
                                     ),
                                   ),
                                   Icon(
-                                    _showProductSearch ? Icons.expand_less : Icons.expand_more,
+                                    _showProductSearch
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
                                     color: AppColors.textHint,
                                   ),
                                 ],
@@ -313,20 +356,25 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                         icon: const Icon(Icons.clear, size: 18),
                                         onPressed: () {
                                           _searchController.clear();
-                                          setState(() => _productSearchQuery = '');
+                                          setState(
+                                              () => _productSearchQuery = '');
                                         },
                                       )
                                     : null,
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
                               ),
-                              onChanged: (v) => setState(() => _productSearchQuery = v),
+                              onChanged: (v) =>
+                                  setState(() => _productSearchQuery = v),
                             ),
                             const SizedBox(height: 4),
                             Container(
                               constraints: const BoxConstraints(maxHeight: 200),
                               decoration: BoxDecoration(
-                                color: isDark ? AppColors.darkSurface : AppColors.surface,
+                                color: isDark
+                                    ? AppColors.darkSurface
+                                    : AppColors.surface,
                                 border: Border.all(color: AppColors.border),
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -335,18 +383,31 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                 itemCount: _filteredProducts.length,
                                 itemBuilder: (context, index) {
                                   final product = _filteredProducts[index];
-                                  final isSelected = product['id'] == _selectedProductId;
-                                  final stock = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
-                                  final productWarehouseId = product['warehouse_id'] as int?;
+                                  final isSelected =
+                                      product['id'] == _selectedProductId;
+                                  final stock =
+                                      (product['current_stock'] as num?)
+                                              ?.toDouble() ??
+                                          0.0;
+                                  final productWarehouseId =
+                                      product['warehouse_id'] as int?;
                                   // Show warehouse-specific stock if source warehouse is selected
-                                  final isInSourceWarehouse = _fromWarehouseId == null || productWarehouseId == _fromWarehouseId;
+                                  final isInSourceWarehouse =
+                                      _fromWarehouseId == null ||
+                                          productWarehouseId ==
+                                              _fromWarehouseId;
                                   return ListTile(
                                     dense: true,
                                     selected: isSelected,
-                                    selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                                    selectedTileColor: AppColors.primary
+                                        .withValues(alpha: 0.08),
                                     leading: Icon(
-                                      isSelected ? Icons.check_circle : Icons.circle_outlined,
-                                      color: isSelected ? AppColors.primary : AppColors.textHint,
+                                      isSelected
+                                          ? Icons.check_circle
+                                          : Icons.circle_outlined,
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.textHint,
                                       size: 20,
                                     ),
                                     title: Text(
@@ -355,13 +416,17 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                     ),
                                     trailing: Text(
                                       'المخزون: $stock${!isInSourceWarehouse ? " *" : ""}',
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        color: stock > 0 ? AppColors.success : AppColors.error,
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
+                                        color: stock > 0
+                                            ? AppColors.success
+                                            : AppColors.error,
                                       ),
                                     ),
                                     onTap: () {
                                       setState(() {
-                                        _selectedProductId = product['id'] as int;
+                                        _selectedProductId =
+                                            product['id'] as int;
                                         _showProductSearch = false;
                                         _productSearchQuery = '';
                                         _searchController.clear();
@@ -378,7 +443,8 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                           // الكمية
                           TextFormField(
                             controller: _quantityController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
                             decoration: const InputDecoration(
                               labelText: 'الكمية',
                               prefixIcon: Icon(Icons.numbers),
@@ -406,14 +472,17 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                                   ? const SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
                                     )
                                   : const Icon(Icons.swap_horiz, size: 22),
-                              label: Text(_isSaving ? 'جاري التحويل...' : 'تحويل'),
+                              label:
+                                  Text(_isSaving ? 'جاري التحويل...' : 'تحويل'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
@@ -439,11 +508,13 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
                         padding: const EdgeInsets.all(32),
                         child: Column(
                           children: [
-                            Icon(Icons.swap_horiz, size: 48, color: AppColors.textHint),
+                            Icon(Icons.swap_horiz,
+                                size: 48, color: AppColors.textHint),
                             const SizedBox(height: 8),
                             Text(
                               'لا توجد تحويلات',
-                              style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint),
+                              style: theme.textTheme.bodyMedium
+                                  ?.copyWith(color: AppColors.textHint),
                             ),
                           ],
                         ),
@@ -474,7 +545,8 @@ class _StockTransferScreenState extends State<StockTransferScreen> {
         labelText: label,
         prefixIcon: const Icon(Icons.warehouse, size: 20),
         filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+        fillColor:
+            isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -522,7 +594,8 @@ class _TransferCard extends StatelessWidget {
                 color: AppColors.info.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.swap_horiz, color: AppColors.info, size: 22),
+              child:
+                  const Icon(Icons.swap_horiz, color: AppColors.info, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -531,13 +604,16 @@ class _TransferCard extends StatelessWidget {
                 children: [
                   Text(
                     productName,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '$fromName ← $toName',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -556,7 +632,9 @@ class _TransferCard extends StatelessWidget {
                 Text(
                   transferNumber,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textHint,
                   ),
                 ),
               ],

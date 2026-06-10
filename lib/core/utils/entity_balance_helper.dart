@@ -53,7 +53,8 @@ class EntityBalanceHelper {
     final currentType = rows.first['balance_type'] as String? ?? 'credit';
 
     // Convert to signed value
-    double signedBalance = currentType == 'credit' ? currentBalance : -currentBalance;
+    double signedBalance =
+        currentType == 'credit' ? currentBalance : -currentBalance;
 
     // Apply the change
     signedBalance += signedChange;

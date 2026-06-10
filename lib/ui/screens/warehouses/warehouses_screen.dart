@@ -36,13 +36,15 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
   Future<void> _loadWarehouses() async {
     setState(() => _isLoading = true);
     try {
-      final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+      final warehouses =
+          await locator<ReferenceDataRepository>().getAllWarehouses();
 
       // Load product counts per warehouse
       final counts = <int, int>{};
       for (final w in warehouses) {
         final id = w['id'] as int;
-        counts[id] = await locator<ProductRepository>().getProductCountByWarehouse(id);
+        counts[id] =
+            await locator<ProductRepository>().getProductCountByWarehouse(id);
       }
 
       if (mounted) {
@@ -56,7 +58,9 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -93,7 +97,8 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
         builder: (ctx) => AlertDialog(
           icon: const Icon(Icons.warning, color: AppColors.warning, size: 40),
           title: const Text('لا يمكن الحذف'),
-          content: Text('لا يمكن حذف "$name" لأنه يحتوي على $productCount منتج. قم بنقل المنتجات أولاً.'),
+          content: Text(
+              'لا يمكن حذف "$name" لأنه يحتوي على $productCount منتج. قم بنقل المنتجات أولاً.'),
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(ctx),
@@ -200,7 +205,9 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        _searchQuery.isEmpty ? 'لا توجد مستودعات' : 'لا توجد نتائج',
+                        _searchQuery.isEmpty
+                            ? 'لا توجد مستودعات'
+                            : 'لا توجد نتائج',
                         style: theme.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
@@ -222,7 +229,8 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                        border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         children: [
@@ -260,7 +268,8 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: AppColors.success.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
@@ -285,7 +294,8 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
                           final warehouse = filtered[index];
                           return _WarehouseCard(
                             warehouse: warehouse,
-                            productCount: _productCounts[warehouse['id'] as int] ?? 0,
+                            productCount:
+                                _productCounts[warehouse['id'] as int] ?? 0,
                             isDark: isDark,
                             onTap: () => _showAddSheet(existing: warehouse),
                             onDelete: () => _deleteWarehouse(warehouse),
@@ -310,7 +320,8 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pushNamed(context, AppConstants.stockTransfer),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppConstants.stockTransfer),
                   icon: const Icon(Icons.swap_horiz, size: 18),
                   label: const Text('تحويل مخزني'),
                   style: OutlinedButton.styleFrom(
@@ -323,7 +334,8 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pushNamed(context, AppConstants.stocktaking),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppConstants.stocktaking),
                   icon: const Icon(Icons.fact_check, size: 18),
                   label: const Text('جرد المخازن'),
                   style: OutlinedButton.styleFrom(
@@ -402,14 +414,18 @@ class _WarehouseCard extends StatelessWidget {
                           Icon(
                             Icons.location_on,
                             size: 14,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               location,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -422,7 +438,8 @@ class _WarehouseCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.info.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),

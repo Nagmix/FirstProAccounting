@@ -67,7 +67,9 @@ class InvoiceItemsSection extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                   letterSpacing: 0.3,
-                  color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : const Color(0xFF1E293B),
                 )),
           ),
           if (trailing != null) trailing,
@@ -105,14 +107,19 @@ class InvoiceItemsSection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text('${items.length}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12)),
             ),
           ),
           if (items.isEmpty)
             Container(
               padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+                color: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : AppColors.surfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isDark ? AppColors.darkBorder : AppColors.border,
@@ -129,11 +136,14 @@ class InvoiceItemsSection extends StatelessWidget {
                         color: _accentBlue.withValues(alpha: 0.06),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.shopping_cart_outlined, size: 28, color: _accentBlue.withValues(alpha: 0.4)),
+                      child: Icon(Icons.shopping_cart_outlined,
+                          size: 28, color: _accentBlue.withValues(alpha: 0.4)),
                     ),
                     const SizedBox(height: 10),
                     Text('لم يتم إضافة أصناف بعد',
-                        style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint, fontWeight: FontWeight.w500)),
+                        style: context.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textHint,
+                            fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -173,7 +183,8 @@ class InvoiceItemsSection extends StatelessWidget {
                             color: _accentBlue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(7),
                           ),
-                          child: const Icon(Icons.add_rounded, size: 16, color: _accentBlue),
+                          child: const Icon(Icons.add_rounded,
+                              size: 16, color: _accentBlue),
                         ),
                         const SizedBox(width: 8),
                         Text('إضافة صنف',

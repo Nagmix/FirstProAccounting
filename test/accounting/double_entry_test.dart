@@ -85,10 +85,13 @@ void main() {
       'FROM transactions WHERE journal_id = ?',
       [journalId],
     );
-    final totalDebit = MoneyHelper.readCalculatedMoney(result.first['total_debit']);
-    final totalCredit = MoneyHelper.readCalculatedMoney(result.first['total_credit']);
+    final totalDebit =
+        MoneyHelper.readCalculatedMoney(result.first['total_debit']);
+    final totalCredit =
+        MoneyHelper.readCalculatedMoney(result.first['total_credit']);
     expect((totalDebit - totalCredit).abs(), lessThan(0.01),
-        reason: 'Journal $journalId: debits ($totalDebit) must equal credits ($totalCredit)');
+        reason:
+            'Journal $journalId: debits ($totalDebit) must equal credits ($totalCredit)');
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -96,10 +99,13 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('Double-entry balance — المدين يساوي الدائن', () {
-    test('Simple two-line journal entry balances / قيد بسيط من سطرين متوازن', () async {
+    test('Simple two-line journal entry balances / قيد بسيط من سطرين متوازن',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final cashAccountId = await _insertAccount(code: '8001', type: 'ASSET', balanceType: 'debit');
-      final salesAccountId = await _insertAccount(code: '8002', type: 'REVENUE', balanceType: 'credit');
+      final cashAccountId = await _insertAccount(
+          code: '8001', type: 'ASSET', balanceType: 'debit');
+      final salesAccountId = await _insertAccount(
+          code: '8002', type: 'REVENUE', balanceType: 'credit');
 
       final journalId = DateTime.now().microsecondsSinceEpoch;
       final amount = MoneyHelper.toCents(5000.0);
@@ -136,9 +142,12 @@ void main() {
 
     test('Multi-line compound entry is balanced / قيد مركب متوازن', () async {
       final now = DateTime.now().toIso8601String();
-      final cashAccountId = await _insertAccount(code: '8021', type: 'ASSET', balanceType: 'debit');
-      final discountAccountId = await _insertAccount(code: '8022', type: 'EXPENSE', balanceType: 'debit');
-      final salesAccountId = await _insertAccount(code: '8023', type: 'REVENUE', balanceType: 'credit');
+      final cashAccountId = await _insertAccount(
+          code: '8021', type: 'ASSET', balanceType: 'debit');
+      final discountAccountId = await _insertAccount(
+          code: '8022', type: 'EXPENSE', balanceType: 'debit');
+      final salesAccountId = await _insertAccount(
+          code: '8023', type: 'REVENUE', balanceType: 'credit');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 2;
       // Sale of 5000, customer paid 4800, discount 200
@@ -149,30 +158,50 @@ void main() {
       await db.transaction((txn) async {
         // Debits: Cash + Discount = 5000
         await txn.insert('transactions', {
-          'account_id': cashAccountId, 'journal_id': journalId,
-          'debit': cashAmount, 'credit': 0,
-          'description': 'نقدية', 'date': now, 'created_at': now,
-          'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': cashAmount,
+          'account_id': cashAccountId,
+          'journal_id': journalId,
+          'debit': cashAmount,
+          'credit': 0,
+          'description': 'نقدية',
+          'date': now,
+          'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': cashAmount,
         });
         await txn.insert('transactions', {
-          'account_id': discountAccountId, 'journal_id': journalId,
-          'debit': discountAmt, 'credit': 0,
-          'description': 'خصم', 'date': now, 'created_at': now,
-          'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': discountAmt,
+          'account_id': discountAccountId,
+          'journal_id': journalId,
+          'debit': discountAmt,
+          'credit': 0,
+          'description': 'خصم',
+          'date': now,
+          'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': discountAmt,
         });
         // Credit: Sales = 5000
         await txn.insert('transactions', {
-          'account_id': salesAccountId, 'journal_id': journalId,
-          'debit': 0, 'credit': salesAmount,
-          'description': 'مبيعات', 'date': now, 'created_at': now,
-          'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': salesAmount,
+          'account_id': salesAccountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': salesAmount,
+          'description': 'مبيعات',
+          'date': now,
+          'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': salesAmount,
         });
       });
 
       await _verifyJournalBalance(journalId);
     });
 
-    test('validateJournalBalance rejects unbalanced entry / يرفض القيد غير المتوازن', () {
+    test(
+        'validateJournalBalance rejects unbalanced entry / يرفض القيد غير المتوازن',
+        () {
       final entries = [
         {'debit': MoneyHelper.toCents(5000.0), 'credit': 0},
         {'debit': 0, 'credit': MoneyHelper.toCents(4000.0)}, // Unbalanced!
@@ -180,7 +209,8 @@ void main() {
       expect(() => _validateJournalBalance(entries), throwsException);
     });
 
-    test('validateJournalBalance accepts balanced entry / يقبل القيد المتوازن', () {
+    test('validateJournalBalance accepts balanced entry / يقبل القيد المتوازن',
+        () {
       final entries = [
         {'debit': MoneyHelper.toCents(5000.0), 'credit': 0},
         {'debit': 0, 'credit': MoneyHelper.toCents(5000.0)},
@@ -188,10 +218,14 @@ void main() {
       expect(() => _validateJournalBalance(entries), returnsNormally);
     });
 
-    test('All journal entries in database are balanced / جميع القيود في قاعدة البيانات متوازنة', () async {
+    test(
+        'All journal entries in database are balanced / جميع القيود في قاعدة البيانات متوازنة',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final cashAcc = await _insertAccount(code: '8031', type: 'ASSET', balanceType: 'debit');
-      final revenueAcc = await _insertAccount(code: '8032', type: 'REVENUE', balanceType: 'credit');
+      final cashAcc = await _insertAccount(
+          code: '8031', type: 'ASSET', balanceType: 'debit');
+      final revenueAcc = await _insertAccount(
+          code: '8032', type: 'REVENUE', balanceType: 'credit');
       await _insertAccount(code: '8033', type: 'EXPENSE', balanceType: 'debit');
 
       // Create several balanced journal entries
@@ -201,16 +235,28 @@ void main() {
         final amount = MoneyHelper.toCents(amounts[i]);
 
         await db.insert('transactions', {
-          'account_id': cashAcc, 'journal_id': journalId,
-          'debit': amount, 'credit': 0,
-          'description': 'مدين', 'date': now, 'created_at': now,
-          'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': amount,
+          'account_id': cashAcc,
+          'journal_id': journalId,
+          'debit': amount,
+          'credit': 0,
+          'description': 'مدين',
+          'date': now,
+          'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': amount,
         });
         await db.insert('transactions', {
-          'account_id': revenueAcc, 'journal_id': journalId,
-          'debit': 0, 'credit': amount,
-          'description': 'دائن', 'date': now, 'created_at': now,
-          'currency_code': 'YER', 'exchange_rate': 1.0, 'amount_base': amount,
+          'account_id': revenueAcc,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': amount,
+          'description': 'دائن',
+          'date': now,
+          'created_at': now,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': amount,
         });
       }
 
@@ -230,62 +276,82 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('balance_type correctness — صحة نوع الرصيد', () {
-    test('ASSET accounts have debit balance_type / حسابات الأصول من نوع مدين', () async {
+    test('ASSET accounts have debit balance_type / حسابات الأصول من نوع مدين',
+        () async {
       final assetAccounts = await db.query('accounts',
           where: "account_type = 'ASSET' AND is_system = 1");
       for (final acc in assetAccounts) {
         expect(acc['balance_type'], 'debit',
-            reason: 'ASSET account ${acc['account_code']} should have balance_type=debit');
+            reason:
+                'ASSET account ${acc['account_code']} should have balance_type=debit');
       }
     });
 
-    test('EXPENSE accounts have debit balance_type / حسابات المصروفات من نوع مدين', () async {
+    test(
+        'EXPENSE accounts have debit balance_type / حسابات المصروفات من نوع مدين',
+        () async {
       final expenseAccounts = await db.query('accounts',
           where: "account_type = 'EXPENSE' AND is_system = 1");
       for (final acc in expenseAccounts) {
         expect(acc['balance_type'], 'debit',
-            reason: 'EXPENSE account ${acc['account_code']} should have balance_type=debit');
+            reason:
+                'EXPENSE account ${acc['account_code']} should have balance_type=debit');
       }
     });
 
-    test('REVENUE accounts have credit balance_type / حسابات الإيرادات من نوع دائن', () async {
+    test(
+        'REVENUE accounts have credit balance_type / حسابات الإيرادات من نوع دائن',
+        () async {
       final revenueAccounts = await db.query('accounts',
           where: "account_type = 'REVENUE' AND is_system = 1");
       for (final acc in revenueAccounts) {
         expect(acc['balance_type'], 'credit',
-            reason: 'REVENUE account ${acc['account_code']} should have balance_type=credit');
+            reason:
+                'REVENUE account ${acc['account_code']} should have balance_type=credit');
       }
     });
 
-    test('LIABILITY accounts have credit balance_type / حسابات الخصوم من نوع دائن', () async {
+    test(
+        'LIABILITY accounts have credit balance_type / حسابات الخصوم من نوع دائن',
+        () async {
       final liabilityAccounts = await db.query('accounts',
           where: "account_type = 'LIABILITY' AND is_system = 1");
       for (final acc in liabilityAccounts) {
         expect(acc['balance_type'], 'credit',
-            reason: 'LIABILITY account ${acc['account_code']} should have balance_type=credit');
+            reason:
+                'LIABILITY account ${acc['account_code']} should have balance_type=credit');
       }
     });
 
-    test('EQUITY accounts have credit balance_type / حسابات حقوق الملكية من نوع دائن', () async {
+    test(
+        'EQUITY accounts have credit balance_type / حسابات حقوق الملكية من نوع دائن',
+        () async {
       final equityAccounts = await db.query('accounts',
           where: "account_type = 'EQUITY' AND is_system = 1");
       for (final acc in equityAccounts) {
         expect(acc['balance_type'], 'credit',
-            reason: 'EQUITY account ${acc['account_code']} should have balance_type=credit');
+            reason:
+                'EQUITY account ${acc['account_code']} should have balance_type=credit');
       }
     });
 
-    test('Account balance updates respect balance_type / تحديثات الرصيد تراعي نوع الرصيد', () async {
+    test(
+        'Account balance updates respect balance_type / تحديثات الرصيد تراعي نوع الرصيد',
+        () async {
       final now = DateTime.now().toIso8601String();
 
       // Create a debit-balance account (ASSET)
       final debitAccountId = await _insertAccount(
-        code: '8501', type: 'ASSET', balanceType: 'debit',
+        code: '8501',
+        type: 'ASSET',
+        balanceType: 'debit',
       );
       // Set initial balance
-      await db.update('accounts',
+      await db.update(
+        'accounts',
         {'balance': MoneyHelper.toCents(10000.0), 'updated_at': now},
-        where: 'id = ?', whereArgs: [debitAccountId],
+        where: 'id = ?',
+        whereArgs: [debitAccountId],
       );
 
       // Apply a debit entry: debit-balance account increases
@@ -303,24 +369,34 @@ void main() {
           updated_at = ?
         WHERE id = ?
       ''', [
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        now, debitAccountId,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        now,
+        debitAccountId,
       ]);
 
-      final updatedDebit = await db.query('accounts', where: 'id = ?', whereArgs: [debitAccountId]);
+      final updatedDebit = await db
+          .query('accounts', where: 'id = ?', whereArgs: [debitAccountId]);
       // Debit account + debit entry: 10000 + 5000 = 15000
       expect(MoneyHelper.readMoney(updatedDebit.first['balance']), 15000.0);
 
       // Create a credit-balance account (REVENUE)
       final creditAccountId = await _insertAccount(
-        code: '8502', type: 'REVENUE', balanceType: 'credit',
+        code: '8502',
+        type: 'REVENUE',
+        balanceType: 'credit',
       );
-      await db.update('accounts',
+      await db.update(
+        'accounts',
         {'balance': MoneyHelper.toCents(3000.0), 'updated_at': now},
-        where: 'id = ?', whereArgs: [creditAccountId],
+        where: 'id = ?',
+        whereArgs: [creditAccountId],
       );
 
       // Apply a credit entry: credit-balance account increases
@@ -343,19 +419,26 @@ void main() {
         now, creditAccountId,
       ]);
 
-      final updatedCredit = await db.query('accounts', where: 'id = ?', whereArgs: [creditAccountId]);
+      final updatedCredit = await db
+          .query('accounts', where: 'id = ?', whereArgs: [creditAccountId]);
       // Credit account + credit entry: 3000 + 5000 = 8000
       expect(MoneyHelper.readMoney(updatedCredit.first['balance']), 8000.0);
     });
 
-    test('Debit on credit-balance account decreases balance / المدين على حساب دائن يقلل الرصيد', () async {
+    test(
+        'Debit on credit-balance account decreases balance / المدين على حساب دائن يقلل الرصيد',
+        () async {
       final now = DateTime.now().toIso8601String();
       final creditAccountId = await _insertAccount(
-        code: '8503', type: 'REVENUE', balanceType: 'credit',
+        code: '8503',
+        type: 'REVENUE',
+        balanceType: 'credit',
       );
-      await db.update('accounts',
+      await db.update(
+        'accounts',
         {'balance': MoneyHelper.toCents(5000.0), 'updated_at': now},
-        where: 'id = ?', whereArgs: [creditAccountId],
+        where: 'id = ?',
+        whereArgs: [creditAccountId],
       );
 
       final amountCents = MoneyHelper.toCents(2000.0);
@@ -373,14 +456,20 @@ void main() {
           updated_at = ?
         WHERE id = ?
       ''', [
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        isDebitInt, amountCents,
-        now, creditAccountId,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        isDebitInt,
+        amountCents,
+        now,
+        creditAccountId,
       ]);
 
-      final updated = await db.query('accounts', where: 'id = ?', whereArgs: [creditAccountId]);
+      final updated = await db
+          .query('accounts', where: 'id = ?', whereArgs: [creditAccountId]);
       // Credit account + debit entry: 5000 - 2000 = 3000
       expect(MoneyHelper.readMoney(updated.first['balance']), 3000.0);
     });
@@ -391,9 +480,12 @@ void main() {
   // ══════════════════════════════════════════════════════════════
 
   group('amount_base computation — حساب المبلغ الأساسي للعملات المتعددة', () {
-    test('YER transaction: amount_base equals transaction amount / معاملة الريال: amount_base = المبلغ', () async {
+    test(
+        'YER transaction: amount_base equals transaction amount / معاملة الريال: amount_base = المبلغ',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final accountId = await _insertAccount(code: '8601', type: 'ASSET', balanceType: 'debit');
+      final accountId = await _insertAccount(
+          code: '8601', type: 'ASSET', balanceType: 'debit');
 
       final amount = MoneyHelper.toCents(10000.0); // 10000 YER in cents
       await db.insert('transactions', {
@@ -415,9 +507,12 @@ void main() {
           reason: 'For YER, amount_base should equal the transaction amount');
     });
 
-    test('USD transaction: amount_base = amount * 530 / معاملة الدولار: amount_base = المبلغ × 530', () async {
+    test(
+        'USD transaction: amount_base = amount * 530 / معاملة الدولار: amount_base = المبلغ × 530',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final accountId = await _insertAccount(code: '8602', type: 'ASSET', balanceType: 'debit');
+      final accountId = await _insertAccount(
+          code: '8602', type: 'ASSET', balanceType: 'debit');
 
       final amount = MoneyHelper.toCents(100.0); // 100 USD in cents = 10000
       const exchangeRate = 530.0;
@@ -439,12 +534,16 @@ void main() {
       final txn = await db.query('transactions',
           where: 'account_id = ?', whereArgs: [accountId], limit: 1);
       expect(txn.first['amount_base'], expectedAmountBase,
-          reason: 'For USD 100 @ 530, amount_base should be 5300000 (= 53000 YER)');
+          reason:
+              'For USD 100 @ 530, amount_base should be 5300000 (= 53000 YER)');
     });
 
-    test('SAR transaction: amount_base = amount * 140 / معاملة الريال السعودي: amount_base = المبلغ × 140', () async {
+    test(
+        'SAR transaction: amount_base = amount * 140 / معاملة الريال السعودي: amount_base = المبلغ × 140',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final accountId = await _insertAccount(code: '8603', type: 'ASSET', balanceType: 'debit');
+      final accountId = await _insertAccount(
+          code: '8603', type: 'ASSET', balanceType: 'debit');
 
       final amount = MoneyHelper.toCents(500.0); // 500 SAR in cents = 50000
       const exchangeRate = 140.0;
@@ -466,13 +565,18 @@ void main() {
       final txn = await db.query('transactions',
           where: 'account_id = ?', whereArgs: [accountId], limit: 1);
       expect(txn.first['amount_base'], expectedAmountBase,
-          reason: 'For SAR 500 @ 140, amount_base should be 7000000 (= 70000 YER)');
+          reason:
+              'For SAR 500 @ 140, amount_base should be 7000000 (= 70000 YER)');
     });
 
-    test('Multi-currency journal: base amounts balance in YER / قيد متعدد العملات: المبالغ الأساسية تتوازن بالريال', () async {
+    test(
+        'Multi-currency journal: base amounts balance in YER / قيد متعدد العملات: المبالغ الأساسية تتوازن بالريال',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final yerAccountId = await _insertAccount(code: '8604', type: 'ASSET', balanceType: 'debit');
-      final usdAccountId = await _insertAccount(code: '8605', type: 'ASSET', balanceType: 'debit');
+      final yerAccountId = await _insertAccount(
+          code: '8604', type: 'ASSET', balanceType: 'debit');
+      final usdAccountId = await _insertAccount(
+          code: '8605', type: 'ASSET', balanceType: 'debit');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 203;
 
@@ -481,7 +585,7 @@ void main() {
       // USD side: debit 100 USD, amount_base = 5300000
 
       final yerAmount = MoneyHelper.toCents(53000.0); // 5300000 cents
-      final usdAmount = MoneyHelper.toCents(100.0);   // 10000 cents
+      final usdAmount = MoneyHelper.toCents(100.0); // 10000 cents
       final yerAmountBase = yerAmount; // 5300000
       final usdAmountBase = (usdAmount * 530.0).round(); // 5300000
 
@@ -538,10 +642,14 @@ void main() {
               'debit_base=$totalDebitBase, credit_base=$totalCreditBase');
     });
 
-    test('Exchange gain/loss journal entries balance in base currency / قيود أرباح/خسائر الصرف متوازنة', () async {
+    test(
+        'Exchange gain/loss journal entries balance in base currency / قيود أرباح/خسائر الصرف متوازنة',
+        () async {
       final now = DateTime.now().toIso8601String();
-      final assetAccountId = await _insertAccount(code: '8606', type: 'ASSET', balanceType: 'debit');
-      final gainAccountId = await _insertAccount(code: '8607', type: 'REVENUE', balanceType: 'credit');
+      final assetAccountId = await _insertAccount(
+          code: '8606', type: 'ASSET', balanceType: 'debit');
+      final gainAccountId = await _insertAccount(
+          code: '8607', type: 'REVENUE', balanceType: 'credit');
 
       final journalId = DateTime.now().microsecondsSinceEpoch + 204;
       final gainAmount = MoneyHelper.toCents(500.0); // 500 YER gain

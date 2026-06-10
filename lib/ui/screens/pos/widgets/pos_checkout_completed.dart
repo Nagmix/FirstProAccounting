@@ -28,7 +28,8 @@ class PosCheckoutCompletedOverlay extends StatelessWidget {
         child: Center(
           child: Card(
             margin: const EdgeInsets.symmetric(horizontal: 24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             elevation: 12,
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -38,19 +39,23 @@ class PosCheckoutCompletedOverlay extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.check_circle, color: AppColors.success, size: 28),
+                      const Icon(Icons.check_circle,
+                          color: AppColors.success, size: 28),
                       const SizedBox(width: 10),
                       Text(
                         'تم إنهاء البيع',
-                        style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                        style: context.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Text('رقم الفاتورة: ${vm.lastInvoiceId}',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text('الإجمالي: ${CurrencyFormatter.format(vm.capturedTotal)}',
+                  Text(
+                      'الإجمالي: ${CurrencyFormatter.format(vm.capturedTotal)}',
                       style: const TextStyle(fontSize: 14)),
                   const SizedBox(height: 4),
                   Text('طريقة الدفع: ${vm.capturedPaymentLabel}',
@@ -75,7 +80,8 @@ class PosCheckoutCompletedOverlay extends StatelessWidget {
                           label: const Text('طباعه'),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       ),
@@ -87,9 +93,12 @@ class PosCheckoutCompletedOverlay extends StatelessWidget {
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('إغلاق', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                          child: const Text('إغلاق',
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.w700)),
                         ),
                       ),
                     ],

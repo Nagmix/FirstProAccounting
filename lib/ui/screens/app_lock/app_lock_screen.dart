@@ -123,7 +123,8 @@ class _AppLockScreenState extends State<AppLockScreen>
       try {
         _isBiometricAvailable = await _localAuth.isDeviceSupported();
         if (_isBiometricAvailable) {
-          final biometricEnabled = await locator<ReferenceDataRepository>().getSetting('biometric_enabled');
+          final biometricEnabled = await locator<ReferenceDataRepository>()
+              .getSetting('biometric_enabled');
           _isBiometricEnabled = biometricEnabled == '1';
         }
       } on PlatformException {
@@ -131,7 +132,9 @@ class _AppLockScreenState extends State<AppLockScreen>
       }
 
       // Load username
-      _userName = await locator<ReferenceDataRepository>().getSetting('user_name') ?? '';
+      _userName =
+          await locator<ReferenceDataRepository>().getSetting('user_name') ??
+              '';
 
       if (mounted) {
         setState(() {
@@ -163,7 +166,8 @@ class _AppLockScreenState extends State<AppLockScreen>
     // Multiple rounds for key stretching
     var currentBytes = bytes;
     for (var round = 0; round < 1000; round++) {
-      final roundKey = utf8.encode('$salt${base64Encode(currentBytes)}$pin$round');
+      final roundKey =
+          utf8.encode('$salt${base64Encode(currentBytes)}$pin$round');
       currentBytes = sha256.convert(roundKey).bytes;
     }
     return 'h3\$${base64Encode(currentBytes)}';
@@ -277,7 +281,8 @@ class _AppLockScreenState extends State<AppLockScreen>
       if (secureValue != null) return secureValue;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('AppLockScreen._readSecureWithMigration (secureStorage): WARNING $e');
+        debugPrint(
+            'AppLockScreen._readSecureWithMigration (secureStorage): WARNING $e');
       }
     }
 
@@ -293,7 +298,8 @@ class _AppLockScreenState extends State<AppLockScreen>
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('AppLockScreen._readSecureWithMigration (dbFallback): WARNING $e');
+        debugPrint(
+            'AppLockScreen._readSecureWithMigration (dbFallback): WARNING $e');
       }
     }
     return null;
@@ -458,7 +464,8 @@ class _AppLockScreenState extends State<AppLockScreen>
     _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         _lockoutSeconds--;
-        _errorMessage = 'تم تجاوز عدد المحاولات، حاول بعد $_lockoutSeconds ثانية';
+        _errorMessage =
+            'تم تجاوز عدد المحاولات، حاول بعد $_lockoutSeconds ثانية';
       });
 
       if (_lockoutSeconds <= 0) {
@@ -729,7 +736,9 @@ class _AppLockScreenState extends State<AppLockScreen>
         double scale = 1.0;
         // Scale up the most recently filled dot
         if (isFilled && index == _enteredPin.length - 1) {
-          scale = 1.0 + (_dotScaleController.value * 0.2) * (1 - _dotScaleController.value);
+          scale = 1.0 +
+              (_dotScaleController.value * 0.2) *
+                  (1 - _dotScaleController.value);
         }
         return Transform.scale(
           scale: scale,

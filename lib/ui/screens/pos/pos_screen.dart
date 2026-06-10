@@ -89,6 +89,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       if (mounted) setState(() {});
     }
   }
+
   int _lastTickSeconds = -1;
 
   void _onSearchChanged() {
@@ -132,49 +133,51 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       builder: (context, _) => Scaffold(
         appBar: _buildAppBar(),
         body: _vm.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Stack(
-                  children: [
-                    // Main content: product grid
-                    // AbsorbPointer prevents taps from leaking through
-                    // to main content when a checkout overlay is active.
+            ? const Center(child: CircularProgressIndicator())
+            : Stack(
+                children: [
+                  // Main content: product grid
+                  // AbsorbPointer prevents taps from leaking through
+                  // to main content when a checkout overlay is active.
+                  AbsorbPointer(
+                    absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
+                    child: Column(
+                      children: [
+                        if (_vm.activeShift != null) _buildShiftInfoBar(),
+                        _buildSearchBar(),
+                        _buildCategoryChips(),
+                        if (_vm.topSellers.isNotEmpty) _buildTopSellers(),
+                        Expanded(child: _buildProductGrid()),
+                      ],
+                    ),
+                  ),
+                  // Draggable cart sheet at bottom
+                  // DraggableScrollableSheet must be a direct child of Stack
+                  // (not wrapped in Positioned) for correct gesture handling.
+                  if (_vm.activeShift != null)
                     AbsorbPointer(
                       absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
-                      child: Column(
-                        children: [
-                          if (_vm.activeShift != null) _buildShiftInfoBar(),
-                          _buildSearchBar(),
-                          _buildCategoryChips(),
-                          if (_vm.topSellers.isNotEmpty) _buildTopSellers(),
-                          Expanded(child: _buildProductGrid()),
-                        ],
-                      ),
+                      child: _buildDraggableCartSheet(),
                     ),
-                    // Draggable cart sheet at bottom
-                    // DraggableScrollableSheet must be a direct child of Stack
-                    // (not wrapped in Positioned) for correct gesture handling.
-                    if (_vm.activeShift != null)
-                      AbsorbPointer(
-                        absorbing: _vm.checkoutPhase != CheckoutPhase.idle,
-                        child: _buildDraggableCartSheet(),
-                      ),
-                    // Shift overlay when no active shift
-                    if (_vm.activeShift == null) _buildShiftOverlay(),
-                    // ── Checkout overlays (replaces showDialog) ────────
-                    // State-based overlays eliminate dialog stacking bug.
-                    // Each overlay uses GestureDetector to absorb ALL taps
-                    // (including on the transparent background), preventing
-                    // any tap-through to widgets below.
-                    if (_vm.checkoutPhase == CheckoutPhase.confirming ||
-                        _vm.checkoutPhase == CheckoutPhase.saving)
-                      _buildCheckoutConfirmationOverlay(),
-                    if (_vm.checkoutPhase == CheckoutPhase.completed)
-                      _buildCheckoutCompletedOverlay(),
-                  ],
-                ),
+                  // Shift overlay when no active shift
+                  if (_vm.activeShift == null) _buildShiftOverlay(),
+                  // ── Checkout overlays (replaces showDialog) ────────
+                  // State-based overlays eliminate dialog stacking bug.
+                  // Each overlay uses GestureDetector to absorb ALL taps
+                  // (including on the transparent background), preventing
+                  // any tap-through to widgets below.
+                  if (_vm.checkoutPhase == CheckoutPhase.confirming ||
+                      _vm.checkoutPhase == CheckoutPhase.saving)
+                    _buildCheckoutConfirmationOverlay(),
+                  if (_vm.checkoutPhase == CheckoutPhase.completed)
+                    _buildCheckoutCompletedOverlay(),
+                ],
+              ),
         floatingActionButton: _vm.activeShift != null
             ? FloatingActionButton(
-                onPressed: _vm.checkoutPhase != CheckoutPhase.idle ? null : _scanBarcode,
+                onPressed: _vm.checkoutPhase != CheckoutPhase.idle
+                    ? null
+                    : _scanBarcode,
                 backgroundColor: AppColors.secondary,
                 foregroundColor: Colors.white,
                 tooltip: 'مسح باركود',
@@ -193,7 +196,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         children: [
           const Icon(Icons.storefront, size: 22),
           const SizedBox(width: 8),
-          const Text('نقطة البيع', style: TextStyle(fontWeight: FontWeight.w800)),
+          const Text('نقطة البيع',
+              style: TextStyle(fontWeight: FontWeight.w800)),
         ],
       ),
       actions: [
@@ -204,7 +208,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             child: DropdownButton<String>(
               value: _vm.selectedCurrency,
               icon: const Icon(Icons.arrow_drop_down, size: 18),
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary),
               borderRadius: BorderRadius.circular(8),
               items: const [
                 DropdownMenuItem(value: 'YER', child: Text('YER')),
@@ -260,7 +267,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       child: Center(
         child: Card(
           margin: const EdgeInsets.symmetric(horizontal: 28),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           elevation: 16,
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -305,7 +313,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     icon: const Icon(Icons.lock_open, size: 24),
                     label: const Text(
                       'فتح وردية جديدة',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -358,8 +367,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 prefixIcon: const Icon(Icons.search, size: 20),
                 filled: true,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
@@ -434,7 +445,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         children: [
           Row(
             children: [
-              const Icon(Icons.local_fire_department, size: 16, color: AppColors.warning),
+              const Icon(Icons.local_fire_department,
+                  size: 16, color: AppColors.warning),
               const SizedBox(width: 4),
               Text(
                 'الأكثر مبيعاً',
@@ -457,11 +469,17 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 final productName = item['product_name'] as String? ?? '';
                 final qty = (item['total_qty'] as num?)?.toInt() ?? 0;
                 // Find matching product for tap
-                final matchProduct = _vm.products.where((p) => p.id == item['product_id']).firstOrNull;
+                final matchProduct = _vm.products
+                    .where((p) => p.id == item['product_id'])
+                    .firstOrNull;
                 return ActionChip(
-                  avatar: const Icon(Icons.local_fire_department, size: 14, color: AppColors.warning),
-                  label: Text('$productName ($qty)', style: const TextStyle(fontSize: 11)),
-                  onPressed: matchProduct != null ? () => _addToCartWithUnit(matchProduct) : null,
+                  avatar: const Icon(Icons.local_fire_department,
+                      size: 14, color: AppColors.warning),
+                  label: Text('$productName ($qty)',
+                      style: const TextStyle(fontSize: 11)),
+                  onPressed: matchProduct != null
+                      ? () => _addToCartWithUnit(matchProduct)
+                      : null,
                 );
               },
             ),
@@ -486,7 +504,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             const SizedBox(height: 12),
             Text('لا توجد منتجات', style: context.textTheme.titleMedium),
             const SizedBox(height: 4),
-            Text('أضف منتجات من شاشة المنتجات', style: context.textTheme.bodySmall),
+            Text('أضف منتجات من شاشة المنتجات',
+                style: context.textTheme.bodySmall),
           ],
         ),
       );
@@ -498,7 +517,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         return RefreshIndicator(
           onRefresh: _vm.loadData,
           child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 120), // bottom padding for cart sheet
+            padding: const EdgeInsets.fromLTRB(
+                12, 8, 12, 120), // bottom padding for cart sheet
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
               childAspectRatio: 0.75,
@@ -541,7 +561,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           return Container(
             decoration: BoxDecoration(
               color: context.isDarkMode ? AppColors.darkSurface : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.12),
@@ -621,8 +642,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 // ── Payment details for active method ────────
                 if (_vm.activePaymentMethod == 'credit')
                   _buildCreditCustomerSelector(),
-                if (_vm.activePaymentMethod == 'ewallet')
-                  _buildEwalletFields(),
+                if (_vm.activePaymentMethod == 'ewallet') _buildEwalletFields(),
                 if (_vm.activePaymentMethod == 'bank_transfer')
                   _buildBankTransferFields(),
 
@@ -649,7 +669,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   remaining: _vm.remaining,
                   checkoutPhase: _vm.checkoutPhase,
                   paymentLabel: _paymentLabel,
-                  onAddPayment: () => _vm.addPayment(PaymentEntry(method: _vm.activePaymentMethod, amount: _vm.total)),
+                  onAddPayment: () => _vm.addPayment(PaymentEntry(
+                      method: _vm.activePaymentMethod, amount: _vm.total)),
                   onAddPartialPayment: _showAddPartialPaymentDialog,
                   onStartCheckout: _startCheckout,
                   onHoldOrder: _holdOrder,
@@ -658,7 +679,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                     _searchController.clear();
                     _isSearching = false;
                     _sheetController.animateTo(0.12,
-                        duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut);
                   },
                 ),
               ],
@@ -674,17 +696,20 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     return InkWell(
       onTap: () {
         if (_sheetExtent < 0.5) {
-          _sheetController.animateTo(0.88, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+          _sheetController.animateTo(0.88,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut);
         } else {
-          _sheetController.animateTo(0.12, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+          _sheetController.animateTo(0.12,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut);
         }
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Row(
           children: [
-            Icon(Icons.shopping_cart,
-                size: 20, color: AppColors.primary),
+            Icon(Icons.shopping_cart, size: 20, color: AppColors.primary),
             const SizedBox(width: 8),
             Text(
               'سلة المشتريات',
@@ -721,9 +746,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               ),
             const SizedBox(width: 8),
             Icon(
-              _sheetExtent > 0.5
-                  ? Icons.arrow_drop_down
-                  : Icons.arrow_drop_up,
+              _sheetExtent > 0.5 ? Icons.arrow_drop_down : Icons.arrow_drop_up,
               size: 18,
               color: AppColors.textSecondary,
             ),
@@ -752,14 +775,19 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               const Icon(Icons.person, size: 18, color: AppColors.info),
               const SizedBox(width: 8),
               Text(
-                _vm.selectedCustomerName.isEmpty ? 'اختر العميل' : _vm.selectedCustomerName,
+                _vm.selectedCustomerName.isEmpty
+                    ? 'اختر العميل'
+                    : _vm.selectedCustomerName,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: _vm.selectedCustomerName.isEmpty ? AppColors.textHint : AppColors.info,
+                  color: _vm.selectedCustomerName.isEmpty
+                      ? AppColors.textHint
+                      : AppColors.info,
                 ),
               ),
               const Spacer(),
-              const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.info),
+              const Icon(Icons.arrow_drop_down,
+                  size: 16, color: AppColors.info),
             ],
           ),
         ),
@@ -788,22 +816,26 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ── Image picker helpers ─────────────────────────────────────────
   Future<void> _pickImage(String method) async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+    final image =
+        await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
     if (image != null) {
       final idx = _vm.payments.indexWhere((p) => p.method == method);
       if (idx >= 0) {
-        _vm.updatePayment(idx, _vm.payments[idx].copyWith(imagePath: image.path));
+        _vm.updatePayment(
+            idx, _vm.payments[idx].copyWith(imagePath: image.path));
       }
     }
   }
 
   Future<void> _pickImageFromGallery(String method) async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final image =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (image != null) {
       final idx = _vm.payments.indexWhere((p) => p.method == method);
       if (idx >= 0) {
-        _vm.updatePayment(idx, _vm.payments[idx].copyWith(imagePath: image.path));
+        _vm.updatePayment(
+            idx, _vm.payments[idx].copyWith(imagePath: image.path));
       }
     }
   }
@@ -881,7 +913,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
 
   /// Add to cart with unit selection dialog when multiple units exist.
-  void _addToCartWithUnit(Product product, {Map<String, dynamic>? unitInfo}) async {
+  void _addToCartWithUnit(Product product,
+      {Map<String, dynamic>? unitInfo}) async {
     if (_vm.activeShift == null) {
       if (mounted) {
         context.showErrorSnackBar('يجب فتح وردية أولاً');
@@ -928,7 +961,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     if (availableUnits.length <= 1) {
       // Only base unit - add directly (backwards compatible)
       try {
-        _addToCartDirect(product, availableUnits.isNotEmpty ? availableUnits.first : null);
+        _addToCartDirect(
+            product, availableUnits.isNotEmpty ? availableUnits.first : null);
       } catch (e) {
         if (kDebugMode) {
           debugPrint('POS: Add-to-cart error: $e');
@@ -943,8 +977,11 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     // Multiple units available - show selection dialog
     // Note: getAvailableUnitsForProduct already converts cents to doubles
     String? selectedUnitName = availableUnits.first['unit_name'] as String?;
-    double selectedPrice = (availableUnits.first['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
-    double selectedFactor = (availableUnits.first['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+    double selectedPrice =
+        (availableUnits.first['sell_price'] as num?)?.toDouble() ??
+            product.sellPrice;
+    double selectedFactor =
+        (availableUnits.first['conversion_factor'] as num?)?.toDouble() ?? 1.0;
     String? selectedBarcode = availableUnits.first['barcode'] as String?;
 
     await showDialog(
@@ -958,20 +995,25 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ...availableUnits.map((unit) => ListTile(
-                  title: Text(unit['unit_name'] as String),
-                  subtitle: Text('${CurrencyFormatter.format((unit['sell_price'] as num?)?.toDouble() ?? 0.0)}'),
-                  trailing: (unit['unit_name'] == selectedUnitName)
-                      ? Icon(Icons.check_circle, color: AppColors.success)
-                      : null,
-                  onTap: () {
-                    setDialogState(() {
-                      selectedUnitName = unit['unit_name'] as String;
-                      selectedPrice = (unit['sell_price'] as num?)?.toDouble() ?? product.sellPrice;
-                      selectedFactor = (unit['conversion_factor'] as num?)?.toDouble() ?? 1.0;
-                      selectedBarcode = unit['barcode'] as String?;
-                    });
-                  },
-                )),
+                      title: Text(unit['unit_name'] as String),
+                      subtitle: Text(
+                          '${CurrencyFormatter.format((unit['sell_price'] as num?)?.toDouble() ?? 0.0)}'),
+                      trailing: (unit['unit_name'] == selectedUnitName)
+                          ? Icon(Icons.check_circle, color: AppColors.success)
+                          : null,
+                      onTap: () {
+                        setDialogState(() {
+                          selectedUnitName = unit['unit_name'] as String;
+                          selectedPrice =
+                              (unit['sell_price'] as num?)?.toDouble() ??
+                                  product.sellPrice;
+                          selectedFactor =
+                              (unit['conversion_factor'] as num?)?.toDouble() ??
+                                  1.0;
+                          selectedBarcode = unit['barcode'] as String?;
+                        });
+                      },
+                    )),
               ],
             ),
             actions: [
@@ -1017,9 +1059,10 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     final factor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
     final unitName = (unitInfo?['unit_name'] as String?) ?? 'قطعة';
-    final existingIndex = _vm.cartItems.indexWhere((i) =>
-        i.productId == product.id && i.unitName == unitName);
-    final requestedQty = existingIndex >= 0 ? _vm.cartItems[existingIndex].quantity + 1 : 1;
+    final existingIndex = _vm.cartItems
+        .indexWhere((i) => i.productId == product.id && i.unitName == unitName);
+    final requestedQty =
+        existingIndex >= 0 ? _vm.cartItems[existingIndex].quantity + 1 : 1;
 
     // Stock check: show warning but always allow adding to cart
     final baseQtyNeeded = requestedQty * factor;
@@ -1029,7 +1072,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('تنبيه: المخزون منخفض لـ ${product.nameAr} (${product.currentStock.toInt()})'),
+              content: Text(
+                  'تنبيه: المخزون منخفض لـ ${product.nameAr} (${product.currentStock.toInt()})'),
               backgroundColor: AppColors.warning,
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
@@ -1081,7 +1125,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       return;
     }
 
-    final primaryMethod = _vm.payments.isNotEmpty ? _vm.payments.first.method : _vm.activePaymentMethod;
+    final primaryMethod = _vm.payments.isNotEmpty
+        ? _vm.payments.first.method
+        : _vm.activePaymentMethod;
 
     if (primaryMethod == 'credit' && _vm.selectedCustomerId == null) {
       context.showErrorSnackBar('يجب اختيار عميل للبيع آجل');
@@ -1090,15 +1136,20 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
 
     // ── التحقق من سقف الدين للعميل عند البيع الآجل ──
     if (primaryMethod == 'credit' && _vm.selectedCustomerId != null) {
-      final isOverCeiling = await locator<CustomerRepository>().isCustomerOverDebtCeiling(_vm.selectedCustomerId!, _vm.total, currency: _vm.selectedCurrency);
+      final isOverCeiling = await locator<CustomerRepository>()
+          .isCustomerOverDebtCeiling(_vm.selectedCustomerId!, _vm.total,
+              currency: _vm.selectedCurrency);
       if (!mounted) return;
       if (isOverCeiling) {
-        context.showErrorSnackBar('تجاوز سقف الدين! لا يمكن إتمام البيع الآجل لهذا العميل');
+        context.showErrorSnackBar(
+            'تجاوز سقف الدين! لا يمكن إتمام البيع الآجل لهذا العميل');
         return;
       }
     }
 
-    if (primaryMethod != 'credit' && _vm.totalPaid < _vm.total - 0.01 && _vm.payments.isNotEmpty) {
+    if (primaryMethod != 'credit' &&
+        _vm.totalPaid < _vm.total - 0.01 &&
+        _vm.payments.isNotEmpty) {
       context.showErrorSnackBar('المبلغ المدفوع أقل من الإجمالي');
       return;
     }
@@ -1113,7 +1164,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     // GUARD: Prevent double-execution from rapid taps.
     if (_vm.checkoutPhase != CheckoutPhase.confirming) return;
 
-    final primaryMethod = _vm.payments.isNotEmpty ? _vm.payments.first.method : _vm.activePaymentMethod;
+    final primaryMethod = _vm.payments.isNotEmpty
+        ? _vm.payments.first.method
+        : _vm.activePaymentMethod;
 
     _vm.setCheckoutPhase(CheckoutPhase.saving);
 
@@ -1137,7 +1190,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         'subtotal': _vm.subtotal,
         'discount_rate': _vm.discountType == DiscountType.percentage
             ? _vm.orderDiscount
-            : (_vm.subtotal > 0 ? (_vm.effectiveDiscount / _vm.subtotal) * 100 : 0.0),
+            : (_vm.subtotal > 0
+                ? (_vm.effectiveDiscount / _vm.subtotal) * 100
+                : 0.0),
         'discount_amount': _vm.effectiveDiscount,
         'tax_amount': _vm.tax,
         'total': _vm.total,
@@ -1152,17 +1207,20 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         'created_at': now.toIso8601String(),
       };
 
-      final items = _vm.cartItems.map((item) => {
-        'invoice_id': invoiceId,
-        'product_id': item.productId,
-        'product_name': item.name,
-        'quantity': item.quantity, // Quantity in the selected unit
-        'unit_price': item.unitPrice,
-        'total_price': item.total,
-        'unit_name': item.unitName,
-        'conversion_factor': item.conversionFactor,
-        'base_quantity': item.baseQuantity, // Always in base unit for stock
-      }).toList();
+      final items = _vm.cartItems
+          .map((item) => {
+                'invoice_id': invoiceId,
+                'product_id': item.productId,
+                'product_name': item.name,
+                'quantity': item.quantity, // Quantity in the selected unit
+                'unit_price': item.unitPrice,
+                'total_price': item.total,
+                'unit_name': item.unitName,
+                'conversion_factor': item.conversionFactor,
+                'base_quantity':
+                    item.baseQuantity, // Always in base unit for stock
+              })
+          .toList();
 
       await locator<InvoiceRepository>().saveInvoiceWithJournalEntries(
         invoiceMap,
@@ -1174,7 +1232,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         deferPosting: true,
       );
 
-      await locator<ShiftService>().updateShiftTotals(shiftId, _vm.total, 0.0, _vm.effectiveDiscount);
+      await locator<ShiftService>()
+          .updateShiftTotals(shiftId, _vm.total, 0.0, _vm.effectiveDiscount);
       await _vm.loadData();
 
       if (!mounted) return;
@@ -1239,12 +1298,14 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   /// Print invoice as PDF.
   Future<void> _printPdfInvoice(String invoiceId) async {
     try {
-      final invoiceData = await locator<InvoiceRepository>().getInvoiceById(invoiceId);
+      final invoiceData =
+          await locator<InvoiceRepository>().getInvoiceById(invoiceId);
       if (invoiceData == null) {
         if (mounted) context.showErrorSnackBar('لم يتم العثور على الفاتورة');
         return;
       }
-      final itemsData = await locator<InvoiceRepository>().getInvoiceItems(invoiceId);
+      final itemsData =
+          await locator<InvoiceRepository>().getInvoiceItems(invoiceId);
       await InvoicePdfGenerator.printInvoice(invoiceData, itemsData);
     } catch (e) {
       if (mounted) context.showErrorSnackBar('حدث خطأ أثناء الطباعة');
@@ -1271,20 +1332,28 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
     }
 
     try {
-      final currencySymbol = _vm.selectedCurrency == 'SAR' ? 'ر.س' : _vm.selectedCurrency == 'USD' ? r'$' : 'ر.ي';
+      final currencySymbol = _vm.selectedCurrency == 'SAR'
+          ? 'ر.س'
+          : _vm.selectedCurrency == 'USD'
+              ? r'$'
+              : 'ر.ي';
 
       await printerService.printReceipt({
         'invoice_number': invoiceId,
         'invoice_type': 'فاتورة نقاط بيع',
         'date': DateTime.now(),
-        'customer_name': _vm.selectedCustomerName.isEmpty ? 'بدون عميل' : _vm.selectedCustomerName,
-        'items': _vm.cartItems.map((item) => <String, dynamic>{
-          'product_name': item.name,
-          'unit_name': item.unitName,
-          'quantity': item.quantity,
-          'unit_price': item.unitPrice,
-          'total_price': item.total,
-        }).toList(),
+        'customer_name': _vm.selectedCustomerName.isEmpty
+            ? 'بدون عميل'
+            : _vm.selectedCustomerName,
+        'items': _vm.cartItems
+            .map((item) => <String, dynamic>{
+                  'product_name': item.name,
+                  'unit_name': item.unitName,
+                  'quantity': item.quantity,
+                  'unit_price': item.unitPrice,
+                  'total_price': item.total,
+                })
+            .toList(),
         'subtotal': _vm.subtotal,
         'discount': _vm.effectiveDiscount,
         'tax': _vm.tax,
@@ -1357,7 +1426,8 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         _addToCartWithUnit(matchResult.product, unitInfo: matchResult.unitInfo);
       } else {
         if (mounted) {
-          context.showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
+          context
+              .showErrorSnackBar('لم يتم العثور على منتج بالباركود: $result');
         }
       }
     }

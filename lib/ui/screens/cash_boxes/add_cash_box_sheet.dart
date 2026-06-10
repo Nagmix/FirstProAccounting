@@ -52,7 +52,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
       _nameController.text = widget.existing!.name;
       _balanceType = widget.existing!.balanceType;
       _balanceController.text = widget.existing!.balance.toStringAsFixed(2);
-      _bankAccountNumberController.text = widget.existing!.bankAccountNumber ?? '';
+      _bankAccountNumberController.text =
+          widget.existing!.bankAccountNumber ?? '';
       _bankNameController.text = widget.existing!.bankName ?? '';
       _bankBranchController.text = widget.existing!.bankBranch ?? '';
       // Cash box is currency-agnostic; no need to derive currency from linked account
@@ -74,7 +75,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
   /// This is temporary — only used for the journal entry, NOT stored on the cash box.
   Future<int?> _resolveLinkedAccountForCurrency(String currency) async {
     final code = _cashBanksAccountCodes[currency]!;
-    final account = await locator<JournalService>().getAccountByCodeAndCurrency(code, currency);
+    final account = await locator<JournalService>()
+        .getAccountByCodeAndCurrency(code, currency);
     return account?['id'] as int?;
   }
 
@@ -88,12 +90,14 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
         id: widget.existing?.id,
         name: _nameController.text.trim(),
         type: _type,
-        bankAccountNumber: _type == 'bank' ? _bankAccountNumberController.text.trim() : null,
+        bankAccountNumber:
+            _type == 'bank' ? _bankAccountNumberController.text.trim() : null,
         bankName: _type == 'bank' ? _bankNameController.text.trim() : null,
         bankBranch: _type == 'bank' ? _bankBranchController.text.trim() : null,
         balance: double.tryParse(_balanceController.text) ?? 0.0,
         balanceType: _balanceType,
-        linkedAccountId: null, // Cash box is currency-agnostic — no permanent link
+        linkedAccountId:
+            null, // Cash box is currency-agnostic — no permanent link
         createdAt: widget.existing?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -117,23 +121,28 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
         final openingBalance = double.tryParse(_balanceController.text) ?? 0.0;
         if (openingBalance > 0) {
           // Resolve the linked account for the selected currency (temporary, for journal only)
-          final linkedAccountId = await _resolveLinkedAccountForCurrency(_currency);
+          final linkedAccountId =
+              await _resolveLinkedAccountForCurrency(_currency);
 
           if (linkedAccountId == null) {
             if (!mounted) return;
             setState(() => _isSaving = false);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة. تأكد من وجود الحساب بدليل الحسابات.'),
+                content: Text(
+                    'لم يتم العثور على حساب الصناديق والبنوك للعملة المحددة. تأكد من وجود الحساب بدليل الحسابات.'),
                 backgroundColor: AppColors.error,
               ),
             );
             return;
           }
 
-          final codeOffset = _currency == 'SAR' ? 1 : (_currency == 'USD' ? 2 : 0);
-          final openingBalanceAccount = await locator<JournalService>().getAccountByCodeAndCurrency(
-            (2901 + codeOffset).toString(), _currency,
+          final codeOffset =
+              _currency == 'SAR' ? 1 : (_currency == 'USD' ? 2 : 0);
+          final openingBalanceAccount =
+              await locator<JournalService>().getAccountByCodeAndCurrency(
+            (2901 + codeOffset).toString(),
+            _currency,
           );
           final openingBalanceAccountId = openingBalanceAccount?['id'] as int?;
 
@@ -156,7 +165,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
+          content: Text(
+              'تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -178,7 +188,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final viewPaddingBottom = MediaQuery.of(context).viewPadding.bottom;
-    final currencySymbol = _currencyInfo[_currency]?['symbol'] ?? AppConstants.currency;
+    final currencySymbol =
+        _currencyInfo[_currency]?['symbol'] ?? AppConstants.currency;
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset + viewPaddingBottom),
@@ -193,13 +204,16 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               // ── Title ──
               Text(
                 _isEdit ? 'تعديل صندوق/بنك' : 'إضافة صندوق أو بنك',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
 
               // ── Type selection ──
-              Text('النوع', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text('النوع',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               SegmentedButton<String>(
                 segments: const [
@@ -225,9 +239,12 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: _type == 'bank' ? 'اسم البنك' : 'اسم الصندوق',
-                  prefixIcon: Icon(_type == 'bank' ? Icons.account_balance : Icons.account_balance_wallet),
+                  prefixIcon: Icon(_type == 'bank'
+                      ? Icons.account_balance
+                      : Icons.account_balance_wallet),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
               ),
               const SizedBox(height: 14),
 
@@ -266,15 +283,18 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               if (!_isEdit) ...[
                 // ── Section header ──
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.account_balance_wallet_outlined, size: 18, color: AppColors.primary),
+                      Icon(Icons.account_balance_wallet_outlined,
+                          size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text(
                         'الرصيد الافتتاحي',
@@ -291,11 +311,15 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 // ── Opening balance amount ──
                 TextFormField(
                   controller: _balanceController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.next,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                  ],
                   decoration: InputDecoration(
-                    labelText: _type == 'cash_box' ? 'الرصيد الافتتاحي' : 'الرصيد',
+                    labelText:
+                        _type == 'cash_box' ? 'الرصيد الافتتاحي' : 'الرصيد',
                     prefixIcon: const Icon(Icons.calculate),
                     suffixText: currencySymbol,
                   ),
@@ -323,15 +347,18 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
 
                 // ── Note about currency ──
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.warning.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: AppColors.warning),
+                      Icon(Icons.info_outline,
+                          size: 14, color: AppColors.warning),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -349,7 +376,9 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 const SizedBox(height: 12),
 
                 // ── Opening balance direction: له / عليه ──
-                Text('اتجاه الرصيد الافتتاحي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                Text('اتجاه الرصيد الافتتاحي',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600, color: AppColors.primary)),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -379,15 +408,18 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                 ),
                 // Note: This only applies to the opening balance
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.warning.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: AppColors.warning),
+                      Icon(Icons.info_outline,
+                          size: 14, color: AppColors.warning),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -408,15 +440,18 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
               // ── Edit mode: show existing balance info ──
               if (_isEdit && widget.existing != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+                      Icon(Icons.info_outline,
+                          size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -446,7 +481,8 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
@@ -460,8 +496,10 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      onPressed:
+                          _isSaving ? null : () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14)),
                       child: const Text('إلغاء'),
                     ),
                   ),

@@ -23,10 +23,12 @@ class CostingEngineService {
     String? referenceId,
   }) async {
     if (quantity <= 0.001) {
-      throw Exception('Cannot create cost layer with zero or negative quantity: $quantity');
+      throw Exception(
+          'Cannot create cost layer with zero or negative quantity: $quantity');
     }
     if (unitCost <= 0) {
-      throw Exception('Cannot create cost layer with zero or negative unit cost: $unitCost');
+      throw Exception(
+          'Cannot create cost layer with zero or negative unit cost: $unitCost');
     }
     final db = await _db;
     final layer = InventoryCostLayer(
@@ -268,7 +270,8 @@ class CostingEngineService {
   /// Reverse COGS allocations within an existing transaction (M-08 fix)
   /// Used for sale returns to restore original cost layer allocations
   /// instead of consuming new layers via calculateCOGSInTransaction.
-  Future<void> reverseCOGSAllocationsInTransaction(Transaction txn, {required String invoiceId}) async {
+  Future<void> reverseCOGSAllocationsInTransaction(Transaction txn,
+      {required String invoiceId}) async {
     final allocations = await txn.query('movement_cost_allocations',
         where: 'invoice_id = ?', whereArgs: [invoiceId]);
     for (final alloc in allocations) {
@@ -285,16 +288,14 @@ class CostingEngineService {
   /// Initialize cost layers for existing products during migration
   Future<void> initializeCostLayersForExistingProducts() async {
     final db = await _db;
-    final products = await db
-        .query('products', where: 'current_stock > 0 AND track_stock = 1');
+    final products = await db.query('products',
+        where: 'current_stock > 0 AND track_stock = 1');
 
     for (final p in products) {
       final productId = p['id'] as int;
       // Check if layer already exists
       final existing = await db.query('inventory_cost_layers',
-          where: 'product_id = ?',
-          whereArgs: [productId],
-          limit: 1);
+          where: 'product_id = ?', whereArgs: [productId], limit: 1);
       if (existing.isNotEmpty) continue;
 
       final currentStock = (p['current_stock'] as num).toDouble();

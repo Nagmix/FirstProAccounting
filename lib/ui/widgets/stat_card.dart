@@ -105,7 +105,9 @@ class StatCard extends StatelessWidget {
                         : CurrencyFormatter.formatCompactWithSymbol(value),
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -114,7 +116,9 @@ class StatCard extends StatelessWidget {
                   Text(
                     title,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textSecondary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -127,7 +131,9 @@ class StatCard extends StatelessWidget {
                         Text(
                           subtitle!,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textHint,
                           ),
                         ),
                         const SizedBox(width: 8),

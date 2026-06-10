@@ -151,8 +151,7 @@ extension BuildContextExtensions on BuildContext {
   }
 
   /// Shows a success [SnackBar] styled with the success color.
-  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>
-      showSuccessSnackBar(
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showSuccessSnackBar(
     String message, {
     Duration duration = const Duration(seconds: 3),
   }) {

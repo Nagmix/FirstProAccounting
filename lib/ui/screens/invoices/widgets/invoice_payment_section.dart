@@ -107,14 +107,34 @@ class InvoicePaymentSection extends StatelessWidget {
 
   // ── E-wallet / bank-transfer providers ───────────────────────────
   static const List<String> _ewalletProviders = [
-    'جيب', 'فلوسك', 'كاش', 'ون كاش', 'جوالي', 'الكريمي',
-    'موبايل موني', 'محفظتي', 'شامل موني', 'سبأ كاش', 'ايزي', 'يمن والت', 'أخرى',
+    'جيب',
+    'فلوسك',
+    'كاش',
+    'ون كاش',
+    'جوالي',
+    'الكريمي',
+    'موبايل موني',
+    'محفظتي',
+    'شامل موني',
+    'سبأ كاش',
+    'ايزي',
+    'يمن والت',
+    'أخرى',
   ];
 
   static const List<String> _bankTransferProviders = [
-    'الامتياز', 'النجم', 'يمن اكسبرس', 'الحزمي اكسبرس', 'الاكوع كوني',
-    'السريع للحوالات', 'ياه موني', 'عامري كاش', 'الناصر اكسبرس',
-    'المحيط اكسبرس', 'تحويل', 'أخرى',
+    'الامتياز',
+    'النجم',
+    'يمن اكسبرس',
+    'الحزمي اكسبرس',
+    'الاكوع كوني',
+    'السريع للحوالات',
+    'ياه موني',
+    'عامري كاش',
+    'الناصر اكسبرس',
+    'المحيط اكسبرس',
+    'تحويل',
+    'أخرى',
   ];
 
   // ── Section header helper ────────────────────────────────────────
@@ -142,7 +162,9 @@ class InvoicePaymentSection extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                   letterSpacing: 0.3,
-                  color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : const Color(0xFF1E293B),
                 )),
           ),
           if (trailing != null) trailing,
@@ -182,7 +204,9 @@ class InvoicePaymentSection extends StatelessWidget {
                   items: currencies
                       .map((c) => DropdownMenuItem<String>(
                             value: c['code'] as String,
-                            child: Text('${c['code']}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            child: Text('${c['code']}',
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600)),
                           ))
                       .toList(),
                   onChanged: (val) {
@@ -206,7 +230,8 @@ class InvoicePaymentSection extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: _accentBlue.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
@@ -218,7 +243,8 @@ class InvoicePaymentSection extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       'سعر الصرف: $selectedExchangeRate',
-                      style: context.textTheme.bodySmall?.copyWith(color: _accentBlue, fontWeight: FontWeight.w600),
+                      style: context.textTheme.bodySmall?.copyWith(
+                          color: _accentBlue, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -234,12 +260,16 @@ class InvoicePaymentSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.secondary.withValues(alpha: 0.08), AppColors.secondary.withValues(alpha: 0.03)],
+                  colors: [
+                    AppColors.secondary.withValues(alpha: 0.08),
+                    AppColors.secondary.withValues(alpha: 0.03)
+                  ],
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.secondary.withValues(alpha: 0.2)),
+                border: Border.all(
+                    color: AppColors.secondary.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -250,13 +280,16 @@ class InvoicePaymentSection extends StatelessWidget {
                       color: AppColors.secondary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.info_outline_rounded, color: AppColors.secondary, size: 14),
+                    child: const Icon(Icons.info_outline_rounded,
+                        color: AppColors.secondary, size: 14),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'سيتم تسجيل المبلغ كرصيد على الحساب',
-                      style: context.textTheme.bodySmall?.copyWith(color: AppColors.secondary, fontWeight: FontWeight.w600),
+                      style: context.textTheme.bodySmall?.copyWith(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -312,7 +345,8 @@ class InvoicePaymentSection extends StatelessWidget {
               color: AppColors.warning.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 18),
+            child: const Icon(Icons.warning_amber_rounded,
+                color: AppColors.warning, size: 18),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -350,19 +384,24 @@ class InvoicePaymentSection extends StatelessWidget {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
+          borderSide: BorderSide(
+              color: isDark ? AppColors.darkBorder : AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
+          borderSide: BorderSide(
+              color: isDark ? AppColors.darkBorder : AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _accentBlue, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3),
+        fillColor: isDark
+            ? AppColors.darkSurfaceVariant
+            : AppColors.surfaceVariant.withValues(alpha: 0.3),
       ),
       items: items,
       onChanged: onChanged,
@@ -381,10 +420,14 @@ class InvoicePaymentSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: isReturn
               ? AppColors.error.withValues(alpha: isDark ? 0.12 : 0.06)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3)),
+              : (isDark
+                  ? AppColors.darkSurfaceVariant
+                  : AppColors.surfaceVariant.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isReturn ? AppColors.error : (isDark ? AppColors.darkBorder : AppColors.border),
+            color: isReturn
+                ? AppColors.error
+                : (isDark ? AppColors.darkBorder : AppColors.border),
             width: isReturn ? 1.5 : 1,
           ),
         ),
@@ -418,7 +461,9 @@ class InvoicePaymentSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.5),
+        color: isDark
+            ? AppColors.darkSurfaceVariant
+            : AppColors.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -461,10 +506,21 @@ class InvoicePaymentSection extends StatelessWidget {
         curve: Curves.fastOutSlowIn,
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: isDark ? 0.2 : 0.1) : Colors.transparent,
+          color: isSelected
+              ? color.withValues(alpha: isDark ? 0.2 : 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
-          border: isSelected ? Border.all(color: color.withValues(alpha: 0.3), width: 1) : null,
-          boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2))] : null,
+          border: isSelected
+              ? Border.all(color: color.withValues(alpha: 0.3), width: 1)
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                      color: color.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2))
+                ]
+              : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -472,7 +528,9 @@ class InvoicePaymentSection extends StatelessWidget {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: Icon(icon,
-                  key: ValueKey(isSelected), size: 18, color: isSelected ? color : AppColors.textHint),
+                  key: ValueKey(isSelected),
+                  size: 18,
+                  color: isSelected ? color : AppColors.textHint),
             ),
             const SizedBox(width: 8),
             Text(
@@ -503,7 +561,9 @@ class InvoicePaymentSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: originalInvoiceId != null
               ? AppColors.error.withValues(alpha: isDark ? 0.08 : 0.04)
-              : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.3)),
+              : (isDark
+                  ? AppColors.darkSurfaceVariant
+                  : AppColors.surfaceVariant.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: originalInvoiceId != null
@@ -518,13 +578,18 @@ class InvoicePaymentSection extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: (originalInvoiceId != null ? AppColors.error : AppColors.textHint).withValues(alpha: 0.1),
+                color: (originalInvoiceId != null
+                        ? AppColors.error
+                        : AppColors.textHint)
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 Icons.link_rounded,
                 size: 14,
-                color: originalInvoiceId != null ? AppColors.error : AppColors.textHint,
+                color: originalInvoiceId != null
+                    ? AppColors.error
+                    : AppColors.textHint,
               ),
             ),
             const SizedBox(width: 10),
@@ -532,8 +597,12 @@ class InvoicePaymentSection extends StatelessWidget {
               child: Text(
                 originalInvoiceDisplay ?? 'اختر الفاتورة الأصلية...',
                 style: context.textTheme.bodyMedium?.copyWith(
-                  color: originalInvoiceId != null ? AppColors.textPrimary : AppColors.textHint,
-                  fontWeight: originalInvoiceId != null ? FontWeight.w600 : FontWeight.w400,
+                  color: originalInvoiceId != null
+                      ? AppColors.textPrimary
+                      : AppColors.textHint,
+                  fontWeight: originalInvoiceId != null
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                 ),
               ),
             ),
@@ -546,11 +615,13 @@ class InvoicePaymentSection extends StatelessWidget {
                     color: AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.close_rounded, size: 14, color: AppColors.error),
+                  child: const Icon(Icons.close_rounded,
+                      size: 14, color: AppColors.error),
                 ),
               )
             else
-              Icon(Icons.arrow_drop_down_rounded, size: 22, color: AppColors.textHint),
+              Icon(Icons.arrow_drop_down_rounded,
+                  size: 22, color: AppColors.textHint),
           ],
         ),
       ),
@@ -564,8 +635,18 @@ class InvoicePaymentSection extends StatelessWidget {
       ('check', 'شيك', Icons.sticky_note_2_rounded, AppColors.accentBlue),
       ('transfer', 'حوالة', Icons.swap_horiz_rounded, AppColors.secondary),
       ('bank', 'بنك', Icons.account_balance_rounded, Color(0xFF4F6AF0)),
-      ('ewallet', 'محفظة', Icons.account_balance_wallet_rounded, AppColors.success),
-      ('bank_transfer', 'حوالة مصرفية', Icons.business_rounded, Color(0xFF6A1B9A)),
+      (
+        'ewallet',
+        'محفظة',
+        Icons.account_balance_wallet_rounded,
+        AppColors.success
+      ),
+      (
+        'bank_transfer',
+        'حوالة مصرفية',
+        Icons.business_rounded,
+        Color(0xFF6A1B9A)
+      ),
     ];
 
     return Wrap(
@@ -580,18 +661,30 @@ class InvoicePaymentSection extends StatelessWidget {
             curve: Curves.fastOutSlowIn,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: selected ? m.$4.withValues(alpha: isDark ? 0.18 : 0.08) : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
+              color: selected
+                  ? m.$4.withValues(alpha: isDark ? 0.18 : 0.08)
+                  : (isDark ? AppColors.darkSurfaceVariant : Colors.white),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: selected ? m.$4 : (isDark ? AppColors.darkBorder : AppColors.border),
+                color: selected
+                    ? m.$4
+                    : (isDark ? AppColors.darkBorder : AppColors.border),
                 width: selected ? 1.5 : 1,
               ),
-              boxShadow: selected ? [BoxShadow(color: m.$4.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))] : null,
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                          color: m.$4.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2))
+                    ]
+                  : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(m.$3, size: 15, color: selected ? m.$4 : AppColors.textHint),
+                Icon(m.$3,
+                    size: 15, color: selected ? m.$4 : AppColors.textHint),
                 const SizedBox(width: 5),
                 Text(
                   m.$2,
@@ -616,7 +709,10 @@ class InvoicePaymentSection extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.success.withValues(alpha: 0.06), AppColors.success.withValues(alpha: 0.02)],
+          colors: [
+            AppColors.success.withValues(alpha: 0.06),
+            AppColors.success.withValues(alpha: 0.02)
+          ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
@@ -633,22 +729,31 @@ class InvoicePaymentSection extends StatelessWidget {
               labelText: 'اختر المحفظة الإلكترونية',
               prefixIcon: Container(
                 margin: const EdgeInsets.only(left: 8),
-                child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.success, size: 18),
+                child: const Icon(Icons.account_balance_wallet_rounded,
+                    color: AppColors.success, size: 18),
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.success.withValues(alpha: 0.3)),
+                borderSide:
+                    BorderSide(color: AppColors.success.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.success, width: 1.5),
+                borderSide:
+                    const BorderSide(color: AppColors.success, width: 1.5),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               filled: true,
               fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
-            items: _ewalletProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 13)))).toList(),
+            items: _ewalletProviders
+                .map((p) => DropdownMenuItem<String>(
+                    value: p,
+                    child: Text(p, style: const TextStyle(fontSize: 13))))
+                .toList(),
             onChanged: onEwalletProviderChanged,
           ),
           const SizedBox(height: 10),
@@ -666,7 +771,10 @@ class InvoicePaymentSection extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [purpleColor.withValues(alpha: 0.06), purpleColor.withValues(alpha: 0.02)],
+          colors: [
+            purpleColor.withValues(alpha: 0.06),
+            purpleColor.withValues(alpha: 0.02)
+          ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
@@ -683,22 +791,30 @@ class InvoicePaymentSection extends StatelessWidget {
               labelText: 'اختر شركة الحوالة',
               prefixIcon: Container(
                 margin: const EdgeInsets.only(left: 8),
-                child: const Icon(Icons.business_rounded, color: purpleColor, size: 18),
+                child: const Icon(Icons.business_rounded,
+                    color: purpleColor, size: 18),
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor.withValues(alpha: 0.3)),
+                borderSide:
+                    BorderSide(color: purpleColor.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: purpleColor, width: 1.5),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               filled: true,
               fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
-            items: _bankTransferProviders.map((p) => DropdownMenuItem<String>(value: p, child: Text(p, style: const TextStyle(fontSize: 13)))).toList(),
+            items: _bankTransferProviders
+                .map((p) => DropdownMenuItem<String>(
+                    value: p,
+                    child: Text(p, style: const TextStyle(fontSize: 13))))
+                .toList(),
             onChanged: onBankTransferProviderChanged,
           ),
           const SizedBox(height: 10),
@@ -711,18 +827,22 @@ class InvoicePaymentSection extends StatelessWidget {
               labelText: 'رقم الحوالة (اختياري)',
               prefixIcon: Container(
                 margin: const EdgeInsets.only(left: 8),
-                child: const Icon(Icons.tag_rounded, color: purpleColor, size: 18),
+                child:
+                    const Icon(Icons.tag_rounded, color: purpleColor, size: 18),
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: purpleColor.withValues(alpha: 0.3)),
+                borderSide:
+                    BorderSide(color: purpleColor.withValues(alpha: 0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: purpleColor, width: 1.5),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               filled: true,
               fillColor: isDark ? AppColors.darkSurfaceVariant : Colors.white,
             ),
@@ -749,7 +869,8 @@ class InvoicePaymentSection extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: Stack(
               children: [
-                Image.file(File(attachmentPath!), width: double.infinity, height: 100, fit: BoxFit.cover),
+                Image.file(File(attachmentPath!),
+                    width: double.infinity, height: 100, fit: BoxFit.cover),
                 Positioned(
                   top: 6,
                   left: 6,
@@ -757,8 +878,11 @@ class InvoicePaymentSection extends StatelessWidget {
                     onTap: onRemoveAttachment,
                     child: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                      decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.close_rounded,
+                          size: 16, color: Colors.white),
                     ),
                   ),
                 ),
@@ -781,14 +905,19 @@ class InvoicePaymentSection extends StatelessWidget {
                     onTap: onPickImageFromGallery,
                     borderRadius: BorderRadius.circular(10),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 9),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_rounded, size: 16, color: _accentBlue),
+                          Icon(Icons.image_rounded,
+                              size: 16, color: _accentBlue),
                           const SizedBox(width: 6),
                           Text(isBankTransfer ? 'رفق إشعار' : 'رفق صورة',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _accentBlue)),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _accentBlue)),
                         ],
                       ),
                     ),
@@ -809,13 +938,19 @@ class InvoicePaymentSection extends StatelessWidget {
                     onTap: onPickImageFromCamera,
                     borderRadius: BorderRadius.circular(10),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 9),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.camera_alt_rounded, size: 16, color: _accentBlue),
+                          Icon(Icons.camera_alt_rounded,
+                              size: 16, color: _accentBlue),
                           const SizedBox(width: 6),
-                          Text('تصوير', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _accentBlue)),
+                          Text('تصوير',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _accentBlue)),
                         ],
                       ),
                     ),
@@ -842,7 +977,8 @@ class InvoicePaymentSection extends StatelessWidget {
           items: cashBoxes.map((cb) {
             return DropdownMenuItem<int>(
               value: cb['id'] as int,
-              child: Text('${cb['name']}', style: const TextStyle(fontSize: 12)),
+              child:
+                  Text('${cb['name']}', style: const TextStyle(fontSize: 12)),
             );
           }).toList(),
           onChanged: onCashBoxChanged,
@@ -865,25 +1001,37 @@ class InvoicePaymentSection extends StatelessWidget {
                   labelText: 'المدفوع',
                   prefixIcon: Container(
                     margin: const EdgeInsets.only(left: 8),
-                    child: const Icon(Icons.payments_rounded, size: 18, color: _accentBlue),
+                    child: const Icon(Icons.payments_rounded,
+                        size: 18, color: _accentBlue),
                   ),
                   suffixText: selectedCurrency,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border),
+                    borderSide: BorderSide(
+                        color:
+                            isDark ? AppColors.darkBorder : AppColors.border),
                   ),
                   disabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.3)),
+                    borderSide: BorderSide(
+                        color: AppColors.border.withValues(alpha: 0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: _accentBlue, width: 1.5),
+                    borderSide:
+                        const BorderSide(color: _accentBlue, width: 1.5),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: autoPay,
-                  fillColor: autoPay ? (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant).withValues(alpha: 0.5) : null,
+                  fillColor: autoPay
+                      ? (isDark
+                              ? AppColors.darkSurfaceVariant
+                              : AppColors.surfaceVariant)
+                          .withValues(alpha: 0.5)
+                      : null,
                 ),
                 onChanged: (_) => onPaidChanged(),
               ),
@@ -900,12 +1048,18 @@ class InvoicePaymentSection extends StatelessWidget {
                     width: 44,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: autoPay ? _accentBlue : (isDark ? AppColors.darkSurfaceVariant : AppColors.border),
+                      color: autoPay
+                          ? _accentBlue
+                          : (isDark
+                              ? AppColors.darkSurfaceVariant
+                              : AppColors.border),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: AnimatedAlign(
                       duration: const Duration(milliseconds: 200),
-                      alignment: autoPay ? Alignment.centerLeft : Alignment.centerRight,
+                      alignment: autoPay
+                          ? Alignment.centerLeft
+                          : Alignment.centerRight,
                       child: Container(
                         width: 20,
                         height: 20,
@@ -913,7 +1067,12 @@ class InvoicePaymentSection extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 1))],
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1))
+                          ],
                         ),
                       ),
                     ),
@@ -936,10 +1095,14 @@ class InvoicePaymentSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: remaining > 0.005 ? AppColors.error.withValues(alpha: 0.06) : AppColors.success.withValues(alpha: 0.06),
+              color: remaining > 0.005
+                  ? AppColors.error.withValues(alpha: 0.06)
+                  : AppColors.success.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: remaining > 0.005 ? AppColors.error.withValues(alpha: 0.2) : AppColors.success.withValues(alpha: 0.2),
+                color: remaining > 0.005
+                    ? AppColors.error.withValues(alpha: 0.2)
+                    : AppColors.success.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -949,19 +1112,26 @@ class InvoicePaymentSection extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      remaining > 0.005 ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+                      remaining > 0.005
+                          ? Icons.error_outline_rounded
+                          : Icons.check_circle_outline_rounded,
                       size: 14,
-                      color: remaining > 0.005 ? AppColors.error : AppColors.success,
+                      color: remaining > 0.005
+                          ? AppColors.error
+                          : AppColors.success,
                     ),
                     const SizedBox(width: 6),
-                    Text('المتبقي', style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                    Text('المتبقي',
+                        style: context.textTheme.bodySmall
+                            ?.copyWith(fontWeight: FontWeight.w600)),
                   ],
                 ),
                 Text(
                   CurrencyFormatter.format(remaining),
                   style: context.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: remaining > 0.005 ? AppColors.error : AppColors.success,
+                    color:
+                        remaining > 0.005 ? AppColors.error : AppColors.success,
                   ),
                 ),
               ],

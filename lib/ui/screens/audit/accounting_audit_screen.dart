@@ -52,7 +52,8 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       final trialBalance = await auditService.getTrialBalanceByCurrency();
 
       // 2. Account Summary by Currency and Type
-      final accountSummary = await auditService.getAccountSummaryByCurrencyAndType();
+      final accountSummary =
+          await auditService.getAccountSummaryByCurrencyAndType();
 
       // 3. Orphaned Invoices (invoices without journal entries)
       final orphanedInvoices = await auditService.getOrphanedInvoices();
@@ -79,7 +80,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
         }
       }
 
-      int issues = orphanedInvoices.length + orphanedExpenses.length + unbalancedJournals.length;
+      int issues = orphanedInvoices.length +
+          orphanedExpenses.length +
+          unbalancedJournals.length;
 
       if (mounted) {
         setState(() {
@@ -125,7 +128,8 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           ],
         ),
         body: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary))
             : RefreshIndicator(
                 onRefresh: _runAudit,
                 child: ListView(
@@ -164,7 +168,8 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
   Widget _buildHealthCard(ThemeData theme, bool isDark) {
     final color = _isBalanced ? AppColors.success : AppColors.error;
     final icon = _isBalanced ? Icons.verified_user : Icons.shield;
-    final title = _isBalanced ? 'النظام المحاسبي متوازن' : 'يوجد خلل في التوازن المحاسبي';
+    final title =
+        _isBalanced ? 'النظام المحاسبي متوازن' : 'يوجد خلل في التوازن المحاسبي';
     final subtitle = _isBalanced
         ? 'جميع القيود مجلوبة ومتوازنة حسب العملات'
         : 'يوجد فرق بين المدين والدائن في بعض العملات';
@@ -174,8 +179,14 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: _isBalanced
-              ? [AppColors.success.withValues(alpha: 0.1), AppColors.successLight.withValues(alpha: 0.05)]
-              : [AppColors.error.withValues(alpha: 0.1), AppColors.errorLight.withValues(alpha: 0.05)],
+              ? [
+                  AppColors.success.withValues(alpha: 0.1),
+                  AppColors.successLight.withValues(alpha: 0.05)
+                ]
+              : [
+                  AppColors.error.withValues(alpha: 0.1),
+                  AppColors.errorLight.withValues(alpha: 0.05)
+                ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
@@ -206,7 +217,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           Text(
             subtitle,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -238,7 +251,8 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,19 +261,25 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             children: [
               Icon(Icons.bar_chart, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('نظرة عامة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text('نظرة عامة',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              _buildStatChip(theme, isDark, Icons.swap_horiz, 'القيود', '$_totalTransactions', AppColors.primary),
+              _buildStatChip(theme, isDark, Icons.swap_horiz, 'القيود',
+                  '$_totalTransactions', AppColors.primary),
               const SizedBox(width: 8),
-              _buildStatChip(theme, isDark, Icons.pie_chart, 'الحسابات', '$_totalAccounts', AppColors.accentBlue),
+              _buildStatChip(theme, isDark, Icons.pie_chart, 'الحسابات',
+                  '$_totalAccounts', AppColors.accentBlue),
               const SizedBox(width: 8),
-              _buildStatChip(theme, isDark, Icons.receipt, 'الفواتير', '$_totalInvoices', AppColors.success),
+              _buildStatChip(theme, isDark, Icons.receipt, 'الفواتير',
+                  '$_totalInvoices', AppColors.success),
               const SizedBox(width: 8),
-              _buildStatChip(theme, isDark, Icons.attach_money, 'المصروفات', '$_totalExpenses', AppColors.secondary),
+              _buildStatChip(theme, isDark, Icons.attach_money, 'المصروفات',
+                  '$_totalExpenses', AppColors.secondary),
             ],
           ),
         ],
@@ -267,7 +287,8 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
     );
   }
 
-  Widget _buildStatChip(ThemeData theme, bool isDark, IconData icon, String label, String value, Color color) {
+  Widget _buildStatChip(ThemeData theme, bool isDark, IconData icon,
+      String label, String value, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
@@ -279,8 +300,12 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           children: [
             Icon(icon, size: 18, color: color),
             const SizedBox(height: 4),
-            Text(value, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: color)),
-            Text(label, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary, fontSize: 10)),
+            Text(value,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w800, color: color)),
+            Text(label,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: AppColors.textSecondary, fontSize: 10)),
           ],
         ),
       ),
@@ -288,14 +313,19 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
   }
 
   Widget _buildTrialBalanceSection(ThemeData theme, bool isDark) {
-    final currencyNames = {'YER': 'ريال يمني', 'SAR': 'ريال سعودي', 'USD': 'دولار أمريكي'};
+    final currencyNames = {
+      'YER': 'ريال يمني',
+      'SAR': 'ريال سعودي',
+      'USD': 'دولار أمريكي'
+    };
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +334,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             children: [
               Icon(Icons.balance, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('ميزان المراجعة حسب العملة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text('ميزان المراجعة حسب العملة',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 14),
@@ -317,10 +349,33 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             ),
             child: Row(
               children: [
-                Expanded(flex: 2, child: Text('العملة', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
-                Expanded(flex: 2, child: Text('المدين', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error), textAlign: TextAlign.center)),
-                Expanded(flex: 2, child: Text('الدائن', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success), textAlign: TextAlign.center)),
-                Expanded(flex: 2, child: Text('الفرق', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.warning), textAlign: TextAlign.center)),
+                Expanded(
+                    flex: 2,
+                    child: Text('العملة',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary))),
+                Expanded(
+                    flex: 2,
+                    child: Text('المدين',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.error),
+                        textAlign: TextAlign.center)),
+                Expanded(
+                    flex: 2,
+                    child: Text('الدائن',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.success),
+                        textAlign: TextAlign.center)),
+                Expanded(
+                    flex: 2,
+                    child: Text('الفرق',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.warning),
+                        textAlign: TextAlign.center)),
               ],
             ),
           ),
@@ -335,7 +390,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.divider.withValues(alpha: 0.3))),
+                border: Border(
+                    bottom: BorderSide(
+                        color: AppColors.divider.withValues(alpha: 0.3))),
               ),
               child: Row(
                 children: [
@@ -344,15 +401,37 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
                     child: Row(
                       children: [
                         Icon(isOk ? Icons.check_circle : Icons.error_outline,
-                            size: 14, color: isOk ? AppColors.success : AppColors.error),
+                            size: 14,
+                            color: isOk ? AppColors.success : AppColors.error),
                         const SizedBox(width: 4),
-                        Text(currencyNames[currency] ?? currency, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(currencyNames[currency] ?? currency,
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
-                  Expanded(flex: 2, child: Text(CurrencyFormatter.formatCompact(debit), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.error), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text(CurrencyFormatter.formatCompact(credit), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.success), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text(CurrencyFormatter.formatCompact(diff.abs()), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: isOk ? AppColors.success : AppColors.error), textAlign: TextAlign.center)),
+                  Expanded(
+                      flex: 2,
+                      child: Text(CurrencyFormatter.formatCompact(debit),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.error),
+                          textAlign: TextAlign.center)),
+                  Expanded(
+                      flex: 2,
+                      child: Text(CurrencyFormatter.formatCompact(credit),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success),
+                          textAlign: TextAlign.center)),
+                  Expanded(
+                      flex: 2,
+                      child: Text(CurrencyFormatter.formatCompact(diff.abs()),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color:
+                                  isOk ? AppColors.success : AppColors.error),
+                          textAlign: TextAlign.center)),
                 ],
               ),
             );
@@ -385,7 +464,8 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +474,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             children: [
               Icon(Icons.pie_chart, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('ملخص الحسابات حسب النوع والعملة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text('ملخص الحسابات حسب النوع والعملة',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 12),
@@ -412,18 +494,24 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    decoration:
+                        BoxDecoration(color: color, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '${typeNames[type] ?? type} ($currency)',
-                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
-                  Text('$count حساب', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+                  Text('$count حساب',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: AppColors.textSecondary)),
                   const SizedBox(width: 12),
-                  Text(CurrencyFormatter.formatCompact(balance.abs()), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: color)),
+                  Text(CurrencyFormatter.formatCompact(balance.abs()),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700, color: color)),
                 ],
               ),
             );
@@ -448,13 +536,16 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             children: [
               Icon(Icons.error_outline, size: 18, color: AppColors.warning),
               const SizedBox(width: 8),
-              Text('فواتير بدون قيود محاسبية', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.warning)),
+              Text('فواتير بدون قيود محاسبية',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: AppColors.warning)),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             'هذه الفواتير لم يتم تسجيل قيودها في دليل الحسابات:',
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 10),
           ..._orphanedInvoices.map((inv) {
@@ -473,12 +564,21 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(inv['entity_name'] ?? 'بدون اسم', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                        Text('${inv['type'] == 'sale' ? 'بيع' : 'شراء'} - ${inv['currency']}', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+                        Text(inv['entity_name'] ?? 'بدون اسم',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(
+                            '${inv['type'] == 'sale' ? 'بيع' : 'شراء'} - ${inv['currency']}',
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
-                  Text(CurrencyFormatter.format(MoneyHelper.readMoney(inv['total'])), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(
+                      CurrencyFormatter.format(
+                          MoneyHelper.readMoney(inv['total'])),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
                 ],
               ),
             );
@@ -503,13 +603,16 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             children: [
               Icon(Icons.report, size: 18, color: AppColors.error),
               const SizedBox(width: 8),
-              Text('مصروفات بدون حساب محاسبي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
+              Text('مصروفات بدون حساب محاسبي',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: AppColors.error)),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             'هذه المصروفات غير مرتبطة بأي حساب في دليل الحسابات:',
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 10),
           ..._orphanedExpenses.map((exp) {
@@ -528,12 +631,21 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(exp['title'] ?? 'بدون عنوان', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                        Text('${exp['operation_type'] ?? 'صرف'} - ${exp['currency']}', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+                        Text(exp['title'] ?? 'بدون عنوان',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(
+                            '${exp['operation_type'] ?? 'صرف'} - ${exp['currency']}',
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
-                  Text(CurrencyFormatter.format(MoneyHelper.readMoney(exp['amount'])), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(
+                      CurrencyFormatter.format(
+                          MoneyHelper.readMoney(exp['amount'])),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
                 ],
               ),
             );
@@ -558,7 +670,9 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
             children: [
               Icon(Icons.balance, size: 18, color: AppColors.error),
               const SizedBox(width: 8),
-              Text('قيود غير متوازنة (مدين ≠ دائن)', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
+              Text('قيود غير متوازنة (مدين ≠ دائن)',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: AppColors.error)),
             ],
           ),
           const SizedBox(height: 12),
@@ -579,15 +693,22 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('قيد #${j['journal_id']}', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                        Text('${j['entry_count']} بنود', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+                        Text('قيد #${j['journal_id']}',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        Text('${j['entry_count']} بنود',
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('الفرق: ${CurrencyFormatter.format(diff.abs())}', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
+                      Text('الفرق: ${CurrencyFormatter.format(diff.abs())}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.error)),
                     ],
                   ),
                 ],
@@ -621,7 +742,8 @@ class _AccountingAuditScreenState extends State<AccountingAuditScreen> {
           const SizedBox(height: 8),
           Text(
             'جميع العمليات مرتبطة بدليل الحسابات والميزان متوازن حسب العملات',
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],

@@ -19,9 +19,11 @@ class InvoicePdfGenerator {
   // ── Public API ────────────────────────────────────────────────
 
   /// Generate and show the system print/share dialog for a single invoice.
-  static Future<void> printInvoice(Map<String, dynamic> invoice, List<Map<String, dynamic>> items) async {
+  static Future<void> printInvoice(
+      Map<String, dynamic> invoice, List<Map<String, dynamic>> items) async {
     final pdfBytes = await generateInvoicePdf(invoice, items);
-    await Printing.sharePdf(bytes: pdfBytes, filename: 'invoice_${invoice['id']}.pdf');
+    await Printing.sharePdf(
+        bytes: pdfBytes, filename: 'invoice_${invoice['id']}.pdf');
   }
 
   /// Generate raw PDF bytes for the given invoice.
@@ -30,25 +32,43 @@ class InvoicePdfGenerator {
     List<Map<String, dynamic>> items,
   ) async {
     // ── Load business settings ──
-    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name');
-    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone');
-    final businessEmail = await locator<ReferenceDataRepository>().getSetting('business_email');
-    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address');
-    final logoPath = await locator<ReferenceDataRepository>().getSetting('business_logo_path');
+    final businessName =
+        await locator<ReferenceDataRepository>().getSetting('business_name');
+    final businessPhone =
+        await locator<ReferenceDataRepository>().getSetting('business_phone');
+    final businessEmail =
+        await locator<ReferenceDataRepository>().getSetting('business_email');
+    final businessAddress =
+        await locator<ReferenceDataRepository>().getSetting('business_address');
+    final logoPath = await locator<ReferenceDataRepository>()
+        .getSetting('business_logo_path');
 
     // Determine if user has configured custom business info
-    final hasCustomBusiness = businessName != null && businessName.trim().isNotEmpty;
+    final hasCustomBusiness =
+        businessName != null && businessName.trim().isNotEmpty;
 
     // Default app branding when user hasn't configured
-    final String headerName = hasCustomBusiness ? businessName : 'الأول برو المحاسبي';
-    final String headerPhone = (businessPhone != null && businessPhone.trim().isNotEmpty) ? businessPhone : '';
-    final String headerEmail = (businessEmail != null && businessEmail.trim().isNotEmpty) ? businessEmail : '';
-    final String headerAddress = (businessAddress != null && businessAddress.trim().isNotEmpty) ? businessAddress : '';
+    final String headerName =
+        hasCustomBusiness ? businessName : 'الأول برو المحاسبي';
+    final String headerPhone =
+        (businessPhone != null && businessPhone.trim().isNotEmpty)
+            ? businessPhone
+            : '';
+    final String headerEmail =
+        (businessEmail != null && businessEmail.trim().isNotEmpty)
+            ? businessEmail
+            : '';
+    final String headerAddress =
+        (businessAddress != null && businessAddress.trim().isNotEmpty)
+            ? businessAddress
+            : '';
 
     // ── Load logo ──
     pw.MemoryImage? logoImage;
     try {
-      if (logoPath != null && logoPath.isNotEmpty && File(logoPath).existsSync()) {
+      if (logoPath != null &&
+          logoPath.isNotEmpty &&
+          File(logoPath).existsSync()) {
         final logoBytes = await File(logoPath).readAsBytes();
         logoImage = pw.MemoryImage(logoBytes);
       } else if (!hasCustomBusiness) {
@@ -73,11 +93,14 @@ class InvoicePdfGenerator {
     final invoiceType = (invoice['type'] as String?) ?? 'sale';
     final isReturn = (invoice['is_return'] as int?) == 1;
     final currency = (invoice['currency'] as String?) ?? 'YER';
-    final currencySymbol = currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
+    final currencySymbol =
+        currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
 
     String typeLabel;
     if (invoiceType == 'pos') {
-      typeLabel = isReturn ? 'فاتورة مبيعات نقاط البيع - مرتجع' : 'فاتورة مبيعات نقاط البيع';
+      typeLabel = isReturn
+          ? 'فاتورة مبيعات نقاط البيع - مرتجع'
+          : 'فاتورة مبيعات نقاط البيع';
     } else if (invoiceType == 'sale' || invoiceType == 'sale_return') {
       typeLabel = isReturn ? 'فاتورة مبيعات - مرتجع' : 'فاتورة مبيعات';
     } else {
@@ -98,9 +121,12 @@ class InvoicePdfGenerator {
         textDirection: pw.TextDirection.rtl,
         build: (context) => [
           // ── Header ──
-          _buildHeader(headerName, headerPhone, headerEmail, headerAddress, logoImage, arabicFont),
+          _buildHeader(headerName, headerPhone, headerEmail, headerAddress,
+              logoImage, arabicFont),
           pw.SizedBox(height: 16),
-          pw.Divider(thickness: 2, color: const PdfColor(0.12, 0.42, 0.14)), // AppColors.primary
+          pw.Divider(
+              thickness: 2,
+              color: const PdfColor(0.12, 0.42, 0.14)), // AppColors.primary
           pw.SizedBox(height: 12),
 
           // ── Invoice title & info ──
@@ -120,7 +146,8 @@ class InvoicePdfGenerator {
             pw.Divider(),
             pw.SizedBox(height: 8),
             _buildSectionTitle('ملاحظات', arabicFont),
-            pw.Text(invoice['notes'] as String, style: pw.TextStyle(font: arabicFont, fontSize: 10)),
+            pw.Text(invoice['notes'] as String,
+                style: pw.TextStyle(font: arabicFont, fontSize: 10)),
           ],
 
           // ── Footer ──
@@ -130,7 +157,10 @@ class InvoicePdfGenerator {
           pw.Center(
             child: pw.Text(
               'تم إنشاء هذه الفاتورة بواسطة تطبيق الأول برو المحاسبي',
-              style: pw.TextStyle(font: arabicFont, fontSize: 8, color: const PdfColor(0.5, 0.5, 0.5)),
+              style: pw.TextStyle(
+                  font: arabicFont,
+                  fontSize: 8,
+                  color: const PdfColor(0.5, 0.5, 0.5)),
             ),
           ),
         ],
@@ -161,22 +191,29 @@ class InvoicePdfGenerator {
             children: [
               pw.Text(
                 name,
-                style: pw.TextStyle(font: font, fontSize: 20, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14)),
+                style: pw.TextStyle(
+                    font: font,
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: const PdfColor(0.12, 0.42, 0.14)),
               ),
               if (phone.isNotEmpty)
                 pw.Padding(
                   padding: const pw.EdgeInsets.only(top: 4),
-                  child: pw.Text('هاتف: $phone', style: pw.TextStyle(font: font, fontSize: 10)),
+                  child: pw.Text('هاتف: $phone',
+                      style: pw.TextStyle(font: font, fontSize: 10)),
                 ),
               if (email.isNotEmpty)
                 pw.Padding(
                   padding: const pw.EdgeInsets.only(top: 2),
-                  child: pw.Text('بريد إلكتروني: $email', style: pw.TextStyle(font: font, fontSize: 10)),
+                  child: pw.Text('بريد إلكتروني: $email',
+                      style: pw.TextStyle(font: font, fontSize: 10)),
                 ),
               if (address.isNotEmpty)
                 pw.Padding(
                   padding: const pw.EdgeInsets.only(top: 2),
-                  child: pw.Text('العنوان: $address', style: pw.TextStyle(font: font, fontSize: 10)),
+                  child: pw.Text('العنوان: $address',
+                      style: pw.TextStyle(font: font, fontSize: 10)),
                 ),
             ],
           ),
@@ -202,7 +239,11 @@ class InvoicePdfGenerator {
             alignment: pw.Alignment.center,
             child: pw.Text(
               'FP',
-              style: pw.TextStyle(font: font, fontSize: 24, fontWeight: pw.FontWeight.bold, color: const PdfColor(1, 1, 1)),
+              style: pw.TextStyle(
+                  font: font,
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                  color: const PdfColor(1, 1, 1)),
             ),
           ),
       ],
@@ -219,7 +260,9 @@ class InvoicePdfGenerator {
     final paymentMethod = (invoice['payment_method'] as String?) ?? 'cash';
     final paymentLabel = paymentMethod == 'credit' ? 'آجل' : 'نقدي';
     final status = (invoice['status'] as String?) ?? 'paid';
-    final statusLabel = status == 'paid' ? 'مدفوعة' : (status == 'partial' ? 'مدفوعة جزئياً' : 'غير مدفوعة');
+    final statusLabel = status == 'paid'
+        ? 'مدفوعة'
+        : (status == 'partial' ? 'مدفوعة جزئياً' : 'غير مدفوعة');
     final entityName = invoice['entity_name'] as String? ?? '—';
 
     return pw.Column(
@@ -234,7 +277,11 @@ class InvoicePdfGenerator {
           ),
           child: pw.Text(
             typeLabel,
-            style: pw.TextStyle(font: font, fontSize: 16, fontWeight: pw.FontWeight.bold, color: const PdfColor(1, 1, 1)),
+            style: pw.TextStyle(
+                font: font,
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: const PdfColor(1, 1, 1)),
           ),
         ),
         pw.SizedBox(height: 12),
@@ -244,7 +291,8 @@ class InvoicePdfGenerator {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                _infoRow('رقم الفاتورة', invoice['id']?.toString() ?? '—', font),
+                _infoRow(
+                    'رقم الفاتورة', invoice['id']?.toString() ?? '—', font),
                 pw.SizedBox(height: 4),
                 _infoRow('التاريخ', _formatDate(invoiceDate), font),
                 pw.SizedBox(height: 4),
@@ -272,14 +320,19 @@ class InvoicePdfGenerator {
     String currencySymbol,
     pw.Font? font,
   ) {
-    final headerStyle = pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold, color: const PdfColor(1, 1, 1));
+    final headerStyle = pw.TextStyle(
+        font: font,
+        fontSize: 10,
+        fontWeight: pw.FontWeight.bold,
+        color: const PdfColor(1, 1, 1));
     final cellStyle = pw.TextStyle(font: font, fontSize: 9);
 
     return pw.Table(
-      border: pw.TableBorder.all(color: const PdfColor(0.8, 0.8, 0.8), width: 0.5),
+      border:
+          pw.TableBorder.all(color: const PdfColor(0.8, 0.8, 0.8), width: 0.5),
       columnWidths: {
-        0: const pw.FlexColumnWidth(3),  // Product name
-        1: const pw.FlexColumnWidth(1),  // Quantity
+        0: const pw.FlexColumnWidth(3), // Product name
+        1: const pw.FlexColumnWidth(1), // Quantity
         2: const pw.FlexColumnWidth(1.5), // Unit price
         3: const pw.FlexColumnWidth(1.5), // Total
       },
@@ -288,9 +341,11 @@ class InvoicePdfGenerator {
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColor(0.12, 0.42, 0.14)),
           children: [
-            _tableCell('الصنف', headerStyle, alignment: pw.Alignment.centerRight),
+            _tableCell('الصنف', headerStyle,
+                alignment: pw.Alignment.centerRight),
             _tableCell('الكمية', headerStyle, alignment: pw.Alignment.center),
-            _tableCell('سعر الوحدة', headerStyle, alignment: pw.Alignment.center),
+            _tableCell('سعر الوحدة', headerStyle,
+                alignment: pw.Alignment.center),
             _tableCell('الإجمالي', headerStyle, alignment: pw.Alignment.center),
           ],
         ),
@@ -303,10 +358,21 @@ class InvoicePdfGenerator {
 
           return pw.TableRow(
             children: [
-              _tableCell(productName, cellStyle, alignment: pw.Alignment.centerRight),
-              _tableCell(quantity.toStringAsFixed(quantity == quantity.truncateToDouble() ? 0 : 2), cellStyle, alignment: pw.Alignment.center),
-              _tableCell('$currencySymbol ${CurrencyFormatter.format(unitPrice)}', cellStyle, alignment: pw.Alignment.center),
-              _tableCell('$currencySymbol ${CurrencyFormatter.format(totalPrice)}', cellStyle, alignment: pw.Alignment.center),
+              _tableCell(productName, cellStyle,
+                  alignment: pw.Alignment.centerRight),
+              _tableCell(
+                  quantity.toStringAsFixed(
+                      quantity == quantity.truncateToDouble() ? 0 : 2),
+                  cellStyle,
+                  alignment: pw.Alignment.center),
+              _tableCell(
+                  '$currencySymbol ${CurrencyFormatter.format(unitPrice)}',
+                  cellStyle,
+                  alignment: pw.Alignment.center),
+              _tableCell(
+                  '$currencySymbol ${CurrencyFormatter.format(totalPrice)}',
+                  cellStyle,
+                  alignment: pw.Alignment.center),
             ],
           );
         }),
@@ -322,7 +388,8 @@ class InvoicePdfGenerator {
     final subtotal = MoneyHelper.readMoney(invoice['subtotal']);
     final discountAmount = MoneyHelper.readMoney(invoice['discount_amount']);
     final taxAmount = MoneyHelper.readMoney(invoice['tax_amount']);
-    final transportCharges = MoneyHelper.readMoney(invoice['transport_charges']);
+    final transportCharges =
+        MoneyHelper.readMoney(invoice['transport_charges']);
     final total = MoneyHelper.readMoney(invoice['total']);
     final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
     final remaining = MoneyHelper.readMoney(invoice['remaining']);
@@ -335,18 +402,27 @@ class InvoicePdfGenerator {
       ),
       child: pw.Column(
         children: [
-          _totalRow('المجموع الفرعي', '$currencySymbol ${CurrencyFormatter.format(subtotal)}', font),
+          _totalRow('المجموع الفرعي',
+              '$currencySymbol ${CurrencyFormatter.format(subtotal)}', font),
           if (discountAmount > 0) ...[
             pw.SizedBox(height: 4),
-            _totalRow('الخصم', '$currencySymbol ${CurrencyFormatter.format(discountAmount)}', font, isNegative: true),
+            _totalRow(
+                'الخصم',
+                '$currencySymbol ${CurrencyFormatter.format(discountAmount)}',
+                font,
+                isNegative: true),
           ],
           if (taxAmount > 0) ...[
             pw.SizedBox(height: 4),
-            _totalRow('الضريبة', '$currencySymbol ${CurrencyFormatter.format(taxAmount)}', font),
+            _totalRow('الضريبة',
+                '$currencySymbol ${CurrencyFormatter.format(taxAmount)}', font),
           ],
           if (transportCharges > 0) ...[
             pw.SizedBox(height: 4),
-            _totalRow('أجور النقل', '$currencySymbol ${CurrencyFormatter.format(transportCharges)}', font),
+            _totalRow(
+                'أجور النقل',
+                '$currencySymbol ${CurrencyFormatter.format(transportCharges)}',
+                font),
           ],
           pw.Divider(color: const PdfColor(0.7, 0.7, 0.7)),
           _totalRow(
@@ -357,13 +433,16 @@ class InvoicePdfGenerator {
             fontSize: 14,
           ),
           pw.SizedBox(height: 6),
-          _totalRow('المدفوع', '$currencySymbol ${CurrencyFormatter.format(paidAmount)}', font),
+          _totalRow('المدفوع',
+              '$currencySymbol ${CurrencyFormatter.format(paidAmount)}', font),
           pw.SizedBox(height: 4),
           _totalRow(
             'المتبقي',
             '$currencySymbol ${CurrencyFormatter.format(remaining)}',
             font,
-            color: remaining > 0 ? const PdfColor(0.8, 0, 0) : const PdfColor(0.12, 0.42, 0.14),
+            color: remaining > 0
+                ? const PdfColor(0.8, 0, 0)
+                : const PdfColor(0.12, 0.42, 0.14),
           ),
         ],
       ),
@@ -375,7 +454,11 @@ class InvoicePdfGenerator {
       padding: const pw.EdgeInsets.only(bottom: 6),
       child: pw.Text(
         title,
-        style: pw.TextStyle(font: font, fontSize: 12, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14)),
+        style: pw.TextStyle(
+            font: font,
+            fontSize: 12,
+            fontWeight: pw.FontWeight.bold,
+            color: const PdfColor(0.12, 0.42, 0.14)),
       ),
     );
   }
@@ -384,8 +467,14 @@ class InvoicePdfGenerator {
     return pw.Row(
       mainAxisSize: pw.MainAxisSize.min,
       children: [
-        pw.Text('$label: ', style: pw.TextStyle(font: font, fontSize: 10, color: const PdfColor(0.4, 0.4, 0.4))),
-        pw.Text(value, style: pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+        pw.Text('$label: ',
+            style: pw.TextStyle(
+                font: font,
+                fontSize: 10,
+                color: const PdfColor(0.4, 0.4, 0.4))),
+        pw.Text(value,
+            style: pw.TextStyle(
+                font: font, fontSize: 10, fontWeight: pw.FontWeight.bold)),
       ],
     );
   }
@@ -423,7 +512,8 @@ class InvoicePdfGenerator {
     );
   }
 
-  static pw.Widget _tableCell(String text, pw.TextStyle style, {pw.Alignment alignment = pw.Alignment.center}) {
+  static pw.Widget _tableCell(String text, pw.TextStyle style,
+      {pw.Alignment alignment = pw.Alignment.center}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       child: pw.Align(

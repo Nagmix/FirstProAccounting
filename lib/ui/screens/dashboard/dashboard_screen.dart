@@ -107,34 +107,120 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ══════════════════════════════════════════════════════════════════
   List<_ActionItem> get _allActions => [
         // Row 1: Quick Ops
-        _ActionItem(label: 'نقطة البيع', icon: Icons.point_of_sale_rounded, color: const Color(0xFF4F6AF0), bgColor: const Color(0xFFEEF0FF), route: AppConstants.pos),
-        _ActionItem(label: 'فاتورة بيع', icon: Icons.receipt_long_rounded, color: const Color(0xFF22C55E), bgColor: const Color(0xFFECFDF5), route: AppConstants.newSaleInvoice),
-        _ActionItem(label: 'فاتورة شراء', icon: Icons.shopping_cart_rounded, color: const Color(0xFFF97316), bgColor: const Color(0xFFFFF7ED), route: AppConstants.newPurchaseInvoice),
+        _ActionItem(
+            label: 'نقطة البيع',
+            icon: Icons.point_of_sale_rounded,
+            color: const Color(0xFF4F6AF0),
+            bgColor: const Color(0xFFEEF0FF),
+            route: AppConstants.pos),
+        _ActionItem(
+            label: 'فاتورة بيع',
+            icon: Icons.receipt_long_rounded,
+            color: const Color(0xFF22C55E),
+            bgColor: const Color(0xFFECFDF5),
+            route: AppConstants.newSaleInvoice),
+        _ActionItem(
+            label: 'فاتورة شراء',
+            icon: Icons.shopping_cart_rounded,
+            color: const Color(0xFFF97316),
+            bgColor: const Color(0xFFFFF7ED),
+            route: AppConstants.newPurchaseInvoice),
         // Row 2: Quick Ops continued
-        _ActionItem(label: 'المصروفات', icon: Icons.account_balance_wallet_rounded, color: const Color(0xFFEF4444), bgColor: const Color(0xFFFEF2F2), route: AppConstants.expenses),
-        _ActionItem(label: 'العملاء', icon: Icons.people_rounded, color: const Color(0xFF22C55E), bgColor: const Color(0xFFECFDF5), route: AppConstants.customers),
-        _ActionItem(label: 'الموردون', icon: Icons.local_shipping_rounded, color: const Color(0xFF3B82F6), bgColor: const Color(0xFFEFF6FF), route: AppConstants.suppliers),
+        _ActionItem(
+            label: 'المصروفات',
+            icon: Icons.account_balance_wallet_rounded,
+            color: const Color(0xFFEF4444),
+            bgColor: const Color(0xFFFEF2F2),
+            route: AppConstants.expenses),
+        _ActionItem(
+            label: 'العملاء',
+            icon: Icons.people_rounded,
+            color: const Color(0xFF22C55E),
+            bgColor: const Color(0xFFECFDF5),
+            route: AppConstants.customers),
+        _ActionItem(
+            label: 'الموردون',
+            icon: Icons.local_shipping_rounded,
+            color: const Color(0xFF3B82F6),
+            bgColor: const Color(0xFFEFF6FF),
+            route: AppConstants.suppliers),
         // Row 3
-        _ActionItem(label: 'المنتجات', icon: Icons.inventory_2_rounded, color: const Color(0xFFF97316), bgColor: const Color(0xFFFFF7ED), route: AppConstants.products),
-        _ActionItem(label: 'الفواتير', icon: Icons.receipt_rounded, color: const Color(0xFF4F6AF0), bgColor: const Color(0xFFEEF0FF), route: AppConstants.invoices),
-        _ActionItem(label: 'المستودعات', icon: Icons.warehouse_rounded, color: const Color(0xFF8B5CF6), bgColor: const Color(0xFFF5F3FF), route: AppConstants.warehouses),
+        _ActionItem(
+            label: 'المنتجات',
+            icon: Icons.inventory_2_rounded,
+            color: const Color(0xFFF97316),
+            bgColor: const Color(0xFFFFF7ED),
+            route: AppConstants.products),
+        _ActionItem(
+            label: 'الفواتير',
+            icon: Icons.receipt_rounded,
+            color: const Color(0xFF4F6AF0),
+            bgColor: const Color(0xFFEEF0FF),
+            route: AppConstants.invoices),
+        _ActionItem(
+            label: 'المستودعات',
+            icon: Icons.warehouse_rounded,
+            color: const Color(0xFF8B5CF6),
+            bgColor: const Color(0xFFF5F3FF),
+            route: AppConstants.warehouses),
         // Page 2 — Row 1
-        _ActionItem(label: 'الصناديق', icon: Icons.credit_card_rounded, color: const Color(0xFF06B6D4), bgColor: const Color(0xFFECFEFF), route: AppConstants.cashBoxes),
-        _ActionItem(label: 'الموظفين', icon: Icons.badge_rounded, color: const Color(0xFFEC4899), bgColor: const Color(0xFFFDF2F8), route: AppConstants.employees),
-        _ActionItem(label: 'العملات', icon: Icons.currency_exchange_rounded, color: const Color(0xFF14B8A6), bgColor: const Color(0xFFF0FDFA), route: AppConstants.currencies),
+        _ActionItem(
+            label: 'الصناديق',
+            icon: Icons.credit_card_rounded,
+            color: const Color(0xFF06B6D4),
+            bgColor: const Color(0xFFECFEFF),
+            route: AppConstants.cashBoxes),
+        _ActionItem(
+            label: 'الموظفين',
+            icon: Icons.badge_rounded,
+            color: const Color(0xFFEC4899),
+            bgColor: const Color(0xFFFDF2F8),
+            route: AppConstants.employees),
+        _ActionItem(
+            label: 'العملات',
+            icon: Icons.currency_exchange_rounded,
+            color: const Color(0xFF14B8A6),
+            bgColor: const Color(0xFFF0FDFA),
+            route: AppConstants.currencies),
         // Row 2
-        _ActionItem(label: 'التقارير', icon: Icons.bar_chart_rounded, color: const Color(0xFF4F6AF0), bgColor: const Color(0xFFEEF0FF), route: AppConstants.reports),
-        _ActionItem(label: 'الإحصائيات', icon: Icons.insights_rounded, color: const Color(0xFF8B5CF6), bgColor: const Color(0xFFF5F3FF), route: AppConstants.statistics),
-        _ActionItem(label: 'دليل الحسابات', icon: Icons.account_tree_rounded, color: const Color(0xFF06B6D4), bgColor: const Color(0xFFECFEFF), route: AppConstants.chartOfAccounts),
+        _ActionItem(
+            label: 'التقارير',
+            icon: Icons.bar_chart_rounded,
+            color: const Color(0xFF4F6AF0),
+            bgColor: const Color(0xFFEEF0FF),
+            route: AppConstants.reports),
+        _ActionItem(
+            label: 'الإحصائيات',
+            icon: Icons.insights_rounded,
+            color: const Color(0xFF8B5CF6),
+            bgColor: const Color(0xFFF5F3FF),
+            route: AppConstants.statistics),
+        _ActionItem(
+            label: 'دليل الحسابات',
+            icon: Icons.account_tree_rounded,
+            color: const Color(0xFF06B6D4),
+            bgColor: const Color(0xFFECFEFF),
+            route: AppConstants.chartOfAccounts),
         // Row 3
-        _ActionItem(label: 'الإعدادات', icon: Icons.settings_rounded, color: const Color(0xFF6B7280), bgColor: const Color(0xFFF9FAFB), route: AppConstants.settings),
-        _ActionItem(label: 'الدعم الفني', icon: Icons.support_agent_rounded, color: const Color(0xFFF97316), bgColor: const Color(0xFFFFF7ED), route: AppConstants.support),
+        _ActionItem(
+            label: 'الإعدادات',
+            icon: Icons.settings_rounded,
+            color: const Color(0xFF6B7280),
+            bgColor: const Color(0xFFF9FAFB),
+            route: AppConstants.settings),
+        _ActionItem(
+            label: 'الدعم الفني',
+            icon: Icons.support_agent_rounded,
+            color: const Color(0xFFF97316),
+            bgColor: const Color(0xFFFFF7ED),
+            route: AppConstants.support),
       ];
 
   int get _totalPages => (_allActions.length / 9).ceil();
 
   /// Total grid height = 3 rows × card height + 2 spacing + safety margin
-  double get _gridHeight => (_kCardHeight * 3) + (_kRowSpacing * 2) + _kGridBottomPadding;
+  double get _gridHeight =>
+      (_kCardHeight * 3) + (_kRowSpacing * 2) + _kGridBottomPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -145,54 +231,55 @@ class _DashboardScreenState extends State<DashboardScreen>
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) => Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
-      extendBodyBehindAppBar: true,
-      body: RefreshIndicator(
-        onRefresh: _loadDashboardData,
-        color: AppColors.primary,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // ── Premium Header ────────────────────────────────────
-            SliverToBoxAdapter(child: _buildHeader(context, isDark)),
+        backgroundColor:
+            isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
+        extendBodyBehindAppBar: true,
+        body: RefreshIndicator(
+          onRefresh: _loadDashboardData,
+          color: AppColors.primary,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              // ── Premium Header ────────────────────────────────────
+              SliverToBoxAdapter(child: _buildHeader(context, isDark)),
 
-            // ── Hero Sales Card ──────────────────────────────────
-            SliverToBoxAdapter(
-              child: AnimatedEntry(
-                delay: const Duration(milliseconds: 80),
-                child: _buildHeroSalesCard(context, isDark),
-              ),
-            ),
-
-            // ── Unified Action Grid (3×3 paged) ──────────────────
-            SliverToBoxAdapter(
-              child: AnimatedEntry(
-                delay: const Duration(milliseconds: 150),
-                child: _buildActionGrid(context, isDark),
-              ),
-            ),
-
-            // ── Recent transactions ──────────────────────────────
-            SliverToBoxAdapter(
-              child: AnimatedEntry(
-                delay: const Duration(milliseconds: 300),
-                child: _buildSectionHeader(
-                  context,
-                  'آخر المعاملات',
-                  actionLabel: 'عرض الكل',
-                  onAction: () => _navigateTo(AppConstants.invoices),
+              // ── Hero Sales Card ──────────────────────────────────
+              SliverToBoxAdapter(
+                child: AnimatedEntry(
+                  delay: const Duration(milliseconds: 80),
+                  child: _buildHeroSalesCard(context, isDark),
                 ),
               ),
-            ),
-            _buildRecentTransactions(context, isDark),
 
-            // ── Bottom spacing for nav bar + system bar ──────────
-            SliverToBoxAdapter(
-              child: SizedBox(height: 120 + bottomPadding),
-            ),
-          ],
+              // ── Unified Action Grid (3×3 paged) ──────────────────
+              SliverToBoxAdapter(
+                child: AnimatedEntry(
+                  delay: const Duration(milliseconds: 150),
+                  child: _buildActionGrid(context, isDark),
+                ),
+              ),
+
+              // ── Recent transactions ──────────────────────────────
+              SliverToBoxAdapter(
+                child: AnimatedEntry(
+                  delay: const Duration(milliseconds: 300),
+                  child: _buildSectionHeader(
+                    context,
+                    'آخر المعاملات',
+                    actionLabel: 'عرض الكل',
+                    onAction: () => _navigateTo(AppConstants.invoices),
+                  ),
+                ),
+              ),
+              _buildRecentTransactions(context, isDark),
+
+              // ── Bottom spacing for nav bar + system bar ──────────
+              SliverToBoxAdapter(
+                child: SizedBox(height: 120 + bottomPadding),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -206,12 +293,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     final greeting = DateFormatter.getGreeting();
     final dateStr =
         '${DateFormatter.dayName(now)}، ${DateFormatter.formatDateLong(now)}';
-    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        0, MediaQuery.of(context).padding.top + 4, 0, 0,
+        0,
+        MediaQuery.of(context).padding.top + 4,
+        0,
+        0,
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FE),
@@ -224,8 +315,16 @@ class _DashboardScreenState extends State<DashboardScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isDark
-                    ? [const Color(0xFF4F6AF0), const Color(0xFF8B5CF6), const Color(0xFFEC4899)]
-                    : [const Color(0xFF4F6AF0), const Color(0xFF6C8CFF), const Color(0xFF22C55E)],
+                    ? [
+                        const Color(0xFF4F6AF0),
+                        const Color(0xFF8B5CF6),
+                        const Color(0xFFEC4899)
+                      ]
+                    : [
+                        const Color(0xFF4F6AF0),
+                        const Color(0xFF6C8CFF),
+                        const Color(0xFF22C55E)
+                      ],
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
               ),
@@ -235,29 +334,38 @@ class _DashboardScreenState extends State<DashboardScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
             child: FadeTransition(
-              opacity: CurvedAnimation(parent: _entryController, curve: Curves.fastOutSlowIn),
+              opacity: CurvedAnimation(
+                  parent: _entryController, curve: Curves.fastOutSlowIn),
               child: Row(
                 children: [
                   // Avatar circle with gradient
                   Container(
-                    width: 46, height: 46,
+                    width: 46,
+                    height: 46,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: isDark
                             ? [const Color(0xFF4F6AF0), const Color(0xFF8B5CF6)]
-                            : [const Color(0xFF4F6AF0), const Color(0xFF6C8CFF)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                            : [
+                                const Color(0xFF4F6AF0),
+                                const Color(0xFF6C8CFF)
+                              ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF4F6AF0).withValues(alpha: 0.25),
-                          offset: const Offset(0, 3), blurRadius: 10,
+                          color:
+                              const Color(0xFF4F6AF0).withValues(alpha: 0.25),
+                          offset: const Offset(0, 3),
+                          blurRadius: 10,
                         ),
                       ],
                     ),
                     child: const Center(
-                      child: Icon(Icons.person_rounded, color: Colors.white, size: 24),
+                      child: Icon(Icons.person_rounded,
+                          color: Colors.white, size: 24),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -266,33 +374,52 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(greeting,
+                        Text(
+                          greeting,
                           style: theme.textTheme.titleLarge?.copyWith(
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                            fontWeight: FontWeight.w800, fontSize: 20, height: 1.2,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.textPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20,
+                            height: 1.2,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 3),
                         Row(
                           children: [
-                            Icon(Icons.calendar_today_rounded, size: 12,
-                              color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
+                            Icon(Icons.calendar_today_rounded,
+                                size: 12,
+                                color: isDark
+                                    ? AppColors.darkTextTertiary
+                                    : AppColors.textTertiary),
                             const SizedBox(width: 4),
-                            Text(dateStr,
+                            Text(
+                              dateStr,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                                fontWeight: FontWeight.w400, fontSize: 12,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12,
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Icon(Icons.access_time_rounded, size: 12,
-                              color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
+                            Icon(Icons.access_time_rounded,
+                                size: 12,
+                                color: isDark
+                                    ? AppColors.darkTextTertiary
+                                    : AppColors.textTertiary),
                             const SizedBox(width: 4),
-                            Text(timeStr,
+                            Text(
+                              timeStr,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                                fontWeight: FontWeight.w500, fontSize: 12,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -303,9 +430,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                   // Action icons
                   Row(
                     children: [
-                      _HeaderActionIcon(icon: Icons.notifications_none_rounded, isDark: isDark, onTap: () => _navigateTo(AppConstants.notifications)),
+                      _HeaderActionIcon(
+                          icon: Icons.notifications_none_rounded,
+                          isDark: isDark,
+                          onTap: () => _navigateTo(AppConstants.notifications)),
                       const SizedBox(width: 8),
-                      _HeaderActionIcon(icon: Icons.menu_rounded, isDark: isDark, onTap: () => Scaffold.of(context).openEndDrawer()),
+                      _HeaderActionIcon(
+                          icon: Icons.menu_rounded,
+                          isDark: isDark,
+                          onTap: () => Scaffold.of(context).openEndDrawer()),
                     ],
                   ),
                 ],
@@ -326,13 +459,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     double trendPercent = 0.0;
     bool isTrendUp = true;
     if (_viewModel.yesterdaySales > 0) {
-      trendPercent = ((_viewModel.todaySales - _viewModel.yesterdaySales) / _viewModel.yesterdaySales * 100);
+      trendPercent = ((_viewModel.todaySales - _viewModel.yesterdaySales) /
+          _viewModel.yesterdaySales *
+          100);
       isTrendUp = trendPercent >= 0;
       trendPercent = trendPercent.abs();
     }
 
     // Average invoice value
-    final avgInvoiceValue = _viewModel.todayInvoiceCount > 0 ? _viewModel.todaySales / _viewModel.todayInvoiceCount : 0.0;
+    final avgInvoiceValue = _viewModel.todayInvoiceCount > 0
+        ? _viewModel.todaySales / _viewModel.todayInvoiceCount
+        : 0.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
@@ -340,8 +477,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isDark
-                ? [const Color(0xFF0D0F1A), const Color(0xFF131629), const Color(0xFF0E0F1C)]
-                : [const Color(0xFF0F1B3D), const Color(0xFF1A1145), const Color(0xFF2A1052)],
+                ? [
+                    const Color(0xFF0D0F1A),
+                    const Color(0xFF131629),
+                    const Color(0xFF0E0F1C)
+                  ]
+                : [
+                    const Color(0xFF0F1B3D),
+                    const Color(0xFF1A1145),
+                    const Color(0xFF2A1052)
+                  ],
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
             stops: const [0.0, 0.5, 1.0],
@@ -349,27 +494,68 @@ class _DashboardScreenState extends State<DashboardScreen>
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF1A1145).withValues(alpha: isDark ? 0.3 : 0.45),
-              offset: const Offset(0, 10), blurRadius: 32,
+              color: const Color(0xFF1A1145)
+                  .withValues(alpha: isDark ? 0.3 : 0.45),
+              offset: const Offset(0, 10),
+              blurRadius: 32,
             ),
             BoxShadow(
-              color: const Color(0xFF0F1B3D).withValues(alpha: isDark ? 0.15 : 0.25),
-              offset: const Offset(0, 4), blurRadius: 16,
+              color: const Color(0xFF0F1B3D)
+                  .withValues(alpha: isDark ? 0.15 : 0.25),
+              offset: const Offset(0, 4),
+              blurRadius: 16,
             ),
           ],
         ),
         child: Stack(
           children: [
             // Decorative shapes
-            Positioned(left: -30, top: -30, child: Container(width: 120, height: 120, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.04)))),
-            Positioned(right: -20, bottom: -40, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.03)))),
+            Positioned(
+                left: -30,
+                top: -30,
+                child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.04)))),
+            Positioned(
+                right: -20,
+                bottom: -40,
+                child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.03)))),
             // Sparkle decorations
-            Positioned(right: 60, top: 30, child: _SparkleIcon(size: 14, color: Colors.white.withValues(alpha: 0.2))),
-            Positioned(left: 80, top: 60, child: _SparkleIcon(size: 10, color: Colors.white.withValues(alpha: 0.12))),
-            Positioned(right: 30, top: 80, child: _SparkleIcon(size: 8, color: Colors.white.withValues(alpha: 0.15))),
+            Positioned(
+                right: 60,
+                top: 30,
+                child: _SparkleIcon(
+                    size: 14, color: Colors.white.withValues(alpha: 0.2))),
+            Positioned(
+                left: 80,
+                top: 60,
+                child: _SparkleIcon(
+                    size: 10, color: Colors.white.withValues(alpha: 0.12))),
+            Positioned(
+                right: 30,
+                top: 80,
+                child: _SparkleIcon(
+                    size: 8, color: Colors.white.withValues(alpha: 0.15))),
             // Mini chart
-            Positioned(left: 20, bottom: 16, right: 20,
-              child: SizedBox(height: 45, child: CustomPaint(painter: _MiniChartPainter(progress: _chartDrawController, lineColor: Colors.white.withValues(alpha: 0.25), fillColor: Colors.white.withValues(alpha: 0.06)))),
+            Positioned(
+              left: 20,
+              bottom: 16,
+              right: 20,
+              child: SizedBox(
+                  height: 45,
+                  child: CustomPaint(
+                      painter: _MiniChartPainter(
+                          progress: _chartDrawController,
+                          lineColor: Colors.white.withValues(alpha: 0.25),
+                          fillColor: Colors.white.withValues(alpha: 0.06)))),
             ),
             // Content
             Padding(
@@ -385,76 +571,140 @@ class _DashboardScreenState extends State<DashboardScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 30, height: 30,
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
-                            child: Icon(Icons.sell_rounded, color: Colors.white.withValues(alpha: 0.9), size: 16),
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(9)),
+                            child: Icon(Icons.sell_rounded,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                size: 16),
                           ),
                           const SizedBox(width: 10),
                           Text('إجمالي مبيعات اليوم',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.2)),
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.12), Colors.white.withValues(alpha: 0.06)]),
+                          gradient: LinearGradient(colors: [
+                            Colors.white.withValues(alpha: 0.12),
+                            Colors.white.withValues(alpha: 0.06)
+                          ]),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1)),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.receipt_long_rounded, color: Colors.white.withValues(alpha: 0.7), size: 13),
+                          Icon(Icons.receipt_long_rounded,
+                              color: Colors.white.withValues(alpha: 0.7),
+                              size: 13),
                           const SizedBox(width: 4),
-                          Text('${_viewModel.todayInvoiceCount}', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                          Text('${_viewModel.todayInvoiceCount}',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700)),
                           const SizedBox(width: 3),
-                          Text('فاتورة', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.6))),
+                          Text('فاتورة',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.6))),
                         ]),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   // Main amount
-                  _CountUpText(value: _viewModel.todaySales,
-                    style: theme.textTheme.displaySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900, height: 1.1, letterSpacing: -0.5)
-                      ?? const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
-                    isLoading: _viewModel.isLoading),
+                  _CountUpText(
+                      value: _viewModel.todaySales,
+                      style: theme.textTheme.displaySmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              height: 1.1,
+                              letterSpacing: -0.5) ??
+                          const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white),
+                      isLoading: _viewModel.isLoading),
                   const SizedBox(height: 12),
                   // Bottom info row: trend + average
                   Row(
                     children: [
                       // Trend indicator
-                      if (_viewModel.yesterdaySales > 0 || _viewModel.todaySales > 0)
+                      if (_viewModel.yesterdaySales > 0 ||
+                          _viewModel.todaySales > 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.15) : const Color(0xFFFCA5A5).withValues(alpha: 0.1),
+                            color: isTrendUp
+                                ? const Color(0xFF4ADE80)
+                                    .withValues(alpha: 0.15)
+                                : const Color(0xFFFCA5A5)
+                                    .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isTrendUp ? const Color(0xFF4ADE80).withValues(alpha: 0.2) : const Color(0xFFFCA5A5).withValues(alpha: 0.15)),
+                            border: Border.all(
+                                color: isTrendUp
+                                    ? const Color(0xFF4ADE80)
+                                        .withValues(alpha: 0.2)
+                                    : const Color(0xFFFCA5A5)
+                                        .withValues(alpha: 0.15)),
                           ),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(isTrendUp ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), size: 13),
+                            Icon(
+                                isTrendUp
+                                    ? Icons.trending_up_rounded
+                                    : Icons.trending_down_rounded,
+                                color: isTrendUp
+                                    ? const Color(0xFF4ADE80)
+                                    : const Color(0xFFFCA5A5),
+                                size: 13),
                             const SizedBox(width: 4),
-                            Text('${trendPercent.toStringAsFixed(1)}%', style: theme.textTheme.labelSmall?.copyWith(color: isTrendUp ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5), fontWeight: FontWeight.w700)),
+                            Text('${trendPercent.toStringAsFixed(1)}%',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                    color: isTrendUp
+                                        ? const Color(0xFF4ADE80)
+                                        : const Color(0xFFFCA5A5),
+                                    fontWeight: FontWeight.w700)),
                           ]),
                         ),
-                      if (_viewModel.yesterdaySales > 0 || _viewModel.todaySales > 0)
+                      if (_viewModel.yesterdaySales > 0 ||
+                          _viewModel.todaySales > 0)
                         const SizedBox(width: 8),
                       // Average sale value
                       if (_viewModel.todayInvoiceCount > 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF60A5FA).withValues(alpha: 0.12),
+                            color:
+                                const Color(0xFF60A5FA).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF60A5FA).withValues(alpha: 0.15)),
+                            border: Border.all(
+                                color: const Color(0xFF60A5FA)
+                                    .withValues(alpha: 0.15)),
                           ),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.analytics_outlined, color: const Color(0xFF60A5FA), size: 13),
+                            Icon(Icons.analytics_outlined,
+                                color: const Color(0xFF60A5FA), size: 13),
                             const SizedBox(width: 4),
-                            Text('متوسط ${CurrencyFormatter.formatCompact(avgInvoiceValue)}', style: theme.textTheme.labelSmall?.copyWith(color: const Color(0xFF60A5FA), fontWeight: FontWeight.w600)),
+                            Text(
+                                'متوسط ${CurrencyFormatter.formatCompact(avgInvoiceValue)}',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                    color: const Color(0xFF60A5FA),
+                                    fontWeight: FontWeight.w600)),
                           ]),
                         ),
                       const Spacer(),
-                      Text(isTrendUp ? 'أكثر من أمس' : 'أقل من أمس', style: theme.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.5), fontWeight: FontWeight.w400)),
+                      Text(isTrendUp ? 'أكثر من أمس' : 'أقل من أمس',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontWeight: FontWeight.w400)),
                     ],
                   ),
                 ],
@@ -487,7 +737,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               controller: _actionPageController,
               physics: const BouncingScrollPhysics(),
               clipBehavior: Clip.none,
-              onPageChanged: (page) => setState(() => _currentActionPage = page),
+              onPageChanged: (page) =>
+                  setState(() => _currentActionPage = page),
               itemCount: _totalPages,
               itemBuilder: (context, pageIndex) {
                 final startIdx = pageIndex * 9;
@@ -510,7 +761,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     // Pad to 9 items so the grid stays consistent
     final padded = List<_ActionItem>.from(items);
     while (padded.length < 9) {
-      padded.add(const _ActionItem(label: '', icon: null, color: Colors.transparent, route: ''));
+      padded.add(const _ActionItem(
+          label: '', icon: null, color: Colors.transparent, route: ''));
     }
 
     return Column(
@@ -529,14 +781,27 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   /// Build a single row of 3 action cards.
-  Widget _buildGridRow(_ActionItem a, _ActionItem b, _ActionItem c, bool isDark) {
+  Widget _buildGridRow(
+      _ActionItem a, _ActionItem b, _ActionItem c, bool isDark) {
     return Row(
       children: [
-        Expanded(child: a.icon != null ? _GridActionCard(item: a, isDark: isDark, onTap: () => _navigateTo(a.route)) : const SizedBox.shrink()),
+        Expanded(
+            child: a.icon != null
+                ? _GridActionCard(
+                    item: a, isDark: isDark, onTap: () => _navigateTo(a.route))
+                : const SizedBox.shrink()),
         SizedBox(width: _kColSpacing),
-        Expanded(child: b.icon != null ? _GridActionCard(item: b, isDark: isDark, onTap: () => _navigateTo(b.route)) : const SizedBox.shrink()),
+        Expanded(
+            child: b.icon != null
+                ? _GridActionCard(
+                    item: b, isDark: isDark, onTap: () => _navigateTo(b.route))
+                : const SizedBox.shrink()),
         SizedBox(width: _kColSpacing),
-        Expanded(child: c.icon != null ? _GridActionCard(item: c, isDark: isDark, onTap: () => _navigateTo(c.route)) : const SizedBox.shrink()),
+        Expanded(
+            child: c.icon != null
+                ? _GridActionCard(
+                    item: c, isDark: isDark, onTap: () => _navigateTo(c.route))
+                : const SizedBox.shrink()),
       ],
     );
   }
@@ -554,22 +819,27 @@ class _DashboardScreenState extends State<DashboardScreen>
             children: [
               // Accent bar
               Container(
-                width: 4, height: 20,
+                width: 4,
+                height: 20,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)],
-                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(width: 10),
-              Text('الخدمات',
+              Text(
+                'الخدمات',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
                   letterSpacing: 0.3,
-                  color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : const Color(0xFF1E293B),
                 ),
               ),
             ],
@@ -589,7 +859,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   decoration: BoxDecoration(
                     color: isActive
                         ? const Color(0xFF4F6AF0)
-                        : (isDark ? AppColors.darkTextTertiary : AppColors.textTertiary).withValues(alpha: 0.25),
+                        : (isDark
+                                ? AppColors.darkTextTertiary
+                                : AppColors.textTertiary)
+                            .withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -603,7 +876,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ══════════════════════════════════════════════════════════════════
   //  SECTION HEADER — Professional with accent bar + action link
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildSectionHeader(BuildContext context, String title, {String? actionLabel, VoidCallback? onAction}) {
+  Widget _buildSectionHeader(BuildContext context, String title,
+      {String? actionLabel, VoidCallback? onAction}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -613,21 +887,26 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           // Accent bar
           Container(
-            width: 4, height: 18,
+            width: 4,
+            height: 18,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)]),
+              gradient: const LinearGradient(
+                  colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)]),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(width: 10),
           // Title
           Expanded(
-            child: Text(title,
+            child: Text(
+              title,
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 18,
                 letterSpacing: 0.3,
-                color: isDark ? AppColors.darkTextPrimary : const Color(0xFF1E293B),
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : const Color(0xFF1E293B),
               ),
             ),
           ),
@@ -637,13 +916,15 @@ class _DashboardScreenState extends State<DashboardScreen>
               onTap: onAction,
               borderRadius: BorderRadius.circular(10),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: const Color(0xFF4F6AF0).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(actionLabel,
+                  Text(
+                    actionLabel,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
@@ -651,7 +932,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                   ),
                   const SizedBox(width: 2),
-                  const Icon(Icons.arrow_back_ios_rounded, size: 10, color: Color(0xFF4F6AF0)),
+                  const Icon(Icons.arrow_back_ios_rounded,
+                      size: 10, color: Color(0xFF4F6AF0)),
                 ]),
               ),
             ),
@@ -668,7 +950,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       return const SliverToBoxAdapter(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 32),
-          child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+          child: Center(
+              child: CircularProgressIndicator(color: AppColors.primary)),
         ),
       );
     }
@@ -680,13 +963,19 @@ class _DashboardScreenState extends State<DashboardScreen>
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
             child: Column(children: [
               Container(
-                width: 72, height: 72,
-                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.06), shape: BoxShape.circle),
-                child: Icon(Icons.receipt_long_rounded, size: 32, color: AppColors.primary.withValues(alpha: 0.5)),
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    shape: BoxShape.circle),
+                child: Icon(Icons.receipt_long_rounded,
+                    size: 32, color: AppColors.primary.withValues(alpha: 0.5)),
               ),
               const SizedBox(height: 16),
-              Text('لا توجد معاملات بعد',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textHint, fontWeight: FontWeight.w500),
+              Text(
+                'لا توجد معاملات بعد',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textHint, fontWeight: FontWeight.w500),
               ),
             ]),
           ),
@@ -701,7 +990,9 @@ class _DashboardScreenState extends State<DashboardScreen>
             final invoice = _viewModel.recentInvoices[index];
             final entityName = invoice['entity_name'] as String? ?? '—';
             final amount = MoneyHelper.readMoney(invoice['total']);
-            final date = DateTime.tryParse(invoice['created_at'] as String? ?? '') ?? DateTime.now();
+            final date =
+                DateTime.tryParse(invoice['created_at'] as String? ?? '') ??
+                    DateTime.now();
             final statusStr = invoice['status'] as String? ?? 'pending';
             final invoiceType = invoice['type'] as String? ?? 'sale';
             final isReturn = (invoice['is_return'] as int? ?? 0) == 1;
@@ -756,10 +1047,16 @@ class _DashboardScreenState extends State<DashboardScreen>
               width: double.infinity,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)], begin: Alignment.centerRight, end: Alignment.centerLeft),
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
-                    BoxShadow(color: const Color(0xFF4F6AF0).withValues(alpha: 0.25), offset: const Offset(0, 4), blurRadius: 12),
+                    BoxShadow(
+                        color: const Color(0xFF4F6AF0).withValues(alpha: 0.25),
+                        offset: const Offset(0, 4),
+                        blurRadius: 12),
                   ],
                 ),
                 child: Material(
@@ -772,9 +1069,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('عرض الكل', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                          Text('عرض الكل',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700)),
                           const SizedBox(width: 6),
-                          const Icon(Icons.arrow_back, color: Colors.white, size: 16),
+                          const Icon(Icons.arrow_back,
+                              color: Colors.white, size: 16),
                         ],
                       ),
                     ),
@@ -788,7 +1092,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
     );
   }
-
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -796,7 +1099,12 @@ class _DashboardScreenState extends State<DashboardScreen>
 // ══════════════════════════════════════════════════════════════════════
 
 class _ActionItem {
-  const _ActionItem({required this.label, required this.icon, required this.color, required this.route, this.bgColor});
+  const _ActionItem(
+      {required this.label,
+      required this.icon,
+      required this.color,
+      required this.route,
+      this.bgColor});
   final String label;
   final IconData? icon;
   final Color color;
@@ -821,7 +1129,8 @@ class _SparkleIcon extends StatelessWidget {
 
 // ── Header action icon ─────────────────────────────────────────────
 class _HeaderActionIcon extends StatelessWidget {
-  const _HeaderActionIcon({required this.icon, required this.isDark, required this.onTap});
+  const _HeaderActionIcon(
+      {required this.icon, required this.isDark, required this.onTap});
   final IconData icon;
   final bool isDark;
   final VoidCallback onTap;
@@ -829,18 +1138,28 @@ class _HeaderActionIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 42, height: 42,
+      width: 42,
+      height: 42,
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), offset: const Offset(0, 2), blurRadius: 8)],
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    offset: const Offset(0, 2),
+                    blurRadius: 8)
+              ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
-          child: Icon(icon, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary, size: 20),
+          child: Icon(icon,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              size: 20),
         ),
       ),
     );
@@ -878,8 +1197,11 @@ class _GridActionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: isDark ? Colors.black.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.03),
-                offset: const Offset(0, 2), blurRadius: 6,
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.12)
+                    : Colors.black.withValues(alpha: 0.03),
+                offset: const Offset(0, 2),
+                blurRadius: 6,
               ),
             ],
           ),
@@ -897,22 +1219,28 @@ class _GridActionCard extends StatelessWidget {
                   children: [
                     // Icon container — compact
                     Container(
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: isDark ? item.color.withValues(alpha: 0.12) : effectiveBg,
+                        color: isDark
+                            ? item.color.withValues(alpha: 0.12)
+                            : effectiveBg,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(item.icon, color: item.color, size: 18),
                     ),
                     const SizedBox(height: 4),
                     // Label
-                    Text(item.label,
+                    Text(
+                      item.label,
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
                         height: 1.2,
                         fontSize: 10,
                       ),
@@ -957,18 +1285,21 @@ class _ProfessionalTransactionTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     // Icon and colors based on type
-    final icon = isSale ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
+    final icon =
+        isSale ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
     final iconBgColor = isSale
         ? const Color(0xFF22C55E).withValues(alpha: isDark ? 0.15 : 0.1)
         : const Color(0xFFEF4444).withValues(alpha: isDark ? 0.15 : 0.1);
-    final iconColor = isSale ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
+    final iconColor =
+        isSale ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
 
     // Status
     final statusLabel = isPaid ? 'مدفوعة' : 'غير مدفوعة';
     final statusBgColor = isPaid
         ? const Color(0xFF22C55E).withValues(alpha: 0.1)
         : const Color(0xFFF97316).withValues(alpha: 0.1);
-    final statusColor = isPaid ? const Color(0xFF22C55E) : const Color(0xFFF97316);
+    final statusColor =
+        isPaid ? const Color(0xFF22C55E) : const Color(0xFFF97316);
 
     // Build subtitle with type label and journal ID
     final subtitleParts = <String>[];
@@ -990,8 +1321,11 @@ class _ProfessionalTransactionTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: isDark ? Colors.black.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.03),
-                offset: const Offset(0, 2), blurRadius: 8,
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.15)
+                    : Colors.black.withValues(alpha: 0.03),
+                offset: const Offset(0, 2),
+                blurRadius: 8,
               ),
             ],
           ),
@@ -999,7 +1333,8 @@ class _ProfessionalTransactionTile extends StatelessWidget {
             children: [
               // Type icon
               Container(
-                width: 44, height: 44,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: iconBgColor,
                   borderRadius: BorderRadius.circular(14),
@@ -1013,18 +1348,24 @@ class _ProfessionalTransactionTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(entityName,
+                    Text(
+                      entityName,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
                       ),
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary,
+                        color: isDark
+                            ? AppColors.darkTextTertiary
+                            : AppColors.textTertiary,
                         fontWeight: FontWeight.w400,
                       ),
                       maxLines: 1,
@@ -1042,17 +1383,21 @@ class _ProfessionalTransactionTile extends StatelessWidget {
                     CurrencyFormatter.format(amount),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: statusBgColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(statusLabel,
+                    child: Text(
+                      statusLabel,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: statusColor,
                         fontWeight: FontWeight.w600,
@@ -1072,7 +1417,8 @@ class _ProfessionalTransactionTile extends StatelessWidget {
 
 // ── Count-up text widget ─────────────────────────────────────────
 class _CountUpText extends StatefulWidget {
-  const _CountUpText({required this.value, required this.style, required this.isLoading});
+  const _CountUpText(
+      {required this.value, required this.style, required this.isLoading});
   final double value;
   final TextStyle style;
   final bool isLoading;
@@ -1081,7 +1427,8 @@ class _CountUpText extends StatefulWidget {
   State<_CountUpText> createState() => _CountUpTextState();
 }
 
-class _CountUpTextState extends State<_CountUpText> with SingleTickerProviderStateMixin {
+class _CountUpTextState extends State<_CountUpText>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
   double _previousValue = 0.0;
@@ -1089,36 +1436,49 @@ class _CountUpTextState extends State<_CountUpText> with SingleTickerProviderSta
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _animation = Tween<double>(begin: 0, end: widget.value).animate(CurvedAnimation(parent: _controller, curve: Curves.fastOutSlowIn));
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _animation = Tween<double>(begin: 0, end: widget.value).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.fastOutSlowIn));
     if (!widget.isLoading) _controller.forward();
   }
 
   @override
   void didUpdateWidget(covariant _CountUpText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.value != widget.value || (!widget.isLoading && oldWidget.isLoading)) {
+    if (oldWidget.value != widget.value ||
+        (!widget.isLoading && oldWidget.isLoading)) {
       _previousValue = oldWidget.value;
-      _animation = Tween<double>(begin: _previousValue, end: widget.value).animate(CurvedAnimation(parent: _controller, curve: Curves.fastOutSlowIn));
+      _animation = Tween<double>(begin: _previousValue, end: widget.value)
+          .animate(CurvedAnimation(
+              parent: _controller, curve: Curves.fastOutSlowIn));
       _controller.forward(from: 0);
     }
   }
 
   @override
-  void dispose() { _controller.dispose(); super.dispose(); }
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _animation,
-      builder: (context, child) => Text(CurrencyFormatter.format(_animation.value), style: widget.style),
+      builder: (context, child) =>
+          Text(CurrencyFormatter.format(_animation.value), style: widget.style),
     );
   }
 }
 
 // ── Mini Chart Painter ────────────────────────────────────────────
 class _MiniChartPainter extends CustomPainter {
-  _MiniChartPainter({required this.progress, required this.lineColor, required this.fillColor}) : super(repaint: progress);
+  _MiniChartPainter(
+      {required this.progress,
+      required this.lineColor,
+      required this.fillColor})
+      : super(repaint: progress);
   final Animation<double> progress;
   final Color lineColor;
   final Color fillColor;
@@ -1147,7 +1507,8 @@ class _MiniChartPainter extends CustomPainter {
     fillPath.moveTo(visiblePoints[0].dx, size.height);
     fillPath.lineTo(visiblePoints[0].dx, visiblePoints[0].dy);
     for (int i = 1; i < visiblePoints.length; i++) {
-      final prev = visiblePoints[i - 1]; final curr = visiblePoints[i];
+      final prev = visiblePoints[i - 1];
+      final curr = visiblePoints[i];
       final cpx = (prev.dx + curr.dx) / 2;
       fillPath.cubicTo(cpx, prev.dy, cpx, curr.dy, curr.dx, curr.dy);
     }
@@ -1158,11 +1519,18 @@ class _MiniChartPainter extends CustomPainter {
     final linePath = Path();
     linePath.moveTo(visiblePoints[0].dx, visiblePoints[0].dy);
     for (int i = 1; i < visiblePoints.length; i++) {
-      final prev = visiblePoints[i - 1]; final curr = visiblePoints[i];
+      final prev = visiblePoints[i - 1];
+      final curr = visiblePoints[i];
       final cpx = (prev.dx + curr.dx) / 2;
       linePath.cubicTo(cpx, prev.dy, cpx, curr.dy, curr.dx, curr.dy);
     }
-    canvas.drawPath(linePath, Paint()..color = lineColor..strokeWidth = 2..style = PaintingStyle.stroke..strokeCap = StrokeCap.round);
+    canvas.drawPath(
+        linePath,
+        Paint()
+          ..color = lineColor
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round);
 
     if (visiblePoints.isNotEmpty) {
       canvas.drawCircle(visiblePoints.last, 3, Paint()..color = lineColor);

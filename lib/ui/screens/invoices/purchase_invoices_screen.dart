@@ -62,50 +62,66 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
   }
 
   double get _totalPurchases => _invoices.fold(0.0, (sum, i) {
-    final total = MoneyHelper.readMoney(i['total']);
-    final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
-    return sum + (isReturn ? -total : total);
-  });
+        final total = MoneyHelper.readMoney(i['total']);
+        final isReturn = (i['is_return'] as int?) == 1 ||
+            (i['type'] as String? ?? '') == 'purchase_return';
+        return sum + (isReturn ? -total : total);
+      });
   double get _totalPaid => _invoices.fold(0.0, (sum, i) {
-    final paid = MoneyHelper.readMoney(i['paid_amount']);
-    final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
-    return sum + (isReturn ? -paid : paid);
-  });
+        final paid = MoneyHelper.readMoney(i['paid_amount']);
+        final isReturn = (i['is_return'] as int?) == 1 ||
+            (i['type'] as String? ?? '') == 'purchase_return';
+        return sum + (isReturn ? -paid : paid);
+      });
   double get _totalRemaining => _invoices.fold(0.0, (sum, i) {
-    final remaining = MoneyHelper.readMoney(i['remaining']);
-    final isReturn = (i['is_return'] as int?) == 1 || (i['type'] as String? ?? '') == 'purchase_return';
-    return sum + (isReturn ? -remaining : remaining);
-  });
+        final remaining = MoneyHelper.readMoney(i['remaining']);
+        final isReturn = (i['is_return'] as int?) == 1 ||
+            (i['type'] as String? ?? '') == 'purchase_return';
+        return sum + (isReturn ? -remaining : remaining);
+      });
   int get _paidCount => _invoices.where((i) => i['status'] == 'paid').length;
-  int get _unpaidCount => _invoices.where((i) => i['status'] == 'unpaid' || i['status'] == 'partial').length;
+  int get _unpaidCount => _invoices
+      .where((i) => i['status'] == 'unpaid' || i['status'] == 'partial')
+      .length;
 
   List<Map<String, dynamic>> get _filteredInvoices {
     var result = _invoices;
 
     if (_paymentStatusFilter != 'الكل') {
-      final statusMap = {'مدفوع': 'paid', 'غير مدفوع': 'unpaid', 'مدفوع جزئياً': 'partial'};
+      final statusMap = {
+        'مدفوع': 'paid',
+        'غير مدفوع': 'unpaid',
+        'مدفوع جزئياً': 'partial'
+      };
       final status = statusMap[_paymentStatusFilter];
-      if (status != null) result = result.where((i) => i['status'] == status).toList();
+      if (status != null) {
+        result = result.where((i) => i['status'] == status).toList();
+      }
     }
 
     if (_paymentMechanismFilter != 'الكل') {
       final methodMap = {'نقداً': 'cash', 'آجل': 'credit'};
       final method = methodMap[_paymentMechanismFilter];
-      if (method != null) result = result.where((i) => i['payment_mechanism'] == method).toList();
+      if (method != null) {
+        result = result.where((i) => i['payment_mechanism'] == method).toList();
+      }
     }
 
     if (_dateRange != null) {
       result = result.where((i) {
         final createdAt = DateTime.tryParse(i['created_at'] as String? ?? '');
         if (createdAt == null) return false;
-        return !createdAt.isBefore(_dateRange!.start) && !createdAt.isAfter(_dateRange!.end);
+        return !createdAt.isBefore(_dateRange!.start) &&
+            !createdAt.isAfter(_dateRange!.end);
       }).toList();
     }
 
@@ -160,8 +176,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                   invoiceData: _filteredInvoices[index],
                                   displayInvoiceId: _displayInvoiceId,
                                   invoiceTypeAr: _invoiceTypeAr,
-                                  onTap: () => _navigateToDetail(_filteredInvoices[index]),
-                                  onPrint: () => _printInvoice(context, _filteredInvoices[index]),
+                                  onTap: () => _navigateToDetail(
+                                      _filteredInvoices[index]),
+                                  onPrint: () => _printInvoice(
+                                      context, _filteredInvoices[index]),
                                 );
                               },
                             ),
@@ -174,7 +192,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const CreateInvoiceScreen(invoiceType: AppConstants.purchaseInvoice),
+                builder: (_) => const CreateInvoiceScreen(
+                    invoiceType: AppConstants.purchaseInvoice),
               ),
             ).then((_) => _loadInvoices());
           },
@@ -233,7 +252,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: AppColors.secondary.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: AppColors.secondary.withValues(alpha: 0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -243,7 +265,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               Expanded(
                 child: _buildStatItem(
                   label: 'إجمالي المشتريات',
-                  value: CurrencyFormatter.formatCompactWithSymbol(_totalPurchases),
+                  value: CurrencyFormatter.formatCompactWithSymbol(
+                      _totalPurchases),
                   icon: Icons.shopping_cart,
                 ),
               ),
@@ -259,7 +282,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               Expanded(
                 child: _buildStatItem(
                   label: 'المتبقي',
-                  value: CurrencyFormatter.formatCompactWithSymbol(_totalRemaining),
+                  value: CurrencyFormatter.formatCompactWithSymbol(
+                      _totalRemaining),
                   icon: Icons.pending_actions,
                 ),
               ),
@@ -277,11 +301,15 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               children: [
                 Icon(Icons.receipt_long, color: Colors.white70, size: 14),
                 const SizedBox(width: 4),
-                Text('$_paidCount مدفوعة', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                Text('$_paidCount مدفوعة',
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 11)),
                 const SizedBox(width: 12),
                 Icon(Icons.warning_amber, color: Colors.white70, size: 14),
                 const SizedBox(width: 4),
-                Text('$_unpaidCount معلقة', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                Text('$_unpaidCount معلقة',
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 11)),
               ],
             ),
           ),
@@ -290,14 +318,20 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     );
   }
 
-  Widget _buildStatItem({required String label, required String value, required IconData icon}) {
+  Widget _buildStatItem(
+      {required String label, required String value, required IconData icon}) {
     return Column(
       children: [
         Icon(icon, color: Colors.white70, size: 18),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Colors.white), textAlign: TextAlign.center),
+        Text(value,
+            style: const TextStyle(
+                fontWeight: FontWeight.w800, fontSize: 14, color: Colors.white),
+            textAlign: TextAlign.center),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70), textAlign: TextAlign.center),
+        Text(label,
+            style: const TextStyle(fontSize: 10, color: Colors.white70),
+            textAlign: TextAlign.center),
       ],
     );
   }
@@ -310,7 +344,9 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         child: Row(
           children: [
             _buildFilterChip(
-              label: _paymentStatusFilter == 'الكل' ? 'حالة الدفع' : _paymentStatusFilter,
+              label: _paymentStatusFilter == 'الكل'
+                  ? 'حالة الدفع'
+                  : _paymentStatusFilter,
               icon: Icons.payments,
               items: const ['الكل', 'مدفوع', 'غير مدفوع', 'مدفوع جزئياً'],
               selected: _paymentStatusFilter,
@@ -319,7 +355,9 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             ),
             const SizedBox(width: 6),
             _buildFilterChip(
-              label: _paymentMechanismFilter == 'الكل' ? 'آلية الدفع' : _paymentMechanismFilter,
+              label: _paymentMechanismFilter == 'الكل'
+                  ? 'آلية الدفع'
+                  : _paymentMechanismFilter,
               icon: Icons.credit_card,
               items: const ['الكل', 'نقداً', 'آجل'],
               selected: _paymentMechanismFilter,
@@ -328,21 +366,28 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             ),
             const SizedBox(width: 6),
             ActionChip(
-              avatar: Icon(Icons.calendar_month, size: 16, color: _dateRange != null ? AppColors.secondary : null),
+              avatar: Icon(Icons.calendar_month,
+                  size: 16,
+                  color: _dateRange != null ? AppColors.secondary : null),
               label: Text(
                 _dateRange != null
                     ? '${DateFormatter.formatDate(_dateRange!.start)} – ${DateFormatter.formatDate(_dateRange!.end)}'
                     : 'الفترة',
-                style: TextStyle(fontSize: 12, color: _dateRange != null ? AppColors.secondary : null),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: _dateRange != null ? AppColors.secondary : null),
               ),
-              side: _dateRange != null ? BorderSide(color: AppColors.secondary) : null,
+              side: _dateRange != null
+                  ? BorderSide(color: AppColors.secondary)
+                  : null,
               onPressed: _pickDateRange,
             ),
             if (_dateRange != null) ...[
               const SizedBox(width: 2),
               GestureDetector(
                 onTap: () => setState(() => _dateRange = null),
-                child: const Icon(Icons.close, size: 16, color: AppColors.textHint),
+                child: const Icon(Icons.close,
+                    size: 16, color: AppColors.textHint),
               ),
             ],
           ],
@@ -360,28 +405,46 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     bool isActive = false,
   }) {
     return ActionChip(
-      avatar: Icon(icon, size: 16, color: isActive ? AppColors.secondary : null),
-      label: Text(label, style: TextStyle(fontSize: 12, color: isActive ? AppColors.secondary : null, fontWeight: isActive ? FontWeight.w600 : null)),
+      avatar:
+          Icon(icon, size: 16, color: isActive ? AppColors.secondary : null),
+      label: Text(label,
+          style: TextStyle(
+              fontSize: 12,
+              color: isActive ? AppColors.secondary : null,
+              fontWeight: isActive ? FontWeight.w600 : null)),
       side: isActive ? BorderSide(color: AppColors.secondary) : null,
       onPressed: () {
         showModalBottomSheet(
           context: context,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
           builder: (ctx) => SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 8),
-                Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+                Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 12),
                 ...items.map((item) => ListTile(
-                  title: Text(item, style: TextStyle(fontWeight: item == selected ? FontWeight.w700 : FontWeight.w400)),
-                  trailing: item == selected ? const Icon(Icons.check, color: AppColors.secondary, size: 20) : null,
-                  onTap: () {
-                    onChanged(item);
-                    Navigator.pop(ctx);
-                  },
-                )),
+                      title: Text(item,
+                          style: TextStyle(
+                              fontWeight: item == selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w400)),
+                      trailing: item == selected
+                          ? const Icon(Icons.check,
+                              color: AppColors.secondary, size: 20)
+                          : null,
+                      onTap: () {
+                        onChanged(item);
+                        Navigator.pop(ctx);
+                      },
+                    )),
               ],
             ),
           ),
@@ -395,11 +458,15 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_cart_outlined, size: 64, color: AppColors.textHint),
+          Icon(Icons.shopping_cart_outlined,
+              size: 64, color: AppColors.textHint),
           const SizedBox(height: 12),
-          Text('لا توجد فواتير مشتريات', style: context.textTheme.titleMedium?.copyWith(color: AppColors.textSecondary)),
+          Text('لا توجد فواتير مشتريات',
+              style: context.textTheme.titleMedium
+                  ?.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 4),
-          Text('أضف فاتورة مشتريات جديدة بالضغط على الزر أدناه', style: context.textTheme.bodySmall),
+          Text('أضف فاتورة مشتريات جديدة بالضغط على الزر أدناه',
+              style: context.textTheme.bodySmall),
         ],
       ),
     );
@@ -414,17 +481,23 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     ).then((_) => _loadInvoices());
   }
 
-  Future<void> _printInvoice(BuildContext context, Map<String, dynamic> invoiceData) async {
+  Future<void> _printInvoice(
+      BuildContext context, Map<String, dynamic> invoiceData) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('جاري إنشاء ملف PDF...'), duration: Duration(seconds: 1)),
+        const SnackBar(
+            content: Text('جاري إنشاء ملف PDF...'),
+            duration: Duration(seconds: 1)),
       );
-      final items = await locator<InvoiceRepository>().getInvoiceItems(invoiceData['id'] as String);
+      final items = await locator<InvoiceRepository>()
+          .getInvoiceItems(invoiceData['id'] as String);
       await InvoicePdfGenerator.printInvoice(invoiceData, items);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء الطباعة'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء الطباعة'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -439,7 +512,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       locale: const Locale('ar'),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: AppColors.secondary),
+          colorScheme:
+              Theme.of(ctx).colorScheme.copyWith(primary: AppColors.secondary),
         ),
         child: child!,
       ),
@@ -475,7 +549,8 @@ class _PurchaseInvoiceCard extends StatelessWidget {
     final remaining = MoneyHelper.readMoney(invoiceData['remaining']);
     final total = MoneyHelper.readMoney(invoiceData['total']);
     final paidAmount = MoneyHelper.readMoney(invoiceData['paid_amount']);
-    final paymentMechanism = invoiceData['payment_mechanism'] as String? ?? 'cash';
+    final paymentMechanism =
+        invoiceData['payment_mechanism'] as String? ?? 'cash';
     final currency = invoiceData['currency'] as String? ?? 'YER';
 
     return Container(
@@ -484,7 +559,9 @@ class _PurchaseInvoiceCard extends StatelessWidget {
         color: context.surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isReturn ? AppColors.warning.withValues(alpha: 0.3) : AppColors.border.withValues(alpha: 0.5),
+          color: isReturn
+              ? AppColors.warning.withValues(alpha: 0.3)
+              : AppColors.border.withValues(alpha: 0.5),
           width: isReturn ? 1.5 : 0.5,
         ),
       ),
@@ -501,7 +578,8 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: (isReturn ? AppColors.warning : AppColors.info).withValues(alpha: 0.1),
+                      color: (isReturn ? AppColors.warning : AppColors.info)
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -520,7 +598,8 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                             Flexible(
                               child: Text(
                                 displayInvoiceId(invoiceData['id'] as String?),
-                                style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                style: context.textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -533,7 +612,8 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           invoiceData['entity_name'] as String? ?? 'بدون مورد',
-                          style: context.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                          style: context.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -550,10 +630,13 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                         ),
                       ),
                       if (currency != 'YER')
-                        Text(currency, style: context.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontSize: 9)),
+                        Text(currency,
+                            style: context.textTheme.labelSmall?.copyWith(
+                                color: AppColors.textHint, fontSize: 9)),
                       GestureDetector(
                         onTap: onPrint,
-                        child: Icon(Icons.print, size: 16, color: AppColors.textHint),
+                        child: Icon(Icons.print,
+                            size: 16, color: AppColors.textHint),
                       ),
                     ],
                   ),
@@ -568,20 +651,25 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.access_time, size: 12, color: AppColors.textHint),
+                    Icon(Icons.access_time,
+                        size: 12, color: AppColors.textHint),
                     const SizedBox(width: 4),
                     Text(
                       DateFormatter.formatDateTime(
-                        DateTime.tryParse(invoiceData['created_at'] as String? ?? '') ?? DateTime.now(),
+                        DateTime.tryParse(
+                                invoiceData['created_at'] as String? ?? '') ??
+                            DateTime.now(),
                       ),
-                      style: context.textTheme.labelSmall?.copyWith(color: AppColors.textHint, fontSize: 10),
+                      style: context.textTheme.labelSmall
+                          ?.copyWith(color: AppColors.textHint, fontSize: 10),
                     ),
                     const Spacer(),
                     _buildStatusChip(status),
                     if (remaining > 0.005) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
@@ -597,7 +685,8 @@ class _PurchaseInvoiceCard extends StatelessWidget {
                       ),
                     ] else if (status == 'paid' && paidAmount > 0) ...[
                       const SizedBox(width: 6),
-                      Icon(Icons.check_circle, size: 12, color: AppColors.success),
+                      Icon(Icons.check_circle,
+                          size: 12, color: AppColors.success),
                     ],
                   ],
                 ),
@@ -617,7 +706,9 @@ class _PurchaseInvoiceCard extends StatelessWidget {
         color: AppColors.info.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.info)),
+      child: Text(label,
+          style: const TextStyle(
+              fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.info)),
     );
   }
 
@@ -626,12 +717,16 @@ class _PurchaseInvoiceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: (isCash ? AppColors.success : AppColors.secondary).withValues(alpha: 0.08),
+        color: (isCash ? AppColors.success : AppColors.secondary)
+            .withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         isCash ? 'نقداً' : 'آجل',
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: isCash ? AppColors.success : AppColors.secondary),
+        style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            color: isCash ? AppColors.success : AppColors.secondary),
       ),
     );
   }
@@ -646,8 +741,11 @@ class _PurchaseInvoiceCard extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(10)),
-      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fgColor)),
+      decoration: BoxDecoration(
+          color: bgColor, borderRadius: BorderRadius.circular(10)),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.w700, color: fgColor)),
     );
   }
 }

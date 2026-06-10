@@ -15,7 +15,8 @@ class FinancialStatementsScreen extends StatefulWidget {
   const FinancialStatementsScreen({super.key});
 
   @override
-  State<FinancialStatementsScreen> createState() => _FinancialStatementsScreenState();
+  State<FinancialStatementsScreen> createState() =>
+      _FinancialStatementsScreenState();
 }
 
 class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
@@ -49,23 +50,34 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
 
   String? _currencyCode() {
     switch (_selectedCurrency) {
-      case 'ر.ي': return 'YER';
-      case 'ر.س': return 'SAR';
-      case r'$': return 'USD';
-      default: return null;
+      case 'ر.ي':
+        return 'YER';
+      case 'ر.س':
+        return 'SAR';
+      case r'$':
+        return 'USD';
+      default:
+        return null;
     }
   }
 
   // ignore: unused_element
   String _accountTypeAr(String type) {
     switch (type) {
-      case 'ASSET': return 'أصول';
-      case 'LIABILITY': return 'خصوم';
-      case 'EQUITY': return 'حقوق الملكية';
-      case 'COST': return 'تكاليف';
-      case 'REVENUE': return 'إيرادات';
-      case 'EXPENSE': return 'مصاريف';
-      default: return type;
+      case 'ASSET':
+        return 'أصول';
+      case 'LIABILITY':
+        return 'خصوم';
+      case 'EQUITY':
+        return 'حقوق الملكية';
+      case 'COST':
+        return 'تكاليف';
+      case 'REVENUE':
+        return 'إيرادات';
+      case 'EXPENSE':
+        return 'مصاريف';
+      default:
+        return type;
     }
   }
 
@@ -91,7 +103,14 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       final cc = _currencyCode();
 
       // Build date filter args for ReportService
-      final accountTypes = ['REVENUE', 'COST', 'EXPENSE', 'ASSET', 'LIABILITY', 'EQUITY'];
+      final accountTypes = [
+        'REVENUE',
+        'COST',
+        'EXPENSE',
+        'ASSET',
+        'LIABILITY',
+        'EQUITY'
+      ];
       final results = await locator<ReportService>().getFinancialStatementsData(
         accountTypes: accountTypes,
         currency: cc,
@@ -110,8 +129,10 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
 
       for (final row in results) {
         // Use readCalculatedMoney for SQL SUM results which may be REAL
-        final totalDebitRaw = MoneyHelper.readCalculatedMoney(row['total_debit']);
-        final totalCreditRaw = MoneyHelper.readCalculatedMoney(row['total_credit']);
+        final totalDebitRaw =
+            MoneyHelper.readCalculatedMoney(row['total_debit']);
+        final totalCreditRaw =
+            MoneyHelper.readCalculatedMoney(row['total_credit']);
         final netBalance = totalDebitRaw - totalCreditRaw;
         final accountType = row['account_type'] as String? ?? '';
         // ignore: unused_local_variable
@@ -231,7 +252,8 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
         debugPrint('Financial statements error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ أثناء تحميل البيانات: ${e.toString().length > 80 ? e.toString().substring(0, 80) + '...' : e.toString()}'),
+            content: Text(
+                'حدث خطأ أثناء تحميل البيانات: ${e.toString().length > 80 ? e.toString().substring(0, 80) + '...' : e.toString()}'),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 5),
           ),
@@ -296,7 +318,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             indicatorColor: Colors.white,
             tabs: const [
               Tab(text: 'قائمة الدخل', icon: Icon(Icons.assessment, size: 18)),
-              Tab(text: 'قائمة المركزية المالي', icon: Icon(Icons.account_balance, size: 18)),
+              Tab(
+                  text: 'قائمة المركزية المالي',
+                  icon: Icon(Icons.account_balance, size: 18)),
             ],
           ),
         ),
@@ -329,7 +353,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       child: Row(
         children: [
           // Currency
-          Text('العملة:', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+          Text('العملة:',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -342,11 +368,16 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                 value: _selectedCurrency,
                 isDense: true,
                 icon: const Icon(Icons.arrow_drop_down, size: 14),
-                style: theme.textTheme.bodySmall?.copyWith(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600),
-                items: _currencyOptions.map((c) => DropdownMenuItem(
-                  value: c,
-                  child: Text(c, style: const TextStyle(fontSize: 12)),
-                )).toList(),
+                style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600),
+                items: _currencyOptions
+                    .map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c, style: const TextStyle(fontSize: 12)),
+                        ))
+                    .toList(),
                 onChanged: (val) {
                   if (val != null) {
                     setState(() => _selectedCurrency = val);
@@ -369,9 +400,13 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.calendar_today, size: 12, color: AppColors.primary),
+                  Icon(Icons.calendar_today,
+                      size: 12, color: AppColors.primary),
                   const SizedBox(width: 4),
-                  Text('من: ${_fmtDate(_dateFrom)}', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  Text('من: ${_fmtDate(_dateFrom)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -388,9 +423,13 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.calendar_today, size: 12, color: AppColors.primary),
+                  Icon(Icons.calendar_today,
+                      size: 12, color: AppColors.primary),
                   const SizedBox(width: 4),
-                  Text('إلى: ${_fmtDate(_dateTo)}', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  Text('إلى: ${_fmtDate(_dateTo)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -406,7 +445,8 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
 
   Widget _buildIncomeStatementTab(ThemeData theme, bool isDark) {
     return SingleChildScrollView(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewPadding.bottom + 24),
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewPadding.bottom + 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -418,19 +458,28 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           const SizedBox(height: 16),
 
           // ── Revenue Section ──
-          _buildAccountSection(theme, isDark, 'الإيرادات', _revenueAccounts, AppColors.success, Icons.trending_up),
+          _buildAccountSection(theme, isDark, 'الإيرادات', _revenueAccounts,
+              AppColors.success, Icons.trending_up),
           const SizedBox(height: 12),
 
           // ── Cost Section ──
-          _buildAccountSection(theme, isDark, 'التكاليف (تكلفة البضاعة المباعة + المشتريات)', _costAccounts, AppColors.error, Icons.south_east),
+          _buildAccountSection(
+              theme,
+              isDark,
+              'التكاليف (تكلفة البضاعة المباعة + المشتريات)',
+              _costAccounts,
+              AppColors.error,
+              Icons.south_east),
           const SizedBox(height: 12),
 
           // ── Gross Profit ──
-          _buildProfitCard(theme, isDark, 'مجمل الربح', _grossProfit, _grossProfit >= 0 ? AppColors.success : AppColors.error),
+          _buildProfitCard(theme, isDark, 'مجمل الربح', _grossProfit,
+              _grossProfit >= 0 ? AppColors.success : AppColors.error),
           const SizedBox(height: 12),
 
           // ── Expenses Section ──
-          _buildAccountSection(theme, isDark, 'المصاريف التشغيلية', _expenseAccounts, AppColors.warning, Icons.remove_circle_outline),
+          _buildAccountSection(theme, isDark, 'المصاريف التشغيلية',
+              _expenseAccounts, AppColors.warning, Icons.remove_circle_outline),
           const SizedBox(height: 12),
 
           // ── Net Profit ──
@@ -447,12 +496,16 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
-            (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.03),
+            (_netProfit >= 0 ? AppColors.success : AppColors.error)
+                .withValues(alpha: 0.08),
+            (_netProfit >= 0 ? AppColors.success : AppColors.error)
+                .withValues(alpha: 0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.2)),
+        border: Border.all(
+            color: (_netProfit >= 0 ? AppColors.success : AppColors.error)
+                .withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -460,17 +513,25 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             children: [
               Icon(Icons.assessment, color: AppColors.primary, size: 22),
               const SizedBox(width: 8),
-              Text('ملخص قائمة الدخل', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text('ملخص قائمة الدخل',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800)),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _buildMiniSummary(theme, 'الإيرادات', _revenue, AppColors.success)),
+              Expanded(
+                  child: _buildMiniSummary(
+                      theme, 'الإيرادات', _revenue, AppColors.success)),
               const SizedBox(width: 8),
-              Expanded(child: _buildMiniSummary(theme, 'التكاليف', _cost, AppColors.error)),
+              Expanded(
+                  child: _buildMiniSummary(
+                      theme, 'التكاليف', _cost, AppColors.error)),
               const SizedBox(width: 8),
-              Expanded(child: _buildMiniSummary(theme, 'المصاريف', _expenses, AppColors.warning)),
+              Expanded(
+                  child: _buildMiniSummary(
+                      theme, 'المصاريف', _expenses, AppColors.warning)),
             ],
           ),
           const SizedBox(height: 12),
@@ -478,23 +539,31 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+              color: (_netProfit >= 0 ? AppColors.success : AppColors.error)
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: (_netProfit >= 0 ? AppColors.success : AppColors.error).withValues(alpha: 0.3)),
+              border: Border.all(
+                  color: (_netProfit >= 0 ? AppColors.success : AppColors.error)
+                      .withValues(alpha: 0.3)),
             ),
             child: Column(
               children: [
                 Icon(_netProfit >= 0 ? Icons.trending_up : Icons.trending_down,
-                    size: 28, color: _netProfit >= 0 ? AppColors.success : AppColors.error),
+                    size: 28,
+                    color:
+                        _netProfit >= 0 ? AppColors.success : AppColors.error),
                 const SizedBox(height: 4),
                 Text(_netProfit >= 0 ? 'صافي الربح' : 'صافي الخسارة',
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text(
-                  CurrencyFormatter.format(_netProfit.abs(), symbol: _selectedCurrency),
+                  CurrencyFormatter.format(_netProfit.abs(),
+                      symbol: _selectedCurrency),
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: _netProfit >= 0 ? AppColors.success : AppColors.error,
+                    color:
+                        _netProfit >= 0 ? AppColors.success : AppColors.error,
                   ),
                 ),
               ],
@@ -505,7 +574,8 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
     );
   }
 
-  Widget _buildMiniSummary(ThemeData theme, String title, double value, Color color) {
+  Widget _buildMiniSummary(
+      ThemeData theme, String title, double value, Color color) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -515,16 +585,22 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       ),
       child: Column(
         children: [
-          Text(title, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+          Text(title,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center),
           const SizedBox(height: 4),
           Text(CurrencyFormatter.format(value, symbol: _selectedCurrency),
-              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800, color: color), textAlign: TextAlign.center),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w800, color: color),
+              textAlign: TextAlign.center),
         ],
       ),
     );
   }
 
-  Widget _buildProfitCard(ThemeData theme, bool isDark, String title, double value, Color color) {
+  Widget _buildProfitCard(
+      ThemeData theme, bool isDark, String title, double value, Color color) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -536,19 +612,27 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       child: Row(
         children: [
           Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10)),
             child: Icon(Icons.calculate, color: color, size: 20),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700))),
+          Expanded(
+              child: Text(title,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700))),
           Text(
             '${title == 'مجمل الربح' ? 'الإيرادات - التكاليف' : ''}',
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+            style:
+                theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
           ),
           const SizedBox(width: 8),
           Text(CurrencyFormatter.format(value, symbol: _selectedCurrency),
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w800, color: color)),
         ],
       ),
     );
@@ -567,20 +651,29 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       child: Row(
         children: [
           Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-            child: Icon(_netProfit >= 0 ? Icons.trending_up : Icons.trending_down, color: color, size: 20),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10)),
+            child: Icon(
+                _netProfit >= 0 ? Icons.trending_up : Icons.trending_down,
+                color: color,
+                size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(_netProfit >= 0 ? 'صافي الربح' : 'صافي الخسارة',
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
           ),
           Text('مجمل الربح - المصاريف',
-              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textHint)),
           const SizedBox(width: 8),
           Text(CurrencyFormatter.format(_netProfit, symbol: _selectedCurrency),
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w800, color: color)),
         ],
       ),
     );
@@ -592,7 +685,8 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
 
   Widget _buildBalanceSheetTab(ThemeData theme, bool isDark) {
     return SingleChildScrollView(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewPadding.bottom + 24),
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewPadding.bottom + 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -604,15 +698,18 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           const SizedBox(height: 16),
 
           // ── Assets Section ──
-          _buildAccountSection(theme, isDark, 'الأصول', _assetAccounts, AppColors.info, Icons.account_balance_wallet),
+          _buildAccountSection(theme, isDark, 'الأصول', _assetAccounts,
+              AppColors.info, Icons.account_balance_wallet),
           const SizedBox(height: 12),
 
           // ── Liabilities Section ──
-          _buildAccountSection(theme, isDark, 'الخصوم', _liabilityAccounts, AppColors.error, Icons.local_shipping),
+          _buildAccountSection(theme, isDark, 'الخصوم', _liabilityAccounts,
+              AppColors.error, Icons.local_shipping),
           const SizedBox(height: 12),
 
           // ── Equity Section ──
-          _buildAccountSection(theme, isDark, 'حقوق الملكية', _equityAccounts, AppColors.accentPurple, Icons.account_balance),
+          _buildAccountSection(theme, isDark, 'حقوق الملكية', _equityAccounts,
+              AppColors.accentPurple, Icons.account_balance),
           const SizedBox(height: 12),
 
           // ── Equity Summary (includes net profit) ──
@@ -634,12 +731,16 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            (_isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
-            (_isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.03),
+            (_isBalanced ? AppColors.success : AppColors.error)
+                .withValues(alpha: 0.08),
+            (_isBalanced ? AppColors.success : AppColors.error)
+                .withValues(alpha: 0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (_isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.2)),
+        border: Border.all(
+            color: (_isBalanced ? AppColors.success : AppColors.error)
+                .withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -647,24 +748,31 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             children: [
               Icon(Icons.account_balance, color: AppColors.primary, size: 22),
               const SizedBox(width: 8),
-              Text('ملخص قائمة المركزية المالي', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text('ملخص قائمة المركزية المالي',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800)),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (_isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+                  color: (_isBalanced ? AppColors.success : AppColors.error)
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(_isBalanced ? Icons.check_circle : Icons.warning, size: 14,
-                        color: _isBalanced ? AppColors.success : AppColors.error),
+                    Icon(_isBalanced ? Icons.check_circle : Icons.warning,
+                        size: 14,
+                        color:
+                            _isBalanced ? AppColors.success : AppColors.error),
                     const SizedBox(width: 4),
                     Text(
                       _isBalanced ? 'متوازن' : 'غير متوازن',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: _isBalanced ? AppColors.success : AppColors.error,
+                        color:
+                            _isBalanced ? AppColors.success : AppColors.error,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -676,12 +784,17 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _buildMiniSummary(theme, 'الأصول', _assets, AppColors.info)),
+              Expanded(
+                  child: _buildMiniSummary(
+                      theme, 'الأصول', _assets, AppColors.info)),
               const SizedBox(width: 8),
-              Expanded(child: _buildMiniSummary(theme, 'الخصوم', _liabilities, AppColors.error)),
+              Expanded(
+                  child: _buildMiniSummary(
+                      theme, 'الخصوم', _liabilities, AppColors.error)),
               const SizedBox(width: 8),
-              Expanded(child: _buildMiniSummary(theme, 'حقوق الملكية', _equity,
-                  _equity >= 0 ? AppColors.success : AppColors.error)),
+              Expanded(
+                  child: _buildMiniSummary(theme, 'حقوق الملكية', _equity,
+                      _equity >= 0 ? AppColors.success : AppColors.error)),
             ],
           ),
         ],
@@ -702,16 +815,25 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       child: Row(
         children: [
           Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10)),
             child: Icon(Icons.account_balance, color: color, size: 20),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text('حقوق الملكية', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700))),
-          Text('الأصول - الخصوم', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+          Expanded(
+              child: Text('حقوق الملكية',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700))),
+          Text('الأصول - الخصوم',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textHint)),
           const SizedBox(width: 8),
           Text(CurrencyFormatter.format(_equity, symbol: _selectedCurrency),
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w800, color: color)),
         ],
       ),
     );
@@ -736,7 +858,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             children: [
               Icon(Icons.functions, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
-              Text('المعادلة المحاسبية', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+              Text('المعادلة المحاسبية',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 12),
@@ -744,7 +868,9 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           const SizedBox(height: 6),
           Row(
             children: [
-              Text('=', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w900, color: AppColors.primary)),
+              Text('=',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w900, color: AppColors.primary)),
               const SizedBox(width: 12),
             ],
           ),
@@ -752,18 +878,26 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           const SizedBox(height: 6),
           Row(
             children: [
-              Text('+', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w900, color: AppColors.primary)),
+              Text('+',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w900, color: AppColors.primary)),
               const SizedBox(width: 12),
             ],
           ),
-          _buildEquationRow(theme, 'حقوق الملكية', _equity, _equity >= 0 ? AppColors.success : AppColors.error),
+          _buildEquationRow(theme, 'حقوق الملكية', _equity,
+              _equity >= 0 ? AppColors.success : AppColors.error),
           const Divider(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('الخصوم + حقوق الملكية', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-              Text(CurrencyFormatter.format(totalLiabilitiesEquity, symbol: _selectedCurrency),
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+              Text('الخصوم + حقوق الملكية',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                  CurrencyFormatter.format(totalLiabilitiesEquity,
+                      symbol: _selectedCurrency),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800, color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 8),
@@ -771,17 +905,21 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: (balanced ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+              color: (balanced ? AppColors.success : AppColors.error)
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(balanced ? Icons.verified : Icons.error_outline, size: 18,
+                Icon(balanced ? Icons.verified : Icons.error_outline,
+                    size: 18,
                     color: balanced ? AppColors.success : AppColors.error),
                 const SizedBox(width: 6),
                 Text(
-                  balanced ? 'الميزانية متوازنة ✓' : 'الميزانية غير متوازنة - يرجى المراجعة',
+                  balanced
+                      ? 'الميزانية متوازنة ✓'
+                      : 'الميزانية غير متوازنة - يرجى المراجعة',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: balanced ? AppColors.success : AppColors.error,
@@ -795,13 +933,18 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
     );
   }
 
-  Widget _buildEquationRow(ThemeData theme, String label, double value, Color color) {
+  Widget _buildEquationRow(
+      ThemeData theme, String label, double value, Color color) {
     return Row(
       children: [
         const SizedBox(width: 16),
-        Expanded(child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
+        Expanded(
+            child: Text(label,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600))),
         Text(CurrencyFormatter.format(value, symbol: _selectedCurrency),
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w800, color: color)),
       ],
     );
   }
@@ -812,7 +955,8 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
 
   Widget _buildAccountSection(ThemeData theme, bool isDark, String title,
       List<Map<String, dynamic>> accounts, Color color, IconData icon) {
-    final total = accounts.fold(0.0, (sum, a) => sum + (a['balance'] as double? ?? 0.0));
+    final total =
+        accounts.fold(0.0, (sum, a) => sum + (a['balance'] as double? ?? 0.0));
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -820,7 +964,8 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -828,44 +973,59 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
           Row(
             children: [
               Container(
-                width: 36, height: 36,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10)),
                 child: Icon(icon, color: color, size: 18),
               ),
               const SizedBox(width: 10),
-              Expanded(child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: color))),
+              Expanded(
+                  child: Text(title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700, color: color))),
               Text(CurrencyFormatter.format(total, symbol: _selectedCurrency),
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color)),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w800, color: color)),
             ],
           ),
           if (accounts.isEmpty)
             Padding(
               padding: const EdgeInsets.all(16),
               child: Center(
-                child: Text('لا توجد حسابات', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint)),
+                child: Text('لا توجد حسابات',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: AppColors.textHint)),
               ),
             )
           else ...[
             const Divider(height: 20),
             ...accounts.map((account) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 60,
-                    child: Text(account['account_code'] as String? ?? '',
-                        style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 60,
+                        child: Text(account['account_code'] as String? ?? '',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(account['name_ar'] as String? ?? '',
+                            style: theme.textTheme.bodySmall),
+                      ),
+                      Text(
+                          CurrencyFormatter.format(
+                              account['balance'] as double? ?? 0.0,
+                              symbol: _selectedCurrency),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700, color: color)),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(account['name_ar'] as String? ?? '',
-                        style: theme.textTheme.bodySmall),
-                  ),
-                  Text(CurrencyFormatter.format(account['balance'] as double? ?? 0.0, symbol: _selectedCurrency),
-                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: color)),
-                ],
-              ),
-            )),
+                )),
           ],
         ],
       ),

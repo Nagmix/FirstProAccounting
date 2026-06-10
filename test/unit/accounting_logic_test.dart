@@ -130,18 +130,20 @@ void main() {
       // Debit-balance types
       const debitTypes = ['ASSET', 'COST', 'EXPENSE'];
       for (final type in debitTypes) {
-        final balanceType = (type == 'ASSET' || type == 'COST' || type == 'EXPENSE')
-            ? 'debit'
-            : 'credit';
+        final balanceType =
+            (type == 'ASSET' || type == 'COST' || type == 'EXPENSE')
+                ? 'debit'
+                : 'credit';
         expect(balanceType, 'debit');
       }
 
       // Credit-balance types
       const creditTypes = ['LIABILITY', 'EQUITY', 'REVENUE'];
       for (final type in creditTypes) {
-        final balanceType = (type == 'ASSET' || type == 'COST' || type == 'EXPENSE')
-            ? 'debit'
-            : 'credit';
+        final balanceType =
+            (type == 'ASSET' || type == 'COST' || type == 'EXPENSE')
+                ? 'debit'
+                : 'credit';
         expect(balanceType, 'credit');
       }
     });
@@ -166,7 +168,8 @@ void main() {
       expect(revenueBalance, 10000.0);
 
       // Total debit = Total credit (balanced)
-      expect(saleAmount, saleAmount); // trivially true but validates the concept
+      expect(
+          saleAmount, saleAmount); // trivially true but validates the concept
     });
 
     test('Credit sale with partial payment', () {
@@ -493,13 +496,15 @@ void main() {
       // Credit balance of 5000 → display as "5,000 له" (green)
       final creditBalance = 5000.0;
       const creditType = 'credit';
-      final creditEffective = creditType == 'credit' ? creditBalance : -creditBalance;
+      final creditEffective =
+          creditType == 'credit' ? creditBalance : -creditBalance;
       expect(creditEffective >= 0, isTrue); // "له"
 
       // Debit balance of 3000 → display as "3,000 عليه" (red)
       final debitBalance = 3000.0;
       const debitType = 'debit';
-      final debitEffective = debitType == 'credit' ? debitBalance : -debitBalance;
+      final debitEffective =
+          debitType == 'credit' ? debitBalance : -debitBalance;
       expect(debitEffective < 0, isTrue); // "عليه"
     });
   });

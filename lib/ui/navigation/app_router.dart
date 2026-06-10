@@ -97,24 +97,32 @@ class AppRouter {
         AppConstants.appLock: (_) => const AppLockScreen(),
         AppConstants.notifications: (_) => const NotificationsScreen(),
         AppConstants.vouchers: (_) => const VouchersScreen(),
-        AppConstants.newVoucher: (_) => const CreateReceiptPaymentVoucherScreen(),
+        AppConstants.newVoucher: (_) =>
+            const CreateReceiptPaymentVoucherScreen(),
         AppConstants.dailyOperations: (_) => const DailyOperationsScreen(),
         AppConstants.inventoryVoucher: (_) => const InventoryVoucherScreen(),
         '/units': (_) => const UnitsScreen(),
         AppConstants.annualPosting: (_) => const AnnualPostingScreen(),
         AppConstants.trialBalance: (_) => const TrialBalanceScreen(),
-        AppConstants.financialStatements: (_) => const FinancialStatementsScreen(),
-        AppConstants.bankReconciliation: (_) => const BankReconciliationScreen(),
+        AppConstants.financialStatements: (_) =>
+            const FinancialStatementsScreen(),
+        AppConstants.bankReconciliation: (_) =>
+            const BankReconciliationScreen(),
         AppConstants.licenseActivation: (_) => const LicenseActivationScreen(),
         AppConstants.licenseStatus: (_) => const LicenseStatusScreen(),
       };
 
-  static Future<T?> push<T extends Object?>(BuildContext context, String routeName, {Object? arguments}) {
+  static Future<T?> push<T extends Object?>(
+      BuildContext context, String routeName,
+      {Object? arguments}) {
     return Navigator.of(context).pushNamed<T>(routeName, arguments: arguments);
   }
 
-  static Future<T?> replace<T extends Object?, TO extends Object?>(BuildContext context, String routeName, {Object? arguments, TO? result}) {
-    return Navigator.of(context).pushReplacementNamed<T, TO>(routeName, arguments: arguments, result: result);
+  static Future<T?> replace<T extends Object?, TO extends Object?>(
+      BuildContext context, String routeName,
+      {Object? arguments, TO? result}) {
+    return Navigator.of(context).pushReplacementNamed<T, TO>(routeName,
+        arguments: arguments, result: result);
   }
 
   /// Push the AccountLedgerScreen directly (requires an [Account] object).
@@ -125,23 +133,30 @@ class AppRouter {
   }
 
   /// Push the InvoiceDetailScreen directly (requires an invoiceId string).
-  static Future<void> pushInvoiceDetail(BuildContext context, String invoiceId) {
+  static Future<void> pushInvoiceDetail(
+      BuildContext context, String invoiceId) {
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => InvoiceDetailScreen(invoiceId: invoiceId)),
+      MaterialPageRoute(
+          builder: (_) => InvoiceDetailScreen(invoiceId: invoiceId)),
     );
   }
 
   /// Push the ExpenseAccountDetailScreen directly (requires a sub-account map).
-  static Future<void> pushExpenseAccountDetail(BuildContext context, Map<String, dynamic> subAccount) {
+  static Future<void> pushExpenseAccountDetail(
+      BuildContext context, Map<String, dynamic> subAccount) {
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ExpenseAccountDetailScreen(subAccount: subAccount)),
+      MaterialPageRoute(
+          builder: (_) => ExpenseAccountDetailScreen(subAccount: subAccount)),
     );
   }
 
   /// Push the BankReconciliationDetailScreen directly.
-  static Future<void> pushBankReconciliationDetail(BuildContext context, int reconciliationId) {
+  static Future<void> pushBankReconciliationDetail(
+      BuildContext context, int reconciliationId) {
     return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => BankReconciliationDetailScreen(reconciliationId: reconciliationId)),
+      MaterialPageRoute(
+          builder: (_) => BankReconciliationDetailScreen(
+              reconciliationId: reconciliationId)),
     );
   }
 }

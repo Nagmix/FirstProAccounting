@@ -36,7 +36,8 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
 
     // Validate format
     if (!RegExp(LicenseConstants.licenseKeyPattern).hasMatch(key)) {
-      setState(() => _error = 'صيغة المفتاح غير صحيحة. يجب أن تكون بصيغة XXXX-XXXX-XXXX-XXXX');
+      setState(() => _error =
+          'صيغة المفتاح غير صحيحة. يجب أن تكون بصيغة XXXX-XXXX-XXXX-XXXX');
       return;
     }
 
@@ -78,9 +79,8 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
   Future<void> _openWhatsApp() async {
     final provider = context.read<LicenseProvider>();
     final fingerprint = provider.deviceFingerprint;
-    final shortFingerprint = fingerprint.length > 16
-        ? fingerprint.substring(0, 16)
-        : fingerprint;
+    final shortFingerprint =
+        fingerprint.length > 16 ? fingerprint.substring(0, 16) : fingerprint;
     final message =
         '${LicenseConstants.supportWhatsAppMessage}$shortFingerprint...';
     final url =
@@ -101,7 +101,11 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
           height: double.infinity,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.primaryDark, AppColors.primary, AppColors.primaryLight],
+              colors: [
+                AppColors.primaryDark,
+                AppColors.primary,
+                AppColors.primaryLight
+              ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               stops: [0.0, 0.5, 1.0],
@@ -167,7 +171,8 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                         ),
                         child: const Column(
                           children: [
-                            Icon(Icons.check_circle, color: Colors.green, size: 48),
+                            Icon(Icons.check_circle,
+                                color: Colors.green, size: 48),
                             SizedBox(height: 12),
                             Text(
                               'تم تفعيل الترخيص بنجاح!',
@@ -217,7 +222,8 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                                   letterSpacing: 2,
                                 ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(12)),
                                 ),
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -236,7 +242,8 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                                    const Icon(Icons.error_outline,
+                                        color: Colors.red, size: 20),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -323,7 +330,8 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.info_outline, color: Colors.white70, size: 18),
+                              Icon(Icons.info_outline,
+                                  color: Colors.white70, size: 18),
                               SizedBox(width: 8),
                               Text(
                                 'النسخة المجانية',

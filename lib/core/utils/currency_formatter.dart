@@ -11,7 +11,8 @@ class CurrencyFormatter {
   }
 
   /// Formats [amount] with the currency symbol (alias for format).
-  static String formatWithSymbol(double amount, {String symbol = AppConstants.currency}) {
+  static String formatWithSymbol(double amount,
+      {String symbol = AppConstants.currency}) {
     return format(amount, symbol: symbol);
   }
 

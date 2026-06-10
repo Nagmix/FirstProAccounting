@@ -18,7 +18,8 @@ class PosProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lowStock = product.currentStock <= product.minStock && product.currentStock > 0;
+    final lowStock =
+        product.currentStock <= product.minStock && product.currentStock > 0;
     final outOfStock = product.currentStock <= 0 && !product.allowNegative;
 
     return Card(
@@ -54,7 +55,8 @@ class PosProductCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                style: context.textTheme.bodySmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 3),
 

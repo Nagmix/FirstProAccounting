@@ -76,7 +76,8 @@ class ReportFiltersSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,14 +170,21 @@ class _DatePresetsRow extends StatelessWidget {
               label: Text(p.$2),
               selected: isSelected,
               selectedColor: AppColors.primary.withValues(alpha: 0.2),
-              backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+              backgroundColor:
+                  isDark ? AppColors.darkSurface : AppColors.surface,
               side: BorderSide(
-                color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.border),
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark ? AppColors.darkBorder : AppColors.border),
               ),
               labelStyle: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? AppColors.primary : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textSecondary),
               ),
               visualDensity: VisualDensity.compact,
               onSelected: (_) => onPresetSelected(p.$1),
@@ -205,7 +213,8 @@ class _CustomDateRow extends StatelessWidget {
     required this.onDateToChanged,
   });
 
-  Future<void> _pickDate(BuildContext context, DateTime? initial, ValueChanged<DateTime?> onChanged) async {
+  Future<void> _pickDate(BuildContext context, DateTime? initial,
+      ValueChanged<DateTime?> onChanged) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: initial ?? DateTime.now(),
@@ -224,7 +233,9 @@ class _CustomDateRow extends StatelessWidget {
         Expanded(
           child: _FilterChip(
             icon: Icons.calendar_today,
-            label: dateFrom != null ? fmtDate(dateFrom!.toIso8601String()) : 'من تاريخ',
+            label: dateFrom != null
+                ? fmtDate(dateFrom!.toIso8601String())
+                : 'من تاريخ',
             onTap: () => _pickDate(context, dateFrom, onDateFromChanged),
           ),
         ),
@@ -232,7 +243,9 @@ class _CustomDateRow extends StatelessWidget {
         Expanded(
           child: _FilterChip(
             icon: Icons.calendar_today,
-            label: dateTo != null ? fmtDate(dateTo!.toIso8601String()) : 'إلى تاريخ',
+            label: dateTo != null
+                ? fmtDate(dateTo!.toIso8601String())
+                : 'إلى تاريخ',
             onTap: () => _pickDate(context, dateTo, onDateToChanged),
           ),
         ),
@@ -305,45 +318,61 @@ class _EntityFiltersRow extends StatelessWidget {
       runSpacing: 8,
       children: [
         if (needsCurrencyFilter(selectedReportKey))
-          SizedBox(width: 100, child: _CurrencyDropdown(
-            value: selectedCurrency,
-            onChanged: onCurrencyChanged,
-          )),
+          SizedBox(
+              width: 100,
+              child: _CurrencyDropdown(
+                value: selectedCurrency,
+                onChanged: onCurrencyChanged,
+              )),
         if (needsAccountFilter(selectedReportKey))
-          SizedBox(width: 180, child: _AccountDropdown(
-            value: selectedAccountId,
-            onChanged: onAccountChanged,
-          )),
+          SizedBox(
+              width: 180,
+              child: _AccountDropdown(
+                value: selectedAccountId,
+                onChanged: onAccountChanged,
+              )),
         if (needsCustomerFilter(selectedReportKey))
-          SizedBox(width: 180, child: _CustomerDropdown(
-            value: selectedCustomerId,
-            onChanged: onCustomerChanged,
-          )),
+          SizedBox(
+              width: 180,
+              child: _CustomerDropdown(
+                value: selectedCustomerId,
+                onChanged: onCustomerChanged,
+              )),
         if (needsSupplierFilter(selectedReportKey))
-          SizedBox(width: 180, child: _SupplierDropdown(
-            value: selectedSupplierId,
-            onChanged: onSupplierChanged,
-          )),
+          SizedBox(
+              width: 180,
+              child: _SupplierDropdown(
+                value: selectedSupplierId,
+                onChanged: onSupplierChanged,
+              )),
         if (needsCashBoxFilter(selectedReportKey))
-          SizedBox(width: 180, child: _CashBoxDropdown(
-            value: selectedCashBoxId,
-            onChanged: onCashBoxChanged,
-          )),
+          SizedBox(
+              width: 180,
+              child: _CashBoxDropdown(
+                value: selectedCashBoxId,
+                onChanged: onCashBoxChanged,
+              )),
         if (needsWarehouseFilter(selectedReportKey))
-          SizedBox(width: 140, child: _WarehouseDropdown(
-            value: selectedWarehouseId,
-            onChanged: onWarehouseChanged,
-          )),
+          SizedBox(
+              width: 140,
+              child: _WarehouseDropdown(
+                value: selectedWarehouseId,
+                onChanged: onWarehouseChanged,
+              )),
         if (needsCategoryFilter(selectedReportKey))
-          SizedBox(width: 140, child: _CategoryDropdown(
-            value: selectedCategoryId,
-            onChanged: onCategoryChanged,
-          )),
+          SizedBox(
+              width: 140,
+              child: _CategoryDropdown(
+                value: selectedCategoryId,
+                onChanged: onCategoryChanged,
+              )),
         if (needsAccountTypeFilter(selectedReportKey))
-          SizedBox(width: 140, child: _AccountTypeDropdown(
-            value: selectedAccountType,
-            onChanged: onAccountTypeChanged,
-          )),
+          SizedBox(
+              width: 140,
+              child: _AccountTypeDropdown(
+                value: selectedAccountType,
+                onChanged: onAccountTypeChanged,
+              )),
       ],
     );
   }
@@ -381,9 +410,13 @@ class _FilterChip extends StatelessWidget {
             Icon(icon, size: 14, color: AppColors.primary),
             const SizedBox(width: 6),
             Flexible(
-              child: Text(label, style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600,
-              ), overflow: TextOverflow.ellipsis),
+              child: Text(label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis),
             ),
           ],
         ),
@@ -415,9 +448,18 @@ class _CurrencyDropdown extends StatelessWidget {
           value: value,
           isDense: true,
           icon: const Icon(Icons.arrow_drop_down, size: 16),
-          style: theme.textTheme.bodySmall?.copyWith(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
-          items: currencyOptions.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 11)))).toList(),
-          onChanged: (val) { if (val != null) onChanged(val); },
+          style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              color: AppColors.primary,
+              fontWeight: FontWeight.w600),
+          items: currencyOptions
+              .map((c) => DropdownMenuItem(
+                  value: c,
+                  child: Text(c, style: const TextStyle(fontSize: 11))))
+              .toList(),
+          onChanged: (val) {
+            if (val != null) onChanged(val);
+          },
         ),
       ),
     );
@@ -440,10 +482,14 @@ class _AccountDropdown extends StatelessWidget {
         if (!snap.hasData) return const SizedBox.shrink();
         return _FilterDropdown<int>(
           value: value,
-          items: snap.data!.map((a) => DropdownMenuItem<int>(
-            value: a['id'] as int,
-            child: Text('${a['name_ar']} (${a['currency']})', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )).toList(),
+          items: snap.data!
+              .map((a) => DropdownMenuItem<int>(
+                    value: a['id'] as int,
+                    child: Text('${a['name_ar']} (${a['currency']})',
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
           onChanged: onChanged,
           hint: 'اختر الحساب',
         );
@@ -466,10 +512,14 @@ class _CustomerDropdown extends StatelessWidget {
         if (!snap.hasData) return const SizedBox.shrink();
         return _FilterDropdown<int>(
           value: value,
-          items: snap.data!.map((c) => DropdownMenuItem<int>(
-            value: c['id'] as int,
-            child: Text(c['name'] as String? ?? '', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )).toList(),
+          items: snap.data!
+              .map((c) => DropdownMenuItem<int>(
+                    value: c['id'] as int,
+                    child: Text(c['name'] as String? ?? '',
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
           onChanged: onChanged,
           hint: 'اختر العميل',
         );
@@ -492,10 +542,14 @@ class _SupplierDropdown extends StatelessWidget {
         if (!snap.hasData) return const SizedBox.shrink();
         return _FilterDropdown<int>(
           value: value,
-          items: snap.data!.map((s) => DropdownMenuItem<int>(
-            value: s['id'] as int,
-            child: Text(s['name'] as String? ?? '', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )).toList(),
+          items: snap.data!
+              .map((s) => DropdownMenuItem<int>(
+                    value: s['id'] as int,
+                    child: Text(s['name'] as String? ?? '',
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
           onChanged: onChanged,
           hint: 'اختر المورد',
         );
@@ -518,10 +572,14 @@ class _CashBoxDropdown extends StatelessWidget {
         if (!snap.hasData) return const SizedBox.shrink();
         return _FilterDropdown<int>(
           value: value,
-          items: snap.data!.map((cb) => DropdownMenuItem<int>(
-            value: cb['id'] as int,
-            child: Text('${cb['name']}', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-          )).toList(),
+          items: snap.data!
+              .map((cb) => DropdownMenuItem<int>(
+                    value: cb['id'] as int,
+                    child: Text('${cb['name']}',
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
           onChanged: onChanged,
           hint: 'اختر الصندوق',
         );
@@ -542,11 +600,16 @@ class _WarehouseDropdown extends StatelessWidget {
       future: locator<ReferenceDataRepository>().getAllWarehouses(),
       builder: (ctx, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
-        final items = [DropdownMenuItem<int>(value: null, child: Text('كل المخازن', style: TextStyle(fontSize: 12)))];
+        final items = [
+          DropdownMenuItem<int>(
+              value: null,
+              child: Text('كل المخازن', style: TextStyle(fontSize: 12)))
+        ];
         items.addAll(snap.data!.map((w) => DropdownMenuItem<int>(
-          value: w['id'] as int,
-          child: Text(w['name'] as String? ?? '', style: const TextStyle(fontSize: 12)),
-        )));
+              value: w['id'] as int,
+              child: Text(w['name'] as String? ?? '',
+                  style: const TextStyle(fontSize: 12)),
+            )));
         return _FilterDropdown<int>(
           value: value,
           items: items,
@@ -570,11 +633,16 @@ class _CategoryDropdown extends StatelessWidget {
       future: locator<ReferenceDataRepository>().getAllCategories(),
       builder: (ctx, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
-        final items = [DropdownMenuItem<int>(value: null, child: Text('كل الفئات', style: TextStyle(fontSize: 12)))];
+        final items = [
+          DropdownMenuItem<int>(
+              value: null,
+              child: Text('كل الفئات', style: TextStyle(fontSize: 12)))
+        ];
         items.addAll(snap.data!.map((c) => DropdownMenuItem<int>(
-          value: c['id'] as int,
-          child: Text(c['name'] as String? ?? '', style: const TextStyle(fontSize: 12)),
-        )));
+              value: c['id'] as int,
+              child: Text(c['name'] as String? ?? '',
+                  style: const TextStyle(fontSize: 12)),
+            )));
         return _FilterDropdown<int>(
           value: value,
           items: items,
@@ -596,11 +664,15 @@ class _AccountTypeDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return _FilterDropdown<String>(
       value: value,
-      items: accountTypes.map((e) => DropdownMenuItem<String>(
-        value: e.key,
-        child: Text(e.key, style: const TextStyle(fontSize: 12)),
-      )).toList(),
-      onChanged: (v) { if (v != null) onChanged(v); },
+      items: accountTypes
+          .map((e) => DropdownMenuItem<String>(
+                value: e.key,
+                child: Text(e.key, style: const TextStyle(fontSize: 12)),
+              ))
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
       hint: 'نوع الحساب',
     );
   }
@@ -638,7 +710,10 @@ class _FilterDropdown<T> extends StatelessWidget {
           isDense: true,
           isExpanded: true,
           icon: const Icon(Icons.arrow_drop_down, size: 16),
-          hint: Text(hint, style: TextStyle(fontSize: 11, color: AppColors.primary.withValues(alpha: 0.6))),
+          hint: Text(hint,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.primary.withValues(alpha: 0.6))),
           style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
           items: items,
           onChanged: onChanged,

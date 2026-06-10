@@ -56,8 +56,10 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
               : 365;
 
       final results = await Future.wait([
-        reportService.getMonthlySalesVsPurchases(_selectedYear, currency: currency),
-        reportService.getRevenueExpenseBreakdown(_selectedYear, currency: currency),
+        reportService.getMonthlySalesVsPurchases(_selectedYear,
+            currency: currency),
+        reportService.getRevenueExpenseBreakdown(_selectedYear,
+            currency: currency),
         reportService.getDailySalesTrend(days, currency: currency),
         reportService.getTopProducts(5, currency: currency),
         customerRepo.getTopCustomerBalances(5),
@@ -89,7 +91,8 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         body: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary))
             : RefreshIndicator(
                 onRefresh: _loadChartData,
                 color: AppColors.primary,
@@ -225,14 +228,22 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
           // Period selector
           Row(
             children: [
-              Text('الفترة:', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text('الفترة:',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(width: 8),
               Expanded(
                 child: SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'week', label: Text('أسبوع', style: TextStyle(fontSize: 11))),
-                    ButtonSegment(value: 'month', label: Text('شهر', style: TextStyle(fontSize: 11))),
-                    ButtonSegment(value: 'year', label: Text('سنة', style: TextStyle(fontSize: 11))),
+                    ButtonSegment(
+                        value: 'week',
+                        label: Text('أسبوع', style: TextStyle(fontSize: 11))),
+                    ButtonSegment(
+                        value: 'month',
+                        label: Text('شهر', style: TextStyle(fontSize: 11))),
+                    ButtonSegment(
+                        value: 'year',
+                        label: Text('سنة', style: TextStyle(fontSize: 11))),
                   ],
                   selected: {_selectedPeriod},
                   onSelectionChanged: (v) {
@@ -241,7 +252,8 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
                   },
                   style: ButtonStyle(
                     visualDensity: VisualDensity.compact,
-                    textStyle: WidgetStatePropertyAll(theme.textTheme.labelSmall),
+                    textStyle:
+                        WidgetStatePropertyAll(theme.textTheme.labelSmall),
                   ),
                 ),
               ),
@@ -251,21 +263,33 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
           // Currency selector + Year
           Row(
             children: [
-              Text('العملة:', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text('العملة:',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: _selectedCurrency.isEmpty ? 'الكل' : _selectedCurrency,
                   isDense: true,
                   decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'الكل', child: Text('الكل', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'YER', child: Text('ر.ي', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'SAR', child: Text('ر.س', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'USD', child: Text('\$', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(
+                        value: 'الكل',
+                        child: Text('الكل', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(
+                        value: 'YER',
+                        child: Text('ر.ي', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(
+                        value: 'SAR',
+                        child: Text('ر.س', style: TextStyle(fontSize: 12))),
+                    DropdownMenuItem(
+                        value: 'USD',
+                        child: Text('\$', style: TextStyle(fontSize: 12))),
                   ],
                   onChanged: (v) {
                     setState(() => _selectedCurrency = v == 'الكل' ? '' : v!);
@@ -275,7 +299,9 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
               ),
               const SizedBox(width: 12),
               // Year dropdown
-              Text('السنة:', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text('السنة:',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(width: 8),
               SizedBox(
                 width: 90,
@@ -283,12 +309,17 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
                   value: _selectedYear,
                   isDense: true,
                   decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   items: List.generate(5, (i) {
                     final y = DateTime.now().year - i;
-                    return DropdownMenuItem(value: y, child: Text('$y', style: const TextStyle(fontSize: 12)));
+                    return DropdownMenuItem(
+                        value: y,
+                        child:
+                            Text('$y', style: const TextStyle(fontSize: 12)));
                   }),
                   onChanged: (v) {
                     if (v != null) {
@@ -308,7 +339,8 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
   // ══════════════════════════════════════════════════════════════════
   //  CHART CARD WRAPPER
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildChartCard(BuildContext context, bool isDark, {required String title, required Widget child}) {
+  Widget _buildChartCard(BuildContext context, bool isDark,
+      {required String title, required Widget child}) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -328,7 +360,8 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
                   width: 4,
                   height: 18,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryLight]),
+                    gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primaryLight]),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -336,7 +369,8 @@ class _AdvancedChartsScreenState extends State<AdvancedChartsScreen> {
                 Expanded(
                   child: Text(
                     title,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -358,12 +392,23 @@ class MonthlyBarChart extends StatelessWidget {
   final bool isDark;
   final void Function(String?, Offset?)? onTooltip;
 
-  const MonthlyBarChart({super.key, required this.data, required this.isDark, this.onTooltip});
+  const MonthlyBarChart(
+      {super.key, required this.data, required this.isDark, this.onTooltip});
 
   // ignore: unused_field
   static const _monthNames = [
-    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+    'يناير',
+    'فبراير',
+    'مارس',
+    'أبريل',
+    'مايو',
+    'يونيو',
+    'يوليو',
+    'أغسطس',
+    'سبتمبر',
+    'أكتوبر',
+    'نوفمبر',
+    'ديسمبر',
   ];
 
   @override
@@ -394,9 +439,18 @@ class MonthlyBarChart extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 6),
-        Text(label, style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary, fontWeight: FontWeight.w600)),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.textSecondary,
+                fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -408,14 +462,30 @@ class _MonthlyBarPainter extends CustomPainter {
 
   _MonthlyBarPainter({required this.data, required this.isDark});
 
-  static const _monthLabels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+  static const _monthLabels = [
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    '11',
+    '12'
+  ];
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paintSales = Paint()..color = AppColors.accentBlue.withValues(alpha: 0.85);
-    final paintPurchases = Paint()..color = AppColors.accentPink.withValues(alpha: 0.85);
+    final paintSales = Paint()
+      ..color = AppColors.accentBlue.withValues(alpha: 0.85);
+    final paintPurchases = Paint()
+      ..color = AppColors.accentPink.withValues(alpha: 0.85);
     final gridPaint = Paint()
-      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withValues(alpha: 0.5)
+      ..color = (isDark ? AppColors.darkBorder : AppColors.border)
+          .withValues(alpha: 0.5)
       ..strokeWidth = 0.5;
     final textPainter = TextPainter(textDirection: TextDirection.rtl);
 
@@ -439,14 +509,18 @@ class _MonthlyBarPainter extends CustomPainter {
     // Draw Y-axis grid lines & labels
     for (int i = 0; i <= 4; i++) {
       final y = topPad + chartH * (1 - i / 4);
-      canvas.drawLine(Offset(leftPad, y), Offset(size.width - rightPad, y), gridPaint);
+      canvas.drawLine(
+          Offset(leftPad, y), Offset(size.width - rightPad, y), gridPaint);
       final val = maxVal * i / 4;
       textPainter.text = TextSpan(
         text: _formatCompact(val),
-        style: TextStyle(fontSize: 9, color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
+        style: TextStyle(
+            fontSize: 9,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(leftPad - textPainter.width - 4, y - textPainter.height / 2));
+      textPainter.paint(canvas,
+          Offset(leftPad - textPainter.width - 4, y - textPainter.height / 2));
     }
 
     // Draw bars
@@ -456,8 +530,10 @@ class _MonthlyBarPainter extends CustomPainter {
 
     for (int i = 0; i < 12; i++) {
       final monthData = data.length > i ? data[i] : null;
-      final sales = monthData != null ? MoneyHelper.readMoney(monthData['sales']) : 0;
-      final purchases = monthData != null ? MoneyHelper.readMoney(monthData['purchases']) : 0;
+      final sales =
+          monthData != null ? MoneyHelper.readMoney(monthData['sales']) : 0;
+      final purchases =
+          monthData != null ? MoneyHelper.readMoney(monthData['purchases']) : 0;
 
       final x = leftPad + i * groupW + groupW * 0.15;
 
@@ -475,7 +551,8 @@ class _MonthlyBarPainter extends CustomPainter {
       final purchasesH = maxVal > 0 ? (purchases / maxVal) * chartH : 0.0;
       if (purchasesH > 0) {
         final rrect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(x + barW + gap, topPad + chartH - purchasesH, barW, purchasesH),
+          Rect.fromLTWH(
+              x + barW + gap, topPad + chartH - purchasesH, barW, purchasesH),
           const Radius.circular(3),
         );
         canvas.drawRRect(rrect, paintPurchases);
@@ -484,10 +561,13 @@ class _MonthlyBarPainter extends CustomPainter {
       // Month label
       textPainter.text = TextSpan(
         text: _monthLabels[i],
-        style: TextStyle(fontSize: 9, color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
+        style: TextStyle(
+            fontSize: 9,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(x + barW - textPainter.width / 2, topPad + chartH + 8));
+      textPainter.paint(canvas,
+          Offset(x + barW - textPainter.width / 2, topPad + chartH + 8));
     }
   }
 
@@ -514,7 +594,8 @@ class DonutChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (data.isEmpty) {
       return Center(
-        child: Text('لا توجد بيانات', style: TextStyle(color: AppColors.textHint)),
+        child:
+            Text('لا توجد بيانات', style: TextStyle(color: AppColors.textHint)),
       );
     }
 
@@ -550,22 +631,35 @@ class DonutChart extends StatelessWidget {
         // ignore: unused_local_variable
         final type = d['type'] as String? ?? '';
         final color = colors[i % colors.length];
-        final totalAll = data.fold(0.0, (sum, d) => sum + (MoneyHelper.readMoney(d['total'])));
-        final pct = totalAll > 0 ? (total / totalAll * 100).toStringAsFixed(1) : '0.0';
+        final totalAll = data.fold(
+            0.0, (sum, d) => sum + (MoneyHelper.readMoney(d['total'])));
+        final pct =
+            totalAll > 0 ? (total / totalAll * 100).toStringAsFixed(1) : '0.0';
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             children: [
-              Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              Container(
+                  width: 10,
+                  height: 10,
+                  decoration:
+                      BoxDecoration(color: color, shape: BoxShape.circle)),
               const SizedBox(width: 6),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(cat, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                    Text(cat,
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis),
                     Text('$pct% - ${CurrencyFormatter.formatCompact(total)}',
-                      style: TextStyle(fontSize: 10, color: isDark ? AppColors.darkTextSecondary : AppColors.textHint)),
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textHint)),
                   ],
                 ),
               ),
@@ -590,7 +684,8 @@ class _DonutPainter extends CustomPainter {
     final outerR = min(size.width, size.height) / 2 - 8;
     final innerR = outerR * 0.55;
 
-    final totalAll = data.fold(0.0, (sum, d) => sum + (MoneyHelper.readMoney(d['total'])));
+    final totalAll =
+        data.fold(0.0, (sum, d) => sum + (MoneyHelper.readMoney(d['total'])));
     if (totalAll == 0) return;
 
     double startAngle = -pi / 2;
@@ -624,12 +719,15 @@ class _DonutPainter extends CustomPainter {
       ),
     );
     tp.layout();
-    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2 - 6));
+    tp.paint(canvas,
+        Offset(center.dx - tp.width / 2, center.dy - tp.height / 2 - 6));
 
     final tp2 = TextPainter(textDirection: TextDirection.rtl);
     tp2.text = TextSpan(
       text: 'الإجمالي',
-      style: TextStyle(fontSize: 10, color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
+      style: TextStyle(
+          fontSize: 10,
+          color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
     );
     tp2.layout();
     tp2.paint(canvas, Offset(center.dx - tp2.width / 2, center.dy + 6));
@@ -673,7 +771,8 @@ class _LineChartPainter extends CustomPainter {
     final chartH = size.height - topPad - bottomPad;
 
     final gridPaint = Paint()
-      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withValues(alpha: 0.5)
+      ..color = (isDark ? AppColors.darkBorder : AppColors.border)
+          .withValues(alpha: 0.5)
       ..strokeWidth = 0.5;
 
     final textPainter = TextPainter(textDirection: TextDirection.rtl);
@@ -697,14 +796,18 @@ class _LineChartPainter extends CustomPainter {
     // Draw Y grid lines
     for (int i = 0; i <= 4; i++) {
       final y = topPad + chartH * (1 - i / 4);
-      canvas.drawLine(Offset(leftPad, y), Offset(size.width - rightPad, y), gridPaint);
+      canvas.drawLine(
+          Offset(leftPad, y), Offset(size.width - rightPad, y), gridPaint);
       final val = effectiveMin + effectiveRange * i / 4;
       textPainter.text = TextSpan(
         text: _fmt(val),
-        style: TextStyle(fontSize: 9, color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
+        style: TextStyle(
+            fontSize: 9,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(leftPad - textPainter.width - 4, y - textPainter.height / 2));
+      textPainter.paint(canvas,
+          Offset(leftPad - textPainter.width - 4, y - textPainter.height / 2));
     }
 
     if (data.isEmpty) return;
@@ -767,7 +870,8 @@ class _LineChartPainter extends CustomPainter {
 
     // Dots
     final dotPaint = Paint()..color = AppColors.primary;
-    final dotBorder = Paint()..color = isDark ? AppColors.darkSurface : AppColors.surface;
+    final dotBorder = Paint()
+      ..color = isDark ? AppColors.darkSurface : AppColors.surface;
     for (final p in points) {
       canvas.drawCircle(p, 5, dotBorder);
       canvas.drawCircle(p, 3.5, dotPaint);
@@ -781,22 +885,32 @@ class _LineChartPainter extends CustomPainter {
       final label = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
       textPainter.text = TextSpan(
         text: label,
-        style: TextStyle(fontSize: 9, color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
+        style: TextStyle(
+            fontSize: 9,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, topPad + chartH + 8));
+      textPainter.paint(canvas,
+          Offset(points[i].dx - textPainter.width / 2, topPad + chartH + 8));
     }
 
     // Min/Max labels
     if (data.isNotEmpty) {
-      final maxIdx = data.indexWhere((d) => MoneyHelper.readMoney(d['total']) == maxVal);
+      final maxIdx =
+          data.indexWhere((d) => MoneyHelper.readMoney(d['total']) == maxVal);
       if (maxIdx >= 0 && maxIdx < points.length) {
         textPainter.text = TextSpan(
           text: '▲ ${_fmt(maxVal)}',
-          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.success),
+          style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: AppColors.success),
         );
         textPainter.layout();
-        textPainter.paint(canvas, Offset(points[maxIdx].dx - textPainter.width / 2, points[maxIdx].dy - 16));
+        textPainter.paint(
+            canvas,
+            Offset(points[maxIdx].dx - textPainter.width / 2,
+                points[maxIdx].dy - 16));
       }
     }
   }
@@ -833,7 +947,9 @@ class HorizontalBarChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return Center(child: Text('لا توجد بيانات', style: TextStyle(color: AppColors.textHint)));
+      return Center(
+          child: Text('لا توجد بيانات',
+              style: TextStyle(color: AppColors.textHint)));
     }
     return CustomPaint(
       painter: _HorizontalBarPainter(
@@ -897,7 +1013,10 @@ class _HorizontalBarPainter extends CustomPainter {
         ),
       );
       textPainter.layout(maxWidth: leftPad - 10);
-      textPainter.paint(canvas, Offset(leftPad - textPainter.width - 8, y + (barH - textPainter.height) / 2));
+      textPainter.paint(
+          canvas,
+          Offset(leftPad - textPainter.width - 8,
+              y + (barH - textPainter.height) / 2));
 
       // Bar
       if (barW > 0) {
@@ -919,7 +1038,8 @@ class _HorizontalBarPainter extends CustomPainter {
         ),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(leftPad + barW + 6, y + (barH - textPainter.height) / 2));
+      textPainter.paint(canvas,
+          Offset(leftPad + barW + 6, y + (barH - textPainter.height) / 2));
     }
   }
 
@@ -934,12 +1054,15 @@ class CustomerBalanceChart extends StatelessWidget {
   final List<Map<String, dynamic>> data;
   final bool isDark;
 
-  const CustomerBalanceChart({super.key, required this.data, required this.isDark});
+  const CustomerBalanceChart(
+      {super.key, required this.data, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return Center(child: Text('لا توجد بيانات', style: TextStyle(color: AppColors.textHint)));
+      return Center(
+          child: Text('لا توجد بيانات',
+              style: TextStyle(color: AppColors.textHint)));
     }
     return CustomPaint(
       painter: _CustomerBalancePainter(data: data, isDark: isDark),
@@ -990,7 +1113,10 @@ class _CustomerBalancePainter extends CustomPainter {
         ),
       );
       textPainter.layout(maxWidth: leftPad - 10);
-      textPainter.paint(canvas, Offset(leftPad - textPainter.width - 8, y + (barH - textPainter.height) / 2));
+      textPainter.paint(
+          canvas,
+          Offset(leftPad - textPainter.width - 8,
+              y + (barH - textPainter.height) / 2));
 
       // Bar
       if (barW > 0) {
@@ -1012,7 +1138,8 @@ class _CustomerBalancePainter extends CustomPainter {
         ),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(leftPad + barW + 6, y + (barH - textPainter.height) / 2));
+      textPainter.paint(canvas,
+          Offset(leftPad + barW + 6, y + (barH - textPainter.height) / 2));
     }
   }
 
@@ -1057,9 +1184,18 @@ class StackedBarChart extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 6),
-        Text(label, style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary, fontWeight: FontWeight.w600)),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.textSecondary,
+                fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -1071,14 +1207,30 @@ class _StackedBarPainter extends CustomPainter {
 
   _StackedBarPainter({required this.data, required this.isDark});
 
-  static const _monthLabels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+  static const _monthLabels = [
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    '11',
+    '12'
+  ];
 
   @override
   void paint(Canvas canvas, Size size) {
-    final inflowPaint = Paint()..color = AppColors.success.withValues(alpha: 0.8);
-    final outflowPaint = Paint()..color = AppColors.error.withValues(alpha: 0.8);
+    final inflowPaint = Paint()
+      ..color = AppColors.success.withValues(alpha: 0.8);
+    final outflowPaint = Paint()
+      ..color = AppColors.error.withValues(alpha: 0.8);
     final gridPaint = Paint()
-      ..color = (isDark ? AppColors.darkBorder : AppColors.border).withValues(alpha: 0.5)
+      ..color = (isDark ? AppColors.darkBorder : AppColors.border)
+          .withValues(alpha: 0.5)
       ..strokeWidth = 0.5;
     final textPainter = TextPainter(textDirection: TextDirection.rtl);
 
@@ -1102,14 +1254,18 @@ class _StackedBarPainter extends CustomPainter {
     // Y grid
     for (int i = 0; i <= 4; i++) {
       final y = topPad + chartH * (1 - i / 4);
-      canvas.drawLine(Offset(leftPad, y), Offset(size.width - rightPad, y), gridPaint);
+      canvas.drawLine(
+          Offset(leftPad, y), Offset(size.width - rightPad, y), gridPaint);
       final val = maxVal * i / 4;
       textPainter.text = TextSpan(
         text: _fmt(val),
-        style: TextStyle(fontSize: 9, color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
+        style: TextStyle(
+            fontSize: 9,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(leftPad - textPainter.width - 4, y - textPainter.height / 2));
+      textPainter.paint(canvas,
+          Offset(leftPad - textPainter.width - 4, y - textPainter.height / 2));
     }
 
     // Bars
@@ -1119,8 +1275,10 @@ class _StackedBarPainter extends CustomPainter {
 
     for (int i = 0; i < 12; i++) {
       final monthData = data.length > i ? data[i] : null;
-      final inflow = monthData != null ? MoneyHelper.readMoney(monthData['inflow']) : 0;
-      final outflow = monthData != null ? MoneyHelper.readMoney(monthData['outflow']) : 0;
+      final inflow =
+          monthData != null ? MoneyHelper.readMoney(monthData['inflow']) : 0;
+      final outflow =
+          monthData != null ? MoneyHelper.readMoney(monthData['outflow']) : 0;
 
       final x = leftPad + i * groupW + groupW * 0.15;
 
@@ -1147,10 +1305,13 @@ class _StackedBarPainter extends CustomPainter {
       // Month label
       textPainter.text = TextSpan(
         text: _monthLabels[i],
-        style: TextStyle(fontSize: 9, color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
+        style: TextStyle(
+            fontSize: 9,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.textHint),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(x + barW - textPainter.width / 2, topPad + chartH + 8));
+      textPainter.paint(canvas,
+          Offset(x + barW - textPainter.width / 2, topPad + chartH + 8));
     }
   }
 

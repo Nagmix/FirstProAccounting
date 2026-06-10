@@ -67,7 +67,8 @@ class _SupportScreenState extends State<SupportScreen>
   // ── Load complaints from notifications table ────────────────────
   Future<void> _loadComplaintsFromDb() async {
     try {
-      final rows = await locator<ReferenceDataRepository>().getNotificationsByType('complaint');
+      final rows = await locator<ReferenceDataRepository>()
+          .getNotificationsByType('complaint');
       if (!mounted) return;
       setState(() {
         _previousComplaints.clear();
@@ -78,7 +79,9 @@ class _SupportScreenState extends State<SupportScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -155,7 +158,9 @@ class _SupportScreenState extends State<SupportScreen>
                 hintText: 'أدخل اسم العميل',
                 prefixIcon: const Icon(Icons.person_outline, size: 20),
                 filled: true,
-                fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                fillColor: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : AppColors.surfaceVariant,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -179,7 +184,9 @@ class _SupportScreenState extends State<SupportScreen>
                 hintText: '05XXXXXXXX',
                 prefixIcon: const Icon(Icons.phone_android, size: 20),
                 filled: true,
-                fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                fillColor: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : AppColors.surfaceVariant,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -202,7 +209,9 @@ class _SupportScreenState extends State<SupportScreen>
                 hintText: 'عنوان الشكوى',
                 prefixIcon: const Icon(Icons.title, size: 20),
                 filled: true,
-                fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                fillColor: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : AppColors.surfaceVariant,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -223,12 +232,15 @@ class _SupportScreenState extends State<SupportScreen>
               value: _selectedCountry,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                fillColor: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : AppColors.surfaceVariant,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
               items: _countries
                   .map((c) => DropdownMenuItem(
@@ -256,7 +268,9 @@ class _SupportScreenState extends State<SupportScreen>
               decoration: InputDecoration(
                 hintText: 'اكتب تفاصيل الشكوى هنا...',
                 filled: true,
-                fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                fillColor: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : AppColors.surfaceVariant,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -331,7 +345,8 @@ class _SupportScreenState extends State<SupportScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
             ),
             const SizedBox(height: 20),
@@ -583,7 +598,9 @@ class _ComplaintCard extends StatelessWidget {
                   Text(
                     complaint.subject,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textSecondary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -592,7 +609,9 @@ class _ComplaintCard extends StatelessWidget {
                   Text(
                     DateFormatter.timeAgo(complaint.date),
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textHint,
                     ),
                   ),
                 ],

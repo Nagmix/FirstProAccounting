@@ -53,14 +53,17 @@ class PosViewModel extends ChangeNotifier {
   List<Product> get filteredProducts {
     var result = _products;
     if (_selectedCategoryId != null) {
-      result = result.where((p) => p.categoryId == _selectedCategoryId).toList();
+      result =
+          result.where((p) => p.categoryId == _selectedCategoryId).toList();
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      result = result.where((p) =>
-          p.nameAr.contains(q) ||
-          p.nameEn.toLowerCase().contains(q) ||
-          (p.barcode ?? '').contains(q)).toList();
+      result = result
+          .where((p) =>
+              p.nameAr.contains(q) ||
+              p.nameEn.toLowerCase().contains(q) ||
+              (p.barcode ?? '').contains(q))
+          .toList();
     }
     return result;
   }
@@ -137,9 +140,11 @@ class PosViewModel extends ChangeNotifier {
   }
 
   double get tax {
-    final taxableBase = (subtotal - effectiveDiscount).clamp(0.0, double.infinity);
+    final taxableBase =
+        (subtotal - effectiveDiscount).clamp(0.0, double.infinity);
     return taxableBase * (AppConstants.defaultVatRate / 100);
   }
+
   double get total => subtotal - effectiveDiscount + tax;
 
   double get totalPaid => _payments.fold(0.0, (sum, p) => sum + p.amount);
@@ -181,13 +186,15 @@ class PosViewModel extends ChangeNotifier {
     if (product.id == null) return; // Guard: unsaved product cannot be added
     final unitName = unitInfo?['unit_name'] as String? ?? 'قطعة';
     final sellPrice = unitInfo != null
-        ? MoneyHelper.readMoney(unitInfo['sell_price'], fallback: product.sellPrice)
+        ? MoneyHelper.readMoney(unitInfo['sell_price'],
+            fallback: product.sellPrice)
         : product.sellPrice;
-    final conversionFactor = (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+    final conversionFactor =
+        (unitInfo?['conversion_factor'] as num?)?.toDouble() ?? 1.0;
     final unitBarcode = unitInfo?['barcode'] as String?;
 
-    final existingIndex = _cartItems.indexWhere((item) =>
-        item.productId == product.id && item.unitName == unitName);
+    final existingIndex = _cartItems.indexWhere(
+        (item) => item.productId == product.id && item.unitName == unitName);
 
     if (existingIndex >= 0) {
       _cartItems[existingIndex] = _cartItems[existingIndex].copyWith(
@@ -394,9 +401,14 @@ class PosViewModel extends ChangeNotifier {
     _selectedCurrency = currency;
     // Default exchange rates for common currencies
     switch (currency) {
-      case 'SAR': _exchangeRate = 140.0; break;  // 1 SAR ≈ 140 YER
-      case 'USD': _exchangeRate = 530.0; break;  // 1 USD ≈ 530 YER
-      default: _exchangeRate = 1.0;
+      case 'SAR':
+        _exchangeRate = 140.0;
+        break; // 1 SAR ≈ 140 YER
+      case 'USD':
+        _exchangeRate = 530.0;
+        break; // 1 USD ≈ 530 YER
+      default:
+        _exchangeRate = 1.0;
     }
     notifyListeners();
   }
@@ -409,9 +421,12 @@ class PosViewModel extends ChangeNotifier {
   /// Currency symbol for display.
   String get currencySymbol {
     switch (_selectedCurrency) {
-      case 'SAR': return 'ر.س';
-      case 'USD': return '\$';
-      default: return 'ر.ي';
+      case 'SAR':
+        return 'ر.س';
+      case 'USD':
+        return '\$';
+      default:
+        return 'ر.ي';
     }
   }
 
@@ -467,7 +482,8 @@ class PosViewModel extends ChangeNotifier {
 
       // Today's invoice count
       final today = DateTime.now();
-      final todayStr = '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
+      final todayStr =
+          '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
       _todayInvoiceCount = await _invoiceRepo.getTodayPosInvoiceCount(todayStr);
 
       _isLoading = false;
@@ -496,7 +512,8 @@ class PosViewModel extends ChangeNotifier {
         if (shift['cashier_name'] != null) {
           _cashierName = shift['cashier_name'].toString();
         }
-        _selectedCurrency = (shift['currency'] ?? cb['currency'] ?? 'YER').toString();
+        _selectedCurrency =
+            (shift['currency'] ?? cb['currency'] ?? 'YER').toString();
         notifyListeners();
         return;
       }
@@ -510,32 +527,41 @@ class PosViewModel extends ChangeNotifier {
   Future<void> _loadHeldOrdersFromDb() async {
     try {
       _heldOrders.clear();
-      final dbOrders = await _shiftService.getHeldOrders(shiftId: _activeShift?['id']);
+      final dbOrders =
+          await _shiftService.getHeldOrders(shiftId: _activeShift?['id']);
       for (final row in dbOrders) {
         final cartData = jsonDecode(row['cart_data'] as String) as List;
         final paymentsData = jsonDecode(row['payments_data'] as String) as List;
-        final cartItems = cartData.map((item) => CartItem(
-          productId: item['productId'] as int,
-          name: item['productName'] as String,
-          quantity: (item['quantity'] as num).toInt(),
-          unitPrice: MoneyHelper.readMoney(item['unitPrice']),
-          unitName: item['unitName'] as String? ?? 'قطعة',
-          conversionFactor: (item['conversionFactor'] as num?)?.toDouble() ?? 1.0,
-        )).toList();
-        final payments = paymentsData.map((p) => PaymentEntry(
-          amount: MoneyHelper.readMoney(p['amount']),
-          method: p['method'] as String? ?? 'cash',
-        )).toList();
+        final cartItems = cartData
+            .map((item) => CartItem(
+                  productId: item['productId'] as int,
+                  name: item['productName'] as String,
+                  quantity: (item['quantity'] as num).toInt(),
+                  unitPrice: MoneyHelper.readMoney(item['unitPrice']),
+                  unitName: item['unitName'] as String? ?? 'قطعة',
+                  conversionFactor:
+                      (item['conversionFactor'] as num?)?.toDouble() ?? 1.0,
+                ))
+            .toList();
+        final payments = paymentsData
+            .map((p) => PaymentEntry(
+                  amount: MoneyHelper.readMoney(p['amount']),
+                  method: p['method'] as String? ?? 'cash',
+                ))
+            .toList();
         final discountTypeStr = row['discount_type'] as String? ?? 'fixed';
         _heldOrders.add(HeldOrder(
           items: cartItems,
           paymentMethod: row['payment_method'] as String? ?? 'cash',
           payments: payments,
           discount: MoneyHelper.readMoney(row['discount']),
-          discountType: DiscountType.values.firstWhere((e) => e.name == discountTypeStr, orElse: () => DiscountType.fixed),
+          discountType: DiscountType.values.firstWhere(
+              (e) => e.name == discountTypeStr,
+              orElse: () => DiscountType.fixed),
           customerId: row['customer_id'] as int?,
           customerName: row['customer_name'] as String? ?? '',
-          createdAt: DateTime.tryParse(row['created_at'] as String? ?? '') ?? DateTime.now(),
+          createdAt: DateTime.tryParse(row['created_at'] as String? ?? '') ??
+              DateTime.now(),
           dbId: row['id'] as int?,
         ));
       }
@@ -550,7 +576,8 @@ class PosViewModel extends ChangeNotifier {
   Future<void> _loadTopSellers() async {
     try {
       final today = DateTime.now();
-      final todayStr = '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
+      final todayStr =
+          '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
       _topSellers = await _reportService.getTopSellersToday(todayStr);
       notifyListeners();
     } catch (e) {
@@ -594,8 +621,10 @@ class PosViewModel extends ChangeNotifier {
       if (product != null) {
         return BarcodeMatchResult(product: product, unitInfo: {
           'unit_name': conversion['from_unit'] as String,
-          'sell_price': MoneyHelper.readMoney(conversion['sell_price'], fallback: product.sellPrice),
-          'conversion_factor': (conversion['conversion_factor'] as num?)?.toDouble() ?? 1.0,
+          'sell_price': MoneyHelper.readMoney(conversion['sell_price'],
+              fallback: product.sellPrice),
+          'conversion_factor':
+              (conversion['conversion_factor'] as num?)?.toDouble() ?? 1.0,
           'barcode': conversion['barcode'] as String?,
         });
       }
@@ -604,7 +633,8 @@ class PosViewModel extends ChangeNotifier {
   }
 
   /// Get available units for a product.
-  Future<List<Map<String, dynamic>>?> getAvailableUnitsForProduct(int productId) async {
+  Future<List<Map<String, dynamic>>?> getAvailableUnitsForProduct(
+      int productId) async {
     return await _refData.getAvailableUnitsForProduct(productId);
   }
 
@@ -657,18 +687,22 @@ class PosViewModel extends ChangeNotifier {
     );
 
     // Persist to DB
-    final cartJson = jsonEncode(_cartItems.map((i) => {
-      'productId': i.productId,
-      'productName': i.name,
-      'quantity': i.quantity,
-      'unitPrice': MoneyHelper.toCents(i.unitPrice),
-      'unitName': i.unitName,
-      'conversionFactor': i.conversionFactor,
-    }).toList());
-    final paymentsJson = jsonEncode(_payments.map((p) => {
-      'method': p.method,
-      'amount': MoneyHelper.toCents(p.amount),
-    }).toList());
+    final cartJson = jsonEncode(_cartItems
+        .map((i) => {
+              'productId': i.productId,
+              'productName': i.name,
+              'quantity': i.quantity,
+              'unitPrice': MoneyHelper.toCents(i.unitPrice),
+              'unitName': i.unitName,
+              'conversionFactor': i.conversionFactor,
+            })
+        .toList());
+    final paymentsJson = jsonEncode(_payments
+        .map((p) => {
+              'method': p.method,
+              'amount': MoneyHelper.toCents(p.amount),
+            })
+        .toList());
 
     final dbId = await _shiftService.insertHeldOrder({
       'shift_id': _activeShift?['id'],
@@ -731,8 +765,10 @@ class PosViewModel extends ChangeNotifier {
 
   Future<String> generateInvoiceId() async {
     final now = DateTime.now();
-    final dateStr = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final nextSeq = await _invoiceRepo.getNextInvoiceSequence('POS-$dateStr', 'pos');
+    final dateStr =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final nextSeq =
+        await _invoiceRepo.getNextInvoiceSequence('POS-$dateStr', 'pos');
     _todayInvoiceCount = nextSeq;
     final seq = nextSeq.toString().padLeft(4, '0');
     return 'POS-$dateStr-$seq';
@@ -744,12 +780,18 @@ class PosViewModel extends ChangeNotifier {
 
   String _paymentLabel(String method) {
     switch (method) {
-      case 'cash': return 'نقدي';
-      case 'card': return 'بطاقة';
-      case 'ewallet': return 'محفظة إلكترونية';
-      case 'bank_transfer': return 'تحويل بنكي';
-      case 'credit': return 'آجل';
-      default: return method;
+      case 'cash':
+        return 'نقدي';
+      case 'card':
+        return 'بطاقة';
+      case 'ewallet':
+        return 'محفظة إلكترونية';
+      case 'bank_transfer':
+        return 'تحويل بنكي';
+      case 'credit':
+        return 'آجل';
+      default:
+        return method;
     }
   }
 }

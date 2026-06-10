@@ -110,7 +110,8 @@ class _BarChartWidgetState extends State<BarChartWidget>
               widget.title!,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                color:
+                    isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),

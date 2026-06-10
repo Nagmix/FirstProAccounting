@@ -95,7 +95,8 @@ class ProductInventoryStep extends StatelessWidget {
           if (hasMultiUnits) ...[
             TextFormField(
               controller: purchaseUnitQtyController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               textInputAction: TextInputAction.next,
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
@@ -189,7 +190,8 @@ class ProductInventoryStep extends StatelessWidget {
             Expanded(
               child: TextFormField(
                 controller: minStockController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.next,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
@@ -206,7 +208,8 @@ class ProductInventoryStep extends StatelessWidget {
             Expanded(
               child: TextFormField(
                 controller: maxStockController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.next,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),

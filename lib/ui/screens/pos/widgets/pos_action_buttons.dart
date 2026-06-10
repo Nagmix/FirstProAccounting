@@ -54,7 +54,8 @@ class PosActionButtons extends StatelessWidget {
                 icon: const Icon(Icons.add, size: 18),
                 label: Text('إضافة دفعة: ${paymentLabel(activePaymentMethod)}'),
                 style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -71,7 +72,8 @@ class PosActionButtons extends StatelessWidget {
                   icon: const Icon(Icons.add_circle, size: 16),
                   label: const Text('إضافة دفعة أخرى'),
                   style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
@@ -84,7 +86,10 @@ class PosActionButtons extends StatelessWidget {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: (cartLength == 0 || checkoutPhase != CheckoutPhase.idle) ? null : onStartCheckout,
+              onPressed:
+                  (cartLength == 0 || checkoutPhase != CheckoutPhase.idle)
+                      ? null
+                      : onStartCheckout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.success,
                 foregroundColor: Colors.white,
@@ -99,7 +104,8 @@ class PosActionButtons extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'إنهاء البيع  ${CurrencyFormatter.format(total)}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -129,7 +135,10 @@ class PosActionButtons extends StatelessWidget {
             width: double.infinity,
             height: 42,
             child: OutlinedButton.icon(
-              onPressed: (cartLength == 0 || checkoutPhase != CheckoutPhase.idle) ? null : onClearInvoice,
+              onPressed:
+                  (cartLength == 0 || checkoutPhase != CheckoutPhase.idle)
+                      ? null
+                      : onClearInvoice,
               icon: const Icon(Icons.delete_outline, size: 18),
               label: const Text('مسح الفاتورة'),
               style: OutlinedButton.styleFrom(

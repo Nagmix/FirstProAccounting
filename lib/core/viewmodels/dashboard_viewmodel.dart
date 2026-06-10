@@ -10,7 +10,6 @@ import '../../data/datasources/repositories/reference_data_repository.dart';
 import '../../data/datasources/services/report_service.dart';
 import '../../data/datasources/services/cash_box_service.dart';
 
-
 /// ViewModel for Dashboard — manages dashboard data loading and refresh.
 ///
 /// Uses dependency-injected repositories/services instead of DatabaseHelper
@@ -98,7 +97,8 @@ class DashboardViewModel extends ChangeNotifier {
       todaySales = results[0] as double;
       yesterdaySales = results[1] as double;
       todayInvoiceCount = (results[2] as num?)?.toInt() ?? 0;
-      recentInvoices = (results[3] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+      recentInvoices =
+          (results[3] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
       productCount = results[4] as int;
       customerCount = results[5] as int;
       totalPurchases = results[6] as double;
@@ -210,7 +210,9 @@ class DashboardViewModel extends ChangeNotifier {
         final opType = opTypeRaw == 'صرف' ? 'مصروف (صرف)' : 'مصروف (قبض)';
         transactions.add({
           'id': 'e_${exp['id']}',
-          'date': exp['expense_date'] as String? ?? exp['created_at'] as String? ?? '',
+          'date': exp['expense_date'] as String? ??
+              exp['created_at'] as String? ??
+              '',
           'amount': MoneyHelper.readMoney(exp['amount']),
           'entity_name': exp['title'] as String? ?? 'مصروف',
           'operation_type': opType,

@@ -6,7 +6,8 @@ import '../../../../core/viewmodels/pos_viewmodel.dart';
 import '../pos_models.dart';
 
 /// Shows the add partial payment dialog.
-Future<void> showAddPartialPaymentDialog(BuildContext context, PosViewModel vm) async {
+Future<void> showAddPartialPaymentDialog(
+    BuildContext context, PosViewModel vm) async {
   final amountController = TextEditingController();
   String selectedMethod = vm.activePaymentMethod;
 
@@ -23,10 +24,15 @@ Future<void> showAddPartialPaymentDialog(BuildContext context, PosViewModel vm) 
               value: selectedMethod,
               decoration: const InputDecoration(labelText: 'طريقة الدفع'),
               items: [
-                DropdownMenuItem(value: 'cash', child: Text('نقدي - المتبقي: ${CurrencyFormatter.format(vm.remaining)}')),
+                DropdownMenuItem(
+                    value: 'cash',
+                    child: Text(
+                        'نقدي - المتبقي: ${CurrencyFormatter.format(vm.remaining)}')),
                 DropdownMenuItem(value: 'card', child: const Text('بطاقة')),
-                DropdownMenuItem(value: 'ewallet', child: const Text('محفظة إلكترونية')),
-                DropdownMenuItem(value: 'bank_transfer', child: const Text('تحويل بنكي')),
+                DropdownMenuItem(
+                    value: 'ewallet', child: const Text('محفظة إلكترونية')),
+                DropdownMenuItem(
+                    value: 'bank_transfer', child: const Text('تحويل بنكي')),
                 DropdownMenuItem(value: 'credit', child: const Text('آجل')),
               ],
               onChanged: (v) => selectedMethod = v ?? 'cash',
@@ -51,7 +57,8 @@ Future<void> showAddPartialPaymentDialog(BuildContext context, PosViewModel vm) 
             onPressed: () {
               final amount = double.tryParse(amountController.text) ?? 0.0;
               if (amount > 0) {
-                vm.addPayment(PaymentEntry(method: selectedMethod, amount: amount));
+                vm.addPayment(
+                    PaymentEntry(method: selectedMethod, amount: amount));
               }
               Navigator.pop(ctx);
             },

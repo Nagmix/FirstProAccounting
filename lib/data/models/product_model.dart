@@ -9,7 +9,8 @@ class Product {
   final String? barcode;
   final int? categoryId;
   final int? unitId; // Kept for backward compat, maps to base_unit_id
-  final int? baseUnitId; // The base unit (smallest) - all stock stored in this unit
+  final int?
+      baseUnitId; // The base unit (smallest) - all stock stored in this unit
   final int? purchaseUnitId; // Default purchase unit
   final int? saleUnitId; // Default sale unit
   final int? supplierId;
@@ -175,10 +176,12 @@ class Product {
       groupId: map['group_id'],
       description: map['description'],
       costPrice: MoneyHelper.readMoney(map['cost_price']),
-      averageCost: MoneyHelper.readMoney(map['average_cost'] ?? map['cost_price']),
+      averageCost:
+          MoneyHelper.readMoney(map['average_cost'] ?? map['cost_price']),
       sellPrice: MoneyHelper.readMoney(map['sell_price']),
       wholesalePrice: MoneyHelper.readMoney(map['wholesale_price']),
-      specialWholesalePrice: MoneyHelper.readMoney(map['special_wholesale_price']),
+      specialWholesalePrice:
+          MoneyHelper.readMoney(map['special_wholesale_price']),
       minimumSalePrice: MoneyHelper.readMoney(map['minimum_sale_price']),
       taxRate: (map['tax_rate'] ?? 0.0).toDouble(),
       taxInclusive: (map['tax_inclusive'] ?? 0) == 1,
@@ -208,7 +211,8 @@ class Product {
       imagePath: map['image_path'],
       supplierCode: map['supplier_code'],
       currency: map['currency'] as String? ?? 'YER',
-      costingMethod: CostingMethodExt.fromValue(map['costing_method'] as String? ?? 'weighted_average'),
+      costingMethod: CostingMethodExt.fromValue(
+          map['costing_method'] as String? ?? 'weighted_average'),
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
     );
@@ -282,7 +286,8 @@ class Product {
       averageCost: averageCost ?? this.averageCost,
       sellPrice: sellPrice ?? this.sellPrice,
       wholesalePrice: wholesalePrice ?? this.wholesalePrice,
-      specialWholesalePrice: specialWholesalePrice ?? this.specialWholesalePrice,
+      specialWholesalePrice:
+          specialWholesalePrice ?? this.specialWholesalePrice,
       minimumSalePrice: minimumSalePrice ?? this.minimumSalePrice,
       taxRate: taxRate ?? this.taxRate,
       taxInclusive: taxInclusive ?? this.taxInclusive,

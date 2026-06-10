@@ -28,8 +28,12 @@ void showDiscountDialog(BuildContext context, PosViewModel vm) {
               controller: controller,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: vm.discountType == DiscountType.percentage ? 'نسبة الخصم %' : 'مبلغ الخصم',
-                suffixText: vm.discountType == DiscountType.percentage ? '%' : AppConstants.currency,
+                labelText: vm.discountType == DiscountType.percentage
+                    ? 'نسبة الخصم %'
+                    : 'مبلغ الخصم',
+                suffixText: vm.discountType == DiscountType.percentage
+                    ? '%'
+                    : AppConstants.currency,
               ),
             ),
             const SizedBox(height: 12),
@@ -40,13 +44,15 @@ void showDiscountDialog(BuildContext context, PosViewModel vm) {
                 ChoiceChip(
                   label: const Text('مبلغ ثابت'),
                   selected: vm.discountType == DiscountType.fixed,
-                  onSelected: (_) => vm.setOrderDiscount(vm.orderDiscount, DiscountType.fixed),
+                  onSelected: (_) =>
+                      vm.setOrderDiscount(vm.orderDiscount, DiscountType.fixed),
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
                   label: const Text('نسبة مئوية'),
                   selected: vm.discountType == DiscountType.percentage,
-                  onSelected: (_) => vm.setOrderDiscount(vm.orderDiscount, DiscountType.percentage),
+                  onSelected: (_) => vm.setOrderDiscount(
+                      vm.orderDiscount, DiscountType.percentage),
                 ),
               ],
             ),
@@ -66,21 +72,28 @@ void showDiscountDialog(BuildContext context, PosViewModel vm) {
               // Validation: discount must be >= 0
               if (value < 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('الخصم لا يمكن أن يكون سالباً'), backgroundColor: AppColors.error),
+                  const SnackBar(
+                      content: Text('الخصم لا يمكن أن يكون سالباً'),
+                      backgroundColor: AppColors.error),
                 );
                 return;
               }
               // Validation: fixed discount must not exceed total
-              if (vm.discountType == DiscountType.fixed && value > vm.subtotal) {
+              if (vm.discountType == DiscountType.fixed &&
+                  value > vm.subtotal) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('الخصم لا يمكن أن يتجاوز الإجمالي'), backgroundColor: AppColors.error),
+                  const SnackBar(
+                      content: Text('الخصم لا يمكن أن يتجاوز الإجمالي'),
+                      backgroundColor: AppColors.error),
                 );
                 return;
               }
               // Validation: percentage discount must not exceed 100%
               if (vm.discountType == DiscountType.percentage && value > 100) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('نسبة الخصم لا يمكن أن تتجاوز 100%'), backgroundColor: AppColors.error),
+                  const SnackBar(
+                      content: Text('نسبة الخصم لا يمكن أن تتجاوز 100%'),
+                      backgroundColor: AppColors.error),
                 );
                 return;
               }

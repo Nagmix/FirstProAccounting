@@ -75,7 +75,8 @@ class PosShiftInfoBar extends StatelessWidget {
               const SizedBox(width: 14),
 
               // Cashier name
-              _shiftChip(context,
+              _shiftChip(
+                context,
                 icon: Icons.person,
                 label: 'الكاشير',
                 value: vm.cashierName,
@@ -83,7 +84,8 @@ class PosShiftInfoBar extends StatelessWidget {
               const SizedBox(width: 10),
 
               // Duration
-              _shiftChip(context,
+              _shiftChip(
+                context,
                 icon: Icons.access_time,
                 label: 'المدة',
                 value: vm.formattedShiftDuration,
@@ -91,7 +93,8 @@ class PosShiftInfoBar extends StatelessWidget {
               const SizedBox(width: 10),
 
               // Cash box
-              _shiftChip(context,
+              _shiftChip(
+                context,
                 icon: Icons.account_balance_wallet,
                 label: 'الصندوق',
                 value: vm.shiftCashBoxName,
@@ -99,7 +102,8 @@ class PosShiftInfoBar extends StatelessWidget {
               const SizedBox(width: 10),
 
               // Total sales
-              _shiftChip(context,
+              _shiftChip(
+                context,
                 icon: Icons.show_chart,
                 label: 'المبيعات',
                 value: CurrencyFormatter.format(totalSales),
@@ -107,7 +111,8 @@ class PosShiftInfoBar extends StatelessWidget {
               const SizedBox(width: 10),
 
               // Opening amount
-              _shiftChip(context,
+              _shiftChip(
+                context,
                 icon: Icons.account_balance_wallet,
                 label: 'الافتتاح',
                 value: CurrencyFormatter.format(openingAmount),

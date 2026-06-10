@@ -181,8 +181,7 @@ void main() {
         // Double-check: every account with is_system=1 actually has the flag set
         for (final acc in systemAccounts) {
           expect(acc['is_system'], 1,
-              reason:
-                  'Account ${acc['account_code']} should have is_system=1');
+              reason: 'Account ${acc['account_code']} should have is_system=1');
         }
       },
     );
@@ -220,8 +219,7 @@ void main() {
             await db.query('accounts', where: 'is_system = 1');
         for (final acc in systemAccounts) {
           expect(acc['is_active'], 1,
-              reason:
-                  'System account ${acc['account_code']} should be active');
+              reason: 'System account ${acc['account_code']} should be active');
         }
       },
     );
@@ -314,9 +312,11 @@ void main() {
               [code],
             );
             // Each duplicate should have different currencies
-            final currencySet = currencies.map((r) => r['currency'] as String).toSet();
+            final currencySet =
+                currencies.map((r) => r['currency'] as String).toSet();
             expect(currencySet.length, (row['cnt'] as num).toInt(),
-                reason: 'Duplicate code $code should be across different currencies');
+                reason:
+                    'Duplicate code $code should be across different currencies');
           }
         }
       },
@@ -349,8 +349,8 @@ void main() {
           parentId: parentId,
         );
 
-        final child = await db.query('accounts',
-            where: 'id = ?', whereArgs: [childId]);
+        final child =
+            await db.query('accounts', where: 'id = ?', whereArgs: [childId]);
         expect(child.first['parent_id'], parentId,
             reason: 'Child account should reference the parent account');
       },
@@ -376,8 +376,8 @@ void main() {
           whereArgs: [accountId],
         );
 
-        final updated = await db.query('accounts',
-            where: 'id = ?', whereArgs: [accountId]);
+        final updated =
+            await db.query('accounts', where: 'id = ?', whereArgs: [accountId]);
         // After setting self-reference, verify the row exists but flag it as invalid
         // In production code, this should be prevented at the service level
         expect(updated.first['parent_id'], accountId,
@@ -437,20 +437,20 @@ void main() {
         );
 
         // Verify the chain
-        final subDetail = await db.query('accounts',
-            where: 'id = ?', whereArgs: [subDetailId]);
+        final subDetail = await db
+            .query('accounts', where: 'id = ?', whereArgs: [subDetailId]);
         expect(subDetail.first['parent_id'], detailId);
 
-        final detail = await db.query('accounts',
-            where: 'id = ?', whereArgs: [detailId]);
+        final detail =
+            await db.query('accounts', where: 'id = ?', whereArgs: [detailId]);
         expect(detail.first['parent_id'], subGroupId);
 
-        final subGroup = await db.query('accounts',
-            where: 'id = ?', whereArgs: [subGroupId]);
+        final subGroup = await db
+            .query('accounts', where: 'id = ?', whereArgs: [subGroupId]);
         expect(subGroup.first['parent_id'], rootId);
 
-        final root = await db.query('accounts',
-            where: 'id = ?', whereArgs: [rootId]);
+        final root =
+            await db.query('accounts', where: 'id = ?', whereArgs: [rootId]);
         expect(root.first['parent_id'], isNull);
       },
     );
@@ -477,8 +477,8 @@ void main() {
           isActive: 1,
         );
 
-        final rows = await db.query('accounts',
-            where: 'id = ?', whereArgs: [id]);
+        final rows =
+            await db.query('accounts', where: 'id = ?', whereArgs: [id]);
         expect(rows.length, 1);
 
         final acc = rows.first;
@@ -521,8 +521,8 @@ void main() {
           whereArgs: [id],
         );
 
-        final updated = await db.query('accounts',
-            where: 'id = ?', whereArgs: [id]);
+        final updated =
+            await db.query('accounts', where: 'id = ?', whereArgs: [id]);
         expect(updated.first['name_ar'], 'إيرادات جديدة');
         expect(updated.first['name_en'], 'New Revenue');
       },
@@ -538,17 +538,16 @@ void main() {
         );
 
         // Delete any transactions referencing this account first (FK constraint)
-        await db.delete('transactions',
-            where: 'account_id = ?', whereArgs: [id]);
+        await db
+            .delete('transactions', where: 'account_id = ?', whereArgs: [id]);
 
         final deleted = await db.delete('accounts',
             where: 'id = ? AND is_system = 0', whereArgs: [id]);
         expect(deleted, 1, reason: 'One row should be deleted');
 
-        final remaining = await db.query('accounts',
-            where: 'id = ?', whereArgs: [id]);
-        expect(remaining, isEmpty,
-            reason: 'Account should no longer exist');
+        final remaining =
+            await db.query('accounts', where: 'id = ?', whereArgs: [id]);
+        expect(remaining, isEmpty, reason: 'Account should no longer exist');
       },
     );
 
@@ -567,11 +566,12 @@ void main() {
         final deleted = await db.delete('accounts',
             where: 'id = ? AND is_system = 0', whereArgs: [systemId]);
         expect(deleted, 0,
-            reason: 'System account should not be deleted via is_system filter');
+            reason:
+                'System account should not be deleted via is_system filter');
 
         // Verify it still exists
-        final stillExists = await db.query('accounts',
-            where: 'id = ?', whereArgs: [systemId]);
+        final stillExists =
+            await db.query('accounts', where: 'id = ?', whereArgs: [systemId]);
         expect(stillExists.isNotEmpty, isTrue,
             reason: 'System account should still exist in DB');
       },
@@ -600,16 +600,14 @@ void main() {
         // With foreign keys ON, deleting the parent should fail
         // because the child still references it
         try {
-          await db.delete('accounts',
-              where: 'id = ?', whereArgs: [parentId]);
+          await db.delete('accounts', where: 'id = ?', whereArgs: [parentId]);
           // If we reach here, FK enforcement may not be working for this path
           // Check if child still exists
-          final childRows = await db.query('accounts',
-              where: 'id = ?', whereArgs: [childId]);
+          final childRows =
+              await db.query('accounts', where: 'id = ?', whereArgs: [childId]);
           if (childRows.isEmpty) {
             // Cascade deletion happened or child was orphaned
-            fail(
-                'Parent deletion should have been prevented by FK constraint');
+            fail('Parent deletion should have been prevented by FK constraint');
           }
         } on DatabaseException catch (e) {
           // Expected: FK constraint violation
@@ -618,10 +616,8 @@ void main() {
         }
 
         // Clean up: delete child first, then parent
-        await db.delete('accounts',
-            where: 'id = ?', whereArgs: [childId]);
-        await db.delete('accounts',
-            where: 'id = ?', whereArgs: [parentId]);
+        await db.delete('accounts', where: 'id = ?', whereArgs: [childId]);
+        await db.delete('accounts', where: 'id = ?', whereArgs: [parentId]);
       },
     );
 
@@ -635,8 +631,8 @@ void main() {
           currency: 'USD',
         );
 
-        final acc = await db.query('accounts',
-            where: 'id = ?', whereArgs: [usdId]);
+        final acc =
+            await db.query('accounts', where: 'id = ?', whereArgs: [usdId]);
         expect(acc.first['currency'], 'USD');
 
         final sarId = await insertAccount(
@@ -646,8 +642,8 @@ void main() {
           currency: 'SAR',
         );
 
-        final accSar = await db.query('accounts',
-            where: 'id = ?', whereArgs: [sarId]);
+        final accSar =
+            await db.query('accounts', where: 'id = ?', whereArgs: [sarId]);
         expect(accSar.first['currency'], 'SAR');
       },
     );
@@ -669,8 +665,7 @@ void main() {
         );
 
         final balanceCents = await getAccountBalanceCents(id);
-        expect(balanceCents, 0,
-            reason: 'New account should have zero balance');
+        expect(balanceCents, 0, reason: 'New account should have zero balance');
         expect(MoneyHelper.fromCents(balanceCents), 0.0);
       },
     );
@@ -744,12 +739,12 @@ void main() {
             END,
             updated_at = ?
           WHERE id = ?
-        ''', [creditAmount, creditAmount, DateTime.now().toIso8601String(), id]);
+        ''',
+            [creditAmount, creditAmount, DateTime.now().toIso8601String(), id]);
 
         final balanceCents = await getAccountBalanceCents(id);
         expect(balanceCents, creditAmount,
-            reason:
-                'Credit on credit-balance account should increase balance');
+            reason: 'Credit on credit-balance account should increase balance');
         expect(MoneyHelper.fromCents(balanceCents), 3000.0);
       },
     );
@@ -785,8 +780,7 @@ void main() {
 
         final balanceCents = await getAccountBalanceCents(id);
         expect(balanceCents, MoneyHelper.toCents(7000.0),
-            reason:
-                'Credit on debit-balance account should decrease balance');
+            reason: 'Credit on debit-balance account should decrease balance');
       },
     );
 
@@ -877,14 +871,29 @@ void main() {
         final c1 = MoneyHelper.toCents(3000.0);
 
         await insertTransaction(
-            accountId: debitId, debit: d1, credit: 0,
-            date: '2025-02-01', currencyCode: 'YER', exchangeRate: 1.0, amountBase: d1);
+            accountId: debitId,
+            debit: d1,
+            credit: 0,
+            date: '2025-02-01',
+            currencyCode: 'YER',
+            exchangeRate: 1.0,
+            amountBase: d1);
         await insertTransaction(
-            accountId: debitId, debit: d2, credit: 0,
-            date: '2025-02-05', currencyCode: 'YER', exchangeRate: 1.0, amountBase: d2);
+            accountId: debitId,
+            debit: d2,
+            credit: 0,
+            date: '2025-02-05',
+            currencyCode: 'YER',
+            exchangeRate: 1.0,
+            amountBase: d2);
         await insertTransaction(
-            accountId: debitId, debit: 0, credit: c1,
-            date: '2025-02-10', currencyCode: 'YER', exchangeRate: 1.0, amountBase: c1);
+            accountId: debitId,
+            debit: 0,
+            credit: c1,
+            date: '2025-02-10',
+            currencyCode: 'YER',
+            exchangeRate: 1.0,
+            amountBase: c1);
 
         final debitBalance =
             await computeBalanceFromTransactions(debitId, 'debit');
@@ -903,14 +912,29 @@ void main() {
         final dr1 = MoneyHelper.toCents(2000.0);
 
         await insertTransaction(
-            accountId: creditId, debit: 0, credit: cr1,
-            date: '2025-02-01', currencyCode: 'YER', exchangeRate: 1.0, amountBase: cr1);
+            accountId: creditId,
+            debit: 0,
+            credit: cr1,
+            date: '2025-02-01',
+            currencyCode: 'YER',
+            exchangeRate: 1.0,
+            amountBase: cr1);
         await insertTransaction(
-            accountId: creditId, debit: 0, credit: cr2,
-            date: '2025-02-05', currencyCode: 'YER', exchangeRate: 1.0, amountBase: cr2);
+            accountId: creditId,
+            debit: 0,
+            credit: cr2,
+            date: '2025-02-05',
+            currencyCode: 'YER',
+            exchangeRate: 1.0,
+            amountBase: cr2);
         await insertTransaction(
-            accountId: creditId, debit: dr1, credit: 0,
-            date: '2025-02-10', currencyCode: 'YER', exchangeRate: 1.0, amountBase: dr1);
+            accountId: creditId,
+            debit: dr1,
+            credit: 0,
+            date: '2025-02-10',
+            currencyCode: 'YER',
+            exchangeRate: 1.0,
+            amountBase: dr1);
 
         final creditBalance =
             await computeBalanceFromTransactions(creditId, 'credit');
@@ -936,11 +960,31 @@ void main() {
 
       // Insert transactions with specific dates
       final amounts = [
-        {'debit': MoneyHelper.toCents(10000.0), 'credit': 0, 'date': '2025-03-01'},
-        {'debit': 0, 'credit': MoneyHelper.toCents(2000.0), 'date': '2025-03-05'},
-        {'debit': MoneyHelper.toCents(5000.0), 'credit': 0, 'date': '2025-03-10'},
-        {'debit': 0, 'credit': MoneyHelper.toCents(3000.0), 'date': '2025-03-15'},
-        {'debit': MoneyHelper.toCents(7000.0), 'credit': 0, 'date': '2025-03-20'},
+        {
+          'debit': MoneyHelper.toCents(10000.0),
+          'credit': 0,
+          'date': '2025-03-01'
+        },
+        {
+          'debit': 0,
+          'credit': MoneyHelper.toCents(2000.0),
+          'date': '2025-03-05'
+        },
+        {
+          'debit': MoneyHelper.toCents(5000.0),
+          'credit': 0,
+          'date': '2025-03-10'
+        },
+        {
+          'debit': 0,
+          'credit': MoneyHelper.toCents(3000.0),
+          'date': '2025-03-15'
+        },
+        {
+          'debit': MoneyHelper.toCents(7000.0),
+          'credit': 0,
+          'date': '2025-03-20'
+        },
       ];
 
       for (int i = 0; i < amounts.length; i++) {
@@ -972,7 +1016,11 @@ void main() {
 
         // Verify chronological order
         for (int i = 1; i < txns.length; i++) {
-          expect(txns[i]['date'].toString().compareTo(txns[i - 1]['date'].toString()) >= 0,
+          expect(
+              txns[i]['date']
+                      .toString()
+                      .compareTo(txns[i - 1]['date'].toString()) >=
+                  0,
               isTrue,
               reason: 'Transactions should be in ascending date order');
         }
@@ -1049,8 +1097,7 @@ void main() {
         // The latest transaction should have the final balance
         final latestDate = txnsDesc.first['date'] as String;
         expect(balanceByDate[latestDate], MoneyHelper.toCents(17000.0),
-            reason:
-                'Final running balance: 10000-2000+5000-3000+7000 = 17000');
+            reason: 'Final running balance: 10000-2000+5000-3000+7000 = 17000');
       },
     );
 
@@ -1119,7 +1166,8 @@ void main() {
         );
         final totalBase = (baseResult.first['total_base'] as num).toInt();
         expect(totalBase, yerAmount + sarBase + usdBase,
-            reason: 'Total base amount should be sum of all amount_base values');
+            reason:
+                'Total base amount should be sum of all amount_base values');
       },
     );
   });
@@ -1133,8 +1181,8 @@ void main() {
     test(
       'All ASSET accounts sum to total assets (in base currency) / مجموع حسابات الأصول يساوي إجمالي الأصول',
       () async {
-        final assetAccounts = await db.query('accounts',
-            where: "account_type = 'ASSET'");
+        final assetAccounts =
+            await db.query('accounts', where: "account_type = 'ASSET'");
         expect(assetAccounts.isNotEmpty, isTrue,
             reason: 'Should have at least one ASSET account');
 
@@ -1152,8 +1200,8 @@ void main() {
     test(
       'All LIABILITY accounts sum to total liabilities / مجموع حسابات الخصوم يساوي إجمالي الخصوم',
       () async {
-        final liabilityAccounts = await db.query('accounts',
-            where: "account_type = 'LIABILITY'");
+        final liabilityAccounts =
+            await db.query('accounts', where: "account_type = 'LIABILITY'");
         expect(liabilityAccounts.isNotEmpty, isTrue,
             reason: 'Should have at least one LIABILITY account');
 
@@ -1247,21 +1295,30 @@ void main() {
         );
 
         final totalAssets = (assetResult.first['total'] as num).toInt();
-        final totalLiabilities = (liabilityResult.first['total'] as num).toInt();
+        final totalLiabilities =
+            (liabilityResult.first['total'] as num).toInt();
         final totalEquity = (equityResult.first['total'] as num).toInt();
 
         expect(totalAssets, MoneyHelper.toCents(10000.0));
         expect(totalLiabilities, 0);
         expect(totalEquity, MoneyHelper.toCents(10000.0));
         expect(totalAssets, totalLiabilities + totalEquity,
-            reason: 'Assets must equal Liabilities + Equity (including Revenue)');
+            reason:
+                'Assets must equal Liabilities + Equity (including Revenue)');
       },
     );
 
     test(
       'Each account type group has at least one system account / كل نوع حساب لديه حساب نظامي واحد على الأقل',
       () async {
-        final types = ['ASSET', 'LIABILITY', 'EQUITY', 'COST', 'REVENUE', 'EXPENSE'];
+        final types = [
+          'ASSET',
+          'LIABILITY',
+          'EQUITY',
+          'COST',
+          'REVENUE',
+          'EXPENSE'
+        ];
         for (final type in types) {
           final accounts = await db.query('accounts',
               where: 'account_type = ? AND is_system = 1', whereArgs: [type]);
@@ -1277,7 +1334,8 @@ void main() {
   //  عمليات الحسابات حسب العملة
   // ══════════════════════════════════════════════════════════════════
 
-  group('Currency-Specific Account Operations — عمليات الحسابات حسب العملة', () {
+  group('Currency-Specific Account Operations — عمليات الحسابات حسب العملة',
+      () {
     test(
       'YER account with YER transactions → balance matches / حساب ريال يمني بمعاملات ريال → الرصيد متطابق',
       () async {
@@ -1505,9 +1563,11 @@ void main() {
 
         // Get revenue and expense system accounts (YER)
         final revenueAccounts = await db.query('accounts',
-            where: "account_type = 'REVENUE' AND currency = 'YER' AND is_system = 1");
+            where:
+                "account_type = 'REVENUE' AND currency = 'YER' AND is_system = 1");
         final expenseAccounts = await db.query('accounts',
-            where: "account_type = 'EXPENSE' AND currency = 'YER' AND is_system = 1");
+            where:
+                "account_type = 'EXPENSE' AND currency = 'YER' AND is_system = 1");
         final retainedEarningsAccounts = await db.query('accounts',
             where: "account_code = '2910' AND currency = 'YER'");
 
@@ -1526,11 +1586,11 @@ void main() {
         final revenueBalance = MoneyHelper.toCents(50000.0);
         final expenseBalance = MoneyHelper.toCents(30000.0);
 
-        await db.update('accounts',
-            {'balance': revenueBalance, 'updated_at': now},
+        await db.update(
+            'accounts', {'balance': revenueBalance, 'updated_at': now},
             where: 'id = ?', whereArgs: [revenueId]);
-        await db.update('accounts',
-            {'balance': expenseBalance, 'updated_at': now},
+        await db.update(
+            'accounts', {'balance': expenseBalance, 'updated_at': now},
             where: 'id = ?', whereArgs: [expenseId]);
 
         // Simulate closing entry: close revenue & expense to retained earnings
@@ -1538,13 +1598,11 @@ void main() {
         final netIncome = revenueBalance - expenseBalance;
 
         // Close revenue (credit balance → debit to zero it out)
-        await db.update('accounts',
-            {'balance': 0, 'updated_at': now},
+        await db.update('accounts', {'balance': 0, 'updated_at': now},
             where: 'id = ?', whereArgs: [revenueId]);
 
         // Close expense (debit balance → credit to zero it out)
-        await db.update('accounts',
-            {'balance': 0, 'updated_at': now},
+        await db.update('accounts', {'balance': 0, 'updated_at': now},
             where: 'id = ?', whereArgs: [expenseId]);
 
         // Add net income to retained earnings (credit account → increase)
@@ -1556,12 +1614,12 @@ void main() {
         ''', [netIncome, now, retainedId]);
 
         // Verify
-        final closedRevenue = await db.query('accounts',
-            where: 'id = ?', whereArgs: [revenueId]);
-        final closedExpense = await db.query('accounts',
-            where: 'id = ?', whereArgs: [expenseId]);
-        final updatedRetained = await db.query('accounts',
-            where: 'id = ?', whereArgs: [retainedId]);
+        final closedRevenue =
+            await db.query('accounts', where: 'id = ?', whereArgs: [revenueId]);
+        final closedExpense =
+            await db.query('accounts', where: 'id = ?', whereArgs: [expenseId]);
+        final updatedRetained = await db
+            .query('accounts', where: 'id = ?', whereArgs: [retainedId]);
 
         expect(closedRevenue.first['balance'], 0,
             reason: 'Revenue account should be zeroed after closing');
@@ -1591,11 +1649,9 @@ void main() {
 
         // Simulate closing: set balances to zero
         final now = DateTime.now().toIso8601String();
-        await db.update('accounts',
-            {'balance': 0, 'updated_at': now},
+        await db.update('accounts', {'balance': 0, 'updated_at': now},
             where: 'id = ?', whereArgs: [revenueId]);
-        await db.update('accounts',
-            {'balance': 0, 'updated_at': now},
+        await db.update('accounts', {'balance': 0, 'updated_at': now},
             where: 'id = ?', whereArgs: [expenseId]);
 
         final closedRevenue = await getAccountBalanceCents(revenueId);
@@ -1639,8 +1695,8 @@ void main() {
         );
 
         // Verify it's closed
-        final closed = await db.query('fiscal_years',
-            where: 'year = ?', whereArgs: [2026]);
+        final closed = await db
+            .query('fiscal_years', where: 'year = ?', whereArgs: [2026]);
         expect(closed.first['status'], 'closed');
 
         // Attempting to close again should be prevented at application level

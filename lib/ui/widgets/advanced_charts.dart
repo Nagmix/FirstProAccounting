@@ -33,8 +33,10 @@ class MonthlyRevenueLineChart extends StatelessWidget {
     final purchasesSpots = <FlSpot>[];
 
     for (int i = 0; i < data.length; i++) {
-      salesSpots.add(FlSpot(i.toDouble(), MoneyHelper.readMoney(data[i]['sales'])));
-      purchasesSpots.add(FlSpot(i.toDouble(), MoneyHelper.readMoney(data[i]['purchases'])));
+      salesSpots
+          .add(FlSpot(i.toDouble(), MoneyHelper.readMoney(data[i]['sales'])));
+      purchasesSpots.add(
+          FlSpot(i.toDouble(), MoneyHelper.readMoney(data[i]['purchases'])));
     }
 
     return SizedBox(
@@ -48,29 +50,53 @@ class MonthlyRevenueLineChart extends StatelessWidget {
               drawVerticalLine: false,
               horizontalInterval: _calculateInterval(data),
               getDrawingHorizontalLine: (value) => FlLine(
-                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                color: isDark
+                    ? Colors.white10
+                    : Colors.black.withValues(alpha: 0.06),
                 strokeWidth: 1,
               ),
             ),
             titlesData: FlTitlesData(
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 30,
                   getTitlesWidget: (value, meta) {
                     final idx = value.toInt();
-                    if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                    if (idx < 0 || idx >= data.length) {
+                      return const SizedBox.shrink();
+                    }
                     final month = data[idx]['month'] as String? ?? '';
                     final parts = month.split('-');
-                    final monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+                    final monthNames = [
+                      'يناير',
+                      'فبراير',
+                      'مارس',
+                      'أبريل',
+                      'مايو',
+                      'يونيو',
+                      'يوليو',
+                      'أغسطس',
+                      'سبتمبر',
+                      'أكتوبر',
+                      'نوفمبر',
+                      'ديسمبر'
+                    ];
                     if (parts.length >= 2) {
                       final m = int.tryParse(parts[1]) ?? 1;
-                      final label = m >= 1 && m <= 12 ? monthNames[m - 1] : month;
+                      final label =
+                          m >= 1 && m <= 12 ? monthNames[m - 1] : month;
                       return Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Text(label, style: TextStyle(fontSize: 9, color: isDark ? Colors.white54 : Colors.black45)),
+                        child: Text(label,
+                            style: TextStyle(
+                                fontSize: 9,
+                                color:
+                                    isDark ? Colors.white54 : Colors.black45)),
                       );
                     }
                     return const SizedBox.shrink();
@@ -84,7 +110,9 @@ class MonthlyRevenueLineChart extends StatelessWidget {
                   getTitlesWidget: (value, meta) {
                     return Text(
                       _formatCompact(value),
-                      style: TextStyle(fontSize: 9, color: isDark ? Colors.white54 : Colors.black45),
+                      style: TextStyle(
+                          fontSize: 9,
+                          color: isDark ? Colors.white54 : Colors.black45),
                       textAlign: TextAlign.center,
                     );
                   },
@@ -120,14 +148,17 @@ class MonthlyRevenueLineChart extends StatelessWidget {
             ],
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (spot) => isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                getTooltipColor: (spot) =>
+                    isDark ? const Color(0xFF2A2A2A) : Colors.white,
                 getTooltipItems: (touchedSpots) {
                   return touchedSpots.map((spot) {
                     final label = spot.barIndex == 0 ? 'مبيعات' : 'مشتريات';
                     return LineTooltipItem(
                       '$label: ${_formatCompact(spot.y)}',
                       TextStyle(
-                        color: spot.barIndex == 0 ? AppColors.accentBlue : AppColors.accentPink,
+                        color: spot.barIndex == 0
+                            ? AppColors.accentBlue
+                            : AppColors.accentPink,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -155,7 +186,9 @@ class MonthlyRevenueLineChart extends StatelessWidget {
   }
 
   String _formatCompact(double value) {
-    if (value.abs() >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}م';
+    if (value.abs() >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}م';
+    }
     if (value.abs() >= 1000) return '${(value / 1000).toStringAsFixed(0)}ك';
     return value.toStringAsFixed(0);
   }
@@ -197,7 +230,8 @@ class SalesByCategoryPieChart extends StatelessWidget {
       );
     }
 
-    final total = data.fold<double>(0, (sum, item) => sum + (MoneyHelper.readMoney(item['total'])));
+    final total = data.fold<double>(
+        0, (sum, item) => sum + (MoneyHelper.readMoney(item['total'])));
     if (total <= 0) {
       return const SizedBox(
         height: 200,
@@ -227,7 +261,9 @@ class SalesByCategoryPieChart extends StatelessWidget {
                     value: value,
                     color: color,
                     radius: 50,
-                    title: percentage >= 5 ? '${percentage.toStringAsFixed(0)}%' : '',
+                    title: percentage >= 5
+                        ? '${percentage.toStringAsFixed(0)}%'
+                        : '',
                     titleStyle: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -335,29 +371,45 @@ class DailySalesBarChart extends StatelessWidget {
               drawVerticalLine: false,
               horizontalInterval: maxVal / 4,
               getDrawingHorizontalLine: (value) => FlLine(
-                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                color: isDark
+                    ? Colors.white10
+                    : Colors.black.withValues(alpha: 0.06),
                 strokeWidth: 1,
               ),
             ),
             titlesData: FlTitlesData(
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 28,
                   getTitlesWidget: (value, meta) {
                     final idx = value.toInt();
-                    if (idx < 0 || idx >= filledData.length) return const SizedBox.shrink();
+                    if (idx < 0 || idx >= filledData.length) {
+                      return const SizedBox.shrink();
+                    }
                     final dateStr = filledData[idx]['date'] as String? ?? '';
-                    final dayNames = ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'];
+                    final dayNames = [
+                      'أحد',
+                      'إثن',
+                      'ثلا',
+                      'أرب',
+                      'خمي',
+                      'جمع',
+                      'سبت'
+                    ];
                     try {
                       final date = DateTime.parse(dateStr);
                       return Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
                           dayNames[date.weekday % 7],
-                          style: TextStyle(fontSize: 9, color: isDark ? Colors.white54 : Colors.black45),
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: isDark ? Colors.white54 : Colors.black45),
                         ),
                       );
                     } catch (_) {
@@ -373,7 +425,9 @@ class DailySalesBarChart extends StatelessWidget {
                   getTitlesWidget: (value, meta) {
                     return Text(
                       _formatCompact(value),
-                      style: TextStyle(fontSize: 9, color: isDark ? Colors.white54 : Colors.black45),
+                      style: TextStyle(
+                          fontSize: 9,
+                          color: isDark ? Colors.white54 : Colors.black45),
                       textAlign: TextAlign.center,
                     );
                   },
@@ -398,7 +452,9 @@ class DailySalesBarChart extends StatelessWidget {
                     backDrawRodData: BackgroundBarChartRodData(
                       show: true,
                       toY: maxVal * 1.2,
-                      color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : Colors.black.withValues(alpha: 0.04),
                     ),
                   ),
                 ],
@@ -406,9 +462,11 @@ class DailySalesBarChart extends StatelessWidget {
             }).toList(),
             barTouchData: BarTouchData(
               touchTooltipData: BarTouchTooltipData(
-                getTooltipColor: (group) => isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                getTooltipColor: (group) =>
+                    isDark ? const Color(0xFF2A2A2A) : Colors.white,
                 getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                  final dateStr = filledData[groupIndex]['date'] as String? ?? '';
+                  final dateStr =
+                      filledData[groupIndex]['date'] as String? ?? '';
                   return BarTooltipItem(
                     '$dateStr\n${_formatCompact(rod.toY)}',
                     TextStyle(
@@ -432,7 +490,8 @@ class DailySalesBarChart extends StatelessWidget {
     final now = DateTime.now();
     for (int i = 6; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
-      final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       final existing = data.where((d) => d['date'] == dateStr).firstOrNull;
       result.add(existing ?? {'date': dateStr, 'total': 0.0, 'count': 0});
     }
@@ -440,7 +499,9 @@ class DailySalesBarChart extends StatelessWidget {
   }
 
   String _formatCompact(double value) {
-    if (value.abs() >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}م';
+    if (value.abs() >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}م';
+    }
     if (value.abs() >= 1000) return '${(value / 1000).toStringAsFixed(0)}ك';
     return value.toStringAsFixed(0);
   }
@@ -491,9 +552,12 @@ class ProfitTrendChart extends StatelessWidget {
           LineChartData(
             gridData: FlGridData(show: false),
             titlesData: FlTitlesData(
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
@@ -501,7 +565,9 @@ class ProfitTrendChart extends StatelessWidget {
                   getTitlesWidget: (value, meta) {
                     return Text(
                       _formatCompact(value),
-                      style: TextStyle(fontSize: 9, color: isDark ? Colors.white54 : Colors.black45),
+                      style: TextStyle(
+                          fontSize: 9,
+                          color: isDark ? Colors.white54 : Colors.black45),
                       textAlign: TextAlign.center,
                     );
                   },
@@ -537,14 +603,16 @@ class ProfitTrendChart extends StatelessWidget {
             ),
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (spot) => isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                getTooltipColor: (spot) =>
+                    isDark ? const Color(0xFF2A2A2A) : Colors.white,
                 getTooltipItems: (touchedSpots) {
                   return touchedSpots.map((spot) {
                     final label = spot.y >= 0 ? 'ربح' : 'خسارة';
                     return LineTooltipItem(
                       '$label: ${_formatCompact(spot.y)}',
                       TextStyle(
-                        color: spot.y >= 0 ? AppColors.success : AppColors.error,
+                        color:
+                            spot.y >= 0 ? AppColors.success : AppColors.error,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -560,7 +628,9 @@ class ProfitTrendChart extends StatelessWidget {
   }
 
   String _formatCompact(double value) {
-    if (value.abs() >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}م';
+    if (value.abs() >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}م';
+    }
     if (value.abs() >= 1000) return '${(value / 1000).toStringAsFixed(0)}ك';
     return value.toStringAsFixed(0);
   }

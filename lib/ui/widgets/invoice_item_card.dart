@@ -52,11 +52,14 @@ class InvoiceItemCard extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
+            const Icon(Icons.delete_outline_rounded,
+                color: Colors.white, size: 24),
             const SizedBox(width: 8),
-            Text('حذف', style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white, fontWeight: FontWeight.w700,
-            )),
+            Text('حذف',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                )),
           ],
         ),
       ),
@@ -66,7 +69,9 @@ class InvoiceItemCard extends StatelessWidget {
           color: isDark ? AppColors.darkSurface : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.border.withValues(alpha: 0.5),
+            color: isDark
+                ? AppColors.darkBorder
+                : AppColors.border.withValues(alpha: 0.5),
           ),
           boxShadow: [
             BoxShadow(
@@ -127,15 +132,19 @@ class InvoiceItemCard extends StatelessWidget {
                       Text(
                         '${item.quantity.toStringAsFixed(item.quantity == item.quantity.truncate() ? 0 : 3)} × ${CurrencyFormatter.formatValue(item.unitPrice)}',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (item.unitName != null && item.unitName!.isNotEmpty) ...[
+                      if (item.unitName != null &&
+                          item.unitName!.isNotEmpty) ...[
                         const SizedBox(width: 5),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
                             color: _accentBlue.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(4),
@@ -169,18 +178,22 @@ class InvoiceItemCard extends StatelessWidget {
 
                       // Total price
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              _accentBlue.withValues(alpha: isDark ? 0.15 : 0.08),
-                              _accentPurple.withValues(alpha: isDark ? 0.08 : 0.04),
+                              _accentBlue.withValues(
+                                  alpha: isDark ? 0.15 : 0.08),
+                              _accentPurple.withValues(
+                                  alpha: isDark ? 0.08 : 0.04),
                             ],
                             begin: Alignment.centerRight,
                             end: Alignment.centerLeft,
                           ),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: _accentBlue.withValues(alpha: 0.12)),
+                          border: Border.all(
+                              color: _accentBlue.withValues(alpha: 0.12)),
                         ),
                         child: Text(
                           CurrencyFormatter.format(item.totalPrice),
@@ -225,10 +238,14 @@ class _QuantityStepper extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant.withValues(alpha: 0.5),
+        color: isDark
+            ? AppColors.darkSurfaceVariant
+            : AppColors.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.border.withValues(alpha: 0.5),
+          color: isDark
+              ? AppColors.darkBorder
+              : AppColors.border.withValues(alpha: 0.5),
         ),
       ),
       child: Row(

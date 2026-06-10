@@ -25,14 +25,18 @@ void main() {
 
       test('creates credit invoice', () {
         final invoice = Invoice(
-          id: 'INV-002', type: 'sale', paymentMechanism: 'credit',
+          id: 'INV-002',
+          type: 'sale',
+          paymentMechanism: 'credit',
         );
         expect(invoice.paymentMechanism, equals('credit'));
       });
 
       test('creates purchase invoice', () {
         final invoice = Invoice(
-          id: 'INV-003', type: 'purchase', supplierId: 5,
+          id: 'INV-003',
+          type: 'purchase',
+          supplierId: 5,
         );
         expect(invoice.type, equals('purchase'));
         expect(invoice.supplierId, equals(5));
@@ -59,7 +63,8 @@ void main() {
       });
 
       test('purchase return returns purchase_return', () {
-        final invoice = Invoice(id: 'INV-001', type: 'purchase', isReturn: true);
+        final invoice =
+            Invoice(id: 'INV-001', type: 'purchase', isReturn: true);
         expect(invoice.effectiveType, equals('purchase_return'));
       });
 
@@ -75,7 +80,8 @@ void main() {
     group('serialization', () {
       test('toMap converts monetary fields to cents', () {
         final invoice = Invoice(
-          id: 'INV-001', type: 'sale',
+          id: 'INV-001',
+          type: 'sale',
           subtotal: 1000.0,
           discountAmount: 50.0,
           taxAmount: 45.0,
@@ -95,7 +101,8 @@ void main() {
       });
 
       test('toMap converts boolean fields to 0/1', () {
-        final returnInvoice = Invoice(id: 'INV-001', type: 'sale', isReturn: true, isPosted: true);
+        final returnInvoice = Invoice(
+            id: 'INV-001', type: 'sale', isReturn: true, isPosted: true);
         final map = returnInvoice.toMap();
         expect(map['is_return'], equals(1));
         expect(map['is_posted'], equals(1));
@@ -154,7 +161,8 @@ void main() {
 
       test('round-trip toMap/fromMap preserves monetary values', () {
         final original = Invoice(
-          id: 'INV-001', type: 'sale',
+          id: 'INV-001',
+          type: 'sale',
           customerId: 1,
           subtotal: 1000.0,
           discountAmount: 50.0,
@@ -174,7 +182,8 @@ void main() {
         expect(restored.taxAmount, closeTo(original.taxAmount, 0.01));
         expect(restored.total, closeTo(original.total, 0.01));
         expect(restored.paidAmount, closeTo(original.paidAmount, 0.01));
-        expect(restored.transportCharges, closeTo(original.transportCharges, 0.01));
+        expect(restored.transportCharges,
+            closeTo(original.transportCharges, 0.01));
         expect(restored.currency, equals(original.currency));
         expect(restored.isPosted, equals(original.isPosted));
       });

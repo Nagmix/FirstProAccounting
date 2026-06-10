@@ -91,15 +91,26 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
     final customer = Customer(
       name: _nameController.text.trim(),
-      phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-      address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-      address2: _address2Controller.text.trim().isEmpty ? null : _address2Controller.text.trim(),
-      email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      phone: _phoneController.text.trim().isEmpty
+          ? null
+          : _phoneController.text.trim(),
+      address: _addressController.text.trim().isEmpty
+          ? null
+          : _addressController.text.trim(),
+      address2: _address2Controller.text.trim().isEmpty
+          ? null
+          : _address2Controller.text.trim(),
+      email: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
       contactMethod: _contactMethod,
-      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      notes: _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
       balance: double.tryParse(_balanceController.text) ?? 0.0,
       balanceType: _balanceType,
-      currency: _currency, // Store opening-balance currency as default (DB NOT NULL), but NOT permanent
+      currency:
+          _currency, // Store opening-balance currency as default (DB NOT NULL), but NOT permanent
       debtCeiling: double.tryParse(_debtCeilingController.text) ?? 0.0,
     );
 
@@ -118,7 +129,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     setState(() => _isSaving = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('تم إضافة العميل "${_nameController.text}" بنجاح'), backgroundColor: AppColors.success),
+      SnackBar(
+          content: Text('تم إضافة العميل "${_nameController.text}" بنجاح'),
+          backgroundColor: AppColors.success),
     );
     Navigator.of(context).pop();
   }
@@ -140,7 +153,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           TextButton.icon(
             onPressed: _isSaving ? null : _save,
             icon: _isSaving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.check, size: 20),
             label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
             style: TextButton.styleFrom(foregroundColor: Colors.white),
@@ -149,7 +166,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
+          padding:
+              EdgeInsets.fromLTRB(20, 8, 20, bottomInset + bottomPadding + 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -159,8 +177,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 TextFormField(
                   controller: _nameController,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'الاسم *', prefixIcon: Icon(Icons.person)),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                  decoration: const InputDecoration(
+                      labelText: 'الاسم *', prefixIcon: Icon(Icons.person)),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
                 ),
                 const SizedBox(height: 14),
 
@@ -168,8 +188,12 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(15)],
-                  decoration: const InputDecoration(labelText: 'رقم الهاتف', prefixIcon: Icon(Icons.phone)),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(15)
+                  ],
+                  decoration: const InputDecoration(
+                      labelText: 'رقم الهاتف', prefixIcon: Icon(Icons.phone)),
                 ),
                 const SizedBox(height: 14),
 
@@ -177,11 +201,15 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.email)),
+                  decoration: const InputDecoration(
+                      labelText: 'البريد الإلكتروني',
+                      prefixIcon: Icon(Icons.email)),
                   validator: (v) {
                     if (v != null && v.trim().isNotEmpty) {
                       final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                      if (!regex.hasMatch(v.trim())) return 'البريد الإلكتروني غير صالح';
+                      if (!regex.hasMatch(v.trim())) {
+                        return 'البريد الإلكتروني غير صالح';
+                      }
                     }
                     return null;
                   },
@@ -191,7 +219,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 TextFormField(
                   controller: _addressController,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'العنوان', prefixIcon: Icon(Icons.location_on)),
+                  decoration: const InputDecoration(
+                      labelText: 'العنوان',
+                      prefixIcon: Icon(Icons.location_on)),
                 ),
                 const SizedBox(height: 14),
 
@@ -205,7 +235,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.04),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.18)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -214,9 +245,13 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       // Amount field (full width)
                       TextFormField(
                         controller: _balanceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         textInputAction: TextInputAction.next,
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}'))
+                        ],
                         decoration: InputDecoration(
                           labelText: 'الرصيد الافتتاحي',
                           prefixIcon: const Icon(Icons.calculate),
@@ -232,10 +267,13 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                           labelText: 'عملة القيد',
                           prefixIcon: Icon(Icons.currency_exchange),
                         ),
-                        items: _currencyInfo.entries.map((e) => DropdownMenuItem(
-                          value: e.key,
-                          child: Text('${e.value['label']} (${e.value['symbol']})'),
-                        )).toList(),
+                        items: _currencyInfo.entries
+                            .map((e) => DropdownMenuItem(
+                                  value: e.key,
+                                  child: Text(
+                                      '${e.value['label']} (${e.value['symbol']})'),
+                                ))
+                            .toList(),
                         onChanged: (v) => setState(() => _currency = v!),
                       ),
                       const SizedBox(height: 12),
@@ -246,30 +284,45 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4),
-                            child: Text('اتجاه الرصيد الافتتاحي', style: theme.textTheme.labelLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                            child: Text('اتجاه الرصيد الافتتاحي',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700)),
                           ),
                           Container(
                             decoration: BoxDecoration(
-                              border: Border.all(color: _balanceType == 'credit' ? AppColors.success : AppColors.error),
+                              border: Border.all(
+                                  color: _balanceType == 'credit'
+                                      ? AppColors.success
+                                      : AppColors.error),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: GestureDetector(
-                                    onTap: () => setState(() => _balanceType = 'credit'),
+                                    onTap: () =>
+                                        setState(() => _balanceType = 'credit'),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: _balanceType == 'credit' ? AppColors.success.withValues(alpha: 0.1) : Colors.transparent,
-                                        borderRadius: const BorderRadius.only(topRight: Radius.circular(9), bottomRight: Radius.circular(9)),
+                                        color: _balanceType == 'credit'
+                                            ? AppColors.success
+                                                .withValues(alpha: 0.1)
+                                            : Colors.transparent,
+                                        borderRadius: const BorderRadius.only(
+                                            topRight: Radius.circular(9),
+                                            bottomRight: Radius.circular(9)),
                                       ),
                                       child: Text(
                                         'له',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w700,
-                                          color: _balanceType == 'credit' ? AppColors.success : AppColors.textHint,
+                                          color: _balanceType == 'credit'
+                                              ? AppColors.success
+                                              : AppColors.textHint,
                                         ),
                                       ),
                                     ),
@@ -277,19 +330,28 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                 ),
                                 Expanded(
                                   child: GestureDetector(
-                                    onTap: () => setState(() => _balanceType = 'debit'),
+                                    onTap: () =>
+                                        setState(() => _balanceType = 'debit'),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: _balanceType == 'debit' ? AppColors.error.withValues(alpha: 0.1) : Colors.transparent,
-                                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(9), bottomLeft: Radius.circular(9)),
+                                        color: _balanceType == 'debit'
+                                            ? AppColors.error
+                                                .withValues(alpha: 0.1)
+                                            : Colors.transparent,
+                                        borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(9),
+                                            bottomLeft: Radius.circular(9)),
                                       ),
                                       child: Text(
                                         'عليه',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w700,
-                                          color: _balanceType == 'debit' ? AppColors.error : AppColors.textHint,
+                                          color: _balanceType == 'debit'
+                                              ? AppColors.error
+                                              : AppColors.textHint,
                                         ),
                                       ),
                                     ),
@@ -304,15 +366,18 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
                       // Note about currency scope
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
                           color: Colors.amber.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.withValues(alpha: 0.25)),
+                          border: Border.all(
+                              color: Colors.amber.withValues(alpha: 0.25)),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, size: 18, color: Colors.amber.shade800),
+                            Icon(Icons.info_outline,
+                                size: 18, color: Colors.amber.shade800),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -334,9 +399,12 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 // Debt ceiling — no currency suffix because customer is multi-currency
                 TextFormField(
                   controller: _debtCeilingController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.next,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                  ],
                   decoration: const InputDecoration(
                     labelText: 'سقف المدينية',
                     prefixIcon: Icon(Icons.credit_card),
@@ -361,15 +429,23 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   children: [
                     Expanded(
                       child: RadioListTile<String>(
-                        value: 'whatsapp', groupValue: _contactMethod, title: const Text('واتساب'),
-                        contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
+                        value: 'whatsapp',
+                        groupValue: _contactMethod,
+                        title: const Text('واتساب'),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        activeColor: AppColors.primary,
                         onChanged: (v) => setState(() => _contactMethod = v!),
                       ),
                     ),
                     Expanded(
                       child: RadioListTile<String>(
-                        value: 'phone', groupValue: _contactMethod, title: const Text('اتصال'),
-                        contentPadding: EdgeInsets.zero, dense: true, activeColor: AppColors.primary,
+                        value: 'phone',
+                        groupValue: _contactMethod,
+                        title: const Text('اتصال'),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        activeColor: AppColors.primary,
                         onChanged: (v) => setState(() => _contactMethod = v!),
                       ),
                     ),
@@ -384,11 +460,16 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       child: ElevatedButton.icon(
                         onPressed: _isSaving ? null : _save,
                         icon: _isSaving
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
                             : const Icon(Icons.check, size: 20),
                         label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                       ),
@@ -396,8 +477,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                        onPressed: _isSaving
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14)),
                         child: const Text('إلغاء'),
                       ),
                     ),
@@ -424,7 +508,9 @@ class _SectionLabel extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(label, style: theme.textTheme.labelLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+      child: Text(label,
+          style: theme.textTheme.labelLarge?.copyWith(
+              color: AppColors.primary, fontWeight: FontWeight.w700)),
     );
   }
 }

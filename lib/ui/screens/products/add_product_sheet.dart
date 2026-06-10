@@ -156,7 +156,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
   /// Get the conversion factor for the purchase unit
   double get _purchaseUnitFactor {
     if (!_hasMultiUnits) return 1.0;
-    final conv = _unitConversions.where((uc) => uc.unitId == _selectedPurchaseUnitId);
+    final conv =
+        _unitConversions.where((uc) => uc.unitId == _selectedPurchaseUnitId);
     if (conv.isNotEmpty) return conv.first.factor;
     return 1.0;
   }
@@ -224,7 +225,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
     });
 
     // Auto-select default accounts based on default currency
-    final defaultCurrency = await locator<ReferenceDataRepository>().getDefaultCurrency();
+    final defaultCurrency =
+        await locator<ReferenceDataRepository>().getDefaultCurrency();
     if (defaultCurrency != null && !_isEditMode) {
       final currencyCode = defaultCurrency['code'] as String? ?? 'YER';
       _defaultCurrencyCode = currencyCode;
@@ -233,22 +235,28 @@ class _AddProductSheetState extends State<AddProductSheet> {
       if (mounted) {
         setState(() {
           // Sales account (4100 + offset)
-          _autoSelectAccount(_revenueAccounts, 4100 + codeOffset, (id) => _selectedSalesAccountId = id);
+          _autoSelectAccount(_revenueAccounts, 4100 + codeOffset,
+              (id) => _selectedSalesAccountId = id);
           // Purchases account (3100 + offset)
-          _autoSelectAccount(_costAccounts, 3100 + codeOffset, (id) => _selectedPurchaseAccountId = id);
+          _autoSelectAccount(_costAccounts, 3100 + codeOffset,
+              (id) => _selectedPurchaseAccountId = id);
           // Inventory account (1300 + offset)
-          _autoSelectAccount(_assetAccounts, 1300 + codeOffset, (id) => _selectedInventoryAccountId = id);
+          _autoSelectAccount(_assetAccounts, 1300 + codeOffset,
+              (id) => _selectedInventoryAccountId = id);
           // COGS account (3200 + offset)
-          _autoSelectAccount(_costAccounts, 3200 + codeOffset, (id) => _selectedCogsAccountId = id);
+          _autoSelectAccount(_costAccounts, 3200 + codeOffset,
+              (id) => _selectedCogsAccountId = id);
           // VAT account (2300 + offset)
-          _autoSelectAccount(_liabilityAccounts, 2300 + codeOffset, (id) => _selectedVatAccountId = id);
+          _autoSelectAccount(_liabilityAccounts, 2300 + codeOffset,
+              (id) => _selectedVatAccountId = id);
         });
       }
     }
   }
 
   /// Helper to auto-select an account by its code
-  void _autoSelectAccount(List<Map<String, dynamic>> accounts, int targetCode, void Function(int) setter) {
+  void _autoSelectAccount(List<Map<String, dynamic>> accounts, int targetCode,
+      void Function(int) setter) {
     for (final a in accounts) {
       final code = a['account_code'] as String? ?? '';
       if (code == targetCode.toString()) {
@@ -290,7 +298,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _selectedVatAccountId = p.vatAccountId;
 
     // Determine sale unit source (before price fields that depend on it)
-    if (p.saleUnitId != null && p.saleUnitId == p.purchaseUnitId && p.purchaseUnitId != p.effectiveBaseUnitId) {
+    if (p.saleUnitId != null &&
+        p.saleUnitId == p.purchaseUnitId &&
+        p.purchaseUnitId != p.effectiveBaseUnitId) {
       _saleUnitSource = 1;
     } else {
       _saleUnitSource = 0;
@@ -303,9 +313,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
     _sellPriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
         ? (p.sellPrice * _purchaseUnitFactor).toStringAsFixed(2)
         : p.sellPrice.toStringAsFixed(2);
-    _specialWholesalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
-        ? (p.specialWholesalePrice * _purchaseUnitFactor).toStringAsFixed(2)
-        : p.specialWholesalePrice.toStringAsFixed(2);
+    _specialWholesalePriceController.text =
+        (_hasMultiUnits && _saleUnitSource == 1)
+            ? (p.specialWholesalePrice * _purchaseUnitFactor).toStringAsFixed(2)
+            : p.specialWholesalePrice.toStringAsFixed(2);
     _minimumSalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
         ? (p.minimumSalePrice * _purchaseUnitFactor).toStringAsFixed(2)
         : p.minimumSalePrice.toStringAsFixed(2);
@@ -327,7 +338,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
   Future<void> _loadUnitConversions() async {
     if (widget.existing?.id == null) return;
-    final conversions = await locator<ReferenceDataRepository>().getUnitConversions(widget.existing!.id!);
+    final conversions = await locator<ReferenceDataRepository>()
+        .getUnitConversions(widget.existing!.id!);
     if (!mounted) return;
     setState(() {
       _unitConversions = conversions.map((c) {
@@ -350,12 +362,14 @@ class _AddProductSheetState extends State<AddProductSheet> {
         _sellPriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
             ? (p.sellPrice * _purchaseUnitFactor).toStringAsFixed(2)
             : p.sellPrice.toStringAsFixed(2);
-        _specialWholesalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
+        _specialWholesalePriceController.text = (_hasMultiUnits &&
+                _saleUnitSource == 1)
             ? (p.specialWholesalePrice * _purchaseUnitFactor).toStringAsFixed(2)
             : p.specialWholesalePrice.toStringAsFixed(2);
-        _minimumSalePriceController.text = (_hasMultiUnits && _saleUnitSource == 1)
-            ? (p.minimumSalePrice * _purchaseUnitFactor).toStringAsFixed(2)
-            : p.minimumSalePrice.toStringAsFixed(2);
+        _minimumSalePriceController.text =
+            (_hasMultiUnits && _saleUnitSource == 1)
+                ? (p.minimumSalePrice * _purchaseUnitFactor).toStringAsFixed(2)
+                : p.minimumSalePrice.toStringAsFixed(2);
       }
     });
   }
@@ -372,7 +386,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
     );
     if (picked != null) {
       final dir = await getApplicationDocumentsDirectory();
-      final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.${picked.name.split('.').last}';
+      final fileName =
+          'product_${DateTime.now().millisecondsSinceEpoch}.${picked.name.split('.').last}';
       final savedPath = '${dir.path}/$fileName';
       await File(picked.path).copy(savedPath);
       setState(() => _imagePath = savedPath);
@@ -627,7 +642,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('الباركود موجود مسبقاً على صنف آخر، يرجى استخدام باركود مختلف'),
+              content: Text(
+                  'الباركود موجود مسبقاً على صنف آخر، يرجى استخدام باركود مختلف'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -683,14 +699,14 @@ class _AddProductSheetState extends State<AddProductSheet> {
       averageCost: _isEditMode ? widget.existing!.averageCost : baseCostPrice,
       sellPrice: baseSellPrice,
       wholesalePrice: purchaseUnitCostPrice,
-      specialWholesalePrice:
-          _hasMultiUnits && _saleUnitSource == 1
-              ? (double.tryParse(_specialWholesalePriceController.text) ?? 0.0) / (_purchaseUnitFactor > 0 ? _purchaseUnitFactor : 1.0)
-              : (double.tryParse(_specialWholesalePriceController.text) ?? 0.0),
-      minimumSalePrice:
-          _hasMultiUnits && _saleUnitSource == 1
-              ? (double.tryParse(_minimumSalePriceController.text) ?? 0.0) / (_purchaseUnitFactor > 0 ? _purchaseUnitFactor : 1.0)
-              : (double.tryParse(_minimumSalePriceController.text) ?? 0.0),
+      specialWholesalePrice: _hasMultiUnits && _saleUnitSource == 1
+          ? (double.tryParse(_specialWholesalePriceController.text) ?? 0.0) /
+              (_purchaseUnitFactor > 0 ? _purchaseUnitFactor : 1.0)
+          : (double.tryParse(_specialWholesalePriceController.text) ?? 0.0),
+      minimumSalePrice: _hasMultiUnits && _saleUnitSource == 1
+          ? (double.tryParse(_minimumSalePriceController.text) ?? 0.0) /
+              (_purchaseUnitFactor > 0 ? _purchaseUnitFactor : 1.0)
+          : (double.tryParse(_minimumSalePriceController.text) ?? 0.0),
       taxRate: double.tryParse(_taxRateController.text) ?? 0.0,
       taxInclusive: _taxInclusive,
       salesAccountId: _selectedSalesAccountId,
@@ -702,7 +718,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
           ? widget.existing!.currentStock
           : (double.tryParse(_openingStockController.text) ?? 0.0),
       minStock: double.tryParse(_minStockController.text) ?? 0.0,
-      warehouseId: _isEditMode ? widget.existing!.warehouseId : _selectedWarehouseId,
+      warehouseId:
+          _isEditMode ? widget.existing!.warehouseId : _selectedWarehouseId,
       expiryDate: _expiryDate,
       expiryTracking: _expiryTracking,
       trackStock: _trackStock,
@@ -726,9 +743,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
 
     try {
       // Build unit conversions list for repository
-      final unitConversionMaps = _unitConversions
-          .where((uc) => uc.unitId != null)
-          .map((uc) {
+      final unitConversionMaps =
+          _unitConversions.where((uc) => uc.unitId != null).map((uc) {
         final unitName = _unitNameById(uc.unitId);
         final baseUnitName = _unitNameById(_selectedBaseUnitId);
         return {
@@ -814,7 +830,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
           title: Text(_isEditMode ? 'تعديل صنف' : 'إضافة صنف جديد'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_forward),
-            onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
+            onPressed:
+                _isSaving ? null : () => Navigator.of(context).pop(false),
           ),
         ),
         body: Form(
@@ -883,7 +900,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             )
                           : ElevatedButton.icon(
@@ -893,7 +911,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                     ),
@@ -927,7 +946,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 child: Icon(
                   Icons.arrow_back_ios,
                   size: 14,
-                  color: isCompleted ? AppColors.success : AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: isCompleted
+                      ? AppColors.success
+                      : AppColors.textTertiary.withValues(alpha: 0.4),
                 ),
               );
             }
@@ -943,7 +964,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
                 }
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
                   color: isActive
@@ -965,23 +987,28 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (isCompleted)
-                      const Icon(Icons.check_circle, size: 16, color: AppColors.success)
+                      const Icon(Icons.check_circle,
+                          size: 16, color: AppColors.success)
                     else if (isActive)
                       Icon(_steps[i].icon, size: 14, color: Colors.white)
                     else
-                      Icon(_steps[i].icon, size: 14, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                      Icon(_steps[i].icon,
+                          size: 14,
+                          color: AppColors.textTertiary.withValues(alpha: 0.5)),
                     const SizedBox(width: 4),
                     Text(
                       _steps[i].title,
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight:
+                            isActive ? FontWeight.w700 : FontWeight.w500,
                         color: isActive
                             ? Colors.white
                             : isCompleted
                                 ? AppColors.success
                                 : isFuture
-                                    ? AppColors.textTertiary.withValues(alpha: 0.5)
+                                    ? AppColors.textTertiary
+                                        .withValues(alpha: 0.5)
                                     : AppColors.textSecondary,
                       ),
                     ),
@@ -1077,7 +1104,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
       onShowAddUnitDialog: _showAddUnitDialog,
       onSaleUnitSourceChanged: (v) => setState(() => _saleUnitSource = v),
       onAddConversionRow: _addConversionRow,
-      onRemoveConversionRow: (index) => setState(() => _unitConversions.removeAt(index)),
+      onRemoveConversionRow: (index) =>
+          setState(() => _unitConversions.removeAt(index)),
       onConversionChanged: (row, index) {
         // Recalculate inventory if this is the purchase unit
         if (row.unitId == _selectedPurchaseUnitId) {
@@ -1186,8 +1214,10 @@ class _AddProductSheetState extends State<AddProductSheet> {
       assetAccounts: _assetAccounts,
       liabilityAccounts: _liabilityAccounts,
       onSalesAccountChanged: (v) => setState(() => _selectedSalesAccountId = v),
-      onPurchaseAccountChanged: (v) => setState(() => _selectedPurchaseAccountId = v),
-      onInventoryAccountChanged: (v) => setState(() => _selectedInventoryAccountId = v),
+      onPurchaseAccountChanged: (v) =>
+          setState(() => _selectedPurchaseAccountId = v),
+      onInventoryAccountChanged: (v) =>
+          setState(() => _selectedInventoryAccountId = v),
       onCogsAccountChanged: (v) => setState(() => _selectedCogsAccountId = v),
       onVatAccountChanged: (v) => setState(() => _selectedVatAccountId = v),
       onCostingMethodChanged: (v) => setState(() => _costingMethod = v),
@@ -1275,7 +1305,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
                   children: [
                     Icon(Icons.straighten, color: AppColors.primary, size: 22),
                     const SizedBox(width: 8),
-                    const Text('إضافة وحدة جديدة', style: TextStyle(fontSize: 18)),
+                    const Text('إضافة وحدة جديدة',
+                        style: TextStyle(fontSize: 18)),
                   ],
                 ),
                 content: SingleChildScrollView(
@@ -1294,7 +1325,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
                             labelText: 'اسم الوحدة بالعربي *',
                             prefixIcon: Icon(Icons.text_fields),
                           ),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'اسم الوحدة مطلوب' : null,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'اسم الوحدة مطلوب'
+                              : null,
                         ),
                         const SizedBox(height: 12),
 
@@ -1332,9 +1365,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
                             prefixIcon: Icon(Icons.category),
                           ),
                           items: Unit.unitTypeLabels.entries
-                              .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                              .map((e) => DropdownMenuItem(
+                                  value: e.key, child: Text(e.value)))
                               .toList(),
-                          onChanged: (v) => setDialogState(() => selectedType = v ?? 'count'),
+                          onChanged: (v) =>
+                              setDialogState(() => selectedType = v ?? 'count'),
                         ),
                         const SizedBox(height: 12),
 
@@ -1374,32 +1409,38 @@ class _AddProductSheetState extends State<AddProductSheet> {
                             FilterChip(
                               label: const Text('مفعلة'),
                               selected: isActive,
-                              onSelected: (v) => setDialogState(() => isActive = v),
+                              onSelected: (v) =>
+                                  setDialogState(() => isActive = v),
                               selectedColor: AppColors.successLight,
                             ),
                             FilterChip(
                               label: const Text('قابلة للبيع'),
                               selected: isSellable,
-                              onSelected: (v) => setDialogState(() => isSellable = v),
+                              onSelected: (v) =>
+                                  setDialogState(() => isSellable = v),
                               selectedColor: AppColors.infoLight,
                             ),
                             FilterChip(
                               label: const Text('قابلة للشراء'),
                               selected: isPurchasable,
-                              onSelected: (v) => setDialogState(() => isPurchasable = v),
+                              onSelected: (v) =>
+                                  setDialogState(() => isPurchasable = v),
                               selectedColor: AppColors.infoLight,
                             ),
                             FilterChip(
                               label: const Text('وحدة تغليف'),
                               selected: isPackaging,
-                              onSelected: (v) => setDialogState(() => isPackaging = v),
+                              onSelected: (v) =>
+                                  setDialogState(() => isPackaging = v),
                               selectedColor: AppColors.warningLight,
                             ),
                             FilterChip(
                               label: const Text('وحدة أساسية'),
                               selected: isBaseUnit,
-                              onSelected: (v) => setDialogState(() => isBaseUnit = v),
-                              selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                              onSelected: (v) =>
+                                  setDialogState(() => isBaseUnit = v),
+                              selectedColor:
+                                  AppColors.primaryLight.withValues(alpha: 0.2),
                             ),
                           ],
                         ),
@@ -1439,7 +1480,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
         'name_en': nameEnController.text.trim(),
         'abbreviation': abbrController.text.trim(),
         'unit_type': selectedType,
-        'description': descController.text.trim().isNotEmpty ? descController.text.trim() : null,
+        'description': descController.text.trim().isNotEmpty
+            ? descController.text.trim()
+            : null,
         'is_active': isActive ? 1 : 0,
         'is_sellable': isSellable ? 1 : 0,
         'is_purchasable': isPurchasable ? 1 : 0,
@@ -1553,9 +1596,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
               child: AlertDialog(
                 title: Row(
                   children: [
-                    Icon(Icons.local_shipping, color: AppColors.primary, size: 22),
+                    Icon(Icons.local_shipping,
+                        color: AppColors.primary, size: 22),
                     const SizedBox(width: 8),
-                    const Text('إضافة مورد جديد', style: TextStyle(fontSize: 18)),
+                    const Text('إضافة مورد جديد',
+                        style: TextStyle(fontSize: 18)),
                   ],
                 ),
                 content: SingleChildScrollView(
@@ -1574,8 +1619,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
                             labelText: 'الاسم *',
                             prefixIcon: Icon(Icons.person),
                           ),
-                          validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'الاسم مطلوب'
+                              : null,
                         ),
                         const SizedBox(height: 12),
 
@@ -1639,8 +1685,9 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               flex: 3,
                               child: TextFormField(
                                 controller: balanceController,
-                                keyboardType: const TextInputType.numberWithOptions(
-                                    decimal: true),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
                                 textInputAction: TextInputAction.next,
                                 inputFormatters: [
                                   FilteringTextInputFormatter.allow(
@@ -1649,8 +1696,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                 decoration: InputDecoration(
                                   isDense: true,
                                   labelText: 'الرصيد الافتتاحي',
-                                  prefixIcon:
-                                      const Icon(Icons.calculate),
+                                  prefixIcon: const Icon(Icons.calculate),
                                   suffixText: AppConstants.currency,
                                 ),
                               ),
@@ -1665,10 +1711,13 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                     padding: const EdgeInsets.only(bottom: 4),
                                     child: Text(
                                       'اتجاه الرصيد',
-                                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
                                   ),
                                   Container(
@@ -1684,19 +1733,22 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                       children: [
                                         Expanded(
                                           child: GestureDetector(
-                                            onTap: () =>
-                                                setDialogState(() => balanceType = 'credit'),
+                                            onTap: () => setDialogState(
+                                                () => balanceType = 'credit'),
                                             child: Container(
                                               padding:
-                                                  const EdgeInsets.symmetric(vertical: 10),
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 10),
                                               decoration: BoxDecoration(
                                                 color: balanceType == 'credit'
                                                     ? AppColors.success
                                                         .withValues(alpha: 0.1)
                                                     : Colors.transparent,
-                                                borderRadius: const BorderRadius.only(
+                                                borderRadius:
+                                                    const BorderRadius.only(
                                                   topRight: Radius.circular(9),
-                                                  bottomRight: Radius.circular(9),
+                                                  bottomRight:
+                                                      Radius.circular(9),
                                                 ),
                                               ),
                                               child: Text(
@@ -1714,19 +1766,22 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                         ),
                                         Expanded(
                                           child: GestureDetector(
-                                            onTap: () =>
-                                                setDialogState(() => balanceType = 'debit'),
+                                            onTap: () => setDialogState(
+                                                () => balanceType = 'debit'),
                                             child: Container(
                                               padding:
-                                                  const EdgeInsets.symmetric(vertical: 10),
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 10),
                                               decoration: BoxDecoration(
                                                 color: balanceType == 'debit'
                                                     ? AppColors.error
                                                         .withValues(alpha: 0.1)
                                                     : Colors.transparent,
-                                                borderRadius: const BorderRadius.only(
+                                                borderRadius:
+                                                    const BorderRadius.only(
                                                   topLeft: Radius.circular(9),
-                                                  bottomLeft: Radius.circular(9),
+                                                  bottomLeft:
+                                                      Radius.circular(9),
                                                 ),
                                               ),
                                               child: Text(
@@ -1755,10 +1810,12 @@ class _AddProductSheetState extends State<AddProductSheet> {
                         // Debt Ceiling
                         TextFormField(
                           controller: debtCeilingController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
                           textInputAction: TextInputAction.next,
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d{0,2}'))
                           ],
                           decoration: InputDecoration(
                             isDense: true,
@@ -1772,10 +1829,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
                         // Contact Method toggle
                         Text(
                           'طريقة التواصل',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                         ),
                         const SizedBox(height: 6),
                         Container(
@@ -1791,10 +1849,11 @@ class _AddProductSheetState extends State<AddProductSheet> {
                             children: [
                               Expanded(
                                 child: GestureDetector(
-                                  onTap: () =>
-                                      setDialogState(() => contactMethod = 'whatsapp'),
+                                  onTap: () => setDialogState(
+                                      () => contactMethod = 'whatsapp'),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 10),
                                     decoration: BoxDecoration(
                                       color: contactMethod == 'whatsapp'
                                           ? const Color(0xFF25D366)
@@ -1806,7 +1865,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                       ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.chat,
@@ -1833,13 +1893,15 @@ class _AddProductSheetState extends State<AddProductSheet> {
                               ),
                               Expanded(
                                 child: GestureDetector(
-                                  onTap: () =>
-                                      setDialogState(() => contactMethod = 'phone'),
+                                  onTap: () => setDialogState(
+                                      () => contactMethod = 'phone'),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 10),
                                     decoration: BoxDecoration(
                                       color: contactMethod == 'phone'
-                                          ? AppColors.primary.withValues(alpha: 0.1)
+                                          ? AppColors.primary
+                                              .withValues(alpha: 0.1)
                                           : Colors.transparent,
                                       borderRadius: const BorderRadius.only(
                                         topLeft: Radius.circular(9),
@@ -1847,7 +1909,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                       ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.phone_in_talk,
@@ -1923,13 +1986,21 @@ class _AddProductSheetState extends State<AddProductSheet> {
       final balance = double.tryParse(balanceController.text) ?? 0.0;
       final id = await locator<SupplierRepository>().insertSupplier({
         'name': nameController.text.trim(),
-        'phone': phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
-        'email': emailController.text.trim().isEmpty ? null : emailController.text.trim(),
-        'address': addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+        'phone': phoneController.text.trim().isEmpty
+            ? null
+            : phoneController.text.trim(),
+        'email': emailController.text.trim().isEmpty
+            ? null
+            : emailController.text.trim(),
+        'address': addressController.text.trim().isEmpty
+            ? null
+            : addressController.text.trim(),
         'balance': balance,
         'balance_type': balanceType,
         'currency': 'YER',
-        'notes': notesController.text.trim().isEmpty ? null : notesController.text.trim(),
+        'notes': notesController.text.trim().isEmpty
+            ? null
+            : notesController.text.trim(),
         'debt_ceiling': double.tryParse(debtCeilingController.text) ?? 0.0,
         'contact_method': contactMethod,
         'created_at': now,

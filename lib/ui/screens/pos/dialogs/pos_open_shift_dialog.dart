@@ -14,7 +14,8 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
   final cashBoxes = await locator<CashBoxService>().getAllCashBoxes();
   if (cashBoxes.isEmpty) {
     if (context.mounted) {
-      context.showErrorSnackBar('لا توجد صناديق نقدية. أضف صندوقاً أولاً من الإعدادات.');
+      context.showErrorSnackBar(
+          'لا توجد صناديق نقدية. أضف صندوقاً أولاً من الإعدادات.');
     }
     return;
   }
@@ -37,7 +38,9 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
           left: 20,
           right: 20,
           top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom +
+              MediaQuery.of(ctx).viewPadding.bottom +
+              20,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -64,7 +67,8 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
                       color: AppColors.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.lock_open, color: AppColors.success, size: 24),
+                    child: const Icon(Icons.lock_open,
+                        color: AppColors.success, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -78,7 +82,9 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
               const SizedBox(height: 20),
 
               // ── Cashier name ─────────────────────────────────
-              Text('اسم الكاشير', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text('اسم الكاشير',
+                  style: context.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextField(
                 controller: cashierNameController,
@@ -86,13 +92,16 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
                 decoration: InputDecoration(
                   hintText: 'أدخل اسم الكاشير',
                   prefixIcon: const Icon(Icons.person, size: 20),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 16),
 
               // ── Cash box selector ────────────────────────────
-              Text('الصندوق النقدي', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text('الصندوق النقدي',
+                  style: context.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -124,7 +133,9 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
               const SizedBox(height: 16),
 
               // ── Opening amount ───────────────────────────────
-              Text('مبلغ الافتتاح', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text('مبلغ الافتتاح',
+                  style: context.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextField(
                 controller: amountController,
@@ -133,14 +144,18 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
                 decoration: InputDecoration(
                   hintText: 'أدخل مبلغ الافتتاح',
                   suffixText: AppConstants.currency,
-                  prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  prefixIcon:
+                      const Icon(Icons.account_balance_wallet, size: 20),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 16),
 
               // ── Notes ────────────────────────────────────────
-              Text('ملاحظات (اختياري)', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text('ملاحظات (اختياري)',
+                  style: context.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextField(
                 controller: notesController,
@@ -148,7 +163,8 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   hintText: 'ملاحظات...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -161,34 +177,44 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
                   onPressed: () async {
                     if (selectedCashBoxId == null) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('اختر صندوقاً نقدیاً'), backgroundColor: AppColors.warning),
+                        const SnackBar(
+                            content: Text('اختر صندوقاً نقدیاً'),
+                            backgroundColor: AppColors.warning),
                       );
                       return;
                     }
                     if (cashierNameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('أدخل اسم الكاشير'), backgroundColor: AppColors.warning),
+                        const SnackBar(
+                            content: Text('أدخل اسم الكاشير'),
+                            backgroundColor: AppColors.warning),
                       );
                       return;
                     }
 
-                    final existingShift = await locator<ShiftService>().getActiveShift(selectedCashBoxId!);
+                    final existingShift = await locator<ShiftService>()
+                        .getActiveShift(selectedCashBoxId!);
                     if (existingShift != null) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('يوجد وردية مفتوحة لهذا الصندوق بالفعل'), backgroundColor: AppColors.warning),
+                          const SnackBar(
+                              content:
+                                  Text('يوجد وردية مفتوحة لهذا الصندوق بالفعل'),
+                              backgroundColor: AppColors.warning),
                         );
                       }
                       return;
                     }
 
                     final cashierName = cashierNameController.text.trim();
-                    final openingAmount = double.tryParse(amountController.text) ?? 0.0;
+                    final openingAmount =
+                        double.tryParse(amountController.text) ?? 0.0;
                     final now = DateTime.now();
 
                     // Get next shift number
                     final reportService = locator<ReportService>();
-                    final shiftNum = await reportService.getShiftCountForDate(now) + 1;
+                    final shiftNum =
+                        await reportService.getShiftCountForDate(now) + 1;
 
                     final shiftMap = {
                       'shift_number': shiftNum,
@@ -202,7 +228,9 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
                       'status': 'open',
                       'opened_at': now.toIso8601String(),
                       'closed_at': null,
-                      'notes': notesController.text.isEmpty ? null : notesController.text,
+                      'notes': notesController.text.isEmpty
+                          ? null
+                          : notesController.text,
                       'total_sales': 0.0,
                       'total_returns': 0.0,
                       'total_discounts': 0.0,
@@ -215,14 +243,18 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
 
                     if (!context.mounted) return;
                     Navigator.pop(ctx);
-                    context.showSuccessSnackBar('تم فتح الوردية $shiftNum بنجاح');
+                    context
+                        .showSuccessSnackBar('تم فتح الوردية $shiftNum بنجاح');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.success,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text('فتح الوردية', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: const Text('فتح الوردية',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
               ),
             ],

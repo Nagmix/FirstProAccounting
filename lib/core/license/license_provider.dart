@@ -50,7 +50,8 @@ class LicenseProvider extends ChangeNotifier {
       _state = LicenseService.instance.state;
 
       if (!success) {
-        _activationError = 'فشل تفعيل المفتاح. تأكد من صحة المفتاح وحاول مرة أخرى';
+        _activationError =
+            'فشل تفعيل المفتاح. تأكد من صحة المفتاح وحاول مرة أخرى';
       }
 
       return success;

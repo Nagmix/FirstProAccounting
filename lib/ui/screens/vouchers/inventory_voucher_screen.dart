@@ -28,7 +28,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
 
   Future<void> _loadData() async {
     try {
-      final vouchers = await locator<StockService>().getInventoryVouchers(searchQuery: _searchQuery.isEmpty ? null : _searchQuery);
+      final vouchers = await locator<StockService>().getInventoryVouchers(
+          searchQuery: _searchQuery.isEmpty ? null : _searchQuery);
       if (mounted) {
         setState(() {
           _vouchers = vouchers;
@@ -40,7 +41,9 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -50,7 +53,9 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
     List<Map<String, dynamic>> result = _vouchers;
     if (_dateFilter != null) {
       final filterStr = _dateFilter!.toIso8601String().substring(0, 10);
-      result = result.where((v) => (v['date'] as String? ?? '').startsWith(filterStr)).toList();
+      result = result
+          .where((v) => (v['date'] as String? ?? '').startsWith(filterStr))
+          .toList();
     }
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
@@ -78,7 +83,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
   }
 
   Future<void> _navigateToDetail(int voucherId) async {
-    final details = await locator<StockService>().getInventoryVoucherDetails(voucherId);
+    final details =
+        await locator<StockService>().getInventoryVoucherDetails(voucherId);
     if (details != null && mounted) {
       _showVoucherDetail(details);
     }
@@ -104,12 +110,14 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: Container(
           padding: const EdgeInsets.all(20),
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,18 +125,33 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('تفاصيل سند الجرد', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+                  Text('تفاصيل سند الجرد',
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                  IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close)),
                 ],
               ),
               const SizedBox(height: 16),
-              _buildDetailRow(theme, 'رقم السند', details['voucher_number'] as String? ?? ''),
-              _buildDetailRow(theme, 'التاريخ', details['date'] as String? ?? ''),
-              _buildDetailRow(theme, 'المخزن', details['warehouse_name'] as String? ?? 'غير محدد'),
-              _buildDetailRow(theme, 'الوصف', details['description'] as String? ?? ''),
-              _buildDetailRow(theme, 'القيمة الإجمالية', CurrencyFormatter.format(MoneyHelper.readMoney(details['total_value']), symbol: currencySymbol)),
+              _buildDetailRow(theme, 'رقم السند',
+                  details['voucher_number'] as String? ?? ''),
+              _buildDetailRow(
+                  theme, 'التاريخ', details['date'] as String? ?? ''),
+              _buildDetailRow(theme, 'المخزن',
+                  details['warehouse_name'] as String? ?? 'غير محدد'),
+              _buildDetailRow(
+                  theme, 'الوصف', details['description'] as String? ?? ''),
+              _buildDetailRow(
+                  theme,
+                  'القيمة الإجمالية',
+                  CurrencyFormatter.format(
+                      MoneyHelper.readMoney(details['total_value']),
+                      symbol: currencySymbol)),
               const Divider(height: 24),
-              Text('البنود', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text('البنود',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               Flexible(
                 child: ListView.builder(
@@ -136,7 +159,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                   itemCount: items.length,
                   itemBuilder: (ctx, i) {
                     final item = items[i];
-                    final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
+                    final difference =
+                        (item['difference'] as num?)?.toDouble() ?? 0.0;
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: Padding(
@@ -144,33 +168,50 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(item['product_name'] as String? ?? 'منتج غير معروف',
-                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                            Text(
+                                item['product_name'] as String? ??
+                                    'منتج غير معروف',
+                                style: theme.textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700)),
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Text('الكمية النظامية: ', style: theme.textTheme.bodySmall),
-                                Text('${item['system_quantity']}', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                                Text('الكمية النظامية: ',
+                                    style: theme.textTheme.bodySmall),
+                                Text('${item['system_quantity']}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                        fontWeight: FontWeight.w600)),
                                 const SizedBox(width: 16),
-                                Text('الكمية الفعلية: ', style: theme.textTheme.bodySmall),
-                                Text('${item['actual_quantity']}', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                                Text('الكمية الفعلية: ',
+                                    style: theme.textTheme.bodySmall),
+                                Text('${item['actual_quantity']}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                        fontWeight: FontWeight.w600)),
                               ],
                             ),
                             Row(
                               children: [
-                                Text('الفرق: ', style: theme.textTheme.bodySmall),
+                                Text('الفرق: ',
+                                    style: theme.textTheme.bodySmall),
                                 Text(
                                   '${difference > 0 ? '+' : ''}${difference.toStringAsFixed(2)}',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w700,
-                                    color: difference > 0 ? AppColors.success : AppColors.error,
+                                    color: difference > 0
+                                        ? AppColors.success
+                                        : AppColors.error,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                Text('القيمة: ', style: theme.textTheme.bodySmall),
+                                Text('القيمة: ',
+                                    style: theme.textTheme.bodySmall),
                                 Text(
-                                  CurrencyFormatter.format(MoneyHelper.readMoney(item['total_value']), symbol: currencySymbol),
-                                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                  CurrencyFormatter.format(
+                                      MoneyHelper.readMoney(
+                                          item['total_value']),
+                                      symbol: currencySymbol),
+                                  style: theme.textTheme.bodySmall
+                                      ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
@@ -193,8 +234,15 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint))),
-          Expanded(child: Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
+          SizedBox(
+              width: 120,
+              child: Text(label,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: AppColors.textHint))),
+          Expanded(
+              child: Text(value,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600))),
         ],
       ),
     );
@@ -213,7 +261,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
           actions: [
             if (_dateFilter != null)
               IconButton(
-                icon: const Icon(Icons.calendar_today, color: AppColors.primary),
+                icon:
+                    const Icon(Icons.calendar_today, color: AppColors.primary),
                 tooltip: 'مسح فلتر التاريخ',
                 onPressed: () {
                   setState(() => _dateFilter = null);
@@ -237,20 +286,25 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                   _buildSearchBar(theme, isDark),
                   if (_dateFilter != null)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       child: Row(
                         children: [
-                          Icon(Icons.filter_alt, size: 16, color: AppColors.primary),
+                          Icon(Icons.filter_alt,
+                              size: 16, color: AppColors.primary),
                           const SizedBox(width: 4),
-                          Text('تصفية: ${_dateFilter!.year}-${_dateFilter!.month.toString().padLeft(2, '0')}-${_dateFilter!.day.toString().padLeft(2, '0')}',
-                              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.primary)),
+                          Text(
+                              'تصفية: ${_dateFilter!.year}-${_dateFilter!.month.toString().padLeft(2, '0')}-${_dateFilter!.day.toString().padLeft(2, '0')}',
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.primary)),
                           const Spacer(),
                           TextButton(
                             onPressed: () {
                               setState(() => _dateFilter = null);
                               _filterVouchers();
                             },
-                            child: const Text('مسح', style: TextStyle(color: AppColors.error)),
+                            child: const Text('مسح',
+                                style: TextStyle(color: AppColors.error)),
                           ),
                         ],
                       ),
@@ -261,10 +315,13 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                         : RefreshIndicator(
                             onRefresh: _loadData,
                             child: ListView.builder(
-                              padding: EdgeInsets.only(bottom: 80 + MediaQuery.of(context).padding.bottom),
+                              padding: EdgeInsets.only(
+                                  bottom: 80 +
+                                      MediaQuery.of(context).padding.bottom),
                               itemCount: _filteredVouchers.length,
                               itemBuilder: (context, index) =>
-                                  _buildVoucherCard(_filteredVouchers[index], theme, isDark),
+                                  _buildVoucherCard(
+                                      _filteredVouchers[index], theme, isDark),
                             ),
                           ),
                   ),
@@ -325,8 +382,10 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
             ],
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          hintStyle: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          hintStyle:
+              theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint),
         ),
       ),
     );
@@ -346,19 +405,26 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(Icons.inventory, size: 40, color: AppColors.primary),
+              child: const Icon(Icons.inventory,
+                  size: 40, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
-            Text('لا توجد سندات جرد', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            Text('لا توجد سندات جرد',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            Text('أضف سند جرد جديد بالضغط على زر الإضافة', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint), textAlign: TextAlign.center),
+            Text('أضف سند جرد جديد بالضغط على زر الإضافة',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: AppColors.textHint),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildVoucherCard(Map<String, dynamic> voucher, ThemeData theme, bool isDark) {
+  Widget _buildVoucherCard(
+      Map<String, dynamic> voucher, ThemeData theme, bool isDark) {
     final number = voucher['voucher_number'] as String? ?? '';
     final date = voucher['date'] as String? ?? '';
     final totalValue = MoneyHelper.readMoney(voucher['total_value']);
@@ -407,7 +473,9 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.04),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.2)
+                : AppColors.primary.withValues(alpha: 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -427,7 +495,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                   color: Colors.brown.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.inventory, color: Colors.brown, size: 22),
+                child:
+                    const Icon(Icons.inventory, color: Colors.brown, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -436,35 +505,55 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(number, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                        Text(number,
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                            overflow: TextOverflow.ellipsis),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(statusAr, style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w700)),
+                          child: Text(statusAr,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w700)),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.calendar_today, size: 12, color: AppColors.textHint),
+                        Icon(Icons.calendar_today,
+                            size: 12, color: AppColors.textHint),
                         const SizedBox(width: 4),
-                        Text(date, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                        Text(date,
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: AppColors.textSecondary)),
                         if (warehouseName.isNotEmpty) ...[
                           const SizedBox(width: 12),
-                          Icon(Icons.warehouse, size: 12, color: AppColors.textHint),
+                          Icon(Icons.warehouse,
+                              size: 12, color: AppColors.textHint),
                           const SizedBox(width: 4),
-                          Expanded(child: Text(warehouseName, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary), overflow: TextOverflow.ellipsis, maxLines: 1)),
+                          Expanded(
+                              child: Text(warehouseName,
+                                  style: theme.textTheme.bodySmall
+                                      ?.copyWith(color: AppColors.textTertiary),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1)),
                         ],
                       ],
                     ),
                     if (description.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(description, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary), overflow: TextOverflow.ellipsis, maxLines: 1),
+                      Text(description,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textTertiary),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1),
                     ],
                   ],
                 ),
@@ -472,7 +561,8 @@ class _InventoryVoucherScreenState extends State<InventoryVoucherScreen> {
               const SizedBox(width: 8),
               Text(
                 CurrencyFormatter.format(totalValue, symbol: currencySymbol),
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w800, color: AppColors.primary),
               ),
               const SizedBox(width: 4),
               Icon(Icons.arrow_back_ios, size: 16, color: AppColors.textHint),

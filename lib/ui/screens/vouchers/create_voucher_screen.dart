@@ -417,8 +417,9 @@ class _CreateVoucherScreenState extends State<CreateVoucherScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
+                  color: isSelected
+                      ? color.withValues(alpha: 0.15)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   border:
                       isSelected ? Border.all(color: color, width: 2) : null,

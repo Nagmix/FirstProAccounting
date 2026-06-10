@@ -33,7 +33,8 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
         child: Center(
           child: Card(
             margin: const EdgeInsets.symmetric(horizontal: 24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             elevation: 12,
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -45,27 +46,37 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
                     children: [
                       if (_isSaving)
                         const SizedBox(
-                          width: 26, height: 26,
+                          width: 26,
+                          height: 26,
                           child: CircularProgressIndicator(strokeWidth: 3),
                         )
                       else
-                        const Icon(Icons.shopping_cart_checkout, color: AppColors.primary, size: 26),
+                        const Icon(Icons.shopping_cart_checkout,
+                            color: AppColors.primary, size: 26),
                       const SizedBox(width: 10),
                       Text(
-                        _isSaving ? 'جارٍ حفظ الفاتورة...' : 'تأكيد عملية البيع',
-                        style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                        _isSaving
+                            ? 'جارٍ حفظ الفاتورة...'
+                            : 'تأكيد عملية البيع',
+                        style: context.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   reportRow(context, 'عدد الأصناف', '${vm.capturedCartLength}'),
-                  reportRow(context, 'المجموع الفرعي', CurrencyFormatter.format(vm.capturedSubtotal)),
+                  reportRow(context, 'المجموع الفرعي',
+                      CurrencyFormatter.format(vm.capturedSubtotal)),
                   if (vm.capturedDiscount > 0)
-                    reportRow(context, 'الخصم', '- ${CurrencyFormatter.format(vm.capturedDiscount)}', valueColor: AppColors.error),
+                    reportRow(context, 'الخصم',
+                        '- ${CurrencyFormatter.format(vm.capturedDiscount)}',
+                        valueColor: AppColors.error),
                   if (vm.capturedTax > 0)
-                    reportRow(context, 'الضريبة', CurrencyFormatter.format(vm.capturedTax)),
+                    reportRow(context, 'الضريبة',
+                        CurrencyFormatter.format(vm.capturedTax)),
                   const Divider(height: 20),
-                  reportRow(context, 'الإجمالي', CurrencyFormatter.format(vm.capturedTotal),
+                  reportRow(context, 'الإجمالي',
+                      CurrencyFormatter.format(vm.capturedTotal),
                       valueColor: AppColors.primary, isBold: true),
                   const SizedBox(height: 8),
                   reportRow(context, 'طريقة الدفع', vm.capturedPaymentLabel),
@@ -74,13 +85,17 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     'سيتم تسجيل الفاتورة وترحيلها عند إغلاق الوردية',
-                    style: TextStyle(fontSize: 11, color: context.textSecondary),
+                    style:
+                        TextStyle(fontSize: 11, color: context.textSecondary),
                   ),
                   const SizedBox(height: 20),
                   if (_isSaving)
-                    const Center(child: Padding(
+                    const Center(
+                        child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 14),
-                      child: Text('يرجى الانتظار...', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+                      child: Text('يرجى الانتظار...',
+                          style: TextStyle(
+                              fontSize: 15, color: AppColors.textSecondary)),
                     ))
                   else
                     Row(
@@ -90,9 +105,11 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
                             onPressed: onCancel,
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text('إلغاء', style: TextStyle(fontSize: 15)),
+                            child: const Text('إلغاء',
+                                style: TextStyle(fontSize: 15)),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -103,9 +120,12 @@ class PosCheckoutConfirmationOverlay extends StatelessWidget {
                               backgroundColor: AppColors.success,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text('تأكيد البيع', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                            child: const Text('تأكيد البيع',
+                                style: TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.w700)),
                           ),
                         ),
                       ],

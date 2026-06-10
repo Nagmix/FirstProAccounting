@@ -140,7 +140,8 @@ class EscPosCommands {
   /// [data]: the barcode content
   /// [width]: module width (2-6)
   /// [height]: barcode height in dots
-  static List<int> printBarcode(String data, {int width = 2, int height = 100}) {
+  static List<int> printBarcode(String data,
+      {int width = 2, int height = 100}) {
     final dataBytes = utf8.encode(data);
     return [
       _gs, 0x77, width.clamp(2, 6), // GS w (module width)
@@ -180,13 +181,19 @@ class EscPosCommands {
   /// Set left margin.
   /// [marginLeft]: margin in dots
   static List<int> setLeftMargin(int marginLeft) {
-    return [_gs, 0x4C, marginLeft & 0xFF, (marginLeft >> 8) & 0xFF]; // GS L nL nH
+    return [
+      _gs,
+      0x4C,
+      marginLeft & 0xFF,
+      (marginLeft >> 8) & 0xFF
+    ]; // GS L nL nH
   }
 
   /// Print QR code (if printer supports it).
   /// Note: Not all thermal printers support QR. This uses the standard
   /// GS ( k QR code command structure.
-  static List<int> printQRCode(String data, {int moduleSize = 4, int errorCorrection = 1}) {
+  static List<int> printQRCode(String data,
+      {int moduleSize = 4, int errorCorrection = 1}) {
     final dataBytes = utf8.encode(data);
     return [
       // QR model selection
@@ -196,7 +203,8 @@ class EscPosCommands {
       // Error correction level
       _gs, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, errorCorrection.clamp(0, 3),
       // Store data
-      _gs, 0x28, 0x6B, (dataBytes.length + 3) & 0xFF, ((dataBytes.length + 3) >> 8) & 0xFF,
+      _gs, 0x28, 0x6B, (dataBytes.length + 3) & 0xFF,
+      ((dataBytes.length + 3) >> 8) & 0xFF,
       0x31, 0x50, 0x30, ...dataBytes,
       // Print
       _gs, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x44, 0x30,
@@ -260,8 +268,10 @@ class EscPosCommands {
 
     // Invoice info
     cmds.addAll(printlnArabic('رقم الفاتورة: $invoiceNumber'));
-    cmds.addAll(printlnArabic('التاريخ: ${date.day}/${date.month}/${date.year}'));
-    cmds.addAll(printlnArabic('الوقت: ${date.hour}:${date.minute.toString().padLeft(2, '0')}'));
+    cmds.addAll(
+        printlnArabic('التاريخ: ${date.day}/${date.month}/${date.year}'));
+    cmds.addAll(printlnArabic(
+        'الوقت: ${date.hour}:${date.minute.toString().padLeft(2, '0')}'));
     cmds.addAll(printlnArabic('العميل: $customerName'));
 
     cmds.addAll(dashedLine(charsPerLine: charsPerLine));
@@ -280,8 +290,10 @@ class EscPosCommands {
     for (final item in items) {
       final name = (item['product_name'] ?? item['name'] ?? '').toString();
       final qty = (item['quantity'] ?? 1).toString();
-      final price = _formatAmount(MoneyHelper.readMoney(item['unit_price'] ?? item['price'] ?? 0));
-      final itemTotal = _formatAmount(MoneyHelper.readMoney(item['total_price'] ?? item['total'] ?? 0));
+      final price = _formatAmount(
+          MoneyHelper.readMoney(item['unit_price'] ?? item['price'] ?? 0));
+      final itemTotal = _formatAmount(
+          MoneyHelper.readMoney(item['total_price'] ?? item['total'] ?? 0));
 
       cmds.addAll(printlnArabic(_padColumns(
         [name, qty, price, itemTotal],
@@ -294,7 +306,8 @@ class EscPosCommands {
 
     // Totals
     cmds.addAll(setAlignment(2)); // left (in RTL context)
-    cmds.addAll(printlnArabic('المجموع الفرعي: ${_formatAmount(subtotal)} $currency'));
+    cmds.addAll(
+        printlnArabic('المجموع الفرعي: ${_formatAmount(subtotal)} $currency'));
 
     if (discount > 0) {
       cmds.addAll(printlnArabic('الخصم: ${_formatAmount(discount)} $currency'));
@@ -311,7 +324,8 @@ class EscPosCommands {
 
     if (paid > 0) {
       cmds.addAll(printlnArabic('المدفوع: ${_formatAmount(paid)} $currency'));
-      cmds.addAll(printlnArabic('المتبقي: ${_formatAmount(remaining)} $currency'));
+      cmds.addAll(
+          printlnArabic('المتبقي: ${_formatAmount(remaining)} $currency'));
     }
 
     if (notes != null && notes.isNotEmpty) {
@@ -349,8 +363,10 @@ class EscPosCommands {
     cmds.addAll(setAlignment(0));
     cmds.addAll(printlnArabic('تم الاتصال بنجاح'));
     cmds.addAll(printlnArabic('الأول برو المحاسبي'));
-    cmds.addAll(printlnArabic('التاريخ: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}'));
-    cmds.addAll(printlnArabic('الوقت: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}'));
+    cmds.addAll(printlnArabic(
+        'التاريخ: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}'));
+    cmds.addAll(printlnArabic(
+        'الوقت: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}'));
     cmds.addAll(feedLines(1));
     cmds.addAll(boldOn());
     cmds.addAll(printlnArabic('الطباعة بلوتوث حرارية'));
@@ -461,7 +477,8 @@ class EscPosCommands {
   }
 
   /// Pad columns for receipt table alignment.
-  static String _padColumns(List<String> columns, List<int> widths, {int charsPerLine = 48}) {
+  static String _padColumns(List<String> columns, List<int> widths,
+      {int charsPerLine = 48}) {
     final buffer = StringBuffer();
     for (int i = 0; i < columns.length; i++) {
       final text = columns[i];

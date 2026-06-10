@@ -131,8 +131,7 @@ class BankReconciliation {
   }) {
     return BankReconciliation(
       id: id ?? this.id,
-      reconciliationNumber:
-          reconciliationNumber ?? this.reconciliationNumber,
+      reconciliationNumber: reconciliationNumber ?? this.reconciliationNumber,
       cashBoxId: cashBoxId ?? this.cashBoxId,
       statementDate: statementDate ?? this.statementDate,
       statementBalance: statementBalance ?? this.statementBalance,
@@ -251,8 +250,7 @@ class BankStatementLine {
       reference: reference ?? this.reference,
       description: description ?? this.description,
       matchStatus: matchStatus ?? this.matchStatus,
-      matchedTransactionId:
-          matchedTransactionId ?? this.matchedTransactionId,
+      matchedTransactionId: matchedTransactionId ?? this.matchedTransactionId,
       isBookEntry: isBookEntry ?? this.isBookEntry,
       sourceType: sourceType ?? this.sourceType,
       sourceId: sourceId ?? this.sourceId,

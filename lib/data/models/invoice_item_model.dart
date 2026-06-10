@@ -8,10 +8,13 @@ class InvoiceItem {
   final double quantity;
   final double unitPrice;
   final double totalPrice;
-  final double unitCost; // P-06: Cost at time of sale/purchase for accurate COGS on deferred posting
+  final double
+      unitCost; // P-06: Cost at time of sale/purchase for accurate COGS on deferred posting
   final String? unitName; // Name of the unit used in this line (e.g., 'كرتون')
-  final double conversionFactor; // How many base units = 1 of this unit (e.g., 24 for carton)
-  final double baseQuantity; // quantity * conversionFactor (always in base unit for stock deduction)
+  final double
+      conversionFactor; // How many base units = 1 of this unit (e.g., 24 for carton)
+  final double
+      baseQuantity; // quantity * conversionFactor (always in base unit for stock deduction)
   final String? notes;
 
   InvoiceItem({
@@ -55,7 +58,8 @@ class InvoiceItem {
       quantity: (map['quantity'] ?? 1.0).toDouble(),
       unitPrice: MoneyHelper.readMoney(map['unit_price']),
       totalPrice: MoneyHelper.readMoney(map['total_price']),
-      unitCost: MoneyHelper.readMoney(map['unit_cost']), // P-06: Read stored cost
+      unitCost:
+          MoneyHelper.readMoney(map['unit_cost']), // P-06: Read stored cost
       unitName: map['unit_name'],
       conversionFactor: (map['conversion_factor'] ?? 1.0).toDouble(),
       baseQuantity: (map['base_quantity'] ?? map['quantity'] ?? 1.0).toDouble(),

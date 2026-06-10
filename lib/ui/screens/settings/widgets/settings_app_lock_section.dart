@@ -93,7 +93,8 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
     final bytes = sha256.convert(key).bytes;
     var currentBytes = bytes;
     for (var round = 0; round < 1000; round++) {
-      final roundKey = utf8.encode('$salt${base64Encode(currentBytes)}$pin$round');
+      final roundKey =
+          utf8.encode('$salt${base64Encode(currentBytes)}$pin$round');
       currentBytes = sha256.convert(roundKey).bytes;
     }
     return 'h3\$${base64Encode(currentBytes)}';
@@ -165,7 +166,8 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
             }
 
             final currentPin = isConfirming ? confirmPin : pin;
-            final title = isConfirming ? 'أعد إدخال رمز PIN' : 'أدخل رمز PIN الجديد';
+            final title =
+                isConfirming ? 'أعد إدخال رمز PIN' : 'أدخل رمز PIN الجديد';
 
             return AlertDialog(
               title: Text(title),
@@ -183,7 +185,8 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
                         height: 20,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isFilled ? AppColors.primary : Colors.transparent,
+                          color:
+                              isFilled ? AppColors.primary : Colors.transparent,
                           border: Border.all(
                             color: errorText != null
                                 ? AppColors.error
@@ -200,7 +203,8 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
                   if (errorText != null)
                     Text(
                       errorText!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 13),
+                      style:
+                          const TextStyle(color: AppColors.error, fontSize: 13),
                     ),
                   const SizedBox(height: 12),
                   // Numeric keypad
@@ -249,7 +253,8 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          child: const Text('0', style: TextStyle(fontSize: 20)),
+                          child:
+                              const Text('0', style: TextStyle(fontSize: 20)),
                         ),
                       ),
                       SizedBox(width: 64, height: 48), // spacer
@@ -296,7 +301,8 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
               final pin = await _showPinDialog(isSetting: true);
               if (pin != null && pin.length == 4) {
                 await _secureStorage.write(key: 'pin_enabled', value: '1');
-                await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
+                await _secureStorage.write(
+                    key: 'app_pin', value: _hashPin(pin));
                 // Clean up old DB entries if they exist
                 try {
                   final refRepo = locator<ReferenceDataRepository>();
@@ -329,14 +335,16 @@ class _SettingsAppLockSectionState extends State<SettingsAppLockSection> {
               await _secureStorage.write(key: 'app_pin', value: _hashPin(pin));
               // Clean up old DB entry if it exists
               try {
-                await locator<ReferenceDataRepository>().deleteSetting('app_pin');
+                await locator<ReferenceDataRepository>()
+                    .deleteSetting('app_pin');
               } catch (e) {
                 debugPrint('SettingsAppLockSection._setPin: WARNING $e');
               }
               if (!widget.pinEnabled) {
                 await _secureStorage.write(key: 'pin_enabled', value: '1');
                 try {
-                  await locator<ReferenceDataRepository>().deleteSetting('pin_enabled');
+                  await locator<ReferenceDataRepository>()
+                      .deleteSetting('pin_enabled');
                 } catch (e) {
                   debugPrint('SettingsAppLockSection._setPin: WARNING $e');
                 }

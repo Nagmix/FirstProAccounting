@@ -80,7 +80,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   //  DATA LOADING
   // ═══════════════════════════════════════════════════════════════════
   Future<void> _loadData() async {
-    final currencies = await locator<ReferenceDataRepository>().getAllCurrencies();
+    final currencies =
+        await locator<ReferenceDataRepository>().getAllCurrencies();
     final exchanges = await locator<CashBoxService>().getAllCurrencyExchanges();
 
     if (!mounted) return;
@@ -96,8 +97,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   }
 
   Future<void> _loadCashBoxes() async {
-    final fromBoxes = await locator<CashBoxService>().getCashBoxesByCurrency(_fromCurrency);
-    final toBoxes = await locator<CashBoxService>().getCashBoxesByCurrency(_toCurrency);
+    final fromBoxes =
+        await locator<CashBoxService>().getCashBoxesByCurrency(_fromCurrency);
+    final toBoxes =
+        await locator<CashBoxService>().getCashBoxesByCurrency(_toCurrency);
 
     if (!mounted) return;
 
@@ -225,7 +228,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     if (value == value.roundToDouble()) {
       return value.toStringAsFixed(0);
     }
-    return value.toStringAsFixed(4).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    return value
+        .toStringAsFixed(4)
+        .replaceAll(RegExp(r'0+$'), '')
+        .replaceAll(RegExp(r'\.$'), '');
   }
 
   String _formatAmount(double value) {
@@ -279,7 +285,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     );
     final fromBoxBalance = MoneyHelper.readMoney(fromBox['balance']);
     if (fromAmount > fromBoxBalance) {
-      _showError('رصيد الصندوق غير كافي (الرصيد: ${CurrencyFormatter.format(fromBoxBalance)} ${_currencySymbol(_fromCurrency)})');
+      _showError(
+          'رصيد الصندوق غير كافي (الرصيد: ${CurrencyFormatter.format(fromBoxBalance)} ${_currencySymbol(_fromCurrency)})');
       return;
     }
 
@@ -288,7 +295,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     try {
       final toAmount = fromAmount * exchangeRate;
       final gainLoss = _calculateGainLoss();
-      final exchangeNumber = await locator<CashBoxService>().getNextExchangeNumber();
+      final exchangeNumber =
+          await locator<CashBoxService>().getNextExchangeNumber();
       final now = DateTime.now().toIso8601String();
 
       final exchangeMap = <String, dynamic>{
@@ -302,7 +310,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
         'to_cash_box_id': _toCashBoxId!,
         'gain_loss': gainLoss.amount,
         'gain_loss_type': gainLoss.type == 'none' ? null : gainLoss.type,
-        'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        'notes': _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
         'created_at': now,
       };
 
@@ -317,9 +327,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
           ...exchangeMap,
           'from_cash_box_name': fromBox['name'] ?? '',
           'to_cash_box_name': _toCashBoxes.firstWhere(
-            (cb) => cb['id'] == _toCashBoxId,
-            orElse: () => <String, dynamic>{},
-          )['name'] ?? '',
+                (cb) => cb['id'] == _toCashBoxId,
+                orElse: () => <String, dynamic>{},
+              )['name'] ??
+              '',
         };
         _showJournalEntry = true;
       });
@@ -417,8 +428,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 text: 'السجل',
               ),
             ],
-            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            labelStyle:
+                const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            unselectedLabelStyle:
+                const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
           ),
         ),
         body: _isLoading
@@ -469,7 +482,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               hintText: 'أضف ملاحظات على العملية (اختياري)',
               prefixIcon: const Icon(Icons.edit_note),
               alignLabelWithHint: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: AppColors.border),
@@ -506,7 +520,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
@@ -573,7 +588,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                       color: AppColors.primary,
                     ),
                     tooltip: 'تبديل العملات',
-                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                    constraints:
+                        const BoxConstraints(minWidth: 44, minHeight: 44),
                   ),
                 ),
               ),
@@ -583,7 +599,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
@@ -654,7 +671,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               value: code,
               child: Text(
                 _currencyLabel(code),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),
             );
           }).toList(),
@@ -692,7 +710,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
@@ -711,12 +730,14 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             const SizedBox(height: 8),
             TextFormField(
               controller: _fromAmountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: 'أدخل المبلغ',
                 prefixIcon: const Icon(Icons.payments, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
@@ -744,7 +765,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                     onTap: _resetRateToAuto,
                     borderRadius: BorderRadius.circular(6),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: AppColors.warning.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
@@ -775,7 +797,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                   ),
                 if (!_isRateManual)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
@@ -812,7 +835,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             const SizedBox(height: 8),
             TextFormField(
               controller: _exchangeRateController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: 'سعر الصرف',
@@ -828,7 +852,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                         onPressed: _resetRateToAuto,
                       )
                     : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
@@ -836,7 +861,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: _isRateManual ? AppColors.warning : AppColors.primary,
+                    color:
+                        _isRateManual ? AppColors.warning : AppColors.primary,
                     width: 2,
                   ),
                 ),
@@ -879,7 +905,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
@@ -949,9 +976,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
 
     final isGain = gainLoss.type == 'gain';
     final color = isGain ? AppColors.success : AppColors.error;
-    final icon = isGain
-        ? Icons.trending_up
-        : Icons.trending_down;
+    final icon = isGain ? Icons.trending_up : Icons.trending_down;
     final label = isGain ? 'أرباح صرافة' : 'خسائر صرافة';
 
     return Container(
@@ -1001,7 +1026,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             // From Cash Box
             Row(
               children: [
-                Icon(Icons.account_balance_wallet, size: 18, color: AppColors.error),
+                Icon(Icons.account_balance_wallet,
+                    size: 18, color: AppColors.error),
                 const SizedBox(width: 8),
                 Text(
                   'صندوق المصدر',
@@ -1026,7 +1052,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               decoration: InputDecoration(
                 hintText: 'اختر صندوق المصدر',
                 prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
@@ -1055,7 +1082,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: balance > 0 ? AppColors.success : AppColors.textSecondary,
+                          color: balance > 0
+                              ? AppColors.success
+                              : AppColors.textSecondary,
                         ),
                         textDirection: TextDirection.ltr,
                       ),
@@ -1070,7 +1099,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             // To Cash Box
             Row(
               children: [
-                Icon(Icons.account_balance_wallet, size: 18, color: AppColors.success),
+                Icon(Icons.account_balance_wallet,
+                    size: 18, color: AppColors.success),
                 const SizedBox(width: 8),
                 Text(
                   'صندوق الوجهة',
@@ -1095,7 +1125,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               decoration: InputDecoration(
                 hintText: 'اختر صندوق الوجهة',
                 prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: AppColors.border),
@@ -1124,7 +1155,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: balance > 0 ? AppColors.success : AppColors.textSecondary,
+                          color: balance > 0
+                              ? AppColors.success
+                              : AppColors.textSecondary,
                         ),
                         textDirection: TextDirection.ltr,
                       ),
@@ -1152,7 +1185,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
                   )
                 : const Icon(Icons.swap_horiz, size: 20),
             label: Text(
@@ -1311,9 +1345,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               const SizedBox(height: 4),
               _journalRow(
                 theme,
-                account: gainLossType == 'gain'
-                    ? 'أرباح صرافة'
-                    : 'خسائر صرافة',
+                account: gainLossType == 'gain' ? 'أرباح صرافة' : 'خسائر صرافة',
                 debit: gainLossType == 'loss' ? gainLoss : 0,
                 credit: gainLossType == 'gain' ? gainLoss : 0,
                 currency: 'YER',
@@ -1506,7 +1538,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
@@ -1624,7 +1657,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
             // Cash box info
             Row(
               children: [
-                Icon(Icons.account_balance_wallet, size: 14, color: AppColors.textSecondary),
+                Icon(Icons.account_balance_wallet,
+                    size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -1644,11 +1678,15 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (gainLossType == 'gain' ? AppColors.success : AppColors.error)
+                  color: (gainLossType == 'gain'
+                          ? AppColors.success
+                          : AppColors.error)
                       .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: (gainLossType == 'gain' ? AppColors.success : AppColors.error)
+                    color: (gainLossType == 'gain'
+                            ? AppColors.success
+                            : AppColors.error)
                         .withValues(alpha: 0.2),
                   ),
                 ),
@@ -1660,14 +1698,18 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                           ? Icons.trending_up
                           : Icons.trending_down,
                       size: 14,
-                      color: gainLossType == 'gain' ? AppColors.success : AppColors.error,
+                      color: gainLossType == 'gain'
+                          ? AppColors.success
+                          : AppColors.error,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       gainLossType == 'gain' ? 'ربح' : 'خسارة',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: gainLossType == 'gain' ? AppColors.success : AppColors.error,
+                        color: gainLossType == 'gain'
+                            ? AppColors.success
+                            : AppColors.error,
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -1675,7 +1717,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
                       '${CurrencyFormatter.format(gainLoss)} ر.ي',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: gainLossType == 'gain' ? AppColors.success : AppColors.error,
+                        color: gainLossType == 'gain'
+                            ? AppColors.success
+                            : AppColors.error,
                       ),
                       textDirection: TextDirection.ltr,
                     ),
@@ -1689,7 +1733,8 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.sticky_note_2, size: 14, color: AppColors.textHint),
+                  Icon(Icons.sticky_note_2,
+                      size: 14, color: AppColors.textHint),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(

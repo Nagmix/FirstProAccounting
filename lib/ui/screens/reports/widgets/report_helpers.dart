@@ -107,10 +107,14 @@ String getReportDescription(String key) {
 
 String? currencyCode(String selectedCurrency) {
   switch (selectedCurrency) {
-    case 'ر.ي': return 'YER';
-    case 'ر.س': return 'SAR';
-    case r'$': return 'USD';
-    default: return null;
+    case 'ر.ي':
+      return 'YER';
+    case 'ر.س':
+      return 'SAR';
+    case r'$':
+      return 'USD';
+    default:
+      return null;
   }
 }
 
@@ -134,22 +138,33 @@ String fmtMoney(double v) => CurrencyFormatter.format(v);
 
 String accountTypeAr(String type) {
   switch (type) {
-    case 'ASSET': return 'أصول';
-    case 'LIABILITY': return 'خصوم';
-    case 'EQUITY': return 'حقوق الملكية';
-    case 'COST': return 'تكاليف';
-    case 'REVENUE': return 'إيرادات';
-    case 'EXPENSE': return 'مصاريف';
-    default: return type;
+    case 'ASSET':
+      return 'أصول';
+    case 'LIABILITY':
+      return 'خصوم';
+    case 'EQUITY':
+      return 'حقوق الملكية';
+    case 'COST':
+      return 'تكاليف';
+    case 'REVENUE':
+      return 'إيرادات';
+    case 'EXPENSE':
+      return 'مصاريف';
+    default:
+      return type;
   }
 }
 
 String invoiceTypeAr(String type, {int? isReturn}) {
   final isRet = isReturn == 1;
   switch (type) {
-    case 'sale': case 'pos': return isRet ? 'مرتجع مبيعات' : 'مبيعات';
-    case 'purchase': return isRet ? 'مرتجع مشتريات' : 'مشتريات';
-    default: return type;
+    case 'sale':
+    case 'pos':
+      return isRet ? 'مرتجع مبيعات' : 'مبيعات';
+    case 'purchase':
+      return isRet ? 'مرتجع مشتريات' : 'مشتريات';
+    default:
+      return type;
   }
 }
 
@@ -159,13 +174,25 @@ String invoiceTypeAr(String type, {int? isReturn}) {
 
 bool needsDateFilter(String? reportKey) {
   if (reportKey == null) return false;
-  const noDate = {'accounts_no_movement', 'inventory', 'out_of_stock', 'low_stock', 'inventory_cost'};
+  const noDate = {
+    'accounts_no_movement',
+    'inventory',
+    'out_of_stock',
+    'low_stock',
+    'inventory_cost'
+  };
   return !noDate.contains(reportKey);
 }
 
 bool needsCurrencyFilter(String? reportKey) {
   if (reportKey == null) return false;
-  const noCurrency = {'accounts_no_movement', 'inventory_movement', 'cash_transfers', 'currency_exchanges', 'shifts'};
+  const noCurrency = {
+    'accounts_no_movement',
+    'inventory_movement',
+    'cash_transfers',
+    'currency_exchanges',
+    'shifts'
+  };
   return !noCurrency.contains(reportKey);
 }
 
@@ -190,7 +217,8 @@ bool needsWarehouseFilter(String? reportKey) {
 }
 
 bool needsCategoryFilter(String? reportKey) {
-  return const {'inventory', 'out_of_stock', 'low_stock', 'sales_by_product'}.contains(reportKey);
+  return const {'inventory', 'out_of_stock', 'low_stock', 'sales_by_product'}
+      .contains(reportKey);
 }
 
 bool needsAccountTypeFilter(String? reportKey) {

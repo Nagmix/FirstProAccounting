@@ -95,14 +95,18 @@ class TransactionTile extends StatelessWidget {
                         customerName,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         DateFormatter.formatDate(date),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -118,7 +122,9 @@ class TransactionTile extends StatelessWidget {
                       CurrencyFormatter.format(amount),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),

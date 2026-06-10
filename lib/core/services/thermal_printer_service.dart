@@ -70,7 +70,8 @@ class ThermalPrinterService {
             _isConnected = true;
 
             // Save the connected device
-            await locator<ReferenceDataRepository>().setSetting('thermal_printer_mac', macAddress);
+            await locator<ReferenceDataRepository>()
+                .setSetting('thermal_printer_mac', macAddress);
 
             return true;
           }
@@ -109,7 +110,8 @@ class ThermalPrinterService {
   /// Auto-connect to the last used printer.
   Future<bool> autoConnect() async {
     try {
-      final mac = await locator<ReferenceDataRepository>().getSetting('thermal_printer_mac');
+      final mac = await locator<ReferenceDataRepository>()
+          .getSetting('thermal_printer_mac');
       if (mac != null && mac.isNotEmpty) {
         return await connect(mac);
       }
@@ -161,10 +163,15 @@ class ThermalPrinterService {
       List<int> bytes = [];
 
       // Get business info from settings
-      final businessName =
-          await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
-      final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
-      final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address') ?? '';
+      final businessName = await locator<ReferenceDataRepository>()
+              .getSetting('business_name') ??
+          'الأول برو المحاسبي';
+      final businessPhone = await locator<ReferenceDataRepository>()
+              .getSetting('business_phone') ??
+          '';
+      final businessAddress = await locator<ReferenceDataRepository>()
+              .getSetting('business_address') ??
+          '';
 
       final currencySymbol =
           currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
@@ -187,8 +194,9 @@ class ThermalPrinterService {
       final typeLabel = invoiceType == 'sale'
           ? 'فاتورة بيع'
           : (invoiceType == 'purchase' ? 'فاتورة شراء' : 'فاتورة');
-      final paymentLabel =
-          paymentMethod == 'cash' ? 'نقدي' : (paymentMethod == 'credit' ? 'آجل' : 'بطاقة');
+      final paymentLabel = paymentMethod == 'cash'
+          ? 'نقدي'
+          : (paymentMethod == 'credit' ? 'آجل' : 'بطاقة');
       bytes += cTextSize(1);
       bytes += cBoldOn();
       bytes += cText('${_normalizeArabic('$typeLabel $paymentLabel')}\n');
@@ -200,8 +208,8 @@ class ThermalPrinterService {
 
       // Items header
       bytes += cTextAlignRight();
-      bytes +=
-          cText('${_normalizeArabic('الصنف                الكمية    السعر    المبلغ')}\n');
+      bytes += cText(
+          '${_normalizeArabic('الصنف                الكمية    السعر    المبلغ')}\n');
       bytes += cLine();
 
       // Items
@@ -230,8 +238,8 @@ class ThermalPrinterService {
       }
       bytes += cBoldOn();
       bytes += cTextSize(2);
-      bytes += cText(
-          '${_normalizeArabic('الإجمالي: $total $currencySymbol')}\n');
+      bytes +=
+          cText('${_normalizeArabic('الإجمالي: $total $currencySymbol')}\n');
       bytes += cTextSize(1);
       bytes += cBoldOff();
 
@@ -272,8 +280,9 @@ class ThermalPrinterService {
 
     try {
       List<int> bytes = [];
-      final businessName =
-          await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
+      final businessName = await locator<ReferenceDataRepository>()
+              .getSetting('business_name') ??
+          'الأول برو المحاسبي';
       final currencySymbol =
           currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
 
@@ -322,10 +331,41 @@ class ThermalPrinterService {
 
   // ESC/POS Command helpers
   List<int> cInit() => [0x1B, 0x40]; // Initialize printer
-  List<int> cFeed(int lines) =>
-      List.generate(lines, (_) => 0x0A); // Feed lines
-  List<int> cLine() =>
-      [0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x0A]; // Dashed line
+  List<int> cFeed(int lines) => List.generate(lines, (_) => 0x0A); // Feed lines
+  List<int> cLine() => [
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x2D,
+        0x0A
+      ]; // Dashed line
   List<int> cTextAlignCenter() => [0x1B, 0x61, 0x01]; // Center alignment
   List<int> cTextAlignRight() => [0x1B, 0x61, 0x02]; // Right alignment
   List<int> cTextAlignLeft() => [0x1B, 0x61, 0x00]; // Left alignment

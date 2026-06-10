@@ -123,8 +123,12 @@ class Expense {
       attachmentPath: map['attachment_path'],
       operationType: map['operation_type'] ?? 'صرف',
       expenseAccountId: map['expense_account_id'],
-      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
-      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : DateTime.now(),
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'])
+          : DateTime.now(),
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : DateTime.now(),
     );
   }
 

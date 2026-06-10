@@ -158,13 +158,19 @@ class _EmptyState extends StatelessWidget {
               child: Icon(icon, size: 40, color: color.withValues(alpha: 0.5)),
             ),
             const SizedBox(height: 16),
-            Text(title, style: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w700, color: color,
-            )),
+            Text(title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                )),
             const SizedBox(height: 4),
-            Text(subtitle, style: TextStyle(
-              fontSize: 13, color: color.withValues(alpha: 0.6),
-            ), textAlign: TextAlign.center),
+            Text(subtitle,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: color.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -181,7 +187,8 @@ class _ShimmerLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant;
+    final baseColor =
+        isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant;
     final highlightColor = isDark ? AppColors.darkSurface : AppColors.surface;
 
     return Column(
@@ -193,14 +200,18 @@ class _ShimmerLoading extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             itemCount: 4,
             separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, __) => _shimmerBox(baseColor, highlightColor, 140, 80),
+            itemBuilder: (_, __) =>
+                _shimmerBox(baseColor, highlightColor, 140, 80),
           ),
         ),
         const SizedBox(height: 12),
-        ...List.generate(6, (_) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: _shimmerBox(baseColor, highlightColor, double.infinity, 36),
-        )),
+        ...List.generate(
+            6,
+            (_) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: _shimmerBox(
+                      baseColor, highlightColor, double.infinity, 36),
+                )),
       ],
     );
   }
@@ -238,9 +249,14 @@ class _KPICards extends StatelessWidget {
     // ignore: unused_local_variable
     final theme = Theme.of(context);
     final entries = totals.entries
-        .where((e) => e.key != 'العدد' && e.key != 'عدد الحسابات' &&
-                      e.key != 'عدد الأصناف' && e.key != 'عدد العملاء' &&
-                      e.key != 'عدد الصناديق' && e.key != 'العميل' && e.key != 'المورد')
+        .where((e) =>
+            e.key != 'العدد' &&
+            e.key != 'عدد الحسابات' &&
+            e.key != 'عدد الأصناف' &&
+            e.key != 'عدد العملاء' &&
+            e.key != 'عدد الصناديق' &&
+            e.key != 'العميل' &&
+            e.key != 'المورد')
         .take(4)
         .toList();
     if (entries.isEmpty) return const SizedBox.shrink();
@@ -266,20 +282,28 @@ class _KPICard extends StatelessWidget {
   final double value;
   final bool isDark;
 
-  const _KPICard({required this.label, required this.value, required this.isDark});
+  const _KPICard(
+      {required this.label, required this.value, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     Color cardColor;
     IconData cardIcon;
-    if (label.contains('ربح') || label.contains('إيرادات') || label.contains('مبيعات') ||
-        label.contains('البيع') || label.contains('الوارد')) {
+    if (label.contains('ربح') ||
+        label.contains('إيرادات') ||
+        label.contains('مبيعات') ||
+        label.contains('البيع') ||
+        label.contains('الوارد')) {
       cardColor = value >= 0 ? AppColors.success : AppColors.error;
       cardIcon = value >= 0 ? Icons.trending_up : Icons.trending_down;
-    } else if (label.contains('مشتريات') || label.contains('تكلفة') ||
-               label.contains('مصروف') || label.contains('دين') || label.contains('متبقي') ||
-               label.contains('الصادر') || label.contains('خسائر')) {
+    } else if (label.contains('مشتريات') ||
+        label.contains('تكلفة') ||
+        label.contains('مصروف') ||
+        label.contains('دين') ||
+        label.contains('متبقي') ||
+        label.contains('الصادر') ||
+        label.contains('خسائر')) {
       cardColor = AppColors.error;
       cardIcon = Icons.trending_down;
     } else {
@@ -307,9 +331,14 @@ class _KPICard extends StatelessWidget {
               Icon(cardIcon, size: 16, color: cardColor),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(label, style: theme.textTheme.labelSmall?.copyWith(
-                  color: cardColor, fontWeight: FontWeight.w600, fontSize: 10,
-                ), maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cardColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
               ),
             ],
           ),
@@ -317,7 +346,9 @@ class _KPICard extends StatelessWidget {
           Text(
             fmtMoney(value.abs()),
             style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w900, color: cardColor, fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: cardColor,
+              fontSize: 16,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -350,8 +381,13 @@ class _SearchBar extends StatelessWidget {
       onChanged: onChanged,
       decoration: InputDecoration(
         hintText: 'بحث في النتائج...',
-        hintStyle: TextStyle(color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary, fontSize: 13),
-        prefixIcon: Icon(Icons.search, size: 20, color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
+        hintStyle: TextStyle(
+            color: isDark ? AppColors.darkTextTertiary : AppColors.textTertiary,
+            fontSize: 13),
+        prefixIcon: Icon(Icons.search,
+            size: 20,
+            color:
+                isDark ? AppColors.darkTextTertiary : AppColors.textTertiary),
         suffixIcon: searchQuery.isNotEmpty
             ? IconButton(
                 icon: Icon(Icons.clear, size: 18, color: AppColors.textHint),
@@ -359,8 +395,10 @@ class _SearchBar extends StatelessWidget {
               )
             : null,
         filled: true,
-        fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        fillColor:
+            isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -426,7 +464,8 @@ class _SortableDataTable extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.only(bottom: 16),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 24),
+        constraints:
+            BoxConstraints(minWidth: MediaQuery.of(context).size.width - 24),
         child: SingleChildScrollView(
           padding: EdgeInsets.zero,
           child: DataTable(
@@ -436,7 +475,9 @@ class _SortableDataTable extends StatelessWidget {
               AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
             ),
             headingTextStyle: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+              fontSize: 11,
             ),
             dataTextStyle: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
             columnSpacing: 16,
@@ -448,11 +489,15 @@ class _SortableDataTable extends StatelessWidget {
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(col, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    Text(col,
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
                     if (sortColumnIndex == idx)
                       Icon(
-                        sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                        size: 14, color: AppColors.primary,
+                        sortAscending
+                            ? Icons.arrow_upward
+                            : Icons.arrow_downward,
+                        size: 14,
+                        color: AppColors.primary,
                       ),
                   ],
                 ),
@@ -461,7 +506,8 @@ class _SortableDataTable extends StatelessWidget {
               );
             }).toList(),
             rows: sortedRows.map((row) {
-              return DataRow(cells: columns.map((col) {
+              return DataRow(
+                  cells: columns.map((col) {
                 final v = row[col];
                 String display;
                 if (v == null) {
@@ -469,7 +515,13 @@ class _SortableDataTable extends StatelessWidget {
                 } else if (v is double) {
                   if (dateKeys.contains(col)) {
                     display = fmtDate(v.toString());
-                  } else if (numericKeys.contains(col) && (col.contains('الكمية') || col.contains('الوارد') || col.contains('الصادر') || col.contains('الصافي') || col.contains('الحد') || col.contains('عدد'))) {
+                  } else if (numericKeys.contains(col) &&
+                      (col.contains('الكمية') ||
+                          col.contains('الوارد') ||
+                          col.contains('الصادر') ||
+                          col.contains('الصافي') ||
+                          col.contains('الحد') ||
+                          col.contains('عدد'))) {
                     display = fmtNum(v);
                   } else if (col.contains('هامش')) {
                     display = '${v.toStringAsFixed(1)}%';
@@ -486,13 +538,18 @@ class _SortableDataTable extends StatelessWidget {
                 }
                 // Color negative values in red
                 Color? textColor;
-                if (v is double && v < 0 && numericKeys.contains(col) && !dateKeys.contains(col)) {
+                if (v is double &&
+                    v < 0 &&
+                    numericKeys.contains(col) &&
+                    !dateKeys.contains(col)) {
                   textColor = AppColors.error;
                 }
                 return DataCell(Text(
                   display,
                   style: textColor != null ? TextStyle(color: textColor) : null,
-                  textAlign: numericKeys.contains(col) ? TextAlign.left : TextAlign.right,
+                  textAlign: numericKeys.contains(col)
+                      ? TextAlign.left
+                      : TextAlign.right,
                 ));
               }).toList());
             }).toList(),

@@ -13,7 +13,8 @@ import '../widgets/custom_bottom_bar.dart';
 class LazyIndexedStack extends StatefulWidget {
   final int index;
   final List<Widget> children;
-  const LazyIndexedStack({super.key, required this.index, required this.children});
+  const LazyIndexedStack(
+      {super.key, required this.index, required this.children});
 
   @override
   State<LazyIndexedStack> createState() => _LazyIndexedStackState();
@@ -44,7 +45,9 @@ class _LazyIndexedStackState extends State<LazyIndexedStack> {
       index: widget.index,
       children: [
         for (int i = 0; i < widget.children.length; i++)
-          _builtIndices.contains(i) ? widget.children[i] : const SizedBox.shrink(),
+          _builtIndices.contains(i)
+              ? widget.children[i]
+              : const SizedBox.shrink(),
       ],
     );
   }
@@ -57,7 +60,8 @@ class MainScaffold extends StatefulWidget {
   State<MainScaffold> createState() => _MainScaffoldState();
 }
 
-class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMixin {
+class _MainScaffoldState extends State<MainScaffold>
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
   late AnimationController _drawerAnimController;
 
@@ -93,30 +97,118 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
   ];
 
   final _drawerItems = const <_DrawerMenuItem>[
-    _DrawerMenuItem(icon: Icons.receipt, label: 'فاتورة بيع جديدة', route: AppConstants.newSaleInvoice, color: AppColors.accentBlue),
-    _DrawerMenuItem(icon: Icons.shopping_cart, label: 'فاتورة شراء جديدة', route: AppConstants.newPurchaseInvoice, color: AppColors.accentPink),
-    _DrawerMenuItem(icon: Icons.description, label: 'عروض الأسعار', route: AppConstants.quotations, color: Colors.purple),
-    _DrawerMenuItem(icon: Icons.shopping_cart, label: 'طلبات الشراء', route: AppConstants.purchaseOrders, color: Colors.teal),
-    _DrawerMenuItem(icon: Icons.inventory_2, label: 'طلبات البيع', route: AppConstants.salesOrders, color: Colors.indigo),
-    _DrawerMenuItem(icon: Icons.history, label: 'الورديات', route: AppConstants.shifts, color: Colors.brown),
-    _DrawerMenuItem(icon: Icons.people, label: 'قائمة العملاء', route: AppConstants.customers, color: AppColors.primaryLight),
-    _DrawerMenuItem(icon: Icons.inventory_2, label: 'المنتجات والمخزون', route: AppConstants.products, color: AppColors.secondary),
-    _DrawerMenuItem(icon: Icons.attach_money, label: 'المصروفات', route: AppConstants.expenses, color: AppColors.error),
-    _DrawerMenuItem(icon: Icons.person, label: 'الموظفين', route: AppConstants.employees, color: AppColors.accentBlue),
-    _DrawerMenuItem(icon: Icons.account_balance_wallet, label: 'الصناديق والبنوك', route: AppConstants.cashBoxes, color: AppColors.success),
+    _DrawerMenuItem(
+        icon: Icons.receipt,
+        label: 'فاتورة بيع جديدة',
+        route: AppConstants.newSaleInvoice,
+        color: AppColors.accentBlue),
+    _DrawerMenuItem(
+        icon: Icons.shopping_cart,
+        label: 'فاتورة شراء جديدة',
+        route: AppConstants.newPurchaseInvoice,
+        color: AppColors.accentPink),
+    _DrawerMenuItem(
+        icon: Icons.description,
+        label: 'عروض الأسعار',
+        route: AppConstants.quotations,
+        color: Colors.purple),
+    _DrawerMenuItem(
+        icon: Icons.shopping_cart,
+        label: 'طلبات الشراء',
+        route: AppConstants.purchaseOrders,
+        color: Colors.teal),
+    _DrawerMenuItem(
+        icon: Icons.inventory_2,
+        label: 'طلبات البيع',
+        route: AppConstants.salesOrders,
+        color: Colors.indigo),
+    _DrawerMenuItem(
+        icon: Icons.history,
+        label: 'الورديات',
+        route: AppConstants.shifts,
+        color: Colors.brown),
+    _DrawerMenuItem(
+        icon: Icons.people,
+        label: 'قائمة العملاء',
+        route: AppConstants.customers,
+        color: AppColors.primaryLight),
+    _DrawerMenuItem(
+        icon: Icons.inventory_2,
+        label: 'المنتجات والمخزون',
+        route: AppConstants.products,
+        color: AppColors.secondary),
+    _DrawerMenuItem(
+        icon: Icons.attach_money,
+        label: 'المصروفات',
+        route: AppConstants.expenses,
+        color: AppColors.error),
+    _DrawerMenuItem(
+        icon: Icons.person,
+        label: 'الموظفين',
+        route: AppConstants.employees,
+        color: AppColors.accentBlue),
+    _DrawerMenuItem(
+        icon: Icons.account_balance_wallet,
+        label: 'الصناديق والبنوك',
+        route: AppConstants.cashBoxes,
+        color: AppColors.success),
     // ── New: Currency Exchange, Cash Transfers, Debt Tracking ─────
-    _DrawerMenuItem(icon: Icons.swap_horiz, label: 'مصارفة عملات', route: AppConstants.currencyExchange, color: Color(0xFF00ACC1)),
-    _DrawerMenuItem(icon: Icons.swap_horiz, label: 'تحويل بين الصناديق', route: AppConstants.cashTransfers, color: Color(0xFF1E88E5)),
-    _DrawerMenuItem(icon: Icons.savings, label: 'تتبع الديون', route: AppConstants.debts, color: Color(0xFFE65100)),
+    _DrawerMenuItem(
+        icon: Icons.swap_horiz,
+        label: 'مصارفة عملات',
+        route: AppConstants.currencyExchange,
+        color: Color(0xFF00ACC1)),
+    _DrawerMenuItem(
+        icon: Icons.swap_horiz,
+        label: 'تحويل بين الصناديق',
+        route: AppConstants.cashTransfers,
+        color: Color(0xFF1E88E5)),
+    _DrawerMenuItem(
+        icon: Icons.savings,
+        label: 'تتبع الديون',
+        route: AppConstants.debts,
+        color: Color(0xFFE65100)),
     // ───────────────────────────────────────────────────────────────
-    _DrawerMenuItem(icon: Icons.receipt_long, label: 'السندات', route: AppConstants.vouchers, color: Color(0xFF7B1FA2)),
-    _DrawerMenuItem(icon: Icons.local_shipping, label: 'الموردين', route: AppConstants.suppliers, color: AppColors.info),
-    _DrawerMenuItem(icon: Icons.warehouse, label: 'المستودعات', route: AppConstants.warehouses, color: AppColors.secondaryDark),
-    _DrawerMenuItem(icon: Icons.pie_chart, label: 'دليل الحسابات', route: AppConstants.chartOfAccounts, color: AppColors.primary),
-    _DrawerMenuItem(icon: Icons.balance, label: 'التسوية البنكية', route: AppConstants.bankReconciliation, color: Color(0xFF00897B)),
-    _DrawerMenuItem(icon: Icons.attach_money, label: 'إدارة العملات', route: AppConstants.currencies, color: AppColors.success),
-    _DrawerMenuItem(icon: Icons.show_chart, label: 'تقرير المبيعات اليومية', route: AppConstants.dailySalesReport, color: AppColors.warning),
-    _DrawerMenuItem(icon: Icons.settings, label: 'الإعدادات', route: AppConstants.settings, color: AppColors.textSecondary),
+    _DrawerMenuItem(
+        icon: Icons.receipt_long,
+        label: 'السندات',
+        route: AppConstants.vouchers,
+        color: Color(0xFF7B1FA2)),
+    _DrawerMenuItem(
+        icon: Icons.local_shipping,
+        label: 'الموردين',
+        route: AppConstants.suppliers,
+        color: AppColors.info),
+    _DrawerMenuItem(
+        icon: Icons.warehouse,
+        label: 'المستودعات',
+        route: AppConstants.warehouses,
+        color: AppColors.secondaryDark),
+    _DrawerMenuItem(
+        icon: Icons.pie_chart,
+        label: 'دليل الحسابات',
+        route: AppConstants.chartOfAccounts,
+        color: AppColors.primary),
+    _DrawerMenuItem(
+        icon: Icons.balance,
+        label: 'التسوية البنكية',
+        route: AppConstants.bankReconciliation,
+        color: Color(0xFF00897B)),
+    _DrawerMenuItem(
+        icon: Icons.attach_money,
+        label: 'إدارة العملات',
+        route: AppConstants.currencies,
+        color: AppColors.success),
+    _DrawerMenuItem(
+        icon: Icons.show_chart,
+        label: 'تقرير المبيعات اليومية',
+        route: AppConstants.dailySalesReport,
+        color: AppColors.warning),
+    _DrawerMenuItem(
+        icon: Icons.settings,
+        label: 'الإعدادات',
+        route: AppConstants.settings,
+        color: AppColors.textSecondary),
   ];
 
   @override
@@ -270,7 +362,8 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                         color: AppColors.accentPink,
                         onTap: () {
                           Navigator.pop(context);
-                          AppRouter.push(context, AppConstants.newPurchaseInvoice);
+                          AppRouter.push(
+                              context, AppConstants.newPurchaseInvoice);
                         },
                       ),
                       const SizedBox(width: 12),
@@ -305,7 +398,8 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                         color: const Color(0xFF00ACC1),
                         onTap: () {
                           Navigator.pop(context);
-                          AppRouter.push(context, AppConstants.currencyExchange);
+                          AppRouter.push(
+                              context, AppConstants.currencyExchange);
                         },
                       ),
                       const SizedBox(width: 12),
@@ -354,11 +448,15 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primaryGradientStart, AppColors.primaryGradientEnd],
+                  colors: [
+                    AppColors.primaryGradientStart,
+                    AppColors.primaryGradientEnd
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+                borderRadius:
+                    BorderRadius.vertical(bottom: Radius.circular(28)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +465,8 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                     'assets/icons/logo.svg',
                     width: 48,
                     height: 48,
-                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    colorFilter:
+                        const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                   ),
                   const SizedBox(height: 14),
                   Text(
@@ -380,7 +479,8 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                   const SizedBox(height: 4),
                   Text(
                     AppConstants.appSlogan,
-                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: Colors.white70),
                   ),
                 ],
               ),
@@ -405,7 +505,8 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
                           child: Row(
                             children: [
                               // Icon with colored background
@@ -428,7 +529,9 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                                   item.label,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w500,
-                                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                                    color: isDark
+                                        ? AppColors.darkTextPrimary
+                                        : AppColors.textPrimary,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
@@ -437,7 +540,9 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                               Icon(
                                 Icons.arrow_back_ios,
                                 size: 14,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.textHint,
                               ),
                             ],
                           ),
@@ -455,7 +560,8 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
               child: Text(
                 'الإصدار ${AppConstants.appVersion}',
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                  color:
+                      isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -497,7 +603,11 @@ class _MoreTab extends StatelessWidget {
         title: const Text('المزيد'),
       ),
       body: ListView(
-        padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: kBottomNavigationBarHeight + bottomPadding),
+        padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: kBottomNavigationBarHeight + bottomPadding),
         children: [
           // ── Section: المبيعات والشراء ────────────────────────────
           _buildSectionHeader(context, 'المبيعات والشراء'),
@@ -618,7 +728,8 @@ class _MoreTab extends StatelessWidget {
             title: 'التسوية البنكية',
             subtitle: 'تسوية كشوفات الحسابات البنكية',
             color: const Color(0xFF00897B),
-            onTap: () => AppRouter.push(context, AppConstants.bankReconciliation),
+            onTap: () =>
+                AppRouter.push(context, AppConstants.bankReconciliation),
           ),
           _MoreTile(
             icon: Icons.pie_chart,
@@ -678,7 +789,8 @@ class _MoreTab extends StatelessWidget {
           const Divider(height: 32),
           Text(
             'حول التطبيق',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           ListTile(
@@ -745,7 +857,8 @@ class _MoreTile extends StatelessWidget {
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         elevation: 1,
-        shadowColor: isDark ? Colors.black26 : AppColors.primary.withValues(alpha: 0.06),
+        shadowColor:
+            isDark ? Colors.black26 : AppColors.primary.withValues(alpha: 0.06),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
@@ -771,7 +884,9 @@ class _MoreTile extends StatelessWidget {
                         title,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.textPrimary,
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
@@ -780,7 +895,9 @@ class _MoreTile extends StatelessWidget {
                       Text(
                         subtitle,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textSecondary,
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
@@ -791,7 +908,8 @@ class _MoreTile extends StatelessWidget {
                 Icon(
                   Icons.arrow_back_ios,
                   size: 16,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textHint,
+                  color:
+                      isDark ? AppColors.darkTextSecondary : AppColors.textHint,
                 ),
               ],
             ),

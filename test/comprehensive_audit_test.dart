@@ -137,7 +137,8 @@ void main() {
         expect(MoneyHelper.readMoney(0), equals(0.0));
       });
 
-      test('reads double as legacy (already divided) — 150.75 stays 150.75', () {
+      test('reads double as legacy (already divided) — 150.75 stays 150.75',
+          () {
         expect(MoneyHelper.readMoney(150.75), equals(150.75));
       });
 
@@ -151,7 +152,8 @@ void main() {
         expect(MoneyHelper.readMoney(15075 as num), closeTo(150.75, 0.001));
       });
 
-      test('handles num type with decimal value (treated as legacy double)', () {
+      test('handles num type with decimal value (treated as legacy double)',
+          () {
         // A num with a decimal part like 150.75 should be treated as legacy
         final num value = 150.75;
         expect(MoneyHelper.readMoney(value), equals(150.75));
@@ -180,8 +182,8 @@ void main() {
       });
 
       test('returns custom fallback for null', () {
-        expect(
-            MoneyHelper.readCalculatedMoney(null, fallback: 99.0), equals(99.0));
+        expect(MoneyHelper.readCalculatedMoney(null, fallback: 99.0),
+            equals(99.0));
       });
 
       test('reads 0 correctly', () {
@@ -254,8 +256,7 @@ void main() {
           'debt_ceiling': 1000.0, // double → 100000
           'name': 'Test',
         };
-        final result =
-            MoneyHelper.toCentsMap(map, ['balance', 'debt_ceiling']);
+        final result = MoneyHelper.toCentsMap(map, ['balance', 'debt_ceiling']);
         expect(result['balance'], equals(50000));
         expect(result['debt_ceiling'], equals(100000));
         expect(result['name'], equals('Test'));
@@ -366,8 +367,7 @@ void main() {
         expect(result.balance, closeTo(5000.0, 0.01));
       });
 
-      test('receipt from customer → credit effect (reduces what they owe)',
-          () {
+      test('receipt from customer → credit effect (reduces what they owe)', () {
         // Start: customer owes 5000 (debit)
         // Receipt: credit effect → signedChange = +3000
         final result = applySignedChange(
@@ -657,8 +657,7 @@ void main() {
       // A genuine manual journal entry that is NOT linked to any invoice
       // should NOT be excluded — it represents revenue/expense that is
       // only captured through the CoA supplement.
-      expect(
-          shouldExcludeFromManualCalculation('manual_adjustment'), isFalse);
+      expect(shouldExcludeFromManualCalculation('manual_adjustment'), isFalse);
     });
 
     test('expense reference_type is excluded from manual expenses', () {
@@ -777,7 +776,8 @@ void main() {
       expect(result.baseType, equals('sale'),
           reason: "sale_return should normalize baseType to 'sale'");
       expect(result.isReturn, isTrue,
-          reason: "sale_return forces isReturn=true regardless of is_return field");
+          reason:
+              "sale_return forces isReturn=true regardless of is_return field");
     });
 
     test("type='purchase_return' → normalized to purchase + isReturn=true", () {
@@ -863,16 +863,14 @@ void main() {
         final result = classifyInvoice(rawType: 'purchase', rawIsReturn: 0);
         final isDebit = result.baseType == 'purchase' && !result.isReturn;
         expect(isDebit, isTrue,
-            reason:
-                'Purchase invoices should debit the cash box (money out)');
+            reason: 'Purchase invoices should debit the cash box (money out)');
       });
 
       test('purchase return → credit = paidAmount (cash in)', () {
         final result = classifyInvoice(rawType: 'purchase', rawIsReturn: 1);
         final isCredit = result.baseType == 'purchase' && result.isReturn;
         expect(isCredit, isTrue,
-            reason:
-                'Purchase returns should credit the cash box (money in)');
+            reason: 'Purchase returns should credit the cash box (money in)');
       });
 
       test('POS sale → credit = paidAmount (cash in)', () {
@@ -915,9 +913,8 @@ void main() {
       required bool isCashIn,
     }) {
       // Compute the signed balance: credit = positive, debit = negative
-      double signedBalance = currentBalanceType == 'credit'
-          ? currentBalance
-          : -currentBalance;
+      double signedBalance =
+          currentBalanceType == 'credit' ? currentBalance : -currentBalance;
 
       // Apply the change: cash-in increases signed balance, cash-out decreases it
       if (isCashIn) {
@@ -977,7 +974,8 @@ void main() {
         isCashIn: false,
       );
       expect(result.balanceType, equals('debit'),
-          reason: 'Overdraft: cash-out exceeds credit balance → flips to debit');
+          reason:
+              'Overdraft: cash-out exceeds credit balance → flips to debit');
       expect(result.balance, closeTo(3000.0, 0.01));
     });
 
@@ -1227,10 +1225,9 @@ void main() {
       expect(
           MoneyHelper.readMoney(map['tax_amount']), closeTo(taxAmount, 0.01));
       expect(MoneyHelper.readMoney(map['total']), closeTo(total, 0.01));
-      expect(MoneyHelper.readMoney(map['paid_amount']),
-          closeTo(paidAmount, 0.01));
       expect(
-          MoneyHelper.readMoney(map['remaining']), closeTo(remaining, 0.01));
+          MoneyHelper.readMoney(map['paid_amount']), closeTo(paidAmount, 0.01));
+      expect(MoneyHelper.readMoney(map['remaining']), closeTo(remaining, 0.01));
     });
 
     test('account balance round-trip via toCents/readMoney', () {
@@ -1278,7 +1275,8 @@ void main() {
       };
 
       // Step 1: Convert for DB storage
-      final dbMap = MoneyHelper.toCentsMap(uiMap, MoneyHelper.invoiceMoneyFields);
+      final dbMap =
+          MoneyHelper.toCentsMap(uiMap, MoneyHelper.invoiceMoneyFields);
 
       // Verify non-money field is untouched
       expect(dbMap['invoice_number'], equals('INV-001'));
@@ -1306,8 +1304,7 @@ void main() {
       };
 
       // Convert for DB storage — the fix converts ints too
-      final dbMap =
-          MoneyHelper.toCentsMap(uiMap, ['balance', 'debt_ceiling']);
+      final dbMap = MoneyHelper.toCentsMap(uiMap, ['balance', 'debt_ceiling']);
 
       // These should now be in cents (the fix)
       expect(dbMap['balance'], equals(50000),

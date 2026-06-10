@@ -78,11 +78,15 @@ class ReportService {
         "FROM vouchers "
         "WHERE date >= ? AND date < ? "
         "ORDER BY date DESC",
-        [dayStart.toIso8601String().substring(0, 10), dayEnd.toIso8601String().substring(0, 10)],
+        [
+          dayStart.toIso8601String().substring(0, 10),
+          dayEnd.toIso8601String().substring(0, 10)
+        ],
       );
       for (final row in vouchers) {
         final voucherType = row['voucher_type'] as String? ?? '';
-        final isReceipt = voucherType.contains('receipt') || voucherType.contains('قبض');
+        final isReceipt =
+            voucherType.contains('receipt') || voucherType.contains('قبض');
         operations.add({
           'type': isReceipt ? 'receipt_voucher' : 'payment_voucher',
           'type_label': isReceipt ? 'سند قبض' : 'سند صرف',
@@ -159,7 +163,8 @@ class ReportService {
           'type': 'currency_exchange',
           'type_label': 'صرافة عملات',
           'id': row['id'],
-          'entity_name': '${row['from_currency'] ?? ''} → ${row['to_currency'] ?? ''}',
+          'entity_name':
+              '${row['from_currency'] ?? ''} → ${row['to_currency'] ?? ''}',
           'amount': MoneyHelper.readCalculatedMoney(row['from_amount']),
           'currency': row['from_currency'] ?? 'YER',
           'time': row['created_at'] ?? '',
@@ -205,7 +210,8 @@ class ReportService {
       "AND created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_sales'] = MoneyHelper.readCalculatedMoney(salesResult.first['total']);
+    summary['total_sales'] =
+        MoneyHelper.readCalculatedMoney(salesResult.first['total']);
 
     // إجمالي المشتريات
     final purchasesResult = await db.rawQuery(
@@ -214,7 +220,8 @@ class ReportService {
       "AND created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_purchases'] = MoneyHelper.readCalculatedMoney(purchasesResult.first['total']);
+    summary['total_purchases'] =
+        MoneyHelper.readCalculatedMoney(purchasesResult.first['total']);
 
     // سندات القبض
     try {
@@ -224,8 +231,11 @@ class ReportService {
         "AND date >= ? AND date < ?",
         [startStr, endStr],
       );
-      summary['total_receipts'] = MoneyHelper.readCalculatedMoney(receiptsResult.first['total']);
-    } catch (e) { DatabaseHelper.logMigrationError("migration", e); }
+      summary['total_receipts'] =
+          MoneyHelper.readCalculatedMoney(receiptsResult.first['total']);
+    } catch (e) {
+      DatabaseHelper.logMigrationError("migration", e);
+    }
 
     // سندات الصرف
     try {
@@ -235,8 +245,11 @@ class ReportService {
         "AND date >= ? AND date < ?",
         [startStr, endStr],
       );
-      summary['total_payments'] = MoneyHelper.readCalculatedMoney(paymentsResult.first['total']);
-    } catch (e) { DatabaseHelper.logMigrationError("migration", e); }
+      summary['total_payments'] =
+          MoneyHelper.readCalculatedMoney(paymentsResult.first['total']);
+    } catch (e) {
+      DatabaseHelper.logMigrationError("migration", e);
+    }
 
     // المصروفات
     final expensesResult = await db.rawQuery(
@@ -244,7 +257,8 @@ class ReportService {
       "WHERE expense_date >= ? AND expense_date < ?",
       [startStr, endStr],
     );
-    summary['total_expenses'] = MoneyHelper.readCalculatedMoney(expensesResult.first['total']);
+    summary['total_expenses'] =
+        MoneyHelper.readCalculatedMoney(expensesResult.first['total']);
 
     // التحويلات
     final transfersResult = await db.rawQuery(
@@ -252,7 +266,8 @@ class ReportService {
       "WHERE created_at >= ? AND created_at < ?",
       [startStr, endStr],
     );
-    summary['total_transfers'] = MoneyHelper.readCalculatedMoney(transfersResult.first['total']);
+    summary['total_transfers'] =
+        MoneyHelper.readCalculatedMoney(transfersResult.first['total']);
 
     return summary;
   }
@@ -391,7 +406,8 @@ class ReportService {
 
   /// Monthly sales vs purchases for a given [year].
   /// Returns 12 rows (one per month) with `month`, `sales`, `purchases` columns.
-  Future<List<Map<String, dynamic>>> getMonthlySalesVsPurchases(int year, {String? currency}) async {
+  Future<List<Map<String, dynamic>>> getMonthlySalesVsPurchases(int year,
+      {String? currency}) async {
     final db = await _db;
     final yearStr = year.toString();
     List<dynamic> args = [yearStr];
@@ -402,10 +418,18 @@ class ReportService {
       args.add(currency);
     }
     // Need separate sub-queries with separate arg lists
-    final salesArgs = [yearStr, if (currency != null && currency.isNotEmpty) currency];
-    final purchasesArgs = [yearStr, if (currency != null && currency.isNotEmpty) currency];
-    final salesCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND currency = ?' : '';
-    final purchasesCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND currency = ?' : '';
+    final salesArgs = [
+      yearStr,
+      if (currency != null && currency.isNotEmpty) currency
+    ];
+    final purchasesArgs = [
+      yearStr,
+      if (currency != null && currency.isNotEmpty) currency
+    ];
+    final salesCurrencyFilter =
+        currency != null && currency.isNotEmpty ? ' AND currency = ?' : '';
+    final purchasesCurrencyFilter =
+        currency != null && currency.isNotEmpty ? ' AND currency = ?' : '';
 
     return await db.rawQuery('''
       SELECT m.month,
@@ -440,7 +464,8 @@ class ReportService {
 
   /// Revenue vs Expense breakdown for a given [year].
   /// Returns rows with `category`, `total`, `type` columns.
-  Future<List<Map<String, dynamic>>> getRevenueExpenseBreakdown(int year, {String? currency}) async {
+  Future<List<Map<String, dynamic>>> getRevenueExpenseBreakdown(int year,
+      {String? currency}) async {
     final db = await _db;
     final yearStr = year.toString();
     String currencyFilter = '';
@@ -493,7 +518,8 @@ class ReportService {
 
   /// Daily sales trend for the last [days] days.
   /// Returns rows with `date`, `total` columns.
-  Future<List<Map<String, dynamic>>> getDailySalesTrend(int days, {String? currency}) async {
+  Future<List<Map<String, dynamic>>> getDailySalesTrend(int days,
+      {String? currency}) async {
     final db = await _db;
     String currencyFilter = '';
     List<dynamic> args = [];
@@ -503,7 +529,8 @@ class ReportService {
     }
     final now = DateTime.now();
     final startDate = now.subtract(Duration(days: days - 1));
-    final startDateStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+    final startDateStr =
+        '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
 
     return await db.rawQuery('''
       SELECT date(created_at) AS date, COALESCE(SUM(total), 0.0) AS total
@@ -518,7 +545,8 @@ class ReportService {
 
   /// Top products by sales amount.
   /// Returns rows with `product_name`, `total_quantity`, `total_amount` columns.
-  Future<List<Map<String, dynamic>>> getTopProducts(int limit, {String? currency}) async {
+  Future<List<Map<String, dynamic>>> getTopProducts(int limit,
+      {String? currency}) async {
     final db = await _db;
     String currencyFilter = '';
     List<dynamic> args = [];
@@ -542,12 +570,14 @@ class ReportService {
 
   /// Top customer balances.
   /// Returns rows with `name`, `balance`, `balance_type`, `currency` columns.
-  Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) => _dbHelper.customers.getTopCustomerBalances(limit);
+  Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) =>
+      _dbHelper.customers.getTopCustomerBalances(limit);
 
   /// Monthly cash flow (inflow vs outflow) for a given [year].
   /// Returns 12 rows with `month`, `inflow`, `outflow` columns.
   /// Fix #6: Include purchase payments and voucher payments in outflow.
-  Future<List<Map<String, dynamic>>> getMonthlyCashFlow(int year, {String? currency}) async {
+  Future<List<Map<String, dynamic>>> getMonthlyCashFlow(int year,
+      {String? currency}) async {
     final db = await _db;
     final yearStr = year.toString();
     String currencyFilter = '';
@@ -609,7 +639,12 @@ class ReportService {
         GROUP BY month
       ) v ON m.month = v.month
       ORDER BY m.month
-    ''', [...inflowArgs, ...outflowArgs, ...purchaseOutflowArgs, ...voucherOutflowArgs]);
+    ''', [
+      ...inflowArgs,
+      ...outflowArgs,
+      ...purchaseOutflowArgs,
+      ...voucherOutflowArgs
+    ]);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -698,7 +733,9 @@ class ReportService {
 
     // Expenses (uses expense_date column)
     final (expDf, expDateArgs) = buildDateFilter(
-      dateFrom: dateFrom, dateTo: dateTo, column: 'expense_date',
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      column: 'expense_date',
     );
     final expRes = await db.rawQuery(
       "SELECT CAST(COALESCE(SUM(amount), 0) AS INTEGER) AS expenses "
@@ -748,7 +785,8 @@ class ReportService {
         }
         if (dateTo != null) {
           cogsRetF += ' AND i.created_at < ?';
-          cogsRetArgs.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+          cogsRetArgs
+              .add(dateTo.add(const Duration(days: 1)).toIso8601String());
         }
         if (currency != null && currency.isNotEmpty) {
           cogsRetF += ' AND i.currency = ?';
@@ -785,13 +823,17 @@ class ReportService {
     int manualCogs = 0;
     try {
       final (acctDf, acctDateArgs) = buildDateFilter(
-        dateFrom: dateFrom, dateTo: dateTo, column: 't.date',
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        column: 't.date',
       );
 
       // Revenue accounts (account_type = 'REVENUE') — credit nature
       // Single query with IN (...) instead of per-account loop
-      final revCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
-      final revCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
+      final revCurrencyFilter =
+          currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
+      final revCurrencyArgs =
+          currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
       final revRes2 = await db.rawQuery(
         "SELECT CAST(COALESCE(SUM(t.credit) - SUM(t.debit), 0) AS INTEGER) AS manual_rev "
         "FROM transactions t "
@@ -809,8 +851,10 @@ class ReportService {
 
       // Expense accounts (account_type = 'EXPENSE') — debit nature
       // Single query with IN (...) instead of per-account loop
-      final expCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
-      final expCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
+      final expCurrencyFilter =
+          currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
+      final expCurrencyArgs =
+          currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
       final expRes2 = await db.rawQuery(
         "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_exp "
         "FROM transactions t "
@@ -823,8 +867,10 @@ class ReportService {
 
       // COGS accounts (account_type = 'COGS') — debit nature
       // Single query with IN (...) instead of per-account loop
-      final cogsCurrencyFilter = currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
-      final cogsCurrencyArgs = currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
+      final cogsCurrencyFilter =
+          currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
+      final cogsCurrencyArgs =
+          currency != null && currency.isNotEmpty ? [currency] : <dynamic>[];
       final cogsRes2 = await db.rawQuery(
         "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_cogs "
         "FROM transactions t "
@@ -839,11 +885,20 @@ class ReportService {
     }
 
     return [
-      {'item': 'revenue', 'amount': (revRes.first['revenue'] as int? ?? 0) + manualRevenue},
+      {
+        'item': 'revenue',
+        'amount': (revRes.first['revenue'] as int? ?? 0) + manualRevenue
+      },
       {'item': 'purchases', 'amount': purRes.first['purchases']},
       {'item': 'sales_returns', 'amount': retSaleRes.first['sales_returns']},
-      {'item': 'purchase_returns', 'amount': retPurRes.first['purchase_returns']},
-      {'item': 'expenses', 'amount': (expRes.first['expenses'] as int? ?? 0) + manualExpenses},
+      {
+        'item': 'purchase_returns',
+        'amount': retPurRes.first['purchase_returns']
+      },
+      {
+        'item': 'expenses',
+        'amount': (expRes.first['expenses'] as int? ?? 0) + manualExpenses
+      },
       {'item': 'cogs', 'amount': cogs + manualCogs},
       {'item': 'manual_revenue_adjustment', 'amount': manualRevenue},
       {'item': 'manual_expense_adjustment', 'amount': manualExpenses},
@@ -863,9 +918,11 @@ class ReportService {
   }) async {
     final db = await _db;
     final args = <dynamic>[];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
     args.addAll(dateArgs);
-    final (cf, curArgs) = buildCurrencyFilter(currency: currency, column: 'i.currency');
+    final (cf, curArgs) =
+        buildCurrencyFilter(currency: currency, column: 'i.currency');
     args.addAll(curArgs);
 
     String catJoin = '';
@@ -904,9 +961,11 @@ class ReportService {
   }) async {
     final db = await _db;
     final args = <dynamic>[];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
     args.addAll(dateArgs);
-    final (cf, curArgs) = buildCurrencyFilter(currency: currency, column: 'i.currency');
+    final (cf, curArgs) =
+        buildCurrencyFilter(currency: currency, column: 'i.currency');
     args.addAll(curArgs);
 
     return await db.rawQuery(
@@ -934,7 +993,8 @@ class ReportService {
   }) async {
     final db = await _db;
     final args = <dynamic>[accountId];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'date');
+    final (df, dateArgs) =
+        buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'date');
     args.addAll(dateArgs);
 
     return await db.rawQuery(
@@ -949,8 +1009,11 @@ class ReportService {
   /// Gets the `balance_type` for an account ('debit' or 'credit').
   Future<String> getAccountBalanceType(int accountId) async {
     final db = await _db;
-    final rows = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
-    return rows.isNotEmpty ? (rows.first['balance_type'] as String? ?? 'credit') : 'credit';
+    final rows = await db.query('accounts',
+        where: 'id = ?', whereArgs: [accountId], limit: 1);
+    return rows.isNotEmpty
+        ? (rows.first['balance_type'] as String? ?? 'credit')
+        : 'credit';
   }
 
   // ── 5. Supplier Movement (Supplier Statement) ─────────────────
@@ -982,8 +1045,16 @@ class ReportService {
     args.addAll(['opening_balance_reversal', referenceId]);
 
     // 3. Voucher transactions linked by voucher → supplier_id
-    conditions.add('(t.reference_type IN (?, ?, ?, ?) AND t.reference_id IN (SELECT ?||v.id FROM vouchers v WHERE v.supplier_id = ?))');
-    args.addAll(['receipt', 'payment', 'settlement', 'compound', 'voucher_', supplierId]);
+    conditions.add(
+        '(t.reference_type IN (?, ?, ?, ?) AND t.reference_id IN (SELECT ?||v.id FROM vouchers v WHERE v.supplier_id = ?))');
+    args.addAll([
+      'receipt',
+      'payment',
+      'settlement',
+      'compound',
+      'voucher_',
+      supplierId
+    ]);
 
     // 4. Purchase/purchase_return invoice transactions linked by
     //    account 21xx (supplier payable) + invoice's supplier_id.
@@ -1007,7 +1078,8 @@ class ReportService {
     args.addAll([supplierCurrency, supplierId, supplierCurrency]);
 
     // Date filter
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
     args.addAll(dateArgs);
 
     // Also filter by supplier's currency through the account
@@ -1031,7 +1103,8 @@ class ReportService {
   /// OPTIMIZED: Replaced N+1 per-customer getCustomerBalanceForCurrency()
   /// calls with a single SQL query using subqueries for opening balance,
   /// invoices, and voucher items, aggregated per customer.
-  Future<List<Map<String, dynamic>>> getCustomerBalancesReport({String? currency}) async {
+  Future<List<Map<String, dynamic>>> getCustomerBalancesReport(
+      {String? currency}) async {
     final db = await _db;
     // When a specific currency is requested, compute the per-currency
     // balance using a single SQL query with JOIN + GROUP BY instead of
@@ -1130,7 +1203,8 @@ class ReportService {
   /// OPTIMIZED: Replaced N+1 per-supplier getSupplierBalanceForCurrency()
   /// calls with a single SQL query using subqueries for opening balance,
   /// invoices, and voucher items, aggregated per supplier.
-  Future<List<Map<String, dynamic>>> getSupplierBalancesReport({String? currency}) async {
+  Future<List<Map<String, dynamic>>> getSupplierBalancesReport(
+      {String? currency}) async {
     final db = await _db;
     if (currency != null && currency.isNotEmpty) {
       try {
@@ -1228,7 +1302,8 @@ class ReportService {
   }) async {
     final db = await _db;
     final args = <dynamic>[];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'expense_date');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 'expense_date');
     args.addAll(dateArgs);
     final (cf, curArgs) = buildCurrencyFilter(currency: currency);
     args.addAll(curArgs);
@@ -1255,7 +1330,8 @@ class ReportService {
   }) async {
     final db = await _db;
     final args = <dynamic>[];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 'i.created_at');
     args.addAll(dateArgs);
 
     String whereExtra = '';
@@ -1289,7 +1365,8 @@ class ReportService {
     DateTime? dateTo,
   }) async {
     final db = await _db;
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'ce.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 'ce.created_at');
 
     return await db.rawQuery(
       "SELECT ce.*, cb1.name AS from_name, cb2.name AS to_name "
@@ -1308,7 +1385,8 @@ class ReportService {
     DateTime? dateTo,
   }) async {
     final db = await _db;
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'v.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 'v.created_at');
 
     return await db.rawQuery(
       "SELECT v.*, cb.name AS cash_box_name "
@@ -1381,14 +1459,17 @@ class ReportService {
   }) async {
     final db = await _db;
     final args = <dynamic>[];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
     args.addAll(dateArgs);
     String cf = '';
     if (currency != null && currency.isNotEmpty) {
       cf = ' AND a.currency = ?';
       args.add(currency);
     }
-    if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+    if (accountType != null &&
+        accountType.isNotEmpty &&
+        accountType != 'الكل') {
       cf += ' AND a.account_type = ?';
       args.add(accountType);
     }
@@ -1421,7 +1502,8 @@ class ReportService {
   }) async {
     final db = await _db;
     final args = <dynamic>[];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.date');
+    final (df, dateArgs) =
+        buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.date');
     args.addAll(dateArgs);
 
     String cf = '';
@@ -1429,7 +1511,9 @@ class ReportService {
       cf = ' AND a.currency = ?';
       args.add(currency);
     }
-    if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+    if (accountType != null &&
+        accountType.isNotEmpty &&
+        accountType != 'الكل') {
       cf += ' AND a.account_type = ?';
       args.add(accountType);
     }
@@ -1482,11 +1566,14 @@ class ReportService {
     final db = await _db;
 
     final args = <dynamic>[];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.date');
+    final (df, dateArgs) =
+        buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.date');
     args.addAll(dateArgs);
 
     String atFilter = '';
-    if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+    if (accountType != null &&
+        accountType.isNotEmpty &&
+        accountType != 'الكل') {
       atFilter = ' AND a.account_type = ?';
       args.add(accountType);
     }
@@ -1550,7 +1637,8 @@ class ReportService {
     // Find the customer's receivable account by code (12xx) and currency.
     // This is more reliable than searching by name, which breaks if the
     // account name does not exactly match the customer name.
-    final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+    final codeOffset =
+        customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
     final accountCode = '${1200 + codeOffset}';
     var acctRes = await db.rawQuery(
       "SELECT id FROM accounts WHERE account_code=? AND currency=? AND is_active=1 LIMIT 1",
@@ -1574,7 +1662,8 @@ class ReportService {
 
     final accountId = acctRes.first['id'] as int;
     final args = <dynamic>[accountId];
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
     args.addAll(dateArgs);
 
     return await db.rawQuery(
@@ -1681,7 +1770,8 @@ class ReportService {
     DateTime? dateTo,
   }) async {
     final db = await _db;
-    final (df, dateArgs) = buildDateFilter(dateFrom: dateFrom, dateTo: dateTo, column: 'ct.created_at');
+    final (df, dateArgs) = buildDateFilter(
+        dateFrom: dateFrom, dateTo: dateTo, column: 'ct.created_at');
 
     return await db.rawQuery(
       "SELECT ct.*, cb1.name AS from_name, cb2.name AS to_name "
@@ -1702,8 +1792,14 @@ class ReportService {
     final accounts = await _dbHelper.accounts.getAccountsWithoutMovements();
     // Apply optional filters
     return accounts.where((a) {
-      if (currency != null && currency.isNotEmpty && a['currency'] != currency) return false;
-      if (accountType != null && accountType.isNotEmpty && accountType != 'الكل') {
+      if (currency != null &&
+          currency.isNotEmpty &&
+          a['currency'] != currency) {
+        return false;
+      }
+      if (accountType != null &&
+          accountType.isNotEmpty &&
+          accountType != 'الكل') {
         if (a['account_type'] != accountType) return false;
       }
       return true;
@@ -1872,7 +1968,8 @@ class ReportService {
 
   /// أفضل العملاء مبيعات — top customers by sales amount since [monthStart].
   /// Returns rows with: id, name, total_sales.
-  Future<List<Map<String, dynamic>>> getTopCustomersBySales(String monthStart, {int limit = 5}) async {
+  Future<List<Map<String, dynamic>>> getTopCustomersBySales(String monthStart,
+      {int limit = 5}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT c.id, c.name, CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total_sales
@@ -1887,7 +1984,8 @@ class ReportService {
 
   /// توزيع العملات — invoice currency breakdown since [monthStart].
   /// Returns rows with: currency, total.
-  Future<List<Map<String, dynamic>>> getInvoiceCurrencyBreakdown(String monthStart) async {
+  Future<List<Map<String, dynamic>>> getInvoiceCurrencyBreakdown(
+      String monthStart) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT i.currency, CAST(COALESCE(SUM(i.total), 0) AS INTEGER) AS total
@@ -1907,7 +2005,8 @@ class ReportService {
   /// الأكثر مبيعاً اليوم — top selling products for a given day.
   /// [todayStr] should be in 'YYYY-MM-DD' format.
   /// Returns rows with: product_id, product_name, total_qty.
-  Future<List<Map<String, dynamic>>> getTopSellersToday(String todayStr, {int limit = 5}) async {
+  Future<List<Map<String, dynamic>>> getTopSellersToday(String todayStr,
+      {int limit = 5}) async {
     final db = await _db;
     return await db.rawQuery(
       "SELECT ii.product_id, ii.product_name, SUM(ii.quantity) AS total_qty "

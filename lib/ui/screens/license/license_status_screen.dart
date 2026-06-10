@@ -115,12 +115,14 @@ class _LicenseStatusScreenState extends State<LicenseStatusScreen> {
               children: [
                 // ── App bar ────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
                     children: [
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.arrow_forward, color: Colors.white),
+                        icon: const Icon(Icons.arrow_forward,
+                            color: Colors.white),
                       ),
                       const Spacer(),
                       const Text(
@@ -316,11 +318,11 @@ class _LicenseStatusScreenState extends State<LicenseStatusScreen> {
 
   Widget _buildDetailsCard(LicenseStateModel state, bool isDark) {
     final cardColor = isDark ? AppColors.darkSurface : Colors.white;
-    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final textColor =
+        isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
     final subtitleColor =
         isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
-    final dividerColor =
-        isDark ? AppColors.darkDivider : AppColors.divider;
+    final dividerColor = isDark ? AppColors.darkDivider : AppColors.divider;
 
     final remaining = LicenseService.instance.getRemainingRecords();
     final recordLabel = state.isPremium
@@ -415,9 +417,7 @@ class _LicenseStatusScreenState extends State<LicenseStatusScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              remaining > 0
-                  ? 'متبقي $remaining سجل'
-                  : 'تم الوصول للحد الأقصى',
+              remaining > 0 ? 'متبقي $remaining سجل' : 'تم الوصول للحد الأقصى',
               style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 11,
@@ -461,7 +461,8 @@ class _LicenseStatusScreenState extends State<LicenseStatusScreen> {
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value, Color valueColor) {
+  Widget _detailRow(
+      IconData icon, String label, String value, Color valueColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(

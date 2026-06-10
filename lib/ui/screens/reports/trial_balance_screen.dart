@@ -32,22 +32,33 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
 
   String? _currencyCode() {
     switch (_selectedCurrency) {
-      case 'ر.ي': return 'YER';
-      case 'ر.س': return 'SAR';
-      case r'$': return 'USD';
-      default: return null;
+      case 'ر.ي':
+        return 'YER';
+      case 'ر.س':
+        return 'SAR';
+      case r'$':
+        return 'USD';
+      default:
+        return null;
     }
   }
 
   String _accountTypeAr(String type) {
     switch (type) {
-      case 'ASSET': return 'أصول';
-      case 'LIABILITY': return 'خصوم';
-      case 'EQUITY': return 'حقوق الملكية';
-      case 'COST': return 'تكاليف';
-      case 'REVENUE': return 'إيرادات';
-      case 'EXPENSE': return 'مصاريف';
-      default: return type;
+      case 'ASSET':
+        return 'أصول';
+      case 'LIABILITY':
+        return 'خصوم';
+      case 'EQUITY':
+        return 'حقوق الملكية';
+      case 'COST':
+        return 'تكاليف';
+      case 'REVENUE':
+        return 'إيرادات';
+      case 'EXPENSE':
+        return 'مصاريف';
+      default:
+        return type;
     }
   }
 
@@ -76,8 +87,10 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
 
       for (final row in results) {
         // Use readCalculatedMoney for SQL SUM results which may be REAL
-        final totalDebitRaw = MoneyHelper.readCalculatedMoney(row['total_debit']);
-        final totalCreditRaw = MoneyHelper.readCalculatedMoney(row['total_credit']);
+        final totalDebitRaw =
+            MoneyHelper.readCalculatedMoney(row['total_debit']);
+        final totalCreditRaw =
+            MoneyHelper.readCalculatedMoney(row['total_credit']);
         final netBalance = totalDebitRaw - totalCreditRaw;
 
         if (MoneyHelper.isZero(netBalance)) continue;
@@ -86,7 +99,8 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
         // Determine which column the net balance goes to
         // debit-type accounts (ASSET, COST): positive balance → debit column
         // credit-type accounts (LIABILITY, REVENUE, EXPENSE): positive balance → credit column
-        final isDebitBalance = balanceType == 'debit' ? netBalance > 0 : netBalance < 0;
+        final isDebitBalance =
+            balanceType == 'debit' ? netBalance > 0 : netBalance < 0;
         final debitAmount = isDebitBalance ? netBalance.abs() : 0.0;
         final creditAmount = isDebitBalance ? 0.0 : netBalance.abs();
 
@@ -115,7 +129,9 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
         setState(() => _isLoading = false);
       }
@@ -176,7 +192,8 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewPadding.bottom + 24),
+                padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewPadding.bottom + 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -204,7 +221,8 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,32 +231,43 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
             children: [
               Icon(Icons.filter_list, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
-              Text('خيارات التصقية', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+              Text('خيارات التصقية',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 12),
           // Currency selector
           Row(
             children: [
-              Text('العملة:', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text('العملة:',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedCurrency,
                     isDense: true,
                     icon: const Icon(Icons.arrow_drop_down, size: 16),
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600),
-                    items: _currencyOptions.map((c) => DropdownMenuItem(
-                      value: c,
-                      child: Text(c, style: const TextStyle(fontSize: 13)),
-                    )).toList(),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 13,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600),
+                    items: _currencyOptions
+                        .map((c) => DropdownMenuItem(
+                              value: c,
+                              child:
+                                  Text(c, style: const TextStyle(fontSize: 13)),
+                            ))
+                        .toList(),
                     onChanged: (val) {
                       if (val != null) {
                         setState(() => _selectedCurrency = val);
@@ -278,7 +307,8 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
     );
   }
 
-  Widget _buildDateChip(ThemeData theme, IconData icon, String label, VoidCallback onTap) {
+  Widget _buildDateChip(
+      ThemeData theme, IconData icon, String label, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -310,19 +340,26 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
     );
   }
 
-  Widget _buildSummaryCard(ThemeData theme, bool isDark, bool isBalanced, double difference) {
+  Widget _buildSummaryCard(
+      ThemeData theme, bool isDark, bool isBalanced, double difference) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            isBalanced ? AppColors.success.withValues(alpha: 0.08) : AppColors.error.withValues(alpha: 0.08),
-            isBalanced ? AppColors.success.withValues(alpha: 0.03) : AppColors.error.withValues(alpha: 0.03),
+            isBalanced
+                ? AppColors.success.withValues(alpha: 0.08)
+                : AppColors.error.withValues(alpha: 0.08),
+            isBalanced
+                ? AppColors.success.withValues(alpha: 0.03)
+                : AppColors.error.withValues(alpha: 0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.2)),
+        border: Border.all(
+            color: (isBalanced ? AppColors.success : AppColors.error)
+                .withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -330,18 +367,25 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
             children: [
               Icon(Icons.balance, color: AppColors.primary, size: 22),
               const SizedBox(width: 8),
-              Text('ملخص ميزان المراجعة', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text('ملخص ميزان المراجعة',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800)),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (isBalanced ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+                  color: (isBalanced ? AppColors.success : AppColors.error)
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(isBalanced ? Icons.check_circle : Icons.warning, size: 14, color: isBalanced ? AppColors.success : AppColors.error),
+                    Icon(isBalanced ? Icons.check_circle : Icons.warning,
+                        size: 14,
+                        color:
+                            isBalanced ? AppColors.success : AppColors.error),
                     const SizedBox(width: 4),
                     Text(
                       isBalanced ? 'متوازن' : 'غير متوازن',
@@ -360,12 +404,14 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
             children: [
               // Total Debit
               Expanded(
-                child: _buildSummaryItem(theme, 'إجمالي المدين', _totalDebit, AppColors.info, Icons.add_circle_outline),
+                child: _buildSummaryItem(theme, 'إجمالي المدين', _totalDebit,
+                    AppColors.info, Icons.add_circle_outline),
               ),
               const SizedBox(width: 12),
               // Total Credit
               Expanded(
-                child: _buildSummaryItem(theme, 'إجمالي الدائن', _totalCredit, AppColors.success, Icons.remove_circle_outline),
+                child: _buildSummaryItem(theme, 'إجمالي الدائن', _totalCredit,
+                    AppColors.success, Icons.remove_circle_outline),
               ),
               const SizedBox(width: 12),
               // Difference
@@ -390,7 +436,8 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
             ),
             child: Text(
               'عدد الحسابات: ${_accounts.length}',
-              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary),
+              style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600, color: AppColors.primary),
               textAlign: TextAlign.center,
             ),
           ),
@@ -399,7 +446,8 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
     );
   }
 
-  Widget _buildSummaryItem(ThemeData theme, String title, double value, Color color, IconData icon) {
+  Widget _buildSummaryItem(
+      ThemeData theme, String title, double value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -411,11 +459,15 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
         children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(height: 4),
-          Text(title, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+          Text(title,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center),
           const SizedBox(height: 4),
           Text(
             CurrencyFormatter.format(value, symbol: _selectedCurrency),
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: color),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w800, color: color),
             textAlign: TextAlign.center,
           ),
         ],
@@ -430,7 +482,8 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,7 +492,9 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
             children: [
               Icon(Icons.list_alt, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
-              Text('تفاصيل الحسابات', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+              Text('تفاصيل الحسابات',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 12),
@@ -449,9 +504,13 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.balance, size: 48, color: AppColors.textHint.withValues(alpha: 0.5)),
+                    Icon(Icons.balance,
+                        size: 48,
+                        color: AppColors.textHint.withValues(alpha: 0.5)),
                     const SizedBox(height: 8),
-                    Text('لا توجد حسابات ذات أرصدة', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
+                    Text('لا توجد حسابات ذات أرصدة',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: AppColors.textHint)),
                   ],
                 ),
               ),
@@ -460,70 +519,117 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.08)),
+                headingRowColor: WidgetStateProperty.all(
+                    AppColors.primary.withValues(alpha: 0.08)),
                 dataRowMinHeight: 44,
                 dataRowMaxHeight: 52,
                 columns: [
-                  DataColumn(label: Text('كود الحساب', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
-                  DataColumn(label: Text('اسم الحساب', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
-                  DataColumn(label: Text('نوع الحساب', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary))),
-                  DataColumn(label: Text('مدين', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.info))),
-                  DataColumn(label: Text('دائن', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success))),
+                  DataColumn(
+                      label: Text('كود الحساب',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary))),
+                  DataColumn(
+                      label: Text('اسم الحساب',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary))),
+                  DataColumn(
+                      label: Text('نوع الحساب',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary))),
+                  DataColumn(
+                      label: Text('مدين',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.info))),
+                  DataColumn(
+                      label: Text('دائن',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.success))),
                 ],
                 rows: [
                   ..._accounts.map((account) => DataRow(cells: [
-                    DataCell(Text(account['account_code'] as String? ?? '', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600))),
-                    DataCell(Text(account['name_ar'] as String? ?? '', style: theme.textTheme.bodySmall)),
-                    DataCell(Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _accountTypeColor(account['account_type'] as String? ?? '').withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _accountTypeAr(account['account_type'] as String? ?? ''),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: _accountTypeColor(account['account_type'] as String? ?? ''),
-                        ),
-                      ),
-                    )),
-                    DataCell(Text(
-                      ((account['debit'] as num?)?.toDouble() ?? 0.0) > 0
-                          ? CurrencyFormatter.formatValue((account['debit'] as num?)?.toDouble() ?? 0.0)
-                          : '-',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: ((account['debit'] as num?)?.toDouble() ?? 0.0) > 0 ? AppColors.info : AppColors.textHint,
-                      ),
-                      textAlign: TextAlign.left,
-                    )),
-                    DataCell(Text(
-                      ((account['credit'] as num?)?.toDouble() ?? 0.0) > 0
-                          ? CurrencyFormatter.formatValue((account['credit'] as num?)?.toDouble() ?? 0.0)
-                          : '-',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: ((account['credit'] as num?)?.toDouble() ?? 0.0) > 0 ? AppColors.success : AppColors.textHint,
-                      ),
-                      textAlign: TextAlign.left,
-                    )),
-                  ])),
+                        DataCell(Text(account['account_code'] as String? ?? '',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w600))),
+                        DataCell(Text(account['name_ar'] as String? ?? '',
+                            style: theme.textTheme.bodySmall)),
+                        DataCell(Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _accountTypeColor(
+                                    account['account_type'] as String? ?? '')
+                                .withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _accountTypeAr(
+                                account['account_type'] as String? ?? ''),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: _accountTypeColor(
+                                  account['account_type'] as String? ?? ''),
+                            ),
+                          ),
+                        )),
+                        DataCell(Text(
+                          ((account['debit'] as num?)?.toDouble() ?? 0.0) > 0
+                              ? CurrencyFormatter.formatValue(
+                                  (account['debit'] as num?)?.toDouble() ?? 0.0)
+                              : '-',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: ((account['debit'] as num?)?.toDouble() ??
+                                        0.0) >
+                                    0
+                                ? AppColors.info
+                                : AppColors.textHint,
+                          ),
+                          textAlign: TextAlign.left,
+                        )),
+                        DataCell(Text(
+                          ((account['credit'] as num?)?.toDouble() ?? 0.0) > 0
+                              ? CurrencyFormatter.formatValue(
+                                  (account['credit'] as num?)?.toDouble() ??
+                                      0.0)
+                              : '-',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: ((account['credit'] as num?)?.toDouble() ??
+                                        0.0) >
+                                    0
+                                ? AppColors.success
+                                : AppColors.textHint,
+                          ),
+                          textAlign: TextAlign.left,
+                        )),
+                      ])),
                   // Totals row
                   DataRow(
-                    color: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.05)),
+                    color: WidgetStateProperty.all(
+                        AppColors.primary.withValues(alpha: 0.05)),
                     cells: [
-                      DataCell(Text('الإجمالي', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.primary))),
+                      DataCell(Text('الإجمالي',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.primary))),
                       const DataCell(SizedBox.shrink()),
                       const DataCell(SizedBox.shrink()),
                       DataCell(Text(
                         CurrencyFormatter.formatValue(_totalDebit),
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.info),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w900, color: AppColors.info),
                         textAlign: TextAlign.left,
                       )),
                       DataCell(Text(
                         CurrencyFormatter.formatValue(_totalCredit),
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900, color: AppColors.success),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.success),
                         textAlign: TextAlign.left,
                       )),
                     ],
@@ -538,13 +644,20 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
 
   Color _accountTypeColor(String type) {
     switch (type) {
-      case 'ASSET': return AppColors.info;
-      case 'LIABILITY': return AppColors.error;
-      case 'EQUITY': return AppColors.accentPurple;
-      case 'COST': return AppColors.warning;
-      case 'REVENUE': return AppColors.success;
-      case 'EXPENSE': return AppColors.secondary;
-      default: return AppColors.textSecondary;
+      case 'ASSET':
+        return AppColors.info;
+      case 'LIABILITY':
+        return AppColors.error;
+      case 'EQUITY':
+        return AppColors.accentPurple;
+      case 'COST':
+        return AppColors.warning;
+      case 'REVENUE':
+        return AppColors.success;
+      case 'EXPENSE':
+        return AppColors.secondary;
+      default:
+        return AppColors.textSecondary;
     }
   }
 }

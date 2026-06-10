@@ -343,7 +343,8 @@ class DatabaseSchema {
         updated_at TEXT NOT NULL
       )
     ''');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_expense_sub_accounts_name ON expense_sub_accounts (name)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expense_sub_accounts_name ON expense_sub_accounts (name)');
 
     // Expenses
     await db.execute('''
@@ -525,7 +526,6 @@ class DatabaseSchema {
       )
     ''');
 
-
     // Shifts (الورديات)
     await db.execute('''
       CREATE TABLE shifts (
@@ -591,51 +591,87 @@ class DatabaseSchema {
       )
     ''');
 
-    await db.execute('CREATE INDEX idx_shifts_cashier_id ON shifts (cashier_id)');
-    await db.execute('CREATE INDEX idx_shifts_cash_box_id ON shifts (cash_box_id)');
+    await db
+        .execute('CREATE INDEX idx_shifts_cashier_id ON shifts (cashier_id)');
+    await db
+        .execute('CREATE INDEX idx_shifts_cash_box_id ON shifts (cash_box_id)');
     await db.execute('CREATE INDEX idx_shifts_status ON shifts (status)');
     // --- Indexes ---
     await db.execute('CREATE INDEX idx_products_barcode ON products (barcode)');
-    await db.execute('CREATE INDEX idx_products_item_code ON products (item_code)');
-    await db.execute('CREATE INDEX idx_invoices_customer_id ON invoices (customer_id)');
-    await db.execute('CREATE INDEX idx_invoices_created_at ON invoices (created_at)');
+    await db
+        .execute('CREATE INDEX idx_products_item_code ON products (item_code)');
+    await db.execute(
+        'CREATE INDEX idx_invoices_customer_id ON invoices (customer_id)');
+    await db.execute(
+        'CREATE INDEX idx_invoices_created_at ON invoices (created_at)');
     await db.execute('CREATE INDEX idx_invoices_status ON invoices (status)');
-    await db.execute('CREATE INDEX idx_invoices_shift_id ON invoices (shift_id)');
-    await db.execute('CREATE INDEX idx_invoices_is_posted ON invoices (is_posted)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
-    await db.execute('CREATE INDEX idx_invoice_items_invoice_id ON invoice_items (invoice_id)');
-    await db.execute('CREATE INDEX idx_transactions_account_id ON transactions (account_id)');
-    await db.execute('CREATE INDEX idx_transactions_journal_id ON transactions (journal_id)');
-    await db.execute('CREATE INDEX idx_transactions_date ON transactions (date)');
-    await db.execute('CREATE INDEX idx_transactions_currency ON transactions (currency_code)');
-    await db.execute('CREATE INDEX idx_transactions_reference ON transactions (reference_type, reference_id)');
-    await db.execute('CREATE INDEX idx_accounts_account_code ON accounts (account_code)');
-    await db.execute('CREATE INDEX idx_accounts_account_type ON accounts (account_type)');
-    await db.execute('CREATE INDEX idx_products_category_id ON products (category_id)');
+    await db
+        .execute('CREATE INDEX idx_invoices_shift_id ON invoices (shift_id)');
+    await db
+        .execute('CREATE INDEX idx_invoices_is_posted ON invoices (is_posted)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices (original_invoice_id)');
+    await db.execute(
+        'CREATE INDEX idx_invoice_items_invoice_id ON invoice_items (invoice_id)');
+    await db.execute(
+        'CREATE INDEX idx_transactions_account_id ON transactions (account_id)');
+    await db.execute(
+        'CREATE INDEX idx_transactions_journal_id ON transactions (journal_id)');
+    await db
+        .execute('CREATE INDEX idx_transactions_date ON transactions (date)');
+    await db.execute(
+        'CREATE INDEX idx_transactions_currency ON transactions (currency_code)');
+    await db.execute(
+        'CREATE INDEX idx_transactions_reference ON transactions (reference_type, reference_id)');
+    await db.execute(
+        'CREATE INDEX idx_accounts_account_code ON accounts (account_code)');
+    await db.execute(
+        'CREATE INDEX idx_accounts_account_type ON accounts (account_type)');
+    await db.execute(
+        'CREATE INDEX idx_products_category_id ON products (category_id)');
     await db.execute('CREATE INDEX idx_currencies_code ON currencies (code)');
     await db.execute('CREATE INDEX idx_cash_boxes_type ON cash_boxes (type)');
-    await db.execute('CREATE INDEX idx_expenses_category ON expenses (category)');
-    await db.execute('CREATE INDEX idx_expenses_expense_date ON expenses (expense_date)');
-    await db.execute('CREATE INDEX idx_expenses_account_id ON expenses (account_id)');
+    await db
+        .execute('CREATE INDEX idx_expenses_category ON expenses (category)');
+    await db.execute(
+        'CREATE INDEX idx_expenses_expense_date ON expenses (expense_date)');
+    await db.execute(
+        'CREATE INDEX idx_expenses_account_id ON expenses (account_id)');
     await db.execute('CREATE INDEX idx_employees_name ON employees (name)');
-    await db.execute('CREATE INDEX idx_employees_is_active ON employees (is_active)');
-    await db.execute('CREATE INDEX idx_expenses_expense_account_id ON expenses (expense_account_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_expenses_sub_account ON expenses (expense_sub_account_id)');
-    await db.execute('CREATE INDEX idx_quotations_customer_id ON quotations (customer_id)');
-    await db.execute('CREATE INDEX idx_quotations_status ON quotations (status)');
-    await db.execute('CREATE INDEX idx_quotation_items_quotation_id ON quotation_items (quotation_id)');
-    await db.execute('CREATE INDEX idx_purchase_orders_supplier_id ON purchase_orders (supplier_id)');
-    await db.execute('CREATE INDEX idx_purchase_orders_status ON purchase_orders (status)');
-    await db.execute('CREATE INDEX idx_purchase_order_items_po_id ON purchase_order_items (purchase_order_id)');
-    await db.execute('CREATE INDEX idx_sales_orders_customer_id ON sales_orders (customer_id)');
-    await db.execute('CREATE INDEX idx_sales_orders_status ON sales_orders (status)');
-    await db.execute('CREATE INDEX idx_sales_order_items_so_id ON sales_order_items (sales_order_id)');
+    await db.execute(
+        'CREATE INDEX idx_employees_is_active ON employees (is_active)');
+    await db.execute(
+        'CREATE INDEX idx_expenses_expense_account_id ON expenses (expense_account_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_sub_account ON expenses (expense_sub_account_id)');
+    await db.execute(
+        'CREATE INDEX idx_quotations_customer_id ON quotations (customer_id)');
+    await db
+        .execute('CREATE INDEX idx_quotations_status ON quotations (status)');
+    await db.execute(
+        'CREATE INDEX idx_quotation_items_quotation_id ON quotation_items (quotation_id)');
+    await db.execute(
+        'CREATE INDEX idx_purchase_orders_supplier_id ON purchase_orders (supplier_id)');
+    await db.execute(
+        'CREATE INDEX idx_purchase_orders_status ON purchase_orders (status)');
+    await db.execute(
+        'CREATE INDEX idx_purchase_order_items_po_id ON purchase_order_items (purchase_order_id)');
+    await db.execute(
+        'CREATE INDEX idx_sales_orders_customer_id ON sales_orders (customer_id)');
+    await db.execute(
+        'CREATE INDEX idx_sales_orders_status ON sales_orders (status)');
+    await db.execute(
+        'CREATE INDEX idx_sales_order_items_so_id ON sales_order_items (sales_order_id)');
 
     // v12 indexes
-    await db.execute('CREATE INDEX idx_currency_exchanges_number ON currency_exchanges (exchange_number)');
-    await db.execute('CREATE INDEX idx_currency_exchanges_created_at ON currency_exchanges (created_at)');
-    await db.execute('CREATE INDEX idx_cash_transfers_number ON cash_transfers (transfer_number)');
-    await db.execute('CREATE INDEX idx_cash_transfers_created_at ON cash_transfers (created_at)');
+    await db.execute(
+        'CREATE INDEX idx_currency_exchanges_number ON currency_exchanges (exchange_number)');
+    await db.execute(
+        'CREATE INDEX idx_currency_exchanges_created_at ON currency_exchanges (created_at)');
+    await db.execute(
+        'CREATE INDEX idx_cash_transfers_number ON cash_transfers (transfer_number)');
+    await db.execute(
+        'CREATE INDEX idx_cash_transfers_created_at ON cash_transfers (created_at)');
 
     // Audit Log
     await db.execute('''
@@ -740,22 +776,36 @@ class DatabaseSchema {
     ''');
 
     // v18 indexes
-    await db.execute('CREATE INDEX idx_vouchers_voucher_number ON vouchers (voucher_number)');
-    await db.execute('CREATE INDEX idx_vouchers_voucher_type ON vouchers (voucher_type)');
+    await db.execute(
+        'CREATE INDEX idx_vouchers_voucher_number ON vouchers (voucher_number)');
+    await db.execute(
+        'CREATE INDEX idx_vouchers_voucher_type ON vouchers (voucher_type)');
     await db.execute('CREATE INDEX idx_vouchers_date ON vouchers (date)');
-    await db.execute('CREATE INDEX idx_vouchers_created_at ON vouchers (created_at)');
-    await db.execute('CREATE INDEX idx_vouchers_employee_id ON vouchers (employee_id)');
-    await db.execute('CREATE INDEX idx_voucher_items_voucher_id ON voucher_items (voucher_id)');
-    await db.execute('CREATE INDEX idx_voucher_items_account_id ON voucher_items (account_id)');
+    await db.execute(
+        'CREATE INDEX idx_vouchers_created_at ON vouchers (created_at)');
+    await db.execute(
+        'CREATE INDEX idx_vouchers_employee_id ON vouchers (employee_id)');
+    await db.execute(
+        'CREATE INDEX idx_voucher_items_voucher_id ON voucher_items (voucher_id)');
+    await db.execute(
+        'CREATE INDEX idx_voucher_items_account_id ON voucher_items (account_id)');
     // v19 indexes
-    await db.execute('CREATE INDEX idx_stock_transfers_number ON stock_transfers (transfer_number)');
-    await db.execute('CREATE INDEX idx_stock_transfers_from_wh ON stock_transfers (from_warehouse_id)');
-    await db.execute('CREATE INDEX idx_stock_transfers_to_wh ON stock_transfers (to_warehouse_id)');
-    await db.execute('CREATE INDEX idx_stock_transfers_product ON stock_transfers (product_id)');
-    await db.execute('CREATE INDEX idx_stock_transfers_date ON stock_transfers (date)');
-    await db.execute('CREATE INDEX idx_stocktaking_sessions_number ON stocktaking_sessions (session_number)');
-    await db.execute('CREATE INDEX idx_stocktaking_sessions_wh ON stocktaking_sessions (warehouse_id)');
-    await db.execute('CREATE INDEX idx_stocktaking_items_session ON stocktaking_items (session_id)');
+    await db.execute(
+        'CREATE INDEX idx_stock_transfers_number ON stock_transfers (transfer_number)');
+    await db.execute(
+        'CREATE INDEX idx_stock_transfers_from_wh ON stock_transfers (from_warehouse_id)');
+    await db.execute(
+        'CREATE INDEX idx_stock_transfers_to_wh ON stock_transfers (to_warehouse_id)');
+    await db.execute(
+        'CREATE INDEX idx_stock_transfers_product ON stock_transfers (product_id)');
+    await db.execute(
+        'CREATE INDEX idx_stock_transfers_date ON stock_transfers (date)');
+    await db.execute(
+        'CREATE INDEX idx_stocktaking_sessions_number ON stocktaking_sessions (session_number)');
+    await db.execute(
+        'CREATE INDEX idx_stocktaking_sessions_wh ON stocktaking_sessions (warehouse_id)');
+    await db.execute(
+        'CREATE INDEX idx_stocktaking_items_session ON stocktaking_items (session_id)');
 
     // Inventory Vouchers (سندات الجرد) - v22
     await db.execute('''
@@ -809,14 +859,22 @@ class DatabaseSchema {
     ''');
 
     // v22 indexes
-    await db.execute('CREATE INDEX idx_inventory_vouchers_number ON inventory_vouchers (voucher_number)');
-    await db.execute('CREATE INDEX idx_inventory_vouchers_date ON inventory_vouchers (date)');
-    await db.execute('CREATE INDEX idx_inventory_vouchers_warehouse ON inventory_vouchers (warehouse_id)');
-    await db.execute('CREATE INDEX idx_inventory_vouchers_status ON inventory_vouchers (status)');
-    await db.execute('CREATE INDEX idx_inventory_voucher_items_voucher ON inventory_voucher_items (voucher_id)');
-    await db.execute('CREATE INDEX idx_inventory_voucher_items_product ON inventory_voucher_items (product_id)');
-    await db.execute('CREATE INDEX idx_fiscal_years_year ON fiscal_years (year)');
-    await db.execute('CREATE INDEX idx_fiscal_years_status ON fiscal_years (status)');
+    await db.execute(
+        'CREATE INDEX idx_inventory_vouchers_number ON inventory_vouchers (voucher_number)');
+    await db.execute(
+        'CREATE INDEX idx_inventory_vouchers_date ON inventory_vouchers (date)');
+    await db.execute(
+        'CREATE INDEX idx_inventory_vouchers_warehouse ON inventory_vouchers (warehouse_id)');
+    await db.execute(
+        'CREATE INDEX idx_inventory_vouchers_status ON inventory_vouchers (status)');
+    await db.execute(
+        'CREATE INDEX idx_inventory_voucher_items_voucher ON inventory_voucher_items (voucher_id)');
+    await db.execute(
+        'CREATE INDEX idx_inventory_voucher_items_product ON inventory_voucher_items (product_id)');
+    await db
+        .execute('CREATE INDEX idx_fiscal_years_year ON fiscal_years (year)');
+    await db.execute(
+        'CREATE INDEX idx_fiscal_years_status ON fiscal_years (status)');
 
     // Audit Trail - v29
     await db.execute('''
@@ -833,10 +891,14 @@ class DatabaseSchema {
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     ''');
-    await db.execute('CREATE INDEX idx_audit_trail_table ON audit_trail (table_name)');
-    await db.execute('CREATE INDEX idx_audit_trail_action ON audit_trail (action)');
-    await db.execute('CREATE INDEX idx_audit_trail_created ON audit_trail (created_at)');
-    await db.execute('CREATE INDEX idx_audit_trail_record ON audit_trail (table_name, record_id)');
+    await db.execute(
+        'CREATE INDEX idx_audit_trail_table ON audit_trail (table_name)');
+    await db
+        .execute('CREATE INDEX idx_audit_trail_action ON audit_trail (action)');
+    await db.execute(
+        'CREATE INDEX idx_audit_trail_created ON audit_trail (created_at)');
+    await db.execute(
+        'CREATE INDEX idx_audit_trail_record ON audit_trail (table_name, record_id)');
 
     // Unit Conversions (was only in migrations before, now in _onCreate for fresh installs)
     await db.execute('''
@@ -857,7 +919,8 @@ class DatabaseSchema {
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
       )
     ''');
-    await db.execute('CREATE INDEX idx_unit_conversions_product ON unit_conversions (product_id)');
+    await db.execute(
+        'CREATE INDEX idx_unit_conversions_product ON unit_conversions (product_id)');
 
     // Stock Movements (was only in migrations before, now in _onCreate for fresh installs)
     await db.execute('''
@@ -874,9 +937,12 @@ class DatabaseSchema {
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
       )
     ''');
-    await db.execute('CREATE INDEX idx_stock_movements_product ON stock_movements (product_id)');
-    await db.execute('CREATE INDEX idx_stock_movements_type ON stock_movements (movement_type)');
-    await db.execute('CREATE INDEX idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
+    await db.execute(
+        'CREATE INDEX idx_stock_movements_product ON stock_movements (product_id)');
+    await db.execute(
+        'CREATE INDEX idx_stock_movements_type ON stock_movements (movement_type)');
+    await db.execute(
+        'CREATE INDEX idx_stock_movements_ref ON stock_movements (reference_type, reference_id)');
 
     // Held Orders (POS) - v33
     await db.execute('''
@@ -894,7 +960,8 @@ class DatabaseSchema {
         FOREIGN KEY (shift_id) REFERENCES shifts (id) ON DELETE CASCADE
       )
     ''');
-    await db.execute('CREATE INDEX idx_held_orders_shift ON held_orders (shift_id)');
+    await db.execute(
+        'CREATE INDEX idx_held_orders_shift ON held_orders (shift_id)');
 
     // Inventory Cost Layers (طبقات تكلفة المخزون) - v38
     await db.execute('''
@@ -913,9 +980,12 @@ class DatabaseSchema {
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
       )
     ''');
-    await db.execute('CREATE INDEX idx_cost_layers_product ON inventory_cost_layers (product_id)');
-    await db.execute('CREATE INDEX idx_cost_layers_fifo ON inventory_cost_layers (product_id, acquisition_date, quantity_remaining) WHERE is_fully_consumed = 0');
-    await db.execute('CREATE INDEX idx_cost_layers_consumed ON inventory_cost_layers (is_fully_consumed)');
+    await db.execute(
+        'CREATE INDEX idx_cost_layers_product ON inventory_cost_layers (product_id)');
+    await db.execute(
+        'CREATE INDEX idx_cost_layers_fifo ON inventory_cost_layers (product_id, acquisition_date, quantity_remaining) WHERE is_fully_consumed = 0');
+    await db.execute(
+        'CREATE INDEX idx_cost_layers_consumed ON inventory_cost_layers (is_fully_consumed)');
 
     // Movement Cost Allocations (تخصيصات تكلفة الحركة) - v38
     await db.execute('''
@@ -932,9 +1002,12 @@ class DatabaseSchema {
         FOREIGN KEY (cost_layer_id) REFERENCES inventory_cost_layers (id)
       )
     ''');
-    await db.execute('CREATE INDEX idx_mca_product ON movement_cost_allocations (product_id)');
-    await db.execute('CREATE INDEX idx_mca_layer ON movement_cost_allocations (cost_layer_id)');
-    await db.execute('CREATE INDEX idx_mca_invoice ON movement_cost_allocations (invoice_id)');
+    await db.execute(
+        'CREATE INDEX idx_mca_product ON movement_cost_allocations (product_id)');
+    await db.execute(
+        'CREATE INDEX idx_mca_layer ON movement_cost_allocations (cost_layer_id)');
+    await db.execute(
+        'CREATE INDEX idx_mca_invoice ON movement_cost_allocations (invoice_id)');
 
     // Bank Reconciliations (التسوية البنكية) - v38
     await db.execute('''
@@ -961,9 +1034,12 @@ class DatabaseSchema {
         FOREIGN KEY (cash_box_id) REFERENCES cash_boxes (id)
       )
     ''');
-    await db.execute('CREATE INDEX idx_bank_recon_cash_box ON bank_reconciliations (cash_box_id)');
-    await db.execute('CREATE INDEX idx_bank_recon_status ON bank_reconciliations (status)');
-    await db.execute('CREATE INDEX idx_bank_recon_number ON bank_reconciliations (reconciliation_number)');
+    await db.execute(
+        'CREATE INDEX idx_bank_recon_cash_box ON bank_reconciliations (cash_box_id)');
+    await db.execute(
+        'CREATE INDEX idx_bank_recon_status ON bank_reconciliations (status)');
+    await db.execute(
+        'CREATE INDEX idx_bank_recon_number ON bank_reconciliations (reconciliation_number)');
 
     // Bank Statement Lines (بنود كشف الحساب البنكي) - v38
     await db.execute('''
@@ -984,10 +1060,14 @@ class DatabaseSchema {
         created_at TEXT NOT NULL
       )
     ''');
-    await db.execute('CREATE INDEX idx_bank_stmt_recon ON bank_statement_lines (reconciliation_id)');
-    await db.execute('CREATE INDEX idx_bank_stmt_cash_box ON bank_statement_lines (cash_box_id)');
-    await db.execute('CREATE INDEX idx_bank_stmt_status ON bank_statement_lines (match_status)');
-    await db.execute('CREATE INDEX idx_bank_stmt_date ON bank_statement_lines (transaction_date)');
+    await db.execute(
+        'CREATE INDEX idx_bank_stmt_recon ON bank_statement_lines (reconciliation_id)');
+    await db.execute(
+        'CREATE INDEX idx_bank_stmt_cash_box ON bank_statement_lines (cash_box_id)');
+    await db.execute(
+        'CREATE INDEX idx_bank_stmt_status ON bank_statement_lines (match_status)');
+    await db.execute(
+        'CREATE INDEX idx_bank_stmt_date ON bank_statement_lines (transaction_date)');
 
     // Seed default data
     await DatabaseSeeds.seedCurrencies(db);

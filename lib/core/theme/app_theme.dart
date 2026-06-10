@@ -76,7 +76,8 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: isLight ? AppColors.textPrimary : AppColors.darkTextPrimary,
+        foregroundColor:
+            isLight ? AppColors.textPrimary : AppColors.darkTextPrimary,
         titleTextStyle: textTheme.titleLarge?.copyWith(
           color: isLight ? AppColors.textPrimary : AppColors.darkTextPrimary,
           fontWeight: FontWeight.w700,
@@ -84,10 +85,8 @@ class AppTheme {
         ),
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness:
-              isLight ? Brightness.dark : Brightness.light,
-          statusBarBrightness:
-              isLight ? Brightness.dark : Brightness.dark,
+          statusBarIconBrightness: isLight ? Brightness.dark : Brightness.light,
+          statusBarBrightness: isLight ? Brightness.dark : Brightness.dark,
         ),
       ),
 
@@ -121,8 +120,7 @@ class AppTheme {
 
       // ── Bottom Navigation Bar ─────────────────────────────────
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor:
-            isLight ? AppColors.surface : AppColors.darkSurface,
+        backgroundColor: isLight ? AppColors.surface : AppColors.darkSurface,
         selectedItemColor: AppColors.primary,
         unselectedItemColor:
             isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
@@ -138,8 +136,7 @@ class AppTheme {
 
       // ── Navigation Bar (M3) ───────────────────────────────────
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor:
-            isLight ? AppColors.surface : AppColors.darkSurface,
+        backgroundColor: isLight ? AppColors.surface : AppColors.darkSurface,
         indicatorColor: AppColors.primary.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -149,9 +146,8 @@ class AppTheme {
             );
           }
           return textTheme.labelSmall?.copyWith(
-            color: isLight
-                ? AppColors.textSecondary
-                : AppColors.darkTextSecondary,
+            color:
+                isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
             fontWeight: FontWeight.w500,
           );
         }),
@@ -160,9 +156,8 @@ class AppTheme {
       // ── Input Decoration ──────────────────────────────────────
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isLight
-            ? AppColors.surfaceVariant
-            : AppColors.darkSurfaceVariant,
+        fillColor:
+            isLight ? AppColors.surfaceVariant : AppColors.darkSurfaceVariant,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -195,7 +190,8 @@ class AppTheme {
           ),
         ),
         labelStyle: textTheme.bodyMedium?.copyWith(
-          color: isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
+          color:
+              isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: isLight ? AppColors.textHint : AppColors.darkTextSecondary,
@@ -305,8 +301,7 @@ class AppTheme {
 
       // ── Dialog ────────────────────────────────────────────────
       dialogTheme: DialogThemeData(
-        backgroundColor:
-            isLight ? AppColors.surface : AppColors.darkSurface,
+        backgroundColor: isLight ? AppColors.surface : AppColors.darkSurface,
         elevation: 8,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -332,8 +327,7 @@ class AppTheme {
 
       // ── Bottom Sheet ──────────────────────────────────────────
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor:
-            isLight ? AppColors.surface : AppColors.darkSurface,
+        backgroundColor: isLight ? AppColors.surface : AppColors.darkSurface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -363,9 +357,8 @@ class AppTheme {
           color: isLight ? AppColors.textPrimary : AppColors.darkTextPrimary,
         ),
         subtitleTextStyle: textTheme.bodySmall?.copyWith(
-          color: isLight
-              ? AppColors.textSecondary
-              : AppColors.darkTextSecondary,
+          color:
+              isLight ? AppColors.textSecondary : AppColors.darkTextSecondary,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -404,18 +397,14 @@ class AppTheme {
       // ── Progress Indicator ────────────────────────────────────
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primary,
-        linearTrackColor:
-            isLight ? AppColors.divider : AppColors.darkDivider,
-        circularTrackColor:
-            isLight ? AppColors.divider : AppColors.darkDivider,
+        linearTrackColor: isLight ? AppColors.divider : AppColors.darkDivider,
+        circularTrackColor: isLight ? AppColors.divider : AppColors.darkDivider,
       ),
 
       // ── Tooltip ───────────────────────────────────────────────
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: isLight
-              ? AppColors.textPrimary
-              : AppColors.darkTextPrimary,
+          color: isLight ? AppColors.textPrimary : AppColors.darkTextPrimary,
           borderRadius: BorderRadius.circular(8),
         ),
         textStyle: textTheme.bodySmall?.copyWith(
@@ -454,8 +443,7 @@ class AppTheme {
 
       // ── Drawer ────────────────────────────────────────────────
       drawerTheme: DrawerThemeData(
-        backgroundColor:
-            isLight ? AppColors.surface : AppColors.darkSurface,
+        backgroundColor: isLight ? AppColors.surface : AppColors.darkSurface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.horizontal(
             left: Radius.circular(24),
@@ -469,118 +457,131 @@ class AppTheme {
   //  TEXT THEME – all styles include fontFamily: 'Cairo'
   // ══════════════════════════════════════════════════════════════════
   static TextTheme _buildTextTheme(Brightness brightness) {
-    final baseColor =
-        brightness == Brightness.light
-            ? AppColors.textPrimary
-            : AppColors.darkTextPrimary;
-    final secondaryColor =
-        brightness == Brightness.light
-            ? AppColors.textSecondary
-            : AppColors.darkTextSecondary;
+    final baseColor = brightness == Brightness.light
+        ? AppColors.textPrimary
+        : AppColors.darkTextPrimary;
+    final secondaryColor = brightness == Brightness.light
+        ? AppColors.textSecondary
+        : AppColors.darkTextSecondary;
 
     const fontFamily = 'Cairo';
 
     return TextTheme(
       displayLarge: TextStyle(
-        fontFamily: fontFamily, fontSize: 57,
+        fontFamily: fontFamily,
+        fontSize: 57,
         fontWeight: FontWeight.w400,
         height: 1.12,
         letterSpacing: -0.25,
         color: baseColor,
       ),
       displayMedium: TextStyle(
-        fontFamily: fontFamily, fontSize: 45,
+        fontFamily: fontFamily,
+        fontSize: 45,
         fontWeight: FontWeight.w400,
         height: 1.16,
         letterSpacing: 0,
         color: baseColor,
       ),
       displaySmall: TextStyle(
-        fontFamily: fontFamily, fontSize: 36,
+        fontFamily: fontFamily,
+        fontSize: 36,
         fontWeight: FontWeight.w400,
         height: 1.22,
         letterSpacing: 0,
         color: baseColor,
       ),
       headlineLarge: TextStyle(
-        fontFamily: fontFamily, fontSize: 32,
+        fontFamily: fontFamily,
+        fontSize: 32,
         fontWeight: FontWeight.w600,
         height: 1.25,
         letterSpacing: 0,
         color: baseColor,
       ),
       headlineMedium: TextStyle(
-        fontFamily: fontFamily, fontSize: 28,
+        fontFamily: fontFamily,
+        fontSize: 28,
         fontWeight: FontWeight.w600,
         height: 1.29,
         letterSpacing: 0,
         color: baseColor,
       ),
       headlineSmall: TextStyle(
-        fontFamily: fontFamily, fontSize: 24,
+        fontFamily: fontFamily,
+        fontSize: 24,
         fontWeight: FontWeight.w600,
         height: 1.33,
         letterSpacing: 0,
         color: baseColor,
       ),
       titleLarge: TextStyle(
-        fontFamily: fontFamily, fontSize: 22,
+        fontFamily: fontFamily,
+        fontSize: 22,
         fontWeight: FontWeight.w700,
         height: 1.27,
         letterSpacing: 0,
         color: baseColor,
       ),
       titleMedium: TextStyle(
-        fontFamily: fontFamily, fontSize: 16,
+        fontFamily: fontFamily,
+        fontSize: 16,
         fontWeight: FontWeight.w600,
         height: 1.50,
         letterSpacing: 0.15,
         color: baseColor,
       ),
       titleSmall: TextStyle(
-        fontFamily: fontFamily, fontSize: 14,
+        fontFamily: fontFamily,
+        fontSize: 14,
         fontWeight: FontWeight.w600,
         height: 1.43,
         letterSpacing: 0.1,
         color: baseColor,
       ),
       bodyLarge: TextStyle(
-        fontFamily: fontFamily, fontSize: 16,
+        fontFamily: fontFamily,
+        fontSize: 16,
         fontWeight: FontWeight.w400,
         height: 1.50,
         letterSpacing: 0.5,
         color: baseColor,
       ),
       bodyMedium: TextStyle(
-        fontFamily: fontFamily, fontSize: 14,
+        fontFamily: fontFamily,
+        fontSize: 14,
         fontWeight: FontWeight.w400,
         height: 1.43,
         letterSpacing: 0.25,
         color: baseColor,
       ),
       bodySmall: TextStyle(
-        fontFamily: fontFamily, fontSize: 12,
+        fontFamily: fontFamily,
+        fontSize: 12,
         fontWeight: FontWeight.w400,
         height: 1.33,
         letterSpacing: 0.4,
         color: secondaryColor,
       ),
       labelLarge: TextStyle(
-        fontFamily: fontFamily, fontSize: 14,
+        fontFamily: fontFamily,
+        fontSize: 14,
         fontWeight: FontWeight.w600,
         height: 1.43,
         letterSpacing: 0.1,
         color: baseColor,
       ),
       labelMedium: TextStyle(
-        fontFamily: fontFamily, fontSize: 12,
+        fontFamily: fontFamily,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
         height: 1.33,
         letterSpacing: 0.5,
         color: secondaryColor,
       ),
       labelSmall: TextStyle(
-        fontFamily: fontFamily, fontSize: 11,
+        fontFamily: fontFamily,
+        fontSize: 11,
         fontWeight: FontWeight.w500,
         height: 1.45,
         letterSpacing: 0.5,

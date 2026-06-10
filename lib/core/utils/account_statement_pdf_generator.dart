@@ -36,7 +36,8 @@ class AccountStatementPdfGenerator {
       phone: phone,
       currency: currency,
     );
-    final filename = '${entityType}_statement_${entityName.replaceAll(' ', '_')}.pdf';
+    final filename =
+        '${entityType}_statement_${entityName.replaceAll(' ', '_')}.pdf';
     await Printing.sharePdf(bytes: pdfBytes, filename: filename);
   }
 
@@ -53,20 +54,34 @@ class AccountStatementPdfGenerator {
     String currency = 'YER',
   }) async {
     // Load business settings
-    final businessName = await locator<ReferenceDataRepository>().getSetting('business_name');
-    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone');
-    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address');
-    final logoPath = await locator<ReferenceDataRepository>().getSetting('business_logo_path');
+    final businessName =
+        await locator<ReferenceDataRepository>().getSetting('business_name');
+    final businessPhone =
+        await locator<ReferenceDataRepository>().getSetting('business_phone');
+    final businessAddress =
+        await locator<ReferenceDataRepository>().getSetting('business_address');
+    final logoPath = await locator<ReferenceDataRepository>()
+        .getSetting('business_logo_path');
 
-    final hasCustomBusiness = businessName != null && businessName.trim().isNotEmpty;
-    final String headerName = hasCustomBusiness ? businessName : 'الأول برو المحاسبي';
-    final String headerPhone = (businessPhone != null && businessPhone.trim().isNotEmpty) ? businessPhone : '';
-    final String headerAddress = (businessAddress != null && businessAddress.trim().isNotEmpty) ? businessAddress : '';
+    final hasCustomBusiness =
+        businessName != null && businessName.trim().isNotEmpty;
+    final String headerName =
+        hasCustomBusiness ? businessName : 'الأول برو المحاسبي';
+    final String headerPhone =
+        (businessPhone != null && businessPhone.trim().isNotEmpty)
+            ? businessPhone
+            : '';
+    final String headerAddress =
+        (businessAddress != null && businessAddress.trim().isNotEmpty)
+            ? businessAddress
+            : '';
 
     // Load logo
     pw.MemoryImage? logoImage;
     try {
-      if (logoPath != null && logoPath.isNotEmpty && File(logoPath).existsSync()) {
+      if (logoPath != null &&
+          logoPath.isNotEmpty &&
+          File(logoPath).existsSync()) {
         final logoBytes = await File(logoPath).readAsBytes();
         logoImage = pw.MemoryImage(logoBytes);
       }
@@ -83,8 +98,10 @@ class AccountStatementPdfGenerator {
       arabicFont = null;
     }
 
-    final currencySymbol = currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
-    final titleAr = entityType == 'customer' ? 'كشف حساب عميل' : 'كشف حساب مورد';
+    final currencySymbol =
+        currency == 'USD' ? r'$' : (currency == 'SAR' ? 'ر.س' : 'ر.ي');
+    final titleAr =
+        entityType == 'customer' ? 'كشف حساب عميل' : 'كشف حساب مورد';
 
     // Sort movements ascending by date+time for correct running balance in PDF.
     final sortedMovements = List<Map<String, dynamic>>.from(movements);
@@ -93,7 +110,8 @@ class AccountStatementPdfGenerator {
       final dateB = b['date'] as String? ?? '';
       final cmp = dateA.compareTo(dateB);
       if (cmp != 0) return cmp;
-      return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
+      return ((a['created_at'] as String?) ?? '')
+          .compareTo((b['created_at'] as String?) ?? '');
     });
 
     final doc = pw.Document(
@@ -110,7 +128,8 @@ class AccountStatementPdfGenerator {
         textDirection: pw.TextDirection.rtl,
         build: (context) => [
           // ── Header ──
-          _buildHeader(headerName, headerPhone, headerAddress, logoImage, arabicFont),
+          _buildHeader(
+              headerName, headerPhone, headerAddress, logoImage, arabicFont),
           pw.SizedBox(height: 16),
           pw.Divider(thickness: 2, color: const PdfColor(0.12, 0.42, 0.14)),
           pw.SizedBox(height: 12),
@@ -124,7 +143,11 @@ class AccountStatementPdfGenerator {
             ),
             child: pw.Text(
               titleAr,
-              style: pw.TextStyle(font: arabicFont, fontSize: 16, fontWeight: pw.FontWeight.bold, color: const PdfColor(1, 1, 1)),
+              style: pw.TextStyle(
+                  font: arabicFont,
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                  color: const PdfColor(1, 1, 1)),
             ),
           ),
           pw.SizedBox(height: 12),
@@ -133,7 +156,8 @@ class AccountStatementPdfGenerator {
           _infoRow('الاسم', entityName, arabicFont),
           if (phone != null && phone.isNotEmpty)
             _infoRow('الهاتف', phone, arabicFont),
-          _infoRow('تاريخ الطباعة', _formatDate(DateTime.now().toIso8601String()), arabicFont),
+          _infoRow('تاريخ الطباعة',
+              _formatDate(DateTime.now().toIso8601String()), arabicFont),
           pw.SizedBox(height: 16),
 
           // ── Movements table ──
@@ -141,7 +165,8 @@ class AccountStatementPdfGenerator {
           pw.SizedBox(height: 16),
 
           // ── Summary ──
-          _buildSummary(totalDebit, totalCredit, netBalance, balanceLabel, currencySymbol, arabicFont),
+          _buildSummary(totalDebit, totalCredit, netBalance, balanceLabel,
+              currencySymbol, arabicFont),
 
           // ── Footer ──
           pw.SizedBox(height: 40),
@@ -150,7 +175,10 @@ class AccountStatementPdfGenerator {
           pw.Center(
             child: pw.Text(
               'تم إنشاء هذا الكشف بواسطة تطبيق الأول برو المحاسبي',
-              style: pw.TextStyle(font: arabicFont, fontSize: 8, color: const PdfColor(0.5, 0.5, 0.5)),
+              style: pw.TextStyle(
+                  font: arabicFont,
+                  fontSize: 8,
+                  color: const PdfColor(0.5, 0.5, 0.5)),
             ),
           ),
         ],
@@ -161,8 +189,11 @@ class AccountStatementPdfGenerator {
   }
 
   static pw.Widget _buildHeader(
-    String name, String phone, String address,
-    pw.MemoryImage? logo, pw.Font? font,
+    String name,
+    String phone,
+    String address,
+    pw.MemoryImage? logo,
+    pw.Font? font,
   ) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -172,22 +203,46 @@ class AccountStatementPdfGenerator {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(name, style: pw.TextStyle(font: font, fontSize: 20, fontWeight: pw.FontWeight.bold, color: const PdfColor(0.12, 0.42, 0.14))),
+              pw.Text(name,
+                  style: pw.TextStyle(
+                      font: font,
+                      fontSize: 20,
+                      fontWeight: pw.FontWeight.bold,
+                      color: const PdfColor(0.12, 0.42, 0.14))),
               if (phone.isNotEmpty)
-                pw.Padding(padding: const pw.EdgeInsets.only(top: 4), child: pw.Text('هاتف: $phone', style: pw.TextStyle(font: font, fontSize: 10))),
+                pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 4),
+                    child: pw.Text('هاتف: $phone',
+                        style: pw.TextStyle(font: font, fontSize: 10))),
               if (address.isNotEmpty)
-                pw.Padding(padding: const pw.EdgeInsets.only(top: 2), child: pw.Text('العنوان: $address', style: pw.TextStyle(font: font, fontSize: 10))),
+                pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 2),
+                    child: pw.Text('العنوان: $address',
+                        style: pw.TextStyle(font: font, fontSize: 10))),
             ],
           ),
         ),
         if (logo != null)
-          pw.Container(width: 72, height: 72, decoration: pw.BoxDecoration(borderRadius: pw.BorderRadius.circular(12)), child: pw.Image(logo, fit: pw.BoxFit.contain))
+          pw.Container(
+              width: 72,
+              height: 72,
+              decoration:
+                  pw.BoxDecoration(borderRadius: pw.BorderRadius.circular(12)),
+              child: pw.Image(logo, fit: pw.BoxFit.contain))
         else
           pw.Container(
-            width: 72, height: 72,
-            decoration: pw.BoxDecoration(color: const PdfColor(0.12, 0.42, 0.14), borderRadius: pw.BorderRadius.circular(12)),
+            width: 72,
+            height: 72,
+            decoration: pw.BoxDecoration(
+                color: const PdfColor(0.12, 0.42, 0.14),
+                borderRadius: pw.BorderRadius.circular(12)),
             alignment: pw.Alignment.center,
-            child: pw.Text('FP', style: pw.TextStyle(font: font, fontSize: 24, fontWeight: pw.FontWeight.bold, color: const PdfColor(1, 1, 1))),
+            child: pw.Text('FP',
+                style: pw.TextStyle(
+                    font: font,
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                    color: const PdfColor(1, 1, 1))),
           ),
       ],
     );
@@ -198,16 +253,21 @@ class AccountStatementPdfGenerator {
     String currencySymbol,
     pw.Font? font,
   ) {
-    final headerStyle = pw.TextStyle(font: font, fontSize: 9, fontWeight: pw.FontWeight.bold, color: const PdfColor(1, 1, 1));
+    final headerStyle = pw.TextStyle(
+        font: font,
+        fontSize: 9,
+        fontWeight: pw.FontWeight.bold,
+        color: const PdfColor(1, 1, 1));
     final cellStyle = pw.TextStyle(font: font, fontSize: 8);
 
     double runningBalance = 0;
 
     return pw.Table(
-      border: pw.TableBorder.all(color: const PdfColor(0.8, 0.8, 0.8), width: 0.5),
+      border:
+          pw.TableBorder.all(color: const PdfColor(0.8, 0.8, 0.8), width: 0.5),
       columnWidths: {
         0: const pw.FlexColumnWidth(2.5), // التاريخ
-        1: const pw.FlexColumnWidth(2),   // البيان
+        1: const pw.FlexColumnWidth(2), // البيان
         2: const pw.FlexColumnWidth(1.5), // عليه
         3: const pw.FlexColumnWidth(1.5), // له
         4: const pw.FlexColumnWidth(1.5), // الرصيد
@@ -227,7 +287,8 @@ class AccountStatementPdfGenerator {
         // Data rows
         ...movements.map((m) {
           final dateStr = m['date'] as String? ?? '';
-          final description = m['description'] as String? ?? (m['type_ar'] as String? ?? '');
+          final description =
+              m['description'] as String? ?? (m['type_ar'] as String? ?? '');
           final debit = MoneyHelper.readMoney(m['debit']);
           final credit = MoneyHelper.readMoney(m['credit']);
           runningBalance += credit - debit;
@@ -236,9 +297,19 @@ class AccountStatementPdfGenerator {
             children: [
               _tableCell(_formatDate(dateStr), cellStyle),
               _tableCell(description, cellStyle, maxLines: 2),
-              _tableCell(debit > 0 ? '$currencySymbol ${CurrencyFormatter.format(debit)}' : '', cellStyle),
-              _tableCell(credit > 0 ? '$currencySymbol ${CurrencyFormatter.format(credit)}' : '', cellStyle),
-              _tableCell('$currencySymbol ${CurrencyFormatter.format(runningBalance.abs())}', cellStyle),
+              _tableCell(
+                  debit > 0
+                      ? '$currencySymbol ${CurrencyFormatter.format(debit)}'
+                      : '',
+                  cellStyle),
+              _tableCell(
+                  credit > 0
+                      ? '$currencySymbol ${CurrencyFormatter.format(credit)}'
+                      : '',
+                  cellStyle),
+              _tableCell(
+                  '$currencySymbol ${CurrencyFormatter.format(runningBalance.abs())}',
+                  cellStyle),
             ],
           );
         }),
@@ -247,8 +318,12 @@ class AccountStatementPdfGenerator {
   }
 
   static pw.Widget _buildSummary(
-    double totalDebit, double totalCredit, double netBalance,
-    String balanceLabel, String currencySymbol, pw.Font? font,
+    double totalDebit,
+    double totalCredit,
+    double netBalance,
+    String balanceLabel,
+    String currencySymbol,
+    pw.Font? font,
   ) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
@@ -258,9 +333,11 @@ class AccountStatementPdfGenerator {
       ),
       child: pw.Column(
         children: [
-          _totalRow('إجمالي عليه', '$currencySymbol ${CurrencyFormatter.format(totalDebit)}', font),
+          _totalRow('إجمالي عليه',
+              '$currencySymbol ${CurrencyFormatter.format(totalDebit)}', font),
           pw.SizedBox(height: 4),
-          _totalRow('إجمالي له', '$currencySymbol ${CurrencyFormatter.format(totalCredit)}', font),
+          _totalRow('إجمالي له',
+              '$currencySymbol ${CurrencyFormatter.format(totalCredit)}', font),
           pw.Divider(color: const PdfColor(0.7, 0.7, 0.7)),
           _totalRow(
             'الرصيد ($balanceLabel)',
@@ -268,7 +345,9 @@ class AccountStatementPdfGenerator {
             font,
             isBold: true,
             fontSize: 14,
-            color: netBalance >= 0 ? const PdfColor(0.12, 0.42, 0.14) : const PdfColor(0.8, 0, 0),
+            color: netBalance >= 0
+                ? const PdfColor(0.12, 0.42, 0.14)
+                : const PdfColor(0.8, 0, 0),
           ),
         ],
       ),
@@ -281,24 +360,42 @@ class AccountStatementPdfGenerator {
       child: pw.Row(
         mainAxisSize: pw.MainAxisSize.min,
         children: [
-          pw.Text('$label: ', style: pw.TextStyle(font: font, fontSize: 10, color: const PdfColor(0.4, 0.4, 0.4))),
-          pw.Text(value, style: pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold)),
+          pw.Text('$label: ',
+              style: pw.TextStyle(
+                  font: font,
+                  fontSize: 10,
+                  color: const PdfColor(0.4, 0.4, 0.4))),
+          pw.Text(value,
+              style: pw.TextStyle(
+                  font: font, fontSize: 10, fontWeight: pw.FontWeight.bold)),
         ],
       ),
     );
   }
 
-  static pw.Widget _totalRow(String label, String value, pw.Font? font, {bool isBold = false, double fontSize = 10, PdfColor? color}) {
+  static pw.Widget _totalRow(String label, String value, pw.Font? font,
+      {bool isBold = false, double fontSize = 10, PdfColor? color}) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Text(label, style: pw.TextStyle(font: font, fontSize: fontSize, fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
-        pw.Text(value, style: pw.TextStyle(font: font, fontSize: fontSize, fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal, color: color)),
+        pw.Text(label,
+            style: pw.TextStyle(
+                font: font,
+                fontSize: fontSize,
+                fontWeight:
+                    isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+        pw.Text(value,
+            style: pw.TextStyle(
+                font: font,
+                fontSize: fontSize,
+                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+                color: color)),
       ],
     );
   }
 
-  static pw.Widget _tableCell(String text, pw.TextStyle style, {int maxLines = 1}) {
+  static pw.Widget _tableCell(String text, pw.TextStyle style,
+      {int maxLines = 1}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: pw.Text(text, style: style, maxLines: maxLines),

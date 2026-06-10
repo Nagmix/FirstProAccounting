@@ -103,7 +103,9 @@ class ProductPricingStep extends StatelessWidget {
           ),
         ],
         // Auto-calculated base unit sell price display
-        if (hasMulti && saleUnitSource == 1 && sellPriceController.text.isNotEmpty) ...[
+        if (hasMulti &&
+            saleUnitSource == 1 &&
+            sellPriceController.text.isNotEmpty) ...[
           const SizedBox(height: 2),
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
@@ -177,7 +179,9 @@ class ProductPricingStep extends StatelessWidget {
     final costPrice = double.tryParse(costPriceController.text);
     if (costPrice == null || costPrice <= 0) return '...';
     final factor = purchaseUnitFactor;
-    if (factor <= 1) return '${costPrice.toStringAsFixed(2)} ${AppConstants.currency}';
+    if (factor <= 1) {
+      return '${costPrice.toStringAsFixed(2)} ${AppConstants.currency}';
+    }
     final baseCost = costPrice / factor;
     return '${baseCost.toStringAsFixed(2)} ${AppConstants.currency}';
   }
@@ -187,7 +191,9 @@ class ProductPricingStep extends StatelessWidget {
     final sellPrice = double.tryParse(sellPriceController.text);
     if (sellPrice == null || sellPrice <= 0) return '...';
     final factor = purchaseUnitFactor;
-    if (factor <= 1) return '${sellPrice.toStringAsFixed(2)} ${AppConstants.currency}';
+    if (factor <= 1) {
+      return '${sellPrice.toStringAsFixed(2)} ${AppConstants.currency}';
+    }
     final baseSell = sellPrice / factor;
     return '${baseSell.toStringAsFixed(2)} ${AppConstants.currency}';
   }

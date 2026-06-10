@@ -11,10 +11,12 @@ class CreateInventoryVoucherScreen extends StatefulWidget {
   const CreateInventoryVoucherScreen({super.key});
 
   @override
-  State<CreateInventoryVoucherScreen> createState() => _CreateInventoryVoucherScreenScreenState();
+  State<CreateInventoryVoucherScreen> createState() =>
+      _CreateInventoryVoucherScreenScreenState();
 }
 
-class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVoucherScreen> {
+class _CreateInventoryVoucherScreenScreenState
+    extends State<CreateInventoryVoucherScreen> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
@@ -43,8 +45,10 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
   }
 
   Future<void> _loadData() async {
-    final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
-    final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
+    final warehouses =
+        await locator<ReferenceDataRepository>().getAllWarehouses();
+    final products =
+        await locator<ProductRepository>().getAllProducts(activeOnly: true);
     if (mounted) {
       setState(() {
         _warehouses = warehouses;
@@ -73,13 +77,15 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
     setState(() {
       _items[index].productId = productId;
       _items[index].productName = product['name_ar'] as String? ?? '';
-      _items[index].systemQuantity = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
+      _items[index].systemQuantity =
+          (product['current_stock'] as num?)?.toDouble() ?? 0.0;
       _items[index].unitCost = MoneyHelper.readMoney(product['cost_price']);
     });
   }
 
   void _updateDifference(int index) {
-    final actual = double.tryParse(_items[index].actualQuantityController.text) ?? 0.0;
+    final actual =
+        double.tryParse(_items[index].actualQuantityController.text) ?? 0.0;
     setState(() {
       _items[index].actualQuantity = actual;
       _items[index].difference = actual - _items[index].systemQuantity;
@@ -87,13 +93,16 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
   }
 
   double get _totalValue {
-    return _items.fold(0.0, (sum, item) => sum + (item.difference.abs() * item.unitCost));
+    return _items.fold(
+        0.0, (sum, item) => sum + (item.difference.abs() * item.unitCost));
   }
 
   Future<void> _saveVoucher() async {
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يجب إضافة بند واحد على الأقل'), backgroundColor: AppColors.error),
+        const SnackBar(
+            content: Text('يجب إضافة بند واحد على الأقل'),
+            backgroundColor: AppColors.error),
       );
       return;
     }
@@ -102,7 +111,9 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
     for (int i = 0; i < _items.length; i++) {
       if (_items[i].productId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('يرجى اختيار المنتج في البند ${i + 1}'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('يرجى اختيار المنتج في البند ${i + 1}'),
+              backgroundColor: AppColors.error),
         );
         return;
       }
@@ -111,41 +122,54 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
     setState(() => _isSaving = true);
 
     try {
-      final voucherNumber = await locator<StockService>().getNextInventoryVoucherNumber();
-      final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+      final voucherNumber =
+          await locator<StockService>().getNextInventoryVoucherNumber();
+      final dateStr =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
       final voucherMap = {
         'voucher_number': voucherNumber,
         'date': dateStr,
         'warehouse_id': _selectedWarehouseId,
-        'description': _descriptionController.text.isEmpty ? null : _descriptionController.text,
+        'description': _descriptionController.text.isEmpty
+            ? null
+            : _descriptionController.text,
         'currency': _selectedCurrency,
         'total_value': _totalValue,
         'status': 'approved',
       };
 
-      final itemsList = _items.map((item) => {
-        'product_id': item.productId,
-        'system_quantity': item.systemQuantity,
-        'actual_quantity': item.actualQuantity,
-        'difference': item.difference,
-        'unit_cost': item.unitCost,
-        'total_value': item.difference.abs() * item.unitCost,
-        'notes': item.notesController.text.isEmpty ? null : item.notesController.text,
-      }).toList();
+      final itemsList = _items
+          .map((item) => {
+                'product_id': item.productId,
+                'system_quantity': item.systemQuantity,
+                'actual_quantity': item.actualQuantity,
+                'difference': item.difference,
+                'unit_cost': item.unitCost,
+                'total_value': item.difference.abs() * item.unitCost,
+                'notes': item.notesController.text.isEmpty
+                    ? null
+                    : item.notesController.text,
+              })
+          .toList();
 
-      await locator<StockService>().insertInventoryVoucher(voucherMap, itemsList);
+      await locator<StockService>()
+          .insertInventoryVoucher(voucherMap, itemsList);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم حفظ سند الجرد بنجاح'), backgroundColor: AppColors.success),
+          const SnackBar(
+              content: Text('تم حفظ سند الجرد بنجاح'),
+              backgroundColor: AppColors.success),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء الحفظ'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء الحفظ'),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -167,7 +191,9 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             TextButton.icon(
               onPressed: _isSaving ? null : _saveVoucher,
               icon: const Icon(Icons.save, color: Colors.white),
-              label: const Text('حفظ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+              label: const Text('حفظ',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w700)),
             ),
           ],
         ),
@@ -176,7 +202,8 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             : Form(
                 key: _formKey,
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewPadding.bottom + 80),
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewPadding.bottom + 80),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -200,7 +227,8 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +237,9 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             children: [
               Icon(Icons.inventory, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
-              Text('بيانات سند الجرد', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+              Text('بيانات سند الجرد',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 16),
@@ -230,7 +260,8 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
               decoration: InputDecoration(
                 labelText: 'التاريخ',
                 prefixIcon: const Icon(Icons.calendar_today, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
                 '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
@@ -246,14 +277,16 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             decoration: InputDecoration(
               labelText: 'المخزن',
               prefixIcon: const Icon(Icons.warehouse, size: 20),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: [
-              const DropdownMenuItem(value: null, child: Text('اختر المخزن (اختياري)')),
+              const DropdownMenuItem(
+                  value: null, child: Text('اختر المخزن (اختياري)')),
               ..._warehouses.map((w) => DropdownMenuItem(
-                value: w['id'] as int,
-                child: Text(w['name'] as String? ?? ''),
-              )),
+                    value: w['id'] as int,
+                    child: Text(w['name'] as String? ?? ''),
+                  )),
             ],
             onChanged: (v) => setState(() => _selectedWarehouseId = v),
           ),
@@ -265,7 +298,8 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             decoration: InputDecoration(
               labelText: 'العملة',
               prefixIcon: const Icon(Icons.attach_money, size: 20),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: const [
               DropdownMenuItem(value: 'YER', child: Text('ريال يمني (ر.ي)')),
@@ -282,7 +316,8 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             decoration: InputDecoration(
               labelText: 'الوصف',
               prefixIcon: const Icon(Icons.description, size: 20),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             maxLines: 2,
           ),
@@ -298,7 +333,8 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +346,10 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
                 children: [
                   Icon(Icons.list_alt, color: AppColors.primary, size: 20),
                   const SizedBox(width: 8),
-                  Text('بنود السند', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                  Text('بنود السند',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
                 ],
               ),
               TextButton.icon(
@@ -328,9 +367,13 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.add_shopping_cart, size: 48, color: AppColors.textHint.withValues(alpha: 0.5)),
+                    Icon(Icons.add_shopping_cart,
+                        size: 48,
+                        color: AppColors.textHint.withValues(alpha: 0.5)),
                     const SizedBox(height: 8),
-                    Text('لم تتم إضافة منتجات بعد', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint)),
+                    Text('لم تتم إضافة منتجات بعد',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: AppColors.textHint)),
                   ],
                 ),
               ),
@@ -346,25 +389,32 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
     );
   }
 
-  Widget _buildItemCard(int index, _InventoryVoucherItem item, ThemeData theme, bool isDark) {
+  Widget _buildItemCard(
+      int index, _InventoryVoucherItem item, ThemeData theme, bool isDark) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceVariant.withValues(alpha: 0.3) : AppColors.surfaceVariant.withValues(alpha: 0.5),
+        color: isDark
+            ? AppColors.darkSurfaceVariant.withValues(alpha: 0.3)
+            : AppColors.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-              Text('بند ${index + 1}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+            children: [
+              Text('بند ${index + 1}',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               IconButton(
                 onPressed: () => _removeItem(index),
-                icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                icon: const Icon(Icons.delete_outline,
+                    color: AppColors.error, size: 20),
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 padding: EdgeInsets.zero,
               ),
@@ -378,12 +428,16 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             decoration: InputDecoration(
               labelText: 'المنتج',
               isDense: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            items: _products.map((p) => DropdownMenuItem(
-              value: p['id'] as int,
-              child: Text(p['name_ar'] as String? ?? '', overflow: TextOverflow.ellipsis),
-            )).toList(),
+            items: _products
+                .map((p) => DropdownMenuItem(
+                      value: p['id'] as int,
+                      child: Text(p['name_ar'] as String? ?? '',
+                          overflow: TextOverflow.ellipsis),
+                    ))
+                .toList(),
             onChanged: (v) => _onProductSelected(index, v),
           ),
           const SizedBox(height: 8),
@@ -396,22 +450,28 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
                   decoration: InputDecoration(
                     labelText: 'الكمية النظامية',
                     isDense: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     filled: true,
-                    fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                    fillColor: isDark
+                        ? AppColors.darkSurfaceVariant
+                        : AppColors.surfaceVariant,
                   ),
-                  child: Text(item.systemQuantity.toStringAsFixed(2), style: theme.textTheme.bodyMedium),
+                  child: Text(item.systemQuantity.toStringAsFixed(2),
+                      style: theme.textTheme.bodyMedium),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextFormField(
                   controller: item.actualQuantityController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: 'الكمية الفعلية',
                     isDense: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   onChanged: (_) => _updateDifference(index),
                 ),
@@ -428,15 +488,20 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
                   decoration: InputDecoration(
                     labelText: 'الفرق',
                     isDense: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     filled: true,
-                    fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                    fillColor: isDark
+                        ? AppColors.darkSurfaceVariant
+                        : AppColors.surfaceVariant,
                   ),
                   child: Text(
                     '${item.difference > 0 ? '+' : ''}${item.difference.toStringAsFixed(2)}',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: item.difference > 0 ? AppColors.success : (item.difference < 0 ? AppColors.error : null),
+                      color: item.difference > 0
+                          ? AppColors.success
+                          : (item.difference < 0 ? AppColors.error : null),
                     ),
                   ),
                 ),
@@ -447,11 +512,15 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
                   decoration: InputDecoration(
                     labelText: 'تكلفة الوحدة',
                     isDense: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     filled: true,
-                    fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                    fillColor: isDark
+                        ? AppColors.darkSurfaceVariant
+                        : AppColors.surfaceVariant,
                   ),
-                  child: Text(item.unitCost.toStringAsFixed(2), style: theme.textTheme.bodyMedium),
+                  child: Text(item.unitCost.toStringAsFixed(2),
+                      style: theme.textTheme.bodyMedium),
                 ),
               ),
             ],
@@ -463,13 +532,17 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             decoration: InputDecoration(
               labelText: 'القيمة الإجمالية',
               isDense: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               filled: true,
-              fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+              fillColor: isDark
+                  ? AppColors.darkSurfaceVariant
+                  : AppColors.surfaceVariant,
             ),
             child: Text(
               CurrencyFormatter.format(item.difference.abs() * item.unitCost),
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700, color: AppColors.primary),
             ),
           ),
           const SizedBox(height: 8),
@@ -480,7 +553,8 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             decoration: InputDecoration(
               labelText: 'ملاحظات',
               isDense: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
         ],
@@ -503,15 +577,20 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
 
     final increaseItems = _items.where((i) => i.difference > 0).toList();
     final decreaseItems = _items.where((i) => i.difference < 0).toList();
-    final totalIncrease = increaseItems.fold(0.0, (sum, i) => sum + (i.difference * i.unitCost));
-    final totalDecrease = decreaseItems.fold(0.0, (sum, i) => sum + (i.difference.abs() * i.unitCost));
+    final totalIncrease =
+        increaseItems.fold(0.0, (sum, i) => sum + (i.difference * i.unitCost));
+    final totalDecrease = decreaseItems.fold(
+        0.0, (sum, i) => sum + (i.difference.abs() * i.unitCost));
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary.withValues(alpha: 0.08), AppColors.secondary.withValues(alpha: 0.08)],
+          colors: [
+            AppColors.primary.withValues(alpha: 0.08),
+            AppColors.secondary.withValues(alpha: 0.08)
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
@@ -523,32 +602,46 @@ class _CreateInventoryVoucherScreenScreenState extends State<CreateInventoryVouc
             children: [
               Icon(Icons.calculate, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
-              Text('ملخص', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+              Text('ملخص',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700, color: AppColors.primary)),
             ],
           ),
           const SizedBox(height: 12),
           _buildSummaryRow(theme, 'عدد البنود', '${_items.length}'),
           if (increaseItems.isNotEmpty) ...[
             const SizedBox(height: 4),
-            _buildSummaryRow(theme, 'زيادة مخزون', CurrencyFormatter.format(totalIncrease, symbol: currencySymbol), color: AppColors.success),
+            _buildSummaryRow(theme, 'زيادة مخزون',
+                CurrencyFormatter.format(totalIncrease, symbol: currencySymbol),
+                color: AppColors.success),
           ],
           if (decreaseItems.isNotEmpty) ...[
             const SizedBox(height: 4),
-            _buildSummaryRow(theme, 'نقص مخزون', CurrencyFormatter.format(totalDecrease, symbol: currencySymbol), color: AppColors.error),
+            _buildSummaryRow(theme, 'نقص مخزون',
+                CurrencyFormatter.format(totalDecrease, symbol: currencySymbol),
+                color: AppColors.error),
           ],
           const Divider(height: 16),
-          _buildSummaryRow(theme, 'القيمة الإجمالية', CurrencyFormatter.format(_totalValue, symbol: currencySymbol), isBold: true, color: AppColors.primary),
+          _buildSummaryRow(theme, 'القيمة الإجمالية',
+              CurrencyFormatter.format(_totalValue, symbol: currencySymbol),
+              isBold: true, color: AppColors.primary),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(ThemeData theme, String label, String value, {bool isBold = false, Color? color}) {
+  Widget _buildSummaryRow(ThemeData theme, String label, String value,
+      {bool isBold = false, Color? color}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isBold ? FontWeight.w700 : FontWeight.w500)),
-        Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: isBold ? FontWeight.w800 : FontWeight.w600, color: color)),
+        Text(label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: isBold ? FontWeight.w700 : FontWeight.w500)),
+        Text(value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                color: color)),
       ],
     );
   }

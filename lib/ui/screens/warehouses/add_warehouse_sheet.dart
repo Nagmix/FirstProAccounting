@@ -42,14 +42,17 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
     final now = DateTime.now().toIso8601String();
     final warehouseMap = {
       'name': _nameController.text.trim(),
-      'location': _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
+      'location': _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
       'is_active': 1,
       'updated_at': now,
     };
 
     final refRepo = locator<ReferenceDataRepository>();
     if (_isEdit) {
-      await refRepo.updateWarehouse(widget.existing!['id'] as int, warehouseMap);
+      await refRepo.updateWarehouse(
+          widget.existing!['id'] as int, warehouseMap);
     } else {
       warehouseMap['created_at'] = now;
       await refRepo.insertWarehouse(warehouseMap);
@@ -60,7 +63,8 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
+        content: Text(
+            'تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
         backgroundColor: AppColors.success,
       ),
     );
@@ -96,7 +100,8 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
               ),
               Text(
                 _isEdit ? 'تعديل المستودع' : 'إضافة مستودع',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
@@ -109,7 +114,9 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
                   labelText: 'اسم المستودع',
                   prefixIcon: Icon(Icons.warehouse),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'اسم المستودع مطلوب' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'اسم المستودع مطلوب'
+                    : null,
               ),
               const SizedBox(height: 14),
 
@@ -135,7 +142,8 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.check, size: 20),
                       label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ'),
@@ -149,7 +157,8 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                      onPressed:
+                          _isSaving ? null : () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),

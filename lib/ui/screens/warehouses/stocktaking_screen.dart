@@ -47,11 +47,13 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final warehouses = await locator<ReferenceDataRepository>().getAllWarehouses();
+    final warehouses =
+        await locator<ReferenceDataRepository>().getAllWarehouses();
     if (!mounted) return;
     final sessions = await locator<StockService>().getStocktakingSessions();
     if (!mounted) return;
-    final products = await locator<ProductRepository>().getAllProducts(activeOnly: true);
+    final products =
+        await locator<ProductRepository>().getAllProducts(activeOnly: true);
     if (!mounted) return;
 
     setState(() {
@@ -65,7 +67,9 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
   List<Map<String, dynamic>> get _filteredProducts {
     var filtered = _products;
     if (_selectedWarehouseId != null) {
-      filtered = filtered.where((p) => p['warehouse_id'] == _selectedWarehouseId).toList();
+      filtered = filtered
+          .where((p) => p['warehouse_id'] == _selectedWarehouseId)
+          .toList();
     }
     if (_searchQuery.isEmpty) return filtered;
     final q = _searchQuery.toLowerCase();
@@ -143,7 +147,9 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
       final id = product['id'] as int;
       final systemQty = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
       final controller = _actualQuantityControllers[id];
-      final actualQty = controller != null ? (double.tryParse(controller.text) ?? systemQty) : systemQty;
+      final actualQty = controller != null
+          ? (double.tryParse(controller.text) ?? systemQty)
+          : systemQty;
       final variance = actualQty - systemQty;
 
       items.add({
@@ -166,13 +172,19 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     // حساب الإحصائيات
-    final adjustedItems = items.where((i) => (i['variance'] as double).abs() >= 0.005).toList();
-    final matchedItems = items.where((i) => (i['variance'] as double).abs() < 0.005).toList();
-    final positiveVariance = adjustedItems.where((i) => (i['variance'] as double) > 0).toList();
-    final negativeVariance = adjustedItems.where((i) => (i['variance'] as double) < 0).toList();
+    final adjustedItems =
+        items.where((i) => (i['variance'] as double).abs() >= 0.005).toList();
+    final matchedItems =
+        items.where((i) => (i['variance'] as double).abs() < 0.005).toList();
+    final positiveVariance =
+        adjustedItems.where((i) => (i['variance'] as double) > 0).toList();
+    final negativeVariance =
+        adjustedItems.where((i) => (i['variance'] as double) < 0).toList();
 
-    double totalPositiveQty = positiveVariance.fold(0.0, (sum, i) => sum + (i['variance'] as double));
-    double totalNegativeQty = negativeVariance.fold(0.0, (sum, i) => sum + (i['variance'] as double));
+    double totalPositiveQty =
+        positiveVariance.fold(0.0, (sum, i) => sum + (i['variance'] as double));
+    double totalNegativeQty =
+        negativeVariance.fold(0.0, (sum, i) => sum + (i['variance'] as double));
     double totalAdjustmentValue = adjustedItems.fold(0.0, (sum, i) {
       final variance = i['variance'] as double;
       final cost = i['cost_price'] as double;
@@ -186,14 +198,16 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               children: [
                 Icon(Icons.fact_check, color: AppColors.primary, size: 28),
                 const SizedBox(width: 10),
                 Text(
                   'معاينة تعديلات الجرد',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
@@ -210,7 +224,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.info.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                        border: Border.all(
+                            color: AppColors.info.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         children: [
@@ -247,7 +262,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                               Expanded(
                                 child: _DialogSummaryChip(
                                   label: 'زيادة',
-                                  value: '+${totalPositiveQty.toStringAsFixed(1)}',
+                                  value:
+                                      '+${totalPositiveQty.toStringAsFixed(1)}',
                                   color: AppColors.success,
                                 ),
                               ),
@@ -263,8 +279,11 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                               Expanded(
                                 child: _DialogSummaryChip(
                                   label: 'قيمة التعديل',
-                                  value: totalAdjustmentValue.toStringAsFixed(0),
-                                  color: totalAdjustmentValue >= 0 ? AppColors.success : AppColors.error,
+                                  value:
+                                      totalAdjustmentValue.toStringAsFixed(0),
+                                  color: totalAdjustmentValue >= 0
+                                      ? AppColors.success
+                                      : AppColors.error,
                                 ),
                               ),
                             ],
@@ -276,25 +295,46 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
 
                     // ترويسة الجدول
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                        color: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : AppColors.surfaceVariant,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8)),
                       ),
                       child: Row(
                         children: [
-                          Expanded(flex: 3, child: Text('المنتج', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                          Expanded(
+                              flex: 3,
+                              child: Text('المنتج',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textSecondary))),
                           SizedBox(
                             width: 55,
-                            child: Text('النظام', textAlign: TextAlign.center, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                            child: Text('النظام',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textSecondary)),
                           ),
                           SizedBox(
                             width: 55,
-                            child: Text('الفعلي', textAlign: TextAlign.center, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                            child: Text('الفعلي',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textSecondary)),
                           ),
                           SizedBox(
                             width: 60,
-                            child: Text('الفرق', textAlign: TextAlign.center, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                            child: Text('الفرق',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textSecondary)),
                           ),
                         ],
                       ),
@@ -314,18 +354,23 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                         rowBgColor = Colors.transparent;
                       } else if (isPositive) {
                         varianceColor = AppColors.success;
-                        rowBgColor = AppColors.successLight.withValues(alpha: isDark ? 0.1 : 0.4);
+                        rowBgColor = AppColors.successLight
+                            .withValues(alpha: isDark ? 0.1 : 0.4);
                       } else {
                         varianceColor = AppColors.error;
-                        rowBgColor = AppColors.errorLight.withValues(alpha: isDark ? 0.1 : 0.4);
+                        rowBgColor = AppColors.errorLight
+                            .withValues(alpha: isDark ? 0.1 : 0.4);
                       }
 
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
                         decoration: BoxDecoration(
                           color: rowBgColor,
                           border: Border(
-                            bottom: BorderSide(color: AppColors.divider.withValues(alpha: 0.3), width: 0.5),
+                            bottom: BorderSide(
+                                color: AppColors.divider.withValues(alpha: 0.3),
+                                width: 0.5),
                           ),
                         ),
                         child: Row(
@@ -335,8 +380,12 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                               child: Text(
                                 item['product_name'] as String,
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  fontWeight: isMatch ? FontWeight.normal : FontWeight.w700,
-                                  color: isMatch ? AppColors.textSecondary : AppColors.textPrimary,
+                                  fontWeight: isMatch
+                                      ? FontWeight.normal
+                                      : FontWeight.w700,
+                                  color: isMatch
+                                      ? AppColors.textSecondary
+                                      : AppColors.textPrimary,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -345,7 +394,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                             SizedBox(
                               width: 55,
                               child: Text(
-                                (item['system_quantity'] as double).toStringAsFixed(1),
+                                (item['system_quantity'] as double)
+                                    .toStringAsFixed(1),
                                 textAlign: TextAlign.center,
                                 style: theme.textTheme.bodySmall,
                               ),
@@ -353,15 +403,21 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                             SizedBox(
                               width: 55,
                               child: Text(
-                                (item['actual_quantity'] as double).toStringAsFixed(1),
+                                (item['actual_quantity'] as double)
+                                    .toStringAsFixed(1),
                                 textAlign: TextAlign.center,
-                                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                             ),
                             SizedBox(
                               width: 60,
                               child: Text(
-                                isMatch ? '0' : (variance > 0 ? '+${variance.toStringAsFixed(1)}' : variance.toStringAsFixed(1)),
+                                isMatch
+                                    ? '0'
+                                    : (variance > 0
+                                        ? '+${variance.toStringAsFixed(1)}'
+                                        : variance.toStringAsFixed(1)),
                                 textAlign: TextAlign.center,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.w700,
@@ -383,11 +439,13 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.warning.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
+                            Icon(Icons.warning_amber_rounded,
+                                color: AppColors.warning, size: 20),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -410,7 +468,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                 onPressed: () => Navigator.of(ctx).pop(false),
                 icon: const Icon(Icons.cancel_outlined, size: 18),
                 label: const Text('إلغاء'),
-                style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary),
               ),
               ElevatedButton.icon(
                 onPressed: () => Navigator.of(ctx).pop(true),
@@ -419,7 +478,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ],
@@ -434,7 +494,9 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
   Future<void> _saveStocktaking() async {
     if (_filledCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال الكميات الفعلية'), backgroundColor: AppColors.warning),
+        const SnackBar(
+            content: Text('يرجى إدخال الكميات الفعلية'),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
@@ -448,7 +510,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
     final now = DateTime.now();
 
     // توليد رقم الجرد
-    final sessionNumber = 'SK-${(_sessions.length + 1).toString().padLeft(4, '0')}';
+    final sessionNumber =
+        'SK-${(_sessions.length + 1).toString().padLeft(4, '0')}';
 
     final sessionMap = {
       'session_number': sessionNumber,
@@ -458,20 +521,25 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
       'matched_items': _matchedCount,
       'mismatched_items': _mismatchedCount,
       'status': 'draft',
-      'notes': _sessionNotesController.text.trim().isEmpty ? null : _sessionNotesController.text.trim(),
+      'notes': _sessionNotesController.text.trim().isEmpty
+          ? null
+          : _sessionNotesController.text.trim(),
       'created_at': now.toIso8601String(),
     };
 
     // بناء عناصر الجرد مع الفرق
-    final items = _buildStocktakingItems().map((item) => {
-      'product_id': item['product_id'],
-      'system_quantity': item['system_quantity'],
-      'actual_quantity': item['actual_quantity'],
-      'difference': item['difference'],
-      'variance': item['variance'],
-    }).toList();
+    final items = _buildStocktakingItems()
+        .map((item) => {
+              'product_id': item['product_id'],
+              'system_quantity': item['system_quantity'],
+              'actual_quantity': item['actual_quantity'],
+              'difference': item['difference'],
+              'variance': item['variance'],
+            })
+        .toList();
 
-    final sessionId = await locator<StockService>().createStocktakingSession(sessionMap, items);
+    final sessionId = await locator<StockService>()
+        .createStocktakingSession(sessionMap, items);
 
     // إكمال الجرد وتحديث المخزون
     await locator<StockService>().completeStocktakingSession(sessionId);
@@ -484,7 +552,9 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ الجرد وتحديث المخزون بنجاح'), backgroundColor: AppColors.success),
+        const SnackBar(
+            content: Text('تم حفظ الجرد وتحديث المخزون بنجاح'),
+            backgroundColor: AppColors.success),
       );
 
       _loadData();
@@ -534,10 +604,13 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                           DropdownButtonFormField<int>(
                             value: _selectedWarehouseId,
                             decoration: InputDecoration(
-                              labelText: 'اختر المخزن (اختياري - الكل إذا لم يتم الاختيار)',
+                              labelText:
+                                  'اختر المخزن (اختياري - الكل إذا لم يتم الاختيار)',
                               prefixIcon: const Icon(Icons.warehouse, size: 20),
                               filled: true,
-                              fillColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                              fillColor: isDark
+                                  ? AppColors.darkSurfaceVariant
+                                  : AppColors.surfaceVariant,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
@@ -553,7 +626,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                                     child: Text(w['name'] as String),
                                   )),
                             ],
-                            onChanged: (v) => setState(() => _selectedWarehouseId = v),
+                            onChanged: (v) =>
+                                setState(() => _selectedWarehouseId = v),
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
@@ -573,14 +647,16 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                                   ? const SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
                                     )
                                   : const Icon(Icons.play_arrow, size: 22),
                               label: const Text('بدء الجرد'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
@@ -597,7 +673,8 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.info.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                        border: Border.all(
+                            color: AppColors.info.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,28 +744,37 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                     ..._filteredProducts.map((product) {
                       final id = product['id'] as int;
                       final nameAr = product['name_ar'] as String? ?? '';
-                      final systemQty = (product['current_stock'] as num?)?.toDouble() ?? 0.0;
+                      final systemQty =
+                          (product['current_stock'] as num?)?.toDouble() ?? 0.0;
                       final controller = _actualQuantityControllers[id];
                       if (controller == null) return const SizedBox.shrink();
 
-                      final actualQty = double.tryParse(controller.text) ?? systemQty;
+                      final actualQty =
+                          double.tryParse(controller.text) ?? systemQty;
                       final difference = actualQty - systemQty;
                       final isMatch = difference.abs() < 0.005;
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 3),
                         color: isMatch
-                            ? AppColors.successLight.withValues(alpha: isDark ? 0.15 : 1.0)
-                            : (difference < 0 ? AppColors.errorLight.withValues(alpha: isDark ? 0.15 : 1.0) : AppColors.warningLight.withValues(alpha: isDark ? 0.15 : 1.0)),
+                            ? AppColors.successLight
+                                .withValues(alpha: isDark ? 0.15 : 1.0)
+                            : (difference < 0
+                                ? AppColors.errorLight
+                                    .withValues(alpha: isDark ? 0.15 : 1.0)
+                                : AppColors.warningLight
+                                    .withValues(alpha: isDark ? 0.15 : 1.0)),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           child: Row(
                             children: [
                               Expanded(
                                 flex: 2,
                                 child: Text(
                                   nameAr,
-                                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                  style: theme.textTheme.bodyMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -699,10 +785,15 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                                 width: 60,
                                 child: Column(
                                   children: [
-                                    Text('النظام', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                                    Text('النظام',
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                                color: AppColors.textHint)),
                                     Text(
                                       systemQty.toStringAsFixed(1),
-                                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600),
                                     ),
                                   ],
                                 ),
@@ -713,28 +804,38 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                                 width: 80,
                                 child: TextFormField(
                                   controller: controller,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
                                   textAlign: TextAlign.center,
-                                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                  style: theme.textTheme.bodyMedium
+                                      ?.copyWith(fontWeight: FontWeight.w700),
                                   decoration: InputDecoration(
                                     isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 8),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide: BorderSide(
-                                        color: isMatch ? AppColors.success : AppColors.error,
+                                        color: isMatch
+                                            ? AppColors.success
+                                            : AppColors.error,
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide: BorderSide(
-                                        color: isMatch ? AppColors.success : AppColors.error,
+                                        color: isMatch
+                                            ? AppColors.success
+                                            : AppColors.error,
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide: BorderSide(
-                                        color: isMatch ? AppColors.success : AppColors.error,
+                                        color: isMatch
+                                            ? AppColors.success
+                                            : AppColors.error,
                                         width: 2,
                                       ),
                                     ),
@@ -748,12 +849,20 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                                 width: 60,
                                 child: Column(
                                   children: [
-                                    Text('الفرق', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textHint)),
+                                    Text('الفرق',
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                                color: AppColors.textHint)),
                                     Text(
-                                      difference >= 0 ? '+${difference.toStringAsFixed(1)}' : difference.toStringAsFixed(1),
-                                      style: theme.textTheme.bodySmall?.copyWith(
+                                      difference >= 0
+                                          ? '+${difference.toStringAsFixed(1)}'
+                                          : difference.toStringAsFixed(1),
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
                                         fontWeight: FontWeight.w700,
-                                        color: isMatch ? AppColors.success : AppColors.error,
+                                        color: isMatch
+                                            ? AppColors.success
+                                            : AppColors.error,
                                       ),
                                     ),
                                   ],
@@ -775,10 +884,13 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
                               )
                             : const Icon(Icons.check_circle, size: 22),
-                        label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ الجرد وتحديث المخزون'),
+                        label: Text(_isSaving
+                            ? 'جاري الحفظ...'
+                            : 'حفظ الجرد وتحديث المخزون'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.success,
                           foregroundColor: Colors.white,
@@ -805,18 +917,21 @@ class _StocktakingScreenState extends State<StocktakingScreen> {
                         padding: const EdgeInsets.all(32),
                         child: Column(
                           children: [
-                            Icon(Icons.fact_check, size: 48, color: AppColors.textHint),
+                            Icon(Icons.fact_check,
+                                size: 48, color: AppColors.textHint),
                             const SizedBox(height: 8),
                             Text(
                               'لا توجد جلسات جرد',
-                              style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textHint),
+                              style: theme.textTheme.bodyMedium
+                                  ?.copyWith(color: AppColors.textHint),
                             ),
                           ],
                         ),
                       ),
                     )
                   else
-                    ..._sessions.take(10).map((session) => _SessionCard(session: session, isDark: isDark)),
+                    ..._sessions.take(10).map((session) =>
+                        _SessionCard(session: session, isDark: isDark)),
                 ],
               ),
             ),
@@ -849,11 +964,13 @@ class _SummaryChip extends StatelessWidget {
           children: [
             Text(
               value,
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: color),
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700, color: color),
             ),
             Text(
               label,
-              style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: color, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -887,11 +1004,13 @@ class _DialogSummaryChip extends StatelessWidget {
         children: [
           Text(
             value,
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: color),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w700, color: color),
           ),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -912,7 +1031,8 @@ class _SessionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final sessionNumber = session['session_number'] as String? ?? '';
-    final warehouseName = session['warehouse_name'] as String? ?? 'جميع المستودعات';
+    final warehouseName =
+        session['warehouse_name'] as String? ?? 'جميع المستودعات';
     final date = session['date'] as String? ?? '';
     final status = session['status'] as String? ?? 'draft';
     final matched = (session['matched_items'] as num?)?.toInt() ?? 0;
@@ -929,7 +1049,8 @@ class _SessionCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: (isCompleted ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
+                color: (isCompleted ? AppColors.success : AppColors.warning)
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -945,13 +1066,16 @@ class _SessionCard extends StatelessWidget {
                 children: [
                   Text(
                     '$sessionNumber - $warehouseName',
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'التاريخ: $date | مطابق: $matched | مختلف: $mismatched',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -960,7 +1084,8 @@ class _SessionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: (isCompleted ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
+                color: (isCompleted ? AppColors.success : AppColors.warning)
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(

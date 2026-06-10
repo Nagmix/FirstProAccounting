@@ -50,8 +50,10 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
   // ── تحميل البيانات ────────────────────────────────────────────
   Future<void> _loadData() async {
     try {
-      final operations = await locator<ReportService>().getDailyOperations(_selectedDate);
-      final summary = await locator<ReportService>().getDailySummary(_selectedDate);
+      final operations =
+          await locator<ReportService>().getDailyOperations(_selectedDate);
+      final summary =
+          await locator<ReportService>().getDailySummary(_selectedDate);
 
       if (mounted) {
         setState(() {
@@ -79,8 +81,7 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
       case 1: // فواتير
         return _operations
             .where((o) =>
-                o['type'] == 'sale_invoice' ||
-                o['type'] == 'purchase_invoice')
+                o['type'] == 'sale_invoice' || o['type'] == 'purchase_invoice')
             .toList();
       case 2: // مصروفات
         return _operations.where((o) => o['type'] == 'expense').toList();
@@ -239,7 +240,8 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
                     const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
                     // بطاقات الملخص
-                    SliverToBoxAdapter(child: _buildSummaryCards(theme, isDark)),
+                    SliverToBoxAdapter(
+                        child: _buildSummaryCards(theme, isDark)),
                     const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
                     // شرائح الفلتر
@@ -286,8 +288,8 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: isDark ? AppColors.darkBorder : AppColors.border),
+        border:
+            Border.all(color: isDark ? AppColors.darkBorder : AppColors.border),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -303,8 +305,7 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
             onTap: _pickDate,
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
@@ -461,7 +462,9 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
           final isSelected = _selectedFilter == index;
           final chipColor = isSelected
               ? AppColors.primary
-              : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary);
+              : (isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary);
           return Padding(
             padding: const EdgeInsets.only(left: 8),
             child: FilterChip(
@@ -473,7 +476,9 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
                   color: isSelected ? Colors.white : chipColor,
                 ),
               ),
-              backgroundColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+              backgroundColor: isDark
+                  ? AppColors.darkSurfaceVariant
+                  : AppColors.surfaceVariant,
               selectedColor: AppColors.primary,
               checkmarkColor: Colors.white,
               side: BorderSide(
@@ -661,8 +666,8 @@ class _DailyOperationsScreenState extends State<DailyOperationsScreen> {
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text('صافي اليوم',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.textHint)),
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: AppColors.textHint)),
                 ],
               ),
             ),

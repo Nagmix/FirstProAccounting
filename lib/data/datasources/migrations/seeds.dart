@@ -6,9 +6,36 @@ class DatabaseSeeds {
   static Future<void> seedCurrencies(Database db) async {
     final now = DateTime.now().toIso8601String();
     final currencies = [
-      {'code': 'YER', 'name_ar': 'ريال يمني', 'name_en': 'Yemeni Rial', 'symbol': 'ر.ي', 'exchange_rate': 1.0, 'is_default': 1, 'is_active': 1, 'created_at': now},
-      {'code': 'SAR', 'name_ar': 'ريال سعودي', 'name_en': 'Saudi Riyal', 'symbol': 'ر.س', 'exchange_rate': 140.0, 'is_default': 0, 'is_active': 1, 'created_at': now},
-      {'code': 'USD', 'name_ar': 'دولار أمريكي', 'name_en': 'US Dollar', 'symbol': r'$', 'exchange_rate': 530.0, 'is_default': 0, 'is_active': 1, 'created_at': now},
+      {
+        'code': 'YER',
+        'name_ar': 'ريال يمني',
+        'name_en': 'Yemeni Rial',
+        'symbol': 'ر.ي',
+        'exchange_rate': 1.0,
+        'is_default': 1,
+        'is_active': 1,
+        'created_at': now
+      },
+      {
+        'code': 'SAR',
+        'name_ar': 'ريال سعودي',
+        'name_en': 'Saudi Riyal',
+        'symbol': 'ر.س',
+        'exchange_rate': 140.0,
+        'is_default': 0,
+        'is_active': 1,
+        'created_at': now
+      },
+      {
+        'code': 'USD',
+        'name_ar': 'دولار أمريكي',
+        'name_en': 'US Dollar',
+        'symbol': r'$',
+        'exchange_rate': 530.0,
+        'is_default': 0,
+        'is_active': 1,
+        'created_at': now
+      },
     ];
     for (final c in currencies) {
       await db.insert('currencies', c);
@@ -56,7 +83,8 @@ class DatabaseSeeds {
   /// Seed default chart of accounts for all currencies.
   static Future<void> seedDefaultAccounts(Database db) async {
     // Only seed if accounts don't already exist
-    final existing = await db.query('accounts', where: 'account_code = ?', whereArgs: ['1000'], limit: 1);
+    final existing = await db.query('accounts',
+        where: 'account_code = ?', whereArgs: ['1000'], limit: 1);
     if (existing.isNotEmpty) return;
 
     final now = DateTime.now().toIso8601String();
@@ -108,7 +136,11 @@ class DatabaseSeeds {
           'account_type': accountType,
           'balance': 0,
           'currency': currencyCode,
-          'balance_type': (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE') ? 'debit' : 'credit',
+          'balance_type': (accountType == 'ASSET' ||
+                  accountType == 'COST' ||
+                  accountType == 'EXPENSE')
+              ? 'debit'
+              : 'credit',
           'parent_id': parentId,
           'is_active': 1,
           'is_system': 1,
@@ -121,11 +153,15 @@ class DatabaseSeeds {
   }
 
   /// Seed accounts for a specific currency if they don't already exist.
-  static Future<void> seedAccountsForCurrency(Database db, String currencyCode, String currencySymbol, int codeOffset) async {
+  static Future<void> seedAccountsForCurrency(Database db, String currencyCode,
+      String currencySymbol, int codeOffset) async {
     final now = DateTime.now().toIso8601String();
 
     final baseCode = 1000 + codeOffset;
-    final existing = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [baseCode.toString(), currencyCode], limit: 1);
+    final existing = await db.query('accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [baseCode.toString(), currencyCode],
+        limit: 1);
     if (existing.isNotEmpty) return;
 
     final templates = defaultAccountTemplates;
@@ -158,7 +194,11 @@ class DatabaseSeeds {
         'account_type': accountType,
         'balance': 0,
         'currency': currencyCode,
-        'balance_type': (accountType == 'ASSET' || accountType == 'COST' || accountType == 'EXPENSE') ? 'debit' : 'credit',
+        'balance_type': (accountType == 'ASSET' ||
+                accountType == 'COST' ||
+                accountType == 'EXPENSE')
+            ? 'debit'
+            : 'credit',
         'parent_id': parentId,
         'is_active': 1,
         'is_system': 1,
@@ -178,33 +218,223 @@ class DatabaseSeeds {
 
     final defaultUnits = [
       // ── العد (Count) ──
-      {'name_ar': 'حبة', 'name_en': 'Piece', 'abbreviation': 'حبة', 'unit_type': 'count', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 1},
-      {'name_ar': 'قطعة', 'name_en': 'Item', 'abbreviation': 'ق', 'unit_type': 'count', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 2},
-      {'name_ar': 'كرتون', 'name_en': 'Carton', 'abbreviation': 'كرت', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 3},
-      {'name_ar': 'باكيت', 'name_en': 'Packet', 'abbreviation': 'باك', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 4},
-      {'name_ar': 'علبة', 'name_en': 'Box', 'abbreviation': 'علب', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 5},
-      {'name_ar': 'ظرف', 'name_en': 'Envelope', 'abbreviation': 'ظرف', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 6},
-      {'name_ar': 'طبق', 'name_en': 'Tray', 'abbreviation': 'طبق', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 7},
-      {'name_ar': 'طقم', 'name_en': 'Set', 'abbreviation': 'طقم', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 8},
-      {'name_ar': 'منصة', 'name_en': 'Pallet', 'abbreviation': 'منص', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 0, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 9},
-      {'name_ar': 'درزن', 'name_en': 'Dozen', 'abbreviation': 'درز', 'unit_type': 'count', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 10},
+      {
+        'name_ar': 'حبة',
+        'name_en': 'Piece',
+        'abbreviation': 'حبة',
+        'unit_type': 'count',
+        'is_base_unit': 1,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 1
+      },
+      {
+        'name_ar': 'قطعة',
+        'name_en': 'Item',
+        'abbreviation': 'ق',
+        'unit_type': 'count',
+        'is_base_unit': 1,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 2
+      },
+      {
+        'name_ar': 'كرتون',
+        'name_en': 'Carton',
+        'abbreviation': 'كرت',
+        'unit_type': 'count',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 3
+      },
+      {
+        'name_ar': 'باكيت',
+        'name_en': 'Packet',
+        'abbreviation': 'باك',
+        'unit_type': 'count',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 4
+      },
+      {
+        'name_ar': 'علبة',
+        'name_en': 'Box',
+        'abbreviation': 'علب',
+        'unit_type': 'count',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 5
+      },
+      {
+        'name_ar': 'ظرف',
+        'name_en': 'Envelope',
+        'abbreviation': 'ظرف',
+        'unit_type': 'count',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 6
+      },
+      {
+        'name_ar': 'طبق',
+        'name_en': 'Tray',
+        'abbreviation': 'طبق',
+        'unit_type': 'count',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 7
+      },
+      {
+        'name_ar': 'طقم',
+        'name_en': 'Set',
+        'abbreviation': 'طقم',
+        'unit_type': 'count',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 8
+      },
+      {
+        'name_ar': 'منصة',
+        'name_en': 'Pallet',
+        'abbreviation': 'منص',
+        'unit_type': 'count',
+        'is_base_unit': 0,
+        'is_sellable': 0,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 9
+      },
+      {
+        'name_ar': 'درزن',
+        'name_en': 'Dozen',
+        'abbreviation': 'درز',
+        'unit_type': 'count',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 10
+      },
 
       // ── الوزن (Weight) ──
-      {'name_ar': 'جرام', 'name_en': 'Gram', 'abbreviation': 'جم', 'unit_type': 'weight', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 11},
-      {'name_ar': 'كيلو', 'name_en': 'Kilogram', 'abbreviation': 'كجم', 'unit_type': 'weight', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 12},
-      {'name_ar': 'طن', 'name_en': 'Ton', 'abbreviation': 'طن', 'unit_type': 'weight', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 13},
+      {
+        'name_ar': 'جرام',
+        'name_en': 'Gram',
+        'abbreviation': 'جم',
+        'unit_type': 'weight',
+        'is_base_unit': 1,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 11
+      },
+      {
+        'name_ar': 'كيلو',
+        'name_en': 'Kilogram',
+        'abbreviation': 'كجم',
+        'unit_type': 'weight',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 12
+      },
+      {
+        'name_ar': 'طن',
+        'name_en': 'Ton',
+        'abbreviation': 'طن',
+        'unit_type': 'weight',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 13
+      },
 
       // ── السوائل (Liquid) ──
-      {'name_ar': 'مل', 'name_en': 'Milliliter', 'abbreviation': 'مل', 'unit_type': 'liquid', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 14},
-      {'name_ar': 'لتر', 'name_en': 'Liter', 'abbreviation': 'ل', 'unit_type': 'liquid', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 15},
-      {'name_ar': 'جالون', 'name_en': 'Gallon', 'abbreviation': 'جال', 'unit_type': 'liquid', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 16},
+      {
+        'name_ar': 'مل',
+        'name_en': 'Milliliter',
+        'abbreviation': 'مل',
+        'unit_type': 'liquid',
+        'is_base_unit': 1,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 14
+      },
+      {
+        'name_ar': 'لتر',
+        'name_en': 'Liter',
+        'abbreviation': 'ل',
+        'unit_type': 'liquid',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 15
+      },
+      {
+        'name_ar': 'جالون',
+        'name_en': 'Gallon',
+        'abbreviation': 'جال',
+        'unit_type': 'liquid',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 16
+      },
 
       // ── الصيدلية (Pharmacy) ──
-      {'name_ar': 'شريط', 'name_en': 'Strip', 'abbreviation': 'شر', 'unit_type': 'pharmacy', 'is_base_unit': 0, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 1, 'display_order': 17},
-      {'name_ar': 'كبسولة', 'name_en': 'Capsule', 'abbreviation': 'كبس', 'unit_type': 'pharmacy', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 18},
+      {
+        'name_ar': 'شريط',
+        'name_en': 'Strip',
+        'abbreviation': 'شر',
+        'unit_type': 'pharmacy',
+        'is_base_unit': 0,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 1,
+        'display_order': 17
+      },
+      {
+        'name_ar': 'كبسولة',
+        'name_en': 'Capsule',
+        'abbreviation': 'كبس',
+        'unit_type': 'pharmacy',
+        'is_base_unit': 1,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 18
+      },
 
       // ── القياس (Measurement) ──
-      {'name_ar': 'متر', 'name_en': 'Meter', 'abbreviation': 'م', 'unit_type': 'count', 'is_base_unit': 1, 'is_sellable': 1, 'is_purchasable': 1, 'is_packaging': 0, 'display_order': 19},
+      {
+        'name_ar': 'متر',
+        'name_en': 'Meter',
+        'abbreviation': 'م',
+        'unit_type': 'count',
+        'is_base_unit': 1,
+        'is_sellable': 1,
+        'is_purchasable': 1,
+        'is_packaging': 0,
+        'display_order': 19
+      },
     ];
 
     for (final unit in defaultUnits) {

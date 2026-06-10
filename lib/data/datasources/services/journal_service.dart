@@ -65,15 +65,24 @@ class JournalService {
         updated_at = ?
       WHERE id = ?
     ''', [
-      isDebitInt, amountCents,
-      isDebitInt, amountCents,
-      isDebitInt, amountCents,
-      isDebitInt, amountCents,
-      isDebitInt, amountCents,
-      isDebitInt, amountCents,
-      isDebitInt, amountCents,
-      isDebitInt, amountCents,
-      now, accountId,
+      isDebitInt,
+      amountCents,
+      isDebitInt,
+      amountCents,
+      isDebitInt,
+      amountCents,
+      isDebitInt,
+      amountCents,
+      isDebitInt,
+      amountCents,
+      isDebitInt,
+      amountCents,
+      isDebitInt,
+      amountCents,
+      isDebitInt,
+      amountCents,
+      now,
+      accountId,
     ]);
   }
 
@@ -114,11 +123,16 @@ class JournalService {
         updated_at = ?
       WHERE id = ?
     ''', [
-      creditCents, debitCents,
-      debitCents, creditCents,
-      creditCents, debitCents,
-      debitCents, creditCents,
-      now, accountId,
+      creditCents,
+      debitCents,
+      debitCents,
+      creditCents,
+      creditCents,
+      debitCents,
+      debitCents,
+      creditCents,
+      now,
+      accountId,
     ]);
   }
 
@@ -168,8 +182,7 @@ class JournalService {
       limit: 1,
     );
     if (accountRow.isEmpty) return;
-    final balanceType =
-        accountRow.first['balance_type'] as String? ?? 'credit';
+    final balanceType = accountRow.first['balance_type'] as String? ?? 'credit';
 
     final result = await db.rawQuery(
       'SELECT CAST(COALESCE(SUM(debit) - SUM(credit), 0) AS INTEGER) AS net_debit, '
@@ -178,7 +191,8 @@ class JournalService {
       [accountId],
     );
     final netDebit = MoneyHelper.readCalculatedMoney(result.first['net_debit']);
-    final netCredit = MoneyHelper.readCalculatedMoney(result.first['net_credit']);
+    final netCredit =
+        MoneyHelper.readCalculatedMoney(result.first['net_credit']);
 
     // For debit-balance accounts (ASSET, EXPENSE, COST): balance = debit - credit
     // For credit-balance accounts (LIABILITY, REVENUE, EQUITY): balance = credit - debit
@@ -201,7 +215,8 @@ class JournalService {
   Future<double> getAccountBalance(int accountId) async {
     final db = await _db;
     // جلب نوع رصيد الحساب
-    final accountRow = await db.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+    final accountRow = await db.query('accounts',
+        where: 'id = ?', whereArgs: [accountId], limit: 1);
     if (accountRow.isEmpty) return 0.0;
     final balanceType = accountRow.first['balance_type'] as String? ?? 'credit';
 
@@ -209,14 +224,17 @@ class JournalService {
       "SELECT CAST(COALESCE(SUM(debit), 0) AS INTEGER) AS total_debit, CAST(COALESCE(SUM(credit), 0) AS INTEGER) AS total_credit FROM transactions WHERE account_id = ?",
       [accountId],
     );
-    final totalDebit = MoneyHelper.readCalculatedMoney(result.first['total_debit']);
-    final totalCredit = MoneyHelper.readCalculatedMoney(result.first['total_credit']);
+    final totalDebit =
+        MoneyHelper.readCalculatedMoney(result.first['total_debit']);
+    final totalCredit =
+        MoneyHelper.readCalculatedMoney(result.first['total_credit']);
 
     // الرصيد حسب طبيعة الحساب
     if (balanceType == 'debit') {
       return totalDebit - totalCredit; // أصول وتكاليف: الرصيد الطبيعي مدين
     } else {
-      return totalCredit - totalDebit; // خصوم وإيرادات وحقوق ملكية: الرصيد الطبيعي دائن
+      return totalCredit -
+          totalDebit; // خصوم وإيرادات وحقوق ملكية: الرصيد الطبيعي دائن
     }
   }
 
@@ -296,7 +314,8 @@ class JournalService {
     final journalId = generateUniqueJournalId();
 
     // Fix #5: Use separate gain/loss accounts with correct account types
-    final exchangeAccountId = await getOrCreateExchangeAccount(isGain: gainLossAmount > 0);
+    final exchangeAccountId =
+        await getOrCreateExchangeAccount(isGain: gainLossAmount > 0);
 
     await db.transaction((txn) async {
       if (gainLossAmount > 0) {
@@ -326,10 +345,18 @@ class JournalService {
           'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
         });
         await updateAccountBalanceWithJournal(
-          txn, accountId, gainLossAmount.abs(), 0.0, now,
+          txn,
+          accountId,
+          gainLossAmount.abs(),
+          0.0,
+          now,
         );
         await updateAccountBalanceWithJournal(
-          txn, exchangeAccountId, 0.0, gainLossAmount.abs(), now,
+          txn,
+          exchangeAccountId,
+          0.0,
+          gainLossAmount.abs(),
+          now,
         );
       } else {
         // خسارة صرف: مدين = حساب خسائر الصرف (EXPENSE/debit)، دائن = الحساب الأصلي
@@ -358,10 +385,18 @@ class JournalService {
           'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
         });
         await updateAccountBalanceWithJournal(
-          txn, exchangeAccountId, gainLossAmount.abs(), 0.0, now,
+          txn,
+          exchangeAccountId,
+          gainLossAmount.abs(),
+          0.0,
+          now,
         );
         await updateAccountBalanceWithJournal(
-          txn, accountId, 0.0, gainLossAmount.abs(), now,
+          txn,
+          accountId,
+          0.0,
+          gainLossAmount.abs(),
+          now,
         );
       }
     });
@@ -380,7 +415,8 @@ class JournalService {
     final date = DateTime.tryParse(dateStr);
     // C-04: Reject invalid dates instead of allowing the operation
     if (date == null) {
-      throw Exception('تاريخ غير صالح: "$dateStr". لا يمكن إجراء عمليات بتاريخ غير معروف.');
+      throw Exception(
+          'تاريخ غير صالح: "$dateStr". لا يمكن إجراء عمليات بتاريخ غير معروف.');
     }
     final year = date.year;
 
@@ -423,8 +459,12 @@ class JournalService {
     if (isGain) {
       // Exchange Gains → REVENUE / credit nature (code 4700 under Revenue root 4000)
       // Find parent REVENUE root account
-      final parentRows = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['4000', 'REVENUE'], limit: 1);
-      final parentId = parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
+      final parentRows = await db.query('accounts',
+          where: 'account_code = ? AND account_type = ?',
+          whereArgs: ['4000', 'REVENUE'],
+          limit: 1);
+      final parentId =
+          parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
       final id = await db.insert('accounts', {
         'name_ar': 'مكاسب فروقات الصرف',
         'name_en': 'Exchange Rate Gains',
@@ -442,8 +482,12 @@ class JournalService {
       return id;
     } else {
       // Exchange Losses → EXPENSE / debit nature (code 5300 under Expenses root 5000)
-      final parentRows = await db.query('accounts', where: 'account_code = ? AND account_type = ?', whereArgs: ['5000', 'EXPENSE'], limit: 1);
-      final parentId = parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
+      final parentRows = await db.query('accounts',
+          where: 'account_code = ? AND account_type = ?',
+          whereArgs: ['5000', 'EXPENSE'],
+          limit: 1);
+      final parentId =
+          parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
       final id = await db.insert('accounts', {
         'name_ar': 'خسائر فروقات الصرف',
         'name_en': 'Exchange Rate Losses',
@@ -494,8 +538,7 @@ class JournalService {
     } else if (currency == 'USD') {
       codeOffset = '2';
     }
-    final actualCode =
-        (int.parse(baseCode) + int.parse(codeOffset)).toString();
+    final actualCode = (int.parse(baseCode) + int.parse(codeOffset)).toString();
     final result = await txn.query(
       'accounts',
       where: 'account_code = ? AND currency = ?',

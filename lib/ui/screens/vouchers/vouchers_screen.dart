@@ -82,7 +82,9 @@ class _VouchersScreenState extends State<VouchersScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء تحميل البيانات'), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text('حدث خطأ أثناء تحميل البيانات'),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -96,12 +98,16 @@ class _VouchersScreenState extends State<VouchersScreen>
     if (typeFilter != null) {
       if (tabIndex == 3) {
         // القيود العامة: settlement vouchers without cash_box_id
-        result = result.where((v) =>
-          v['voucher_type'] == 'settlement' && v['cash_box_id'] == null).toList();
+        result = result
+            .where((v) =>
+                v['voucher_type'] == 'settlement' && v['cash_box_id'] == null)
+            .toList();
       } else if (tabIndex == 4) {
         // سندات التسوية: settlement vouchers with cash_box_id
-        result = result.where((v) =>
-          v['voucher_type'] == 'settlement' && v['cash_box_id'] != null).toList();
+        result = result
+            .where((v) =>
+                v['voucher_type'] == 'settlement' && v['cash_box_id'] != null)
+            .toList();
       } else {
         result = result.where((v) => v['voucher_type'] == typeFilter).toList();
       }
@@ -259,40 +265,57 @@ class _VouchersScreenState extends State<VouchersScreen>
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.8),
+          constraints:
+              BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.8),
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.textHint, borderRadius: BorderRadius.circular(2)),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppColors.textHint,
+                    borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                    child: Icon(_getVoucherTypeIcon(type), color: typeColor, size: 22),
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                        color: typeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Icon(_getVoucherTypeIcon(type),
+                        color: typeColor, size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(number, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                        Text(number,
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800)),
                         const SizedBox(height: 2),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                          child: Text(typeAr, style: theme.textTheme.labelSmall?.copyWith(color: typeColor, fontWeight: FontWeight.w700)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                              color: typeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6)),
+                          child: Text(typeAr,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                  color: typeColor,
+                                  fontWeight: FontWeight.w700)),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                    icon: const Icon(Icons.delete_outline,
+                        color: AppColors.error),
                     onPressed: () {
                       Navigator.pop(ctx);
                       _deleteVoucher(voucherId);
@@ -306,15 +329,22 @@ class _VouchersScreenState extends State<VouchersScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
+                  color: isDark
+                      ? AppColors.darkSurfaceVariant
+                      : AppColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   children: [
                     _buildDetailRow(theme, 'التاريخ', formattedDate),
-                    if (description.isNotEmpty) _buildDetailRow(theme, 'الوصف', description),
+                    if (description.isNotEmpty)
+                      _buildDetailRow(theme, 'الوصف', description),
                     _buildDetailRow(theme, 'العملة', currency),
-                    _buildDetailRow(theme, 'المبلغ الإجمالي', CurrencyFormatter.format(totalAmount, symbol: currencySymbol)),
+                    _buildDetailRow(
+                        theme,
+                        'المبلغ الإجمالي',
+                        CurrencyFormatter.format(totalAmount,
+                            symbol: currencySymbol)),
                   ],
                 ),
               ),
@@ -324,7 +354,9 @@ class _VouchersScreenState extends State<VouchersScreen>
                   children: [
                     Icon(Icons.list_alt, size: 18, color: AppColors.primary),
                     const SizedBox(width: 8),
-                    Text('بنود السند', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    Text('بنود السند',
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -343,9 +375,12 @@ class _VouchersScreenState extends State<VouchersScreen>
                         margin: const EdgeInsets.only(bottom: 6),
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurface : AppColors.surface,
+                          color: isDark
+                              ? AppColors.darkSurface
+                              : AppColors.surface,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.divider.withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: AppColors.divider.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,18 +388,33 @@ class _VouchersScreenState extends State<VouchersScreen>
                             Row(
                               children: [
                                 Expanded(
-                                  child: Text(acctName, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                                  child: Text(acctName,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600)),
                                 ),
                                 if (debit > 0)
-                                  Text(CurrencyFormatter.format(debit, symbol: currencySymbol),
-                                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.error)),
+                                  Text(
+                                      CurrencyFormatter.format(debit,
+                                          symbol: currencySymbol),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.error)),
                                 if (credit > 0)
-                                  Text(CurrencyFormatter.format(credit, symbol: currencySymbol),
-                                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+                                  Text(
+                                      CurrencyFormatter.format(credit,
+                                          symbol: currencySymbol),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.success)),
                               ],
                             ),
                             if (itemDesc.isNotEmpty)
-                              Text(itemDesc, style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+                              Text(itemDesc,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                      color: AppColors.textSecondary)),
                           ],
                         ),
                       );
@@ -393,8 +443,12 @@ class _VouchersScreenState extends State<VouchersScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
-          Text(value, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+          Text(label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+          Text(value,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -418,11 +472,16 @@ class _VouchersScreenState extends State<VouchersScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.textHint, borderRadius: BorderRadius.circular(2)),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppColors.textHint,
+                    borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 16),
-              Text('إنشاء سند جديد', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text('إنشاء سند جديد',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 20),
               // سند قبض
               _buildCreateOption(
@@ -523,7 +582,8 @@ class _VouchersScreenState extends State<VouchersScreen>
         child: Row(
           children: [
             Container(
-              width: 44, height: 44,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
@@ -535,20 +595,26 @@ class _VouchersScreenState extends State<VouchersScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: color)),
+                  Text(title,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700, color: color)),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                  Text(subtitle,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textSecondary)),
                 ],
               ),
             ),
-            Icon(Icons.arrow_back_ios, size: 16, color: color.withValues(alpha: 0.5)),
+            Icon(Icons.arrow_back_ios,
+                size: 16, color: color.withValues(alpha: 0.5)),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _navigateToCreateReceiptPayment({required bool isReceipt}) async {
+  Future<void> _navigateToCreateReceiptPayment(
+      {required bool isReceipt}) async {
     await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -597,7 +663,8 @@ class _VouchersScreenState extends State<VouchersScreen>
             tabs: _tabs,
             isScrollable: true,
             labelColor: isDark ? Colors.white : AppColors.primary,
-            unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+            unselectedLabelColor:
+                isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
             indicatorColor: AppColors.primary,
             tabAlignment: TabAlignment.start,
           ),
@@ -613,10 +680,12 @@ class _VouchersScreenState extends State<VouchersScreen>
                         : RefreshIndicator(
                             onRefresh: _loadData,
                             child: ListView.builder(
-                              padding: EdgeInsets.only(bottom: 80 + bottomPadding),
+                              padding:
+                                  EdgeInsets.only(bottom: 80 + bottomPadding),
                               itemCount: _filteredVouchers.length,
                               itemBuilder: (context, index) =>
-                                  _buildVoucherCard(_filteredVouchers[index], theme, isDark),
+                                  _buildVoucherCard(
+                                      _filteredVouchers[index], theme, isDark),
                             ),
                           ),
                   ),
@@ -660,7 +729,8 @@ class _VouchersScreenState extends State<VouchersScreen>
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           hintStyle: theme.textTheme.bodyMedium?.copyWith(
             color: AppColors.textHint,
           ),
@@ -677,22 +747,26 @@ class _VouchersScreenState extends State<VouchersScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(Icons.receipt_long, size: 40, color: AppColors.primary),
+              child: const Icon(Icons.receipt_long,
+                  size: 40, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
             Text(
               'لا توجد سندات',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
               'أضف سند جديد بالضغط على زر الإضافة',
-              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textHint),
               textAlign: TextAlign.center,
             ),
           ],
@@ -701,7 +775,8 @@ class _VouchersScreenState extends State<VouchersScreen>
     );
   }
 
-  Widget _buildVoucherCard(Map<String, dynamic> voucher, ThemeData theme, bool isDark) {
+  Widget _buildVoucherCard(
+      Map<String, dynamic> voucher, ThemeData theme, bool isDark) {
     final number = voucher['voucher_number'] as String? ?? '';
     final type = voucher['voucher_type'] as String? ?? 'receipt';
     final dateStr = voucher['date'] as String? ?? '';
@@ -735,7 +810,9 @@ class _VouchersScreenState extends State<VouchersScreen>
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.04),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.2)
+                : AppColors.primary.withValues(alpha: 0.04),
             offset: const Offset(0, 2),
             blurRadius: 8,
           ),
@@ -750,7 +827,8 @@ class _VouchersScreenState extends State<VouchersScreen>
           child: Row(
             children: [
               Container(
-                width: 44, height: 44,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: typeColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -764,33 +842,43 @@ class _VouchersScreenState extends State<VouchersScreen>
                   children: [
                     Row(
                       children: [
-                        Text(number, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-                          overflow: TextOverflow.ellipsis),
+                        Text(number,
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                            overflow: TextOverflow.ellipsis),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: typeColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(typeAr, style: theme.textTheme.labelSmall?.copyWith(
-                            color: typeColor, fontWeight: FontWeight.w700,
-                          )),
+                          child: Text(typeAr,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: typeColor,
+                                fontWeight: FontWeight.w700,
+                              )),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.calendar_today, size: 12, color: AppColors.textHint),
+                        Icon(Icons.calendar_today,
+                            size: 12, color: AppColors.textHint),
                         const SizedBox(width: 4),
-                        Text(formattedDate, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                        Text(formattedDate,
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: AppColors.textSecondary)),
                         if (description.isNotEmpty) ...[
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(description,
-                              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
-                              overflow: TextOverflow.ellipsis, maxLines: 1),
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.textTertiary),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1),
                           ),
                         ],
                       ],
@@ -803,7 +891,8 @@ class _VouchersScreenState extends State<VouchersScreen>
                 CurrencyFormatter.format(totalAmount, symbol: currencySymbol),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: type == 'receipt' ? AppColors.success : AppColors.error,
+                  color:
+                      type == 'receipt' ? AppColors.success : AppColors.error,
                 ),
               ),
               const SizedBox(width: 4),

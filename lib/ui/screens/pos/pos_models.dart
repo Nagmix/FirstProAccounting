@@ -9,10 +9,10 @@ enum DiscountType { fixed, percentage }
 /// Using a single enum guarantees only ONE phase is active at a time,
 /// making it impossible for multiple dialogs to stack up.
 enum CheckoutPhase {
-  idle,        // Normal state – no overlay
-  confirming,  // Showing confirmation overlay
-  saving,      // Saving invoice (no overlay, brief processing)
-  completed,   // Showing sale complete overlay
+  idle, // Normal state – no overlay
+  confirming, // Showing confirmation overlay
+  saving, // Saving invoice (no overlay, brief processing)
+  completed, // Showing sale complete overlay
 }
 
 class CartItem {
@@ -20,9 +20,9 @@ class CartItem {
   final String name;
   final double unitPrice;
   final int quantity;
-  final String unitName;           // e.g., 'كرتون' or 'قطعة'
-  final double conversionFactor;   // 1.0 for base unit, 24.0 for carton
-  final String? unitBarcode;       // barcode for this specific unit
+  final String unitName; // e.g., 'كرتون' or 'قطعة'
+  final double conversionFactor; // 1.0 for base unit, 24.0 for carton
+  final String? unitBarcode; // barcode for this specific unit
 
   CartItem({
     required this.productId,
@@ -35,6 +35,7 @@ class CartItem {
   });
 
   double get total => unitPrice * quantity;
+
   /// Equivalent quantity in base units (for stock deduction)
   double get baseQuantity => quantity * conversionFactor;
 

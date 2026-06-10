@@ -34,7 +34,8 @@ class PosMultiPaymentSummary extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.credit_card, size: 16, color: AppColors.primary),
+                const Icon(Icons.credit_card,
+                    size: 16, color: AppColors.primary),
                 const SizedBox(width: 6),
                 Text(
                   'المدفوعات',
@@ -71,10 +72,12 @@ class PosMultiPaymentSummary extends StatelessWidget {
                             paymentLabel(p.method),
                             style: const TextStyle(fontSize: 12),
                           ),
-                          if (p.providerName != null && p.providerName!.isNotEmpty) ...[
+                          if (p.providerName != null &&
+                              p.providerName!.isNotEmpty) ...[
                             Text(
                               ' (${p.providerName})',
-                              style: TextStyle(fontSize: 11, color: context.textSecondary),
+                              style: TextStyle(
+                                  fontSize: 11, color: context.textSecondary),
                             ),
                           ],
                         ],
@@ -91,7 +94,8 @@ class PosMultiPaymentSummary extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           InkWell(
-                            onTap: () => vm.removePayment(vm.payments.indexOf(p)),
+                            onTap: () =>
+                                vm.removePayment(vm.payments.indexOf(p)),
                             child: const Icon(
                               Icons.close,
                               size: 14,
@@ -113,7 +117,9 @@ class PosMultiPaymentSummary extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
-                      color: vm.remaining > 0 ? AppColors.error : AppColors.success,
+                      color: vm.remaining > 0
+                          ? AppColors.error
+                          : AppColors.success,
                     ),
                   ),
                   Text(
@@ -121,7 +127,9 @@ class PosMultiPaymentSummary extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
-                      color: vm.remaining > 0 ? AppColors.error : AppColors.success,
+                      color: vm.remaining > 0
+                          ? AppColors.error
+                          : AppColors.success,
                     ),
                   ),
                 ],

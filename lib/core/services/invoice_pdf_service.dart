@@ -16,7 +16,6 @@ import '../utils/money_helper.dart';
 /// standard template with: header, invoice type badge, metadata, items table,
 /// totals, amount-in-words, and signature fields.
 class InvoicePdfService {
-
   // ─── Color constants ────────────────────────────────────────────────
   static const PdfColor _blueHeader = PdfColor.fromInt(0xFF174AFF);
   static const PdfColor _yellowHighlight = PdfColor.fromInt(0xFFFFFFC8);
@@ -49,15 +48,26 @@ class InvoicePdfService {
 
     // ─── Load business settings ─────────────────────────────────────
     final businessName =
-        await locator<ReferenceDataRepository>().getSetting('business_name') ?? 'الأول برو المحاسبي';
-    final businessPhone = await locator<ReferenceDataRepository>().getSetting('business_phone') ?? '';
-    final businessEmail = await locator<ReferenceDataRepository>().getSetting('business_email') ?? '';
-    final businessAddress = await locator<ReferenceDataRepository>().getSetting('business_address') ??
+        await locator<ReferenceDataRepository>().getSetting('business_name') ??
+            'الأول برو المحاسبي';
+    final businessPhone =
+        await locator<ReferenceDataRepository>().getSetting('business_phone') ??
+            '';
+    final businessEmail =
+        await locator<ReferenceDataRepository>().getSetting('business_email') ??
+            '';
+    final businessAddress = await locator<ReferenceDataRepository>()
+            .getSetting('business_address') ??
         'الجمهورية اليمنية - صنعاء';
-    final logoPath = await locator<ReferenceDataRepository>().getSetting('business_logo_path') ?? '';
-    final taxNumber = await locator<ReferenceDataRepository>().getSetting('business_tax_number') ?? '';
-    final commercialReg =
-        await locator<ReferenceDataRepository>().getSetting('business_commercial_reg') ?? '';
+    final logoPath = await locator<ReferenceDataRepository>()
+            .getSetting('business_logo_path') ??
+        '';
+    final taxNumber = await locator<ReferenceDataRepository>()
+            .getSetting('business_tax_number') ??
+        '';
+    final commercialReg = await locator<ReferenceDataRepository>()
+            .getSetting('business_commercial_reg') ??
+        '';
 
     final currency = invoice['currency'] as String? ?? 'YER';
     final currencySymbol =
@@ -65,16 +75,14 @@ class InvoicePdfService {
 
     // ─── Invoice type title ─────────────────────────────────────────
     final invoiceType = invoice['type'] as String? ?? 'sale';
-    final paymentMechanism =
-        invoice['payment_mechanism'] as String? ?? 'cash';
+    final paymentMechanism = invoice['payment_mechanism'] as String? ?? 'cash';
     String invoiceTitle;
     if (invoiceType == 'sale') {
       invoiceTitle =
           paymentMechanism == 'credit' ? 'فاتورة بيع آجل' : 'فاتورة بيع نقدي';
     } else if (invoiceType == 'purchase') {
-      invoiceTitle = paymentMechanism == 'credit'
-          ? 'فاتورة شراء آجل'
-          : 'فاتورة شراء نقدي';
+      invoiceTitle =
+          paymentMechanism == 'credit' ? 'فاتورة شراء آجل' : 'فاتورة شراء نقدي';
     } else {
       invoiceTitle = 'فاتورة بيع نقدي';
     }
@@ -91,7 +99,8 @@ class InvoicePdfService {
     if (customerName.isEmpty && invoice['customer_id'] != null) {
       final custId = invoice['customer_id'];
       if (custId is int) {
-        final customer = await locator<CustomerRepository>().getCustomerById(custId);
+        final customer =
+            await locator<CustomerRepository>().getCustomerById(custId);
         if (customer != null) {
           customerName = customer['name'] as String? ?? '';
         }
@@ -180,7 +189,8 @@ class InvoicePdfService {
       infoChildren.add(
         pw.Text(
           businessAddress,
-          style: pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
+          style:
+              pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
           textDirection: pw.TextDirection.rtl,
         ),
       );
@@ -189,7 +199,8 @@ class InvoicePdfService {
       infoChildren.add(
         pw.Text(
           'هاتف: $businessPhone',
-          style: pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
+          style:
+              pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
           textDirection: pw.TextDirection.rtl,
         ),
       );
@@ -198,7 +209,8 @@ class InvoicePdfService {
       infoChildren.add(
         pw.Text(
           'بريد إلكتروني: $businessEmail',
-          style: pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
+          style:
+              pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
           textDirection: pw.TextDirection.rtl,
         ),
       );
@@ -207,7 +219,8 @@ class InvoicePdfService {
       infoChildren.add(
         pw.Text(
           'الرقم الضريبي: $taxNumber',
-          style: pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
+          style:
+              pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
           textDirection: pw.TextDirection.rtl,
         ),
       );
@@ -216,7 +229,8 @@ class InvoicePdfService {
       infoChildren.add(
         pw.Text(
           'السجل التجاري: $commercialReg',
-          style: pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
+          style:
+              pw.TextStyle(font: _arabicFont!, fontSize: 9, color: _darkGray),
           textDirection: pw.TextDirection.rtl,
         ),
       );
@@ -359,7 +373,8 @@ class InvoicePdfService {
         pw.Expanded(
           child: pw.Text(
             value,
-            style: pw.TextStyle(font: _arabicFont!, fontSize: 10, color: _black),
+            style:
+                pw.TextStyle(font: _arabicFont!, fontSize: 10, color: _black),
             textDirection: pw.TextDirection.rtl,
           ),
         ),
@@ -426,10 +441,12 @@ class InvoicePdfService {
       final item = items[i];
       final productName = item['product_name'] as String? ?? '';
       final expiryDate = item['expiry_date'] as String? ?? '—';
-      final unit = item['unit'] as String? ?? item['unit_name'] as String? ?? '—';
+      final unit =
+          item['unit'] as String? ?? item['unit_name'] as String? ?? '—';
       final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
       final unitPrice = MoneyHelper.readMoney(item['unit_price']);
-      final totalPrice = MoneyHelper.readMoney(item['total_price'], fallback: quantity * unitPrice);
+      final totalPrice = MoneyHelper.readMoney(item['total_price'],
+          fallback: quantity * unitPrice);
 
       grandTotal += totalPrice;
 
@@ -475,7 +492,10 @@ class InvoicePdfService {
 
     return pw.Table(
       border: pw.TableBorder.all(color: _mediumGray, width: 0.5),
-      columnWidths: { for (var i = 0; i < columnWidths.length; i++) i: pw.FixedColumnWidth(columnWidths[i]) },
+      columnWidths: {
+        for (var i = 0; i < columnWidths.length; i++)
+          i: pw.FixedColumnWidth(columnWidths[i])
+      },
       children: [headerRow, ...dataRows, totalRow],
     );
   }
@@ -509,16 +529,12 @@ class InvoicePdfService {
     Map<String, dynamic> invoice,
     String currencySymbol,
   ) {
-    final subtotal =
-        MoneyHelper.readMoney(invoice['subtotal']);
-    final discountAmount =
-        MoneyHelper.readMoney(invoice['discount_amount']);
-    final taxAmount =
-        MoneyHelper.readMoney(invoice['tax_amount']);
+    final subtotal = MoneyHelper.readMoney(invoice['subtotal']);
+    final discountAmount = MoneyHelper.readMoney(invoice['discount_amount']);
+    final taxAmount = MoneyHelper.readMoney(invoice['tax_amount']);
     final transportCharges =
         MoneyHelper.readMoney(invoice['transport_charges']);
-    final total =
-        MoneyHelper.readMoney(invoice['total']);
+    final total = MoneyHelper.readMoney(invoice['total']);
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(8),
@@ -529,7 +545,8 @@ class InvoicePdfService {
       child: pw.Column(
         children: [
           // Subtotal
-          _totalsRow('المجموع الفرعي', '${_formatNumber(subtotal)} $currencySymbol'),
+          _totalsRow(
+              'المجموع الفرعي', '${_formatNumber(subtotal)} $currencySymbol'),
           // Discount (if any)
           if (discountAmount > 0)
             _totalsRow(
@@ -539,7 +556,8 @@ class InvoicePdfService {
             ),
           // Tax (if any)
           if (taxAmount > 0)
-            _totalsRow('الضريبة', '${_formatNumber(taxAmount)} $currencySymbol'),
+            _totalsRow(
+                'الضريبة', '${_formatNumber(taxAmount)} $currencySymbol'),
           // Transport charges (if any)
           if (transportCharges > 0)
             _totalsRow(
@@ -617,11 +635,11 @@ class InvoicePdfService {
     final currencyNameAr = currency == 'SAR'
         ? 'ريال سعودي'
         : (currency == 'USD' ? 'دولار أمريكي' : 'ريال يمني');
-    final subCurrencyNameAr = currency == 'SAR'
-        ? 'هللة'
-        : (currency == 'USD' ? 'سنت' : 'فلس');
+    final subCurrencyNameAr =
+        currency == 'SAR' ? 'هللة' : (currency == 'USD' ? 'سنت' : 'فلس');
 
-    final words = _numberToArabicWords(total, currencyNameAr, subCurrencyNameAr);
+    final words =
+        _numberToArabicWords(total, currencyNameAr, subCurrencyNameAr);
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(8),
@@ -795,7 +813,8 @@ class InvoicePdfService {
       final billions = n ~/ 1000000000;
       // For 1 and 2 the magnitude word already encodes the count
       if (billions > 2) {
-        parts.add(_convertHundreds(billions, isFeminine: true, asMagnitudePrefix: true));
+        parts.add(_convertHundreds(billions,
+            isFeminine: true, asMagnitudePrefix: true));
       }
       parts.add(billions == 1
           ? 'مليار'
@@ -811,7 +830,8 @@ class InvoicePdfService {
     if (n >= 1000000) {
       final millions = n ~/ 1000000;
       if (millions > 2) {
-        parts.add(_convertHundreds(millions, isFeminine: true, asMagnitudePrefix: true));
+        parts.add(_convertHundreds(millions,
+            isFeminine: true, asMagnitudePrefix: true));
       }
       parts.add(millions == 1
           ? 'مليون'
@@ -827,7 +847,8 @@ class InvoicePdfService {
     if (n >= 1000) {
       final thousands = n ~/ 1000;
       if (thousands > 2) {
-        parts.add(_convertHundreds(thousands, isFeminine: false, asMagnitudePrefix: true));
+        parts.add(_convertHundreds(thousands,
+            isFeminine: false, asMagnitudePrefix: true));
       }
       parts.add(thousands == 1
           ? 'ألف'
@@ -855,7 +876,8 @@ class InvoicePdfService {
   /// [asMagnitudePrefix] when true, uses the counting forms with ة (ta
   /// marbuta) for 3-10 which is correct before magnitude words like
   /// آلاف, ملايين, مليارات (e.g., "ثلاثة آلاف" not "ثلاث آلاف").
-  static String _convertHundreds(int n, {bool isFeminine = false, bool asMagnitudePrefix = false}) {
+  static String _convertHundreds(int n,
+      {bool isFeminine = false, bool asMagnitudePrefix = false}) {
     assert(n >= 1 && n <= 999);
 
     // Ones forms used in the final position (3-10 without ة)

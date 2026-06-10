@@ -72,7 +72,8 @@ class _DebtsScreenState extends State<DebtsScreen>
   Future<void> _loadData() async {
     final customers = await locator<CustomerRepository>().getAllCustomers();
     final suppliers = await locator<SupplierRepository>().getAllSuppliers();
-    final liabilityAccounts = await locator<AccountRepository>().getAccountsByType('LIABILITY');
+    final liabilityAccounts =
+        await locator<AccountRepository>().getAccountsByType('LIABILITY');
 
     if (!mounted) return;
 
@@ -88,7 +89,9 @@ class _DebtsScreenState extends State<DebtsScreen>
 
   // ── Currency balance loading (computed per-currency) ──────────────
   Future<void> _loadCurrencyBalances() async {
-    if (_selectedCurrency == 'الكل') return; // No specific currency selected, use stored balances
+    if (_selectedCurrency == 'الكل') {
+      return; // No specific currency selected, use stored balances
+    }
     setState(() {});
 
     final customerRepo = locator<CustomerRepository>();
@@ -100,7 +103,8 @@ class _DebtsScreenState extends State<DebtsScreen>
     final customerFutures = _allCustomers.map((c) async {
       final id = c['id'] as int?;
       if (id != null) {
-        final balance = await customerRepo.getCustomerBalanceForCurrency(id, _selectedCurrency);
+        final balance = await customerRepo.getCustomerBalanceForCurrency(
+            id, _selectedCurrency);
         return MapEntry(id, balance);
       }
       return null;
@@ -113,7 +117,8 @@ class _DebtsScreenState extends State<DebtsScreen>
     final supplierFutures = _allSuppliers.map((s) async {
       final id = s['id'] as int?;
       if (id != null) {
-        final balance = await supplierRepo.getSupplierBalanceForCurrency(id, _selectedCurrency);
+        final balance = await supplierRepo.getSupplierBalanceForCurrency(
+            id, _selectedCurrency);
         return MapEntry(id, balance);
       }
       return null;
@@ -150,7 +155,8 @@ class _DebtsScreenState extends State<DebtsScreen>
       if (_selectedCurrency != 'الكل' && id != null) {
         // Use computed balance for the selected currency
         final computedBalance = _customerCurrencyBalances[id] ?? 0.0;
-        return computedBalance < 0; // Negative = debit (عليه) = customer owes us
+        return computedBalance <
+            0; // Negative = debit (عليه) = customer owes us
       }
       // Fallback: use stored balance
       final balance = MoneyHelper.readMoney(c['balance']);
@@ -205,7 +211,8 @@ class _DebtsScreenState extends State<DebtsScreen>
       if (_selectedCurrency != 'الكل' && id != null) {
         final computedBalance = _customerCurrencyBalances[id] ?? 0.0;
         if (computedBalance < 0) {
-          totals[_selectedCurrency] = (totals[_selectedCurrency] ?? 0.0) + computedBalance.abs();
+          totals[_selectedCurrency] =
+              (totals[_selectedCurrency] ?? 0.0) + computedBalance.abs();
         }
       } else {
         final currency = c['currency'] as String? ?? 'YER';
@@ -224,7 +231,8 @@ class _DebtsScreenState extends State<DebtsScreen>
       if (_selectedCurrency != 'الكل' && id != null) {
         final computedBalance = _supplierCurrencyBalances[id] ?? 0.0;
         if (computedBalance > 0) {
-          totals[_selectedCurrency] = (totals[_selectedCurrency] ?? 0.0) + computedBalance;
+          totals[_selectedCurrency] =
+              (totals[_selectedCurrency] ?? 0.0) + computedBalance;
         }
       } else {
         final currency = s['currency'] as String? ?? 'YER';
@@ -243,8 +251,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   // ═══════════════════════════════════════════════════════════════════
   //  HELPERS
   // ═══════════════════════════════════════════════════════════════════
-  String _currencySymbol(String code) =>
-      _currencyInfo[code]?['symbol'] ?? code;
+  String _currencySymbol(String code) => _currencyInfo[code]?['symbol'] ?? code;
 
   // ignore: unused_element
   String _formatWithSymbol(double amount, String currency) {
@@ -268,7 +275,8 @@ class _DebtsScreenState extends State<DebtsScreen>
             children: [
               const Icon(Icons.account_balance_wallet, size: 22),
               const SizedBox(width: 8),
-              const Text('الديون', style: TextStyle(fontWeight: FontWeight.w800)),
+              const Text('الديون',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
             ],
           ),
           bottom: TabBar(
@@ -458,12 +466,14 @@ class _DebtsScreenState extends State<DebtsScreen>
     );
   }
 
-  Widget _buildCustomerDebtCard(ThemeData theme, Map<String, dynamic> customer) {
+  Widget _buildCustomerDebtCard(
+      ThemeData theme, Map<String, dynamic> customer) {
     final name = customer['name'] as String? ?? 'بدون اسم';
     final phone = customer['phone'] as String? ?? '';
     final balance = MoneyHelper.readMoney(customer['balance']);
     final currency = customer['currency'] as String? ?? 'YER';
-    final creditLimit = MoneyHelper.readMoney(customer['debt_ceiling'], fallback: MoneyHelper.readMoney(customer['credit_limit']));
+    final creditLimit = MoneyHelper.readMoney(customer['debt_ceiling'],
+        fallback: MoneyHelper.readMoney(customer['credit_limit']));
     final hasCreditLimit = creditLimit > 0;
     final isOverLimit = hasCreditLimit && balance > creditLimit;
 
@@ -780,7 +790,8 @@ class _DebtsScreenState extends State<DebtsScreen>
     );
   }
 
-  Widget _buildSupplierDebtCard(ThemeData theme, Map<String, dynamic> supplier) {
+  Widget _buildSupplierDebtCard(
+      ThemeData theme, Map<String, dynamic> supplier) {
     final name = supplier['name'] as String? ?? 'بدون اسم';
     final phone = supplier['phone'] as String? ?? '';
     final id = supplier['id'] as int?;
@@ -1406,10 +1417,13 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
 
   Future<void> _loadInvoices() async {
     // Get sale invoices for this customer
-    final allSaleInvoices = await locator<InvoiceRepository>().getInvoicesByType('sale');
-    final customerInvoices = allSaleInvoices.where(
-      (inv) => inv['customer_id'] == widget.customerId,
-    ).toList();
+    final allSaleInvoices =
+        await locator<InvoiceRepository>().getInvoicesByType('sale');
+    final customerInvoices = allSaleInvoices
+        .where(
+          (inv) => inv['customer_id'] == widget.customerId,
+        )
+        .toList();
 
     if (!mounted) return;
     setState(() {
@@ -1547,10 +1561,8 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
     final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
     final createdAt = invoice['created_at'] as String? ?? '';
     final isPaid = remaining <= 0;
-    final invoiceCurrency =
-        invoice['currency'] as String? ?? widget.currency;
-    final symbol =
-        _currencyInfo[invoiceCurrency]?['symbol'] ?? invoiceCurrency;
+    final invoiceCurrency = invoice['currency'] as String? ?? widget.currency;
+    final symbol = _currencyInfo[invoiceCurrency]?['symbol'] ?? invoiceCurrency;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1585,8 +1597,7 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isPaid
                       ? AppColors.success.withValues(alpha: 0.1)
@@ -1662,7 +1673,8 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
           if (createdAt.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              createdAt.substring(0, createdAt.length > 16 ? 16 : createdAt.length),
+              createdAt.substring(
+                  0, createdAt.length > 16 ? 16 : createdAt.length),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: AppColors.textHint,
                 fontSize: 10,
@@ -1714,10 +1726,13 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
 
   Future<void> _loadInvoices() async {
     // Get purchase invoices for this supplier
-    final allPurchaseInvoices = await locator<InvoiceRepository>().getInvoicesByType('purchase');
-    final supplierInvoices = allPurchaseInvoices.where(
-      (inv) => inv['supplier_id'] == widget.supplierId,
-    ).toList();
+    final allPurchaseInvoices =
+        await locator<InvoiceRepository>().getInvoicesByType('purchase');
+    final supplierInvoices = allPurchaseInvoices
+        .where(
+          (inv) => inv['supplier_id'] == widget.supplierId,
+        )
+        .toList();
 
     if (!mounted) return;
     setState(() {
@@ -1855,10 +1870,8 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
     final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
     final createdAt = invoice['created_at'] as String? ?? '';
     final isPaid = remaining <= 0;
-    final invoiceCurrency =
-        invoice['currency'] as String? ?? widget.currency;
-    final symbol =
-        _currencyInfo[invoiceCurrency]?['symbol'] ?? invoiceCurrency;
+    final invoiceCurrency = invoice['currency'] as String? ?? widget.currency;
+    final symbol = _currencyInfo[invoiceCurrency]?['symbol'] ?? invoiceCurrency;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1893,8 +1906,7 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isPaid
                       ? AppColors.success.withValues(alpha: 0.1)
@@ -1970,7 +1982,8 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
           if (createdAt.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              createdAt.substring(0, createdAt.length > 16 ? 16 : createdAt.length),
+              createdAt.substring(
+                  0, createdAt.length > 16 ? 16 : createdAt.length),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: AppColors.textHint,
                 fontSize: 10,

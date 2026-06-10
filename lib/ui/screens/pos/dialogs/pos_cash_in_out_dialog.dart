@@ -9,7 +9,8 @@ import '../../../../core/viewmodels/pos_viewmodel.dart';
 import '../../../../data/datasources/services/shift_service.dart';
 
 /// Opens the Cash In / Cash Out bottom sheet dialog.
-Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isCashIn) async {
+Future<void> showCashInOutDialog(
+    BuildContext context, PosViewModel vm, bool isCashIn) async {
   if (vm.activeShift == null) {
     context.showErrorSnackBar('يجب فتح وردية أولاً');
     return;
@@ -28,7 +29,9 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
           left: 20,
           right: 20,
           top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom +
+              MediaQuery.of(ctx).viewPadding.bottom +
+              20,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -51,7 +54,8 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: (isCashIn ? AppColors.success : AppColors.error).withValues(alpha: 0.12),
+                    color: (isCashIn ? AppColors.success : AppColors.error)
+                        .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -63,12 +67,15 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
                 const SizedBox(width: 12),
                 Text(
                   isCashIn ? 'إيداع نقدي' : 'سحب نقدي',
-                  style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  style: context.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            Text('المبلغ', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            Text('المبلغ',
+                style: context.textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
             TextField(
               controller: amountController,
@@ -82,18 +89,22 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
                   size: 20,
                   color: isCashIn ? AppColors.success : AppColors.error,
                 ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
             const SizedBox(height: 16),
-            Text('السبب', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            Text('السبب',
+                style: context.textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
             TextField(
               controller: reasonController,
               maxLines: 2,
               decoration: InputDecoration(
                 hintText: isCashIn ? 'سبب الإيداع...' : 'سبب السحب...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
             const SizedBox(height: 20),
@@ -105,7 +116,9 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
                   final amount = double.tryParse(amountController.text) ?? 0.0;
                   if (amount <= 0) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('أدخل مبلغاً صحيحاً'), backgroundColor: AppColors.warning),
+                      const SnackBar(
+                          content: Text('أدخل مبلغاً صحيحاً'),
+                          backgroundColor: AppColors.warning),
                     );
                     return;
                   }
@@ -116,7 +129,9 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
                     final cashBoxId = vm.activeShift!['cash_box_id'] as int;
                     final reason = reasonController.text.trim().isNotEmpty
                         ? reasonController.text.trim()
-                        : (isCashIn ? 'إيداع نقدي في الوردية' : 'سحب نقدي من الوردية');
+                        : (isCashIn
+                            ? 'إيداع نقدي في الوردية'
+                            : 'سحب نقدي من الوردية');
 
                     await locator<ShiftService>().recordCashInOut(
                       shiftId: shiftId,
@@ -143,13 +158,16 @@ Future<void> showCashInOutDialog(BuildContext context, PosViewModel vm, bool isC
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isCashIn ? AppColors.success : AppColors.error,
+                  backgroundColor:
+                      isCashIn ? AppColors.success : AppColors.error,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(
                   isCashIn ? 'تأكيد الإيداع' : 'تأكيد السحب',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
             ),

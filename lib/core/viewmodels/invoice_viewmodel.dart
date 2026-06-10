@@ -19,7 +19,8 @@ class InvoiceViewModel extends ChangeNotifier {
   final SupplierRepository _supplierRepo = locator<SupplierRepository>();
   // ignore: unused_field
   final ProductRepository _productRepo = locator<ProductRepository>();
-  final ReferenceDataRepository _referenceDataRepo = locator<ReferenceDataRepository>();
+  final ReferenceDataRepository _referenceDataRepo =
+      locator<ReferenceDataRepository>();
   final CashBoxService _cashBoxService = locator<CashBoxService>();
 
   // ── Customer state ──
@@ -148,10 +149,12 @@ class InvoiceViewModel extends ChangeNotifier {
   double get transportChargesAmount => _transportCharges;
 
   /// Tax amount based on VAT rate.
-  double get taxAmount => (subtotal - discountAmount) * (AppConstants.defaultVatRate / 100);
+  double get taxAmount =>
+      (subtotal - discountAmount) * (AppConstants.defaultVatRate / 100);
 
   /// Total after discount, tax, and transport.
-  double get total => subtotal - discountAmount + taxAmount + transportChargesAmount;
+  double get total =>
+      subtotal - discountAmount + taxAmount + transportChargesAmount;
 
   /// Paid amount (from stored value).
   double get paidAmount => _paidAmount;
@@ -181,9 +184,12 @@ class InvoiceViewModel extends ChangeNotifier {
   /// Selected entity name.
   String? get selectedEntityName {
     if (_selectedEntityId == null) return null;
-    final entity = _combinedEntities.where(
-      (e) => e['id'] == _selectedEntityId && e['type'] == _selectedEntityType,
-    ).firstOrNull;
+    final entity = _combinedEntities
+        .where(
+          (e) =>
+              e['id'] == _selectedEntityId && e['type'] == _selectedEntityType,
+        )
+        .firstOrNull;
     return entity?['name'] as String?;
   }
 
@@ -196,7 +202,10 @@ class InvoiceViewModel extends ChangeNotifier {
 
   /// Whether to show partial payment warning.
   bool get showPartialPaymentWarning =>
-      !_autoPay && _paymentMechanism == 'cash' && paidAmount > 0 && remaining > 0.005;
+      !_autoPay &&
+      _paymentMechanism == 'cash' &&
+      paidAmount > 0 &&
+      remaining > 0.005;
 
   // ── Data loading ───────────────────────────────────────────────────
 
@@ -400,9 +409,11 @@ class InvoiceViewModel extends ChangeNotifier {
 
   void setCurrency(String currencyCode) {
     _selectedCurrency = currencyCode;
-    final currency = _currencies.where((c) => c['code'] == currencyCode).firstOrNull;
+    final currency =
+        _currencies.where((c) => c['code'] == currencyCode).firstOrNull;
     if (currency != null) {
-      _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      _selectedExchangeRate =
+          (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
     }
     notifyListeners();
   }
@@ -464,7 +475,8 @@ class InvoiceViewModel extends ChangeNotifier {
   /// Add a product as an invoice item (from product map).
   void addItemFromProduct(Map<String, dynamic> product) {
     final productId = product['id'] as int;
-    final existingIndex = _items.indexWhere((item) => item.productId == productId);
+    final existingIndex =
+        _items.indexWhere((item) => item.productId == productId);
     if (existingIndex >= 0) {
       final existing = _items[existingIndex];
       _items[existingIndex] = existing.copyWith(

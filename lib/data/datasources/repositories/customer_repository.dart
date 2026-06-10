@@ -23,9 +23,10 @@ class CustomerRepository {
     // opening_balance_currency is a virtual key used only for the journal
     // entry — it is NOT stored in the customers table. Fall back to the
     // customer's currency field (for legacy callers) then to 'YER'.
-    final customerCurrency = customerMap['opening_balance_currency'] as String?
-        ?? customerMap['currency'] as String?
-        ?? 'YER';
+    final customerCurrency =
+        customerMap['opening_balance_currency'] as String? ??
+            customerMap['currency'] as String? ??
+            'YER';
 
     int? customerId;
     await db.transaction((txn) async {
@@ -33,27 +34,44 @@ class CustomerRepository {
       // doesn't try to write to a non-existent column.
       final insertMap = Map<String, dynamic>.from(customerMap)
         ..remove('opening_balance_currency');
-      customerId = await txn.insert('customers', MoneyHelper.toCentsMap(insertMap, MoneyHelper.customerMoneyFields));
+      customerId = await txn.insert('customers',
+          MoneyHelper.toCentsMap(insertMap, MoneyHelper.customerMoneyFields));
 
       // Look up exchange rate for the customer's currency
       double customerExchangeRate = 1.0;
       if (customerCurrency != 'YER') {
-        final curRows = await txn.query('currencies', where: 'code = ?', whereArgs: [customerCurrency], limit: 1);
-        customerExchangeRate = curRows.isNotEmpty ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0 : 1.0;
+        final curRows = await txn.query('currencies',
+            where: 'code = ?', whereArgs: [customerCurrency], limit: 1);
+        customerExchangeRate = curRows.isNotEmpty
+            ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0
+            : 1.0;
       }
-      final customerBaseAmount = customerCurrency == 'YER' ? openingBalance : openingBalance * customerExchangeRate;
+      final customerBaseAmount = customerCurrency == 'YER'
+          ? openingBalance
+          : openingBalance * customerExchangeRate;
 
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
         final journalId = generateUniqueJournalId();
-        final codeOffset = customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+        final codeOffset =
+            customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
         final referenceId = 'customer_$customerId';
 
-        final customersAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), customerCurrency], limit: 1);
-        final openingBalanceAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), customerCurrency], limit: 1);
+        final customersAccount = await txn.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(1200 + codeOffset).toString(), customerCurrency],
+            limit: 1);
+        final openingBalanceAccount = await txn.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(2901 + codeOffset).toString(), customerCurrency],
+            limit: 1);
 
-        final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
-        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
+        final customersAccountId = customersAccount.isNotEmpty
+            ? customersAccount.first['id'] as int
+            : null;
+        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty
+            ? openingBalanceAccount.first['id'] as int
+            : null;
 
         if (customersAccountId != null && openingBalanceAccountId != null) {
           if (balanceType == 'debit') {
@@ -86,8 +104,10 @@ class CustomerRepository {
               'exchange_rate': customerExchangeRate,
               'amount_base': MoneyHelper.toCents(customerBaseAmount),
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, openingBalance, 0.0, now);
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, openingBalance, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, customersAccountId, openingBalance, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, openingBalanceAccountId, 0.0, openingBalance, now);
           } else {
             // Customer has credit (له) opening balance: Credit Customers, Debit Opening Balance Equity
             await txn.insert('transactions', {
@@ -118,8 +138,10 @@ class CustomerRepository {
               'exchange_rate': customerExchangeRate,
               'amount_base': MoneyHelper.toCents(customerBaseAmount),
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, 0.0, openingBalance, now);
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, openingBalance, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, customersAccountId, 0.0, openingBalance, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, openingBalanceAccountId, openingBalance, 0.0, now);
           }
         }
       }
@@ -127,20 +149,26 @@ class CustomerRepository {
     return customerId!;
   }
 
-  Future<List<Map<String, dynamic>>> getAllCustomers({String orderBy = 'name', int? limit, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> getAllCustomers(
+      {String orderBy = 'name', int? limit, int offset = 0}) async {
     final db = await _db;
-    return await db.query('customers', orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
+    return await db.query('customers',
+        orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
   }
 
   Future<List<Map<String, dynamic>>> searchCustomers(String query) async {
     final db = await _db;
     final likeQuery = '%$query%';
-    return await db.query('customers', where: 'name LIKE ? OR phone LIKE ?', whereArgs: [likeQuery, likeQuery], orderBy: 'created_at DESC');
+    return await db.query('customers',
+        where: 'name LIKE ? OR phone LIKE ?',
+        whereArgs: [likeQuery, likeQuery],
+        orderBy: 'created_at DESC');
   }
 
   Future<Map<String, dynamic>?> getCustomerById(int id) async {
     final db = await _db;
-    final results = await db.query('customers', where: 'id = ?', whereArgs: [id], limit: 1);
+    final results =
+        await db.query('customers', where: 'id = ?', whereArgs: [id], limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 
@@ -161,7 +189,8 @@ class CustomerRepository {
       final oldBalance = MoneyHelper.readMoney(oldCustomer['balance']);
       final newBalance = MoneyHelper.readMoney(customerMap['balance']);
       final oldBalanceType = oldCustomer['balance_type'] as String? ?? 'credit';
-      final newBalanceType = customerMap['balance_type'] as String? ?? oldBalanceType;
+      final newBalanceType =
+          customerMap['balance_type'] as String? ?? oldBalanceType;
 
       // Convert to signed values: credit (له) = positive, debit (عليه) = negative
       final oldSigned = oldBalanceType == 'credit' ? oldBalance : -oldBalance;
@@ -171,10 +200,11 @@ class CustomerRepository {
       if (signedDiff.abs() >= 0.005) {
         // Use opening_balance_currency if provided (new multi-currency flow),
         // otherwise fall back to the stored currency (legacy), then 'YER'.
-        final newCurrency = customerMap['opening_balance_currency'] as String?
-            ?? customerMap['currency'] as String?
-            ?? oldCustomer['currency'] as String?
-            ?? 'YER';
+        final newCurrency =
+            customerMap['opening_balance_currency'] as String? ??
+                customerMap['currency'] as String? ??
+                oldCustomer['currency'] as String? ??
+                'YER';
         final oldCurrency = oldCustomer['currency'] as String? ?? 'YER';
 
         // ── Handle currency change ──
@@ -186,53 +216,113 @@ class CustomerRepository {
 
         if (currencyChanged) {
           // Step 1: Reverse old opening balance in old currency
-          final oldCodeOffset = oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
-          final oldCustomersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + oldCodeOffset).toString(), oldCurrency], limit: 1);
-          final oldOpeningBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + oldCodeOffset).toString(), oldCurrency], limit: 1);
-          final oldCustomersAccountId = oldCustomersAccount.isNotEmpty ? oldCustomersAccount.first['id'] as int : null;
-          final oldOpeningBalanceAccountId = oldOpeningBalanceAccount.isNotEmpty ? oldOpeningBalanceAccount.first['id'] as int : null;
+          final oldCodeOffset =
+              oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
+          final oldCustomersAccount = await db.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(1200 + oldCodeOffset).toString(), oldCurrency],
+              limit: 1);
+          final oldOpeningBalanceAccount = await db.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(2901 + oldCodeOffset).toString(), oldCurrency],
+              limit: 1);
+          final oldCustomersAccountId = oldCustomersAccount.isNotEmpty
+              ? oldCustomersAccount.first['id'] as int
+              : null;
+          final oldOpeningBalanceAccountId = oldOpeningBalanceAccount.isNotEmpty
+              ? oldOpeningBalanceAccount.first['id'] as int
+              : null;
 
           // Step 2: Create new opening balance in new currency
-          final newCodeOffset = newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
-          final newCustomersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + newCodeOffset).toString(), newCurrency], limit: 1);
-          final newOpeningBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + newCodeOffset).toString(), newCurrency], limit: 1);
-          final newCustomersAccountId = newCustomersAccount.isNotEmpty ? newCustomersAccount.first['id'] as int : null;
-          final newOpeningBalanceAccountId = newOpeningBalanceAccount.isNotEmpty ? newOpeningBalanceAccount.first['id'] as int : null;
+          final newCodeOffset =
+              newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
+          final newCustomersAccount = await db.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(1200 + newCodeOffset).toString(), newCurrency],
+              limit: 1);
+          final newOpeningBalanceAccount = await db.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(2901 + newCodeOffset).toString(), newCurrency],
+              limit: 1);
+          final newCustomersAccountId = newCustomersAccount.isNotEmpty
+              ? newCustomersAccount.first['id'] as int
+              : null;
+          final newOpeningBalanceAccountId = newOpeningBalanceAccount.isNotEmpty
+              ? newOpeningBalanceAccount.first['id'] as int
+              : null;
 
-          if (oldCustomersAccountId == null || oldOpeningBalanceAccountId == null) {
+          if (oldCustomersAccountId == null ||
+              oldOpeningBalanceAccountId == null) {
             // Old currency accounts missing — skip reversal but continue with new
             // (the old entries may have been manually removed or never created)
           }
-          if (newCustomersAccountId == null || newOpeningBalanceAccountId == null) {
+          if (newCustomersAccountId == null ||
+              newOpeningBalanceAccountId == null) {
             // New currency accounts missing — cannot create new entries
             updateMap.remove('balance');
             updateMap.remove('balance_type');
-            await db.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
-            throw Exception('لم يتم العثور على حساب العملاء (1200) أو حساب الرصيد الافتتاحي (2901) بعملة $newCurrency في شجرة الحسابات. لا يمكن تعديل الرصيد بدون قيود محاسبية.');
+            await db.update(
+                'customers',
+                MoneyHelper.toCentsMap(
+                    updateMap, MoneyHelper.customerMoneyFields),
+                where: 'id = ?',
+                whereArgs: [id]);
+            throw Exception(
+                'لم يتم العثور على حساب العملاء (1200) أو حساب الرصيد الافتتاحي (2901) بعملة $newCurrency في شجرة الحسابات. لا يمكن تعديل الرصيد بدون قيود محاسبية.');
           }
 
           return await db.transaction((txn) async {
             // Look up exchange rates for old and new currencies
             double oldExchangeRate = 1.0;
             if (oldCurrency != 'YER') {
-              final curRows = await txn.query('currencies', where: 'code = ?', whereArgs: [oldCurrency], limit: 1);
-              oldExchangeRate = curRows.isNotEmpty ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0 : 1.0;
+              final curRows = await txn.query('currencies',
+                  where: 'code = ?', whereArgs: [oldCurrency], limit: 1);
+              oldExchangeRate = curRows.isNotEmpty
+                  ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0
+                  : 1.0;
             }
             double newExchangeRate = 1.0;
             if (newCurrency != 'YER') {
-              final curRows = await txn.query('currencies', where: 'code = ?', whereArgs: [newCurrency], limit: 1);
-              newExchangeRate = curRows.isNotEmpty ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0 : 1.0;
+              final curRows = await txn.query('currencies',
+                  where: 'code = ?', whereArgs: [newCurrency], limit: 1);
+              newExchangeRate = curRows.isNotEmpty
+                  ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0
+                  : 1.0;
             }
 
             // Reverse old signed balance in old currency
-            if (oldCustomersAccountId != null && oldOpeningBalanceAccountId != null && oldSigned.abs() >= 0.005) {
+            if (oldCustomersAccountId != null &&
+                oldOpeningBalanceAccountId != null &&
+                oldSigned.abs() >= 0.005) {
               final reverseJournalId = generateUniqueJournalId();
               if (oldSigned > 0) {
                 // Old was credit → reverse with debit on customer, credit on OB
-                await _insertOpeningBalanceEntry(txn, oldCustomersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned, true, 'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, oldCurrency, oldExchangeRate);
+                await _insertOpeningBalanceEntry(
+                    txn,
+                    oldCustomersAccountId,
+                    oldOpeningBalanceAccountId,
+                    reverseJournalId,
+                    oldSigned,
+                    true,
+                    'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}',
+                    now,
+                    id,
+                    oldCurrency,
+                    oldExchangeRate);
               } else {
                 // Old was debit → reverse with credit on customer, debit on OB
-                await _insertOpeningBalanceEntry(txn, oldCustomersAccountId, oldOpeningBalanceAccountId, reverseJournalId, oldSigned.abs(), false, 'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, oldCurrency, oldExchangeRate);
+                await _insertOpeningBalanceEntry(
+                    txn,
+                    oldCustomersAccountId,
+                    oldOpeningBalanceAccountId,
+                    reverseJournalId,
+                    oldSigned.abs(),
+                    false,
+                    'عكس رصيد افتتاحي عميل (تغيير عملة) - ${customerMap['name'] ?? oldCustomer['name']}',
+                    now,
+                    id,
+                    oldCurrency,
+                    oldExchangeRate);
               }
             }
 
@@ -241,47 +331,115 @@ class CustomerRepository {
               final newJournalId = generateUniqueJournalId();
               if (newSigned > 0) {
                 // New is credit (له)
-                await _insertOpeningBalanceEntry(txn, newCustomersAccountId, newOpeningBalanceAccountId, newJournalId, newSigned, false, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, newExchangeRate);
+                await _insertOpeningBalanceEntry(
+                    txn,
+                    newCustomersAccountId,
+                    newOpeningBalanceAccountId,
+                    newJournalId,
+                    newSigned,
+                    false,
+                    'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}',
+                    now,
+                    id,
+                    newCurrency,
+                    newExchangeRate);
               } else {
                 // New is debit (عليه)
-                await _insertOpeningBalanceEntry(txn, newCustomersAccountId, newOpeningBalanceAccountId, newJournalId, newSigned.abs(), true, 'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, newExchangeRate);
+                await _insertOpeningBalanceEntry(
+                    txn,
+                    newCustomersAccountId,
+                    newOpeningBalanceAccountId,
+                    newJournalId,
+                    newSigned.abs(),
+                    true,
+                    'رصيد افتتاحي عميل (عملة جديدة) - ${customerMap['name'] ?? oldCustomer['name']}',
+                    now,
+                    id,
+                    newCurrency,
+                    newExchangeRate);
               }
             }
 
-            return await txn.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
+            return await txn.update(
+                'customers',
+                MoneyHelper.toCentsMap(
+                    updateMap, MoneyHelper.customerMoneyFields),
+                where: 'id = ?',
+                whereArgs: [id]);
           });
         }
 
         // ── Same currency — simple adjustment ──
-        final codeOffset = newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
+        final codeOffset =
+            newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
         final journalId = generateUniqueJournalId();
 
-        final customersAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1200 + codeOffset).toString(), newCurrency], limit: 1);
-        final openingBalanceAccount = await db.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(2901 + codeOffset).toString(), newCurrency], limit: 1);
+        final customersAccount = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(1200 + codeOffset).toString(), newCurrency],
+            limit: 1);
+        final openingBalanceAccount = await db.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(2901 + codeOffset).toString(), newCurrency],
+            limit: 1);
 
-        final customersAccountId = customersAccount.isNotEmpty ? customersAccount.first['id'] as int : null;
-        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty ? openingBalanceAccount.first['id'] as int : null;
+        final customersAccountId = customersAccount.isNotEmpty
+            ? customersAccount.first['id'] as int
+            : null;
+        final openingBalanceAccountId = openingBalanceAccount.isNotEmpty
+            ? openingBalanceAccount.first['id'] as int
+            : null;
 
         if (customersAccountId != null && openingBalanceAccountId != null) {
           return await db.transaction((txn) async {
             // Look up exchange rate for the currency
             double exchangeRate = 1.0;
             if (newCurrency != 'YER') {
-              final curRows = await txn.query('currencies', where: 'code = ?', whereArgs: [newCurrency], limit: 1);
-              exchangeRate = curRows.isNotEmpty ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0 : 1.0;
+              final curRows = await txn.query('currencies',
+                  where: 'code = ?', whereArgs: [newCurrency], limit: 1);
+              exchangeRate = curRows.isNotEmpty
+                  ? (curRows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0
+                  : 1.0;
             }
 
             if (signedDiff > 0) {
               // Signed balance increased (more credit/له or less debit/عليه):
               // Credit Customers account, Debit Opening Balance Equity
-              await _insertOpeningBalanceEntry(txn, customersAccountId, openingBalanceAccountId, journalId, signedDiff, false, 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, exchangeRate);
+              await _insertOpeningBalanceEntry(
+                  txn,
+                  customersAccountId,
+                  openingBalanceAccountId,
+                  journalId,
+                  signedDiff,
+                  false,
+                  'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
+                  now,
+                  id,
+                  newCurrency,
+                  exchangeRate);
             } else {
               // Signed balance decreased (more debit/عليه or less credit/له):
               // Debit Customers account, Credit Opening Balance Equity
-              await _insertOpeningBalanceEntry(txn, customersAccountId, openingBalanceAccountId, journalId, signedDiff.abs(), true, 'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}', now, id, newCurrency, exchangeRate);
+              await _insertOpeningBalanceEntry(
+                  txn,
+                  customersAccountId,
+                  openingBalanceAccountId,
+                  journalId,
+                  signedDiff.abs(),
+                  true,
+                  'تعديل رصيد عميل - ${customerMap['name'] ?? oldCustomer['name']}',
+                  now,
+                  id,
+                  newCurrency,
+                  exchangeRate);
             }
 
-            return await txn.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
+            return await txn.update(
+                'customers',
+                MoneyHelper.toCentsMap(
+                    updateMap, MoneyHelper.customerMoneyFields),
+                where: 'id = ?',
+                whereArgs: [id]);
           });
         } else {
           // Balance changed but required accounts not found in chart of accounts.
@@ -292,14 +450,22 @@ class CustomerRepository {
           // fields are saved, and throw a descriptive error.
           updateMap.remove('balance');
           updateMap.remove('balance_type');
-          await db.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
-          throw Exception('لم يتم العثور على حساب العملاء (1200) أو حساب الرصيد الافتتاحي (2901) بعملة $newCurrency في شجرة الحسابات. لا يمكن تعديل الرصيد بدون قيود محاسبية. يرجى التأكد من إعداد الحسابات.');
+          await db.update(
+              'customers',
+              MoneyHelper.toCentsMap(
+                  updateMap, MoneyHelper.customerMoneyFields),
+              where: 'id = ?',
+              whereArgs: [id]);
+          throw Exception(
+              'لم يتم العثور على حساب العملاء (1200) أو حساب الرصيد الافتتاحي (2901) بعملة $newCurrency في شجرة الحسابات. لا يمكن تعديل الرصيد بدون قيود محاسبية. يرجى التأكد من إعداد الحسابات.');
         }
       }
     }
 
     // No balance change (or no journal entries needed) — simple update
-    return await db.update('customers', MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields), where: 'id = ?', whereArgs: [id]);
+    return await db.update('customers',
+        MoneyHelper.toCentsMap(updateMap, MoneyHelper.customerMoneyFields),
+        where: 'id = ?', whereArgs: [id]);
   }
 
   /// Helper: Insert a pair of opening balance journal entries.
@@ -349,13 +515,15 @@ class CustomerRepository {
       'amount_base': MoneyHelper.toCents(baseAmount),
     });
     await _dbHelper.journal.updateAccountBalanceWithJournal(
-      txn, customersAccountId,
+      txn,
+      customersAccountId,
       isDebitCustomer ? amount : 0.0,
       isDebitCustomer ? 0.0 : amount,
       now,
     );
     await _dbHelper.journal.updateAccountBalanceWithJournal(
-      txn, openingBalanceAccountId,
+      txn,
+      openingBalanceAccountId,
       isDebitCustomer ? 0.0 : amount,
       isDebitCustomer ? amount : 0.0,
       now,
@@ -365,19 +533,22 @@ class CustomerRepository {
   Future<int> deleteCustomer(int id) async {
     final db = await _db;
     // Check if customer is referenced in invoices
-    final invRefs = await db.query('invoices', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+    final invRefs = await db.query('invoices',
+        where: 'customer_id = ?', whereArgs: [id], limit: 1);
     if (invRefs.isNotEmpty) {
       // Soft-delete not supported by schema — just prevent deletion
       return 0;
     }
     // Check if customer is referenced in vouchers
-    final vchRefs = await db.query('vouchers', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+    final vchRefs = await db.query('vouchers',
+        where: 'customer_id = ?', whereArgs: [id], limit: 1);
     if (vchRefs.isNotEmpty) {
       return 0;
     }
     // Check if customer is referenced in quotations
     try {
-      final quotRefs = await db.query('quotations', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+      final quotRefs = await db.query('quotations',
+          where: 'customer_id = ?', whereArgs: [id], limit: 1);
       if (quotRefs.isNotEmpty) {
         return 0;
       }
@@ -386,7 +557,8 @@ class CustomerRepository {
     }
     // Check if customer is referenced in sales orders
     try {
-      final orderRefs = await db.query('sales_orders', where: 'customer_id = ?', whereArgs: [id], limit: 1);
+      final orderRefs = await db.query('sales_orders',
+          where: 'customer_id = ?', whereArgs: [id], limit: 1);
       if (orderRefs.isNotEmpty) {
         return 0;
       }
@@ -407,7 +579,8 @@ class CustomerRepository {
   /// Reverse the accounting effect of a customer's opening balance transactions
   /// so that deleting the customer doesn't leave orphaned balance changes.
   /// This version works inside an existing transaction (for atomicity with deletion).
-  Future<void> _reverseOpeningBalanceOnDeleteTxn(Transaction txn, int customerId) async {
+  Future<void> _reverseOpeningBalanceOnDeleteTxn(
+      Transaction txn, int customerId) async {
     final referenceId = 'customer_$customerId';
     // Find all opening balance transactions for this customer
     final obTxns = await txn.query(
@@ -442,14 +615,20 @@ class CustomerRepository {
     // Create reversing entries
     for (final entry in accountNet.entries) {
       final accountId = entry.key;
-      final netCredit = entry.value; // positive = original was credit, negative = original was debit
+      final netCredit = entry
+          .value; // positive = original was credit, negative = original was debit
       if (netCredit.abs() < 0.005) continue;
 
       // Look up the account's currency for currency_code and exchange_rate
-      final accountRow = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
-      final accountCurrency = accountRow.isNotEmpty ? (accountRow.first['currency'] as String? ?? 'YER') : 'YER';
+      final accountRow = await txn.query('accounts',
+          where: 'id = ?', whereArgs: [accountId], limit: 1);
+      final accountCurrency = accountRow.isNotEmpty
+          ? (accountRow.first['currency'] as String? ?? 'YER')
+          : 'YER';
       final accountExchangeRate = currencyRates[accountCurrency] ?? 1.0;
-      final baseAmount = accountCurrency == 'YER' ? netCredit.abs() : netCredit.abs() * accountExchangeRate;
+      final baseAmount = accountCurrency == 'YER'
+          ? netCredit.abs()
+          : netCredit.abs() * accountExchangeRate;
 
       if (netCredit > 0) {
         // Original was credit → reverse with debit
@@ -467,7 +646,8 @@ class CustomerRepository {
           'exchange_rate': accountExchangeRate,
           'amount_base': MoneyHelper.toCents(baseAmount),
         });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, netCredit, 0.0, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, accountId, netCredit, 0.0, now);
       } else {
         // Original was debit → reverse with credit
         final absAmount = netCredit.abs();
@@ -485,7 +665,8 @@ class CustomerRepository {
           'exchange_rate': accountExchangeRate,
           'amount_base': MoneyHelper.toCents(baseAmount),
         });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, 0.0, absAmount, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, accountId, 0.0, absAmount, now);
       }
     }
   }
@@ -496,9 +677,12 @@ class CustomerRepository {
     return (result.first['cnt'] as num?)?.toInt() ?? 0;
   }
 
-  Future<bool> isCustomerOverDebtCeiling(int customerId, double additionalAmount, {String? currency}) async {
+  Future<bool> isCustomerOverDebtCeiling(
+      int customerId, double additionalAmount,
+      {String? currency}) async {
     final db = await _db;
-    final customer = await db.query('customers', where: 'id = ?', whereArgs: [customerId], limit: 1);
+    final customer = await db.query('customers',
+        where: 'id = ?', whereArgs: [customerId], limit: 1);
     if (customer.isEmpty) return false;
 
     final debtCeiling = MoneyHelper.readMoney(customer.first['debt_ceiling']);
@@ -507,7 +691,8 @@ class CustomerRepository {
     double effectiveDebt;
     if (currency != null && currency.isNotEmpty) {
       // Use computed balance for the specific currency — accurate for multi-currency
-      final signedBalance = await getCustomerBalanceForCurrency(customerId, currency);
+      final signedBalance =
+          await getCustomerBalanceForCurrency(customerId, currency);
       // Negative signedBalance means debit (عليه) — customer owes us
       effectiveDebt = signedBalance < 0 ? signedBalance.abs() : 0.0;
     } else {
@@ -516,7 +701,8 @@ class CustomerRepository {
       final balanceType = customer.first['balance_type'] as String? ?? 'credit';
       // Only debit balance (عليه) counts as debt that the customer owes us.
       // Credit balance (له) means we owe the customer, so it reduces their debt.
-      final signedBalance = balanceType == 'debit' ? currentBalance : -currentBalance;
+      final signedBalance =
+          balanceType == 'debit' ? currentBalance : -currentBalance;
       // signedBalance > 0 means customer owes us; < 0 means we owe customer
       effectiveDebt = signedBalance > 0 ? signedBalance : 0.0;
     }
@@ -553,8 +739,10 @@ class CustomerRepository {
   //  Typed getters (C-09: domain model alternatives to raw maps)
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Customer>> getAllCustomerObjects({String orderBy = 'name', int? limit, int offset = 0}) async {
-    final maps = await getAllCustomers(orderBy: orderBy, limit: limit, offset: offset);
+  Future<List<Customer>> getAllCustomerObjects(
+      {String orderBy = 'name', int? limit, int offset = 0}) async {
+    final maps =
+        await getAllCustomers(orderBy: orderBy, limit: limit, offset: offset);
     return maps.map((m) => Customer.fromMap(m)).toList();
   }
 
@@ -598,7 +786,8 @@ class CustomerRepository {
 
   /// جلب حسابات العملاء — find customer receivable accounts by currency.
   /// Returns account rows with matching name pattern.
-  Future<List<Map<String, dynamic>>> getCustomerReceivableAccounts(String currency) async {
+  Future<List<Map<String, dynamic>>> getCustomerReceivableAccounts(
+      String currency) async {
     final db = await _db;
     return await db.rawQuery(
       "SELECT id FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET' AND currency = ?",
@@ -609,7 +798,8 @@ class CustomerRepository {
   /// جلب معاملات القيد الافتتاحي للعميل — find opening balance transactions
   /// linked to this customer via reference_id.
   /// Returns transaction rows with account currency info.
-  Future<List<Map<String, dynamic>>> getCustomerOpeningBalanceTransactions(int customerId) async {
+  Future<List<Map<String, dynamic>>> getCustomerOpeningBalanceTransactions(
+      int customerId) async {
     final db = await _db;
     // Search by reference_id — each customer's opening balance is tagged
     // with reference_id = 'customer_{id}' at creation time.
@@ -639,7 +829,8 @@ class CustomerRepository {
 
   /// جلب حسابات العملاء لجميع العملات — find customer receivable accounts
   /// across all supported currencies.
-  Future<List<Map<String, dynamic>>> getCustomerReceivableAccountsAllCurrencies() async {
+  Future<List<Map<String, dynamic>>>
+      getCustomerReceivableAccountsAllCurrencies() async {
     final db = await _db;
     return await db.rawQuery(
       "SELECT id, currency FROM accounts WHERE name_ar LIKE ? AND account_type = 'ASSET' AND account_code LIKE '12%'",
@@ -652,7 +843,8 @@ class CustomerRepository {
   /// Uses voucher_items to determine debit/credit effect for ALL voucher
   /// types (receipt, payment, settlement, compound, transfers), not just
   /// receipt and payment.
-  Future<double> getCustomerBalanceForCurrency(int customerId, String currency) async {
+  Future<double> getCustomerBalanceForCurrency(
+      int customerId, String currency) async {
     final db = await _db;
     double balance = 0.0;
 

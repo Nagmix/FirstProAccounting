@@ -102,11 +102,11 @@ void main() {
         // Entry 1: Debit Cash 950, Credit Revenue 1000, Debit Discount 50
         // Entry 2: Debit COGS 600, Credit Inventory 600
         final entries = [
-          {'debit': MoneyHelper.toCents(950.0), 'credit': 0},   // Cash
-          {'debit': MoneyHelper.toCents(50.0), 'credit': 0},    // Discount
-          {'debit': 0, 'credit': MoneyHelper.toCents(1000.0)},  // Revenue
-          {'debit': MoneyHelper.toCents(600.0), 'credit': 0},   // COGS
-          {'debit': 0, 'credit': MoneyHelper.toCents(600.0)},   // Inventory
+          {'debit': MoneyHelper.toCents(950.0), 'credit': 0}, // Cash
+          {'debit': MoneyHelper.toCents(50.0), 'credit': 0}, // Discount
+          {'debit': 0, 'credit': MoneyHelper.toCents(1000.0)}, // Revenue
+          {'debit': MoneyHelper.toCents(600.0), 'credit': 0}, // COGS
+          {'debit': 0, 'credit': MoneyHelper.toCents(600.0)}, // Inventory
         ];
         expect(() => validateJournalBalance(entries), returnsNormally);
       });

@@ -203,11 +203,13 @@ class ProductUnitsStep extends StatelessWidget {
               child: Column(
                 children: [
                   Icon(Icons.add_circle_outline,
-                      size: 40, color: AppColors.textTertiary.withValues(alpha: 0.4)),
+                      size: 40,
+                      color: AppColors.textTertiary.withValues(alpha: 0.4)),
                   const SizedBox(height: 8),
                   Text('لا توجد تحويلات',
                       style: TextStyle(
-                          color: AppColors.textTertiary.withValues(alpha: 0.6))),
+                          color:
+                              AppColors.textTertiary.withValues(alpha: 0.6))),
                   const SizedBox(height: 4),
                   Text('اضغط "إضافة تحويل" لتحديد وحدة أكبر',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -227,10 +229,26 @@ class ProductUnitsStep extends StatelessWidget {
             ),
             child: const Row(
               children: [
-                Expanded(flex: 3, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                Expanded(flex: 3, child: Text('معامل التحويل', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                Expanded(flex: 2, child: Text('سعر البيع', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                Expanded(flex: 2, child: Text('سعر التكلفة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                Expanded(
+                    flex: 3,
+                    child: Text('الوحدة',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 12))),
+                Expanded(
+                    flex: 3,
+                    child: Text('معامل التحويل',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 12))),
+                Expanded(
+                    flex: 2,
+                    child: Text('سعر البيع',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 12))),
+                Expanded(
+                    flex: 2,
+                    child: Text('سعر التكلفة',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 12))),
                 SizedBox(width: 40),
               ],
             ),
@@ -281,7 +299,10 @@ class ProductUnitsStep extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('وحدة بيع افتراضية',
-                    style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600)),
               ),
           ],
         ),
@@ -289,7 +310,8 @@ class ProductUnitsStep extends StatelessWidget {
     );
   }
 
-  Widget _buildConversionRow(BuildContext context, UnitConversionRow row, int index) {
+  Widget _buildConversionRow(
+      BuildContext context, UnitConversionRow row, int index) {
     final baseUnitName = unitNameById(selectedBaseUnitId);
 
     return Container(
@@ -310,7 +332,8 @@ class ProductUnitsStep extends StatelessWidget {
               decoration: const InputDecoration(
                 isDense: true,
                 labelText: 'الوحدة',
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               ),
               items: units
                   .where((u) => u['id'] != selectedBaseUnitId)
@@ -333,8 +356,10 @@ class ProductUnitsStep extends StatelessWidget {
           Expanded(
             flex: 3,
             child: TextFormField(
-              initialValue: row.factor == 1.0 ? '' : row.factor.toStringAsFixed(0),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              initialValue:
+                  row.factor == 1.0 ? '' : row.factor.toStringAsFixed(0),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,4}')),
               ],
@@ -359,8 +384,10 @@ class ProductUnitsStep extends StatelessWidget {
           Expanded(
             flex: 2,
             child: TextFormField(
-              initialValue: row.sellPrice > 0 ? row.sellPrice.toStringAsFixed(2) : '',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              initialValue:
+                  row.sellPrice > 0 ? row.sellPrice.toStringAsFixed(2) : '',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
               ],
@@ -416,7 +443,9 @@ class ProductUnitsStep extends StatelessWidget {
     }
 
     return TextFormField(
-      initialValue: autoCost > 0 ? autoCost.toStringAsFixed(2) : (row.costPrice > 0 ? row.costPrice.toStringAsFixed(2) : ''),
+      initialValue: autoCost > 0
+          ? autoCost.toStringAsFixed(2)
+          : (row.costPrice > 0 ? row.costPrice.toStringAsFixed(2) : ''),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
@@ -430,7 +459,8 @@ class ProductUnitsStep extends StatelessWidget {
         suffixIcon: autoCost > 0
             ? Tooltip(
                 message: 'محسوب تلقائياً من سعر تكلفة وحدة الشراء',
-                child: Icon(Icons.auto_fix_high, size: 16, color: AppColors.success.withValues(alpha: 0.7)),
+                child: Icon(Icons.auto_fix_high,
+                    size: 16, color: AppColors.success.withValues(alpha: 0.7)),
               )
             : null,
       ),

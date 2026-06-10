@@ -10,13 +10,16 @@ import '../../../../core/viewmodels/pos_viewmodel.dart';
 import '../../../../data/datasources/services/shift_service.dart';
 
 /// Helper to build a report row.
-Widget reportRow(BuildContext context, String label, String value, {Color? valueColor, bool isBold = false}) {
+Widget reportRow(BuildContext context, String label, String value,
+    {Color? valueColor, bool isBold = false}) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: context.textTheme.bodyMedium?.copyWith(color: context.textSecondary)),
+        Text(label,
+            style: context.textTheme.bodyMedium
+                ?.copyWith(color: context.textSecondary)),
         Text(
           value,
           style: context.textTheme.bodyMedium?.copyWith(
@@ -34,7 +37,9 @@ Future<void> showXReport(BuildContext context, PosViewModel vm) async {
   final shift = vm.activeShift;
   if (shift == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('لا توجد وردية نشطة'), backgroundColor: AppColors.warning),
+      const SnackBar(
+          content: Text('لا توجد وردية نشطة'),
+          backgroundColor: AppColors.warning),
     );
     return;
   }
@@ -43,7 +48,8 @@ Future<void> showXReport(BuildContext context, PosViewModel vm) async {
   final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
   final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
   final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
-  final expectedAmount = openingAmount + totalSales - totalReturns - totalDiscounts;
+  final expectedAmount =
+      openingAmount + totalSales - totalReturns - totalDiscounts;
 
   await showModalBottomSheet(
     context: context,
@@ -55,7 +61,9 @@ Future<void> showXReport(BuildContext context, PosViewModel vm) async {
           left: 20,
           right: 20,
           top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom +
+              MediaQuery.of(ctx).viewPadding.bottom +
+              20,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -81,39 +89,53 @@ Future<void> showXReport(BuildContext context, PosViewModel vm) async {
                     color: AppColors.info.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.bar_chart, color: AppColors.info, size: 24),
+                  child: const Icon(Icons.bar_chart,
+                      color: AppColors.info, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'تقرير X – منتصف الوردية',
-                  style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  style: context.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            reportRow(context, 'رقم الوردية', shift['shift_number']?.toString() ?? '-'),
+            reportRow(context, 'رقم الوردية',
+                shift['shift_number']?.toString() ?? '-'),
             reportRow(context, 'الكاشير', vm.cashierName),
             reportRow(context, 'الصندوق', vm.shiftCashBoxName),
             reportRow(context, 'المدة', vm.formattedShiftDuration),
             const Divider(height: 24),
-            reportRow(context, 'رصيد الافتتاح', CurrencyFormatter.format(openingAmount), valueColor: AppColors.primary),
-            reportRow(context, 'إجمالي المبيعات', CurrencyFormatter.format(totalSales), valueColor: AppColors.success),
-            reportRow(context, 'إجمالي المرتجعات', CurrencyFormatter.format(totalReturns), valueColor: AppColors.error),
-            reportRow(context, 'إجمالي الخصومات', CurrencyFormatter.format(totalDiscounts), valueColor: AppColors.warning),
+            reportRow(context, 'رصيد الافتتاح',
+                CurrencyFormatter.format(openingAmount),
+                valueColor: AppColors.primary),
+            reportRow(context, 'إجمالي المبيعات',
+                CurrencyFormatter.format(totalSales),
+                valueColor: AppColors.success),
+            reportRow(context, 'إجمالي المرتجعات',
+                CurrencyFormatter.format(totalReturns),
+                valueColor: AppColors.error),
+            reportRow(context, 'إجمالي الخصومات',
+                CurrencyFormatter.format(totalDiscounts),
+                valueColor: AppColors.warning),
             const Divider(height: 24),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border:
+                    Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
-                  reportRow(context, 'المتوقع في الصندوق', CurrencyFormatter.format(expectedAmount),
+                  reportRow(context, 'المتوقع في الصندوق',
+                      CurrencyFormatter.format(expectedAmount),
                       valueColor: AppColors.primary, isBold: true),
                   const SizedBox(height: 6),
-                  reportRow(context, 'عدد المعاملات', transactionCount.toString()),
+                  reportRow(
+                      context, 'عدد المعاملات', transactionCount.toString()),
                 ],
               ),
             ),
@@ -126,9 +148,11 @@ Future<void> showXReport(BuildContext context, PosViewModel vm) async {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.info,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('إغلاق التقرير', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: const Text('إغلاق التقرير',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ),
           ],
@@ -143,7 +167,9 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
   final shift = vm.activeShift;
   if (shift == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('لا توجد وردية نشطة'), backgroundColor: AppColors.warning),
+      const SnackBar(
+          content: Text('لا توجد وردية نشطة'),
+          backgroundColor: AppColors.warning),
     );
     return;
   }
@@ -153,7 +179,8 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
   final totalReturns = MoneyHelper.readMoney(shift['total_returns']);
   final totalDiscounts = MoneyHelper.readMoney(shift['total_discounts']);
   final transactionCount = (shift['transaction_count'] as num?)?.toInt() ?? 0;
-  final expectedAmount = openingAmount + totalSales - totalReturns - totalDiscounts;
+  final expectedAmount =
+      openingAmount + totalSales - totalReturns - totalDiscounts;
 
   final closingAmountController = TextEditingController();
   final notesController = TextEditingController();
@@ -168,7 +195,9 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
           left: 20,
           right: 20,
           top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).viewPadding.bottom + 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom +
+              MediaQuery.of(ctx).viewPadding.bottom +
+              20,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -195,27 +224,37 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                       color: AppColors.error.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.logout, color: AppColors.error, size: 24),
+                    child: const Icon(Icons.logout,
+                        color: AppColors.error, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Text(
                     'تقرير Z – إغلاق الوردية',
-                    style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                    style: context.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              reportRow(context, 'رقم الوردية', shift['shift_number']?.toString() ?? '-'),
+              reportRow(context, 'رقم الوردية',
+                  shift['shift_number']?.toString() ?? '-'),
               reportRow(context, 'الكاشير', vm.cashierName),
               reportRow(context, 'الصندوق', vm.shiftCashBoxName),
               reportRow(context, 'المدة', vm.formattedShiftDuration),
               const Divider(height: 20),
 
-              reportRow(context, 'رصيد الافتتاح', CurrencyFormatter.format(openingAmount)),
-              reportRow(context, 'إجمالي المبيعات', CurrencyFormatter.format(totalSales), valueColor: AppColors.success),
-              reportRow(context, 'إجمالي المرتجعات', CurrencyFormatter.format(totalReturns), valueColor: AppColors.error),
-              reportRow(context, 'إجمالي الخصومات', CurrencyFormatter.format(totalDiscounts), valueColor: AppColors.warning),
+              reportRow(context, 'رصيد الافتتاح',
+                  CurrencyFormatter.format(openingAmount)),
+              reportRow(context, 'إجمالي المبيعات',
+                  CurrencyFormatter.format(totalSales),
+                  valueColor: AppColors.success),
+              reportRow(context, 'إجمالي المرتجعات',
+                  CurrencyFormatter.format(totalReturns),
+                  valueColor: AppColors.error),
+              reportRow(context, 'إجمالي الخصومات',
+                  CurrencyFormatter.format(totalDiscounts),
+                  valueColor: AppColors.warning),
               reportRow(context, 'عدد المعاملات', transactionCount.toString()),
               const Divider(height: 20),
 
@@ -224,15 +263,18 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
-                child: reportRow(context, 'المتوقع في الصندوق', CurrencyFormatter.format(expectedAmount),
+                child: reportRow(context, 'المتوقع في الصندوق',
+                    CurrencyFormatter.format(expectedAmount),
                     valueColor: AppColors.primary, isBold: true),
               ),
               const SizedBox(height: 16),
 
               Text('المبلغ الفعلي في الصندوق',
-                  style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  style: context.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextField(
                 controller: closingAmountController,
@@ -241,21 +283,25 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                 decoration: InputDecoration(
                   hintText: 'أدخل المبلغ الفعلي',
                   suffixText: AppConstants.currency,
-                  prefixIcon: const Icon(Icons.account_balance_wallet, size: 20),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  prefixIcon:
+                      const Icon(Icons.account_balance_wallet, size: 20),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 16),
 
               Text('ملاحظات (اختياري)',
-                  style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  style: context.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextField(
                 controller: notesController,
                 maxLines: 2,
                 decoration: InputDecoration(
                   hintText: 'ملاحظات الإغلاق...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -267,7 +313,8 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                 child: ElevatedButton(
                   onPressed: () async {
                     final closingAmount =
-                        double.tryParse(closingAmountController.text) ?? expectedAmount;
+                        double.tryParse(closingAmountController.text) ??
+                            expectedAmount;
                     final difference = closingAmount - expectedAmount;
                     final now = DateTime.now();
 
@@ -279,7 +326,9 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                       'difference': difference,
                       'status': 'closed',
                       'closed_at': now.toIso8601String(),
-                      'notes': notesController.text.isEmpty ? shift['notes'] : notesController.text,
+                      'notes': notesController.text.isEmpty
+                          ? shift['notes']
+                          : notesController.text,
                       'updated_at': now.toIso8601String(),
                     };
                     await vm.closeShift(shiftId, closeData);
@@ -312,8 +361,10 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('المتوقع: ${CurrencyFormatter.format(expectedAmount)}'),
-                              Text('الفعلي: ${CurrencyFormatter.format(closingAmount)}'),
+                              Text(
+                                  'المتوقع: ${CurrencyFormatter.format(expectedAmount)}'),
+                              Text(
+                                  'الفعلي: ${CurrencyFormatter.format(closingAmount)}'),
                               const SizedBox(height: 8),
                               if (difference.abs() >= 0.005)
                                 Text(
@@ -322,18 +373,23 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                                       : 'عجز: ${CurrencyFormatter.format(difference.abs())}',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    color: difference > 0 ? AppColors.success : AppColors.error,
+                                    color: difference > 0
+                                        ? AppColors.success
+                                        : AppColors.error,
                                   ),
                                 )
                               else
                                 const Text(
                                   'الصندوق متوازن',
-                                  style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.success),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.success),
                                 ),
                               const SizedBox(height: 8),
                               const Text(
                                 'تم ترحيل جميع فواتير الوردية إلى الحسابات',
-                                style: TextStyle(fontSize: 12, color: AppColors.info),
+                                style: TextStyle(
+                                    fontSize: 12, color: AppColors.info),
                               ),
                             ],
                           ),
@@ -350,10 +406,12 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.error,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                   child: const Text('إغلاق الوردية وترحيل الفواتير',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 ),
               ),
             ],

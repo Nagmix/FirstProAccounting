@@ -22,8 +22,10 @@ class MigrationHelpers {
     }
     final difference = (totalDebit - totalCredit).abs();
     if (difference > 0.01) {
-      debugPrint('⚠️ UNBALANCED JOURNAL ENTRY: Debit=$totalDebit, Credit=$totalCredit, Diff=$difference');
-      throw Exception('قيد محاسبي غير متوازن: المدين=$totalDebit, الدائن=$totalCredit, الفرق=$difference');
+      debugPrint(
+          '⚠️ UNBALANCED JOURNAL ENTRY: Debit=$totalDebit, Credit=$totalCredit, Diff=$difference');
+      throw Exception(
+          'قيد محاسبي غير متوازن: المدين=$totalDebit, الدائن=$totalCredit, الفرق=$difference');
     }
   }
 
@@ -39,7 +41,8 @@ class MigrationHelpers {
     double credit,
     String now,
   ) async {
-    final account = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId], limit: 1);
+    final account = await txn.query('accounts',
+        where: 'id = ?', whereArgs: [accountId], limit: 1);
     if (account.isNotEmpty) {
       final currentBalance = MoneyHelper.readMoney(account.first['balance']);
       final balanceType = account.first['balance_type'] as String? ?? 'credit';
@@ -49,13 +52,16 @@ class MigrationHelpers {
       } else {
         newBalance = currentBalance + debit - credit;
       }
-      await txn.update('accounts', {'balance': MoneyHelper.toCents(newBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [accountId]);
+      await txn.update('accounts',
+          {'balance': MoneyHelper.toCents(newBalance), 'updated_at': now},
+          where: 'id = ?', whereArgs: [accountId]);
     }
   }
 
   /// التحقق من أن الفترة المحاسبية مفتوحة قبل إجراء أي عملية
   /// يمنع تعديل أو إضافة قيود في فترات مغلقة
-  static Future<void> checkFiscalPeriodOpen(DatabaseExecutor db, String dateStr) async {
+  static Future<void> checkFiscalPeriodOpen(
+      DatabaseExecutor db, String dateStr) async {
     final date = DateTime.tryParse(dateStr);
     if (date == null) return;
     final year = date.year;
@@ -68,7 +74,8 @@ class MigrationHelpers {
       limit: 1,
     );
     if (result.isNotEmpty) {
-      throw Exception('الفترة المحاسبية للعام $year مغلقة. لا يمكن إجراء عمليات في فترة مقفلة.');
+      throw Exception(
+          'الفترة المحاسبية للعام $year مغلقة. لا يمكن إجراء عمليات في فترة مقفلة.');
     }
   }
 
@@ -103,10 +110,13 @@ class MigrationHelpers {
   /// التحقق الإلزامي من توازن القيد المزدوج قبل الحفظ
   /// يُستخدم كدالة مساعدة للتأكد من أن مجموع المدين = مجموع الدائن
   static void assertJournalBalance(List<Map<String, dynamic>> entries) {
-    final totalDebit = entries.fold(0.0, (sum, e) => sum + MoneyHelper.readMoney(e['debit']));
-    final totalCredit = entries.fold(0.0, (sum, e) => sum + MoneyHelper.readMoney(e['credit']));
+    final totalDebit =
+        entries.fold(0.0, (sum, e) => sum + MoneyHelper.readMoney(e['debit']));
+    final totalCredit =
+        entries.fold(0.0, (sum, e) => sum + MoneyHelper.readMoney(e['credit']));
     if ((totalDebit - totalCredit).abs() > 0.01) {
-      throw Exception('القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit. يجب أن يتساوى المدين والدائن.');
+      throw Exception(
+          'القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit. يجب أن يتساوى المدين والدائن.');
     }
   }
 }

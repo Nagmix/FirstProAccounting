@@ -46,7 +46,8 @@ class ExpenseSubAccountRepository {
   }
 
   /// Update a sub-account.
-  Future<int> updateSubAccount(int id, Map<String, dynamic> subAccountMap) async {
+  Future<int> updateSubAccount(
+      int id, Map<String, dynamic> subAccountMap) async {
     final db = await _db;
     final dbMap = MoneyHelper.toCentsMap(subAccountMap, moneyFields);
     return await db.update(
@@ -102,14 +103,17 @@ class ExpenseSubAccountRepository {
       [subAccountId, currency],
     );
     if (result.isEmpty) return 0.0;
-    final totalSarf = MoneyHelper.readCalculatedMoney(result.first['total_sarf']);
-    final totalQabd = MoneyHelper.readCalculatedMoney(result.first['total_qabd']);
+    final totalSarf =
+        MoneyHelper.readCalculatedMoney(result.first['total_sarf']);
+    final totalQabd =
+        MoneyHelper.readCalculatedMoney(result.first['total_qabd']);
     return totalSarf - totalQabd;
   }
 
   /// Get the total balance across all currencies for a sub-account.
   /// Returns a Map<String, double> mapping currency code to balance.
-  Future<Map<String, double>> getSubAccountTotalBalance(int subAccountId) async {
+  Future<Map<String, double>> getSubAccountTotalBalance(
+      int subAccountId) async {
     final db = await _db;
     final results = await db.rawQuery(
       "SELECT "

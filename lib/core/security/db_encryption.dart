@@ -32,7 +32,8 @@ class DbEncryption {
       var key = await _secureStorage.read(key: _keyStorageKey);
       if (key == null || key.isEmpty) {
         // Generate a cryptographically random 32-byte hex key
-        final bytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
+        final bytes =
+            List<int>.generate(32, (_) => Random.secure().nextInt(256));
         key = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
         await _secureStorage.write(key: _keyStorageKey, value: key);
       }

@@ -144,21 +144,33 @@ class MoneyHelper {
   /// Common money field names for each table.
   /// Use these constants to avoid typos and keep field lists centralized.
   static const invoiceMoneyFields = [
-    'subtotal', 'discount_amount', 'tax_amount', 'transport_charges',
-    'total', 'paid_amount', 'remaining',
+    'subtotal',
+    'discount_amount',
+    'tax_amount',
+    'transport_charges',
+    'total',
+    'paid_amount',
+    'remaining',
   ];
 
   static const invoiceItemMoneyFields = [
-    'unit_price', 'total_price', 'unit_cost',
+    'unit_price',
+    'total_price',
+    'unit_cost',
   ];
 
   static const productMoneyFields = [
-    'sell_price', 'cost_price', 'average_cost',
-    'wholesale_price', 'special_wholesale_price', 'minimum_sale_price',
+    'sell_price',
+    'cost_price',
+    'average_cost',
+    'wholesale_price',
+    'special_wholesale_price',
+    'minimum_sale_price',
   ];
 
   static const accountMoneyFields = [
-    'balance', 'debt_ceiling',
+    'balance',
+    'debt_ceiling',
   ];
 
   static const expenseMoneyFields = [
@@ -167,33 +179,43 @@ class MoneyHelper {
 
   // Note: 'opening_balance' removed (not a column in customers table).
   static const customerMoneyFields = [
-    'balance', 'debt_ceiling',
+    'balance',
+    'debt_ceiling',
   ];
 
   // Fix: 'opening_balance' removed (not a column in suppliers table).
   // Fix: 'debt_ceiling' added (it IS a money column stored in cents).
   static const supplierMoneyFields = [
-    'balance', 'debt_ceiling',
+    'balance',
+    'debt_ceiling',
   ];
 
   static const cashBoxMoneyFields = [
-    'balance', 'opening_balance',
+    'balance',
+    'opening_balance',
   ];
 
   // Fix #4: Include 'total_amount' — the vouchers table stores the amount
   // in a column named 'total_amount', not 'amount'. Without this, the
   // toCentsMap conversion would skip the field entirely, causing a ×100 error.
   static const voucherMoneyFields = [
-    'total_amount', 'amount',
+    'total_amount',
+    'amount',
   ];
 
   static const shiftMoneyFields = [
-    'opening_amount', 'total_sales', 'total_returns', 'total_discounts', 'closing_amount',
-    'expected_amount', 'difference',
+    'opening_amount',
+    'total_sales',
+    'total_returns',
+    'total_discounts',
+    'closing_amount',
+    'expected_amount',
+    'difference',
   ];
 
   static const transactionMoneyFields = [
-    'debit', 'credit',
+    'debit',
+    'credit',
   ];
 
   static const stockMovementMoneyFields = [
@@ -205,18 +227,31 @@ class MoneyHelper {
   ];
 
   static const orderMoneyFields = [
-    'subtotal', 'discount_amount', 'tax_amount', 'total', 'paid_amount', 'remaining',
+    'subtotal',
+    'discount_amount',
+    'tax_amount',
+    'total',
+    'paid_amount',
+    'remaining',
   ];
 
   static const orderItemMoneyFields = [
-    'unit_price', 'total_price',
+    'unit_price',
+    'total_price',
   ];
 
   static const bankReconciliationMoneyFields = [
-    'statement_balance', 'book_balance', 'deposits_in_transit',
-    'outstanding_checks', 'bank_charges', 'interest_earned',
-    'nsf_checks', 'other_adjustments', 'adjusted_bank_balance',
-    'adjusted_book_balance', 'difference',
+    'statement_balance',
+    'book_balance',
+    'deposits_in_transit',
+    'outstanding_checks',
+    'bank_charges',
+    'interest_earned',
+    'nsf_checks',
+    'other_adjustments',
+    'adjusted_bank_balance',
+    'adjusted_book_balance',
+    'difference',
   ];
 
   static const bankStatementLineMoneyFields = [

@@ -30,10 +30,10 @@ void main() {
           {'account_id': 1, 'debit': MoneyHelper.toCents(1000.0), 'credit': 0},
           {'account_id': 2, 'debit': 0, 'credit': MoneyHelper.toCents(1000.0)},
         ];
-        final totalDebit = entries.fold<int>(0,
-            (sum, e) => sum + (e['debit'] as int));
-        final totalCredit = entries.fold<int>(0,
-            (sum, e) => sum + (e['credit'] as int));
+        final totalDebit =
+            entries.fold<int>(0, (sum, e) => sum + (e['debit'] as int));
+        final totalCredit =
+            entries.fold<int>(0, (sum, e) => sum + (e['credit'] as int));
         expect(totalDebit, equals(totalCredit));
       });
 
@@ -44,10 +44,10 @@ void main() {
           {'account_id': 2, 'debit': 0, 'credit': MoneyHelper.toCents(1000.0)},
           {'account_id': 3, 'debit': 0, 'credit': MoneyHelper.toCents(150.0)},
         ];
-        final totalDebit = entries.fold<int>(0,
-            (sum, e) => sum + (e['debit'] as int));
-        final totalCredit = entries.fold<int>(0,
-            (sum, e) => sum + (e['credit'] as int));
+        final totalDebit =
+            entries.fold<int>(0, (sum, e) => sum + (e['debit'] as int));
+        final totalCredit =
+            entries.fold<int>(0, (sum, e) => sum + (e['credit'] as int));
         expect(totalDebit, equals(totalCredit));
       });
 
@@ -56,10 +56,10 @@ void main() {
           {'account_id': 1, 'debit': MoneyHelper.toCents(1000.0), 'credit': 0},
           {'account_id': 2, 'debit': 0, 'credit': MoneyHelper.toCents(900.0)},
         ];
-        final totalDebit = entries.fold<int>(0,
-            (sum, e) => sum + (e['debit'] as int));
-        final totalCredit = entries.fold<int>(0,
-            (sum, e) => sum + (e['credit'] as int));
+        final totalDebit =
+            entries.fold<int>(0, (sum, e) => sum + (e['debit'] as int));
+        final totalCredit =
+            entries.fold<int>(0, (sum, e) => sum + (e['credit'] as int));
         expect(totalDebit, isNot(equals(totalCredit)));
       });
 
@@ -71,10 +71,10 @@ void main() {
           {'account_id': 2, 'debit': MoneyHelper.toCents(50.0), 'credit': 0},
           {'account_id': 3, 'debit': 0, 'credit': MoneyHelper.toCents(1000.0)},
         ];
-        final totalDebit = entries.fold<int>(0,
-            (sum, e) => sum + (e['debit'] as int));
-        final totalCredit = entries.fold<int>(0,
-            (sum, e) => sum + (e['credit'] as int));
+        final totalDebit =
+            entries.fold<int>(0, (sum, e) => sum + (e['debit'] as int));
+        final totalCredit =
+            entries.fold<int>(0, (sum, e) => sum + (e['credit'] as int));
         expect(totalDebit, equals(totalCredit));
       });
 
@@ -88,10 +88,10 @@ void main() {
           {'debit': MoneyHelper.toCents(600.0), 'credit': 0},
           {'debit': 0, 'credit': MoneyHelper.toCents(600.0)},
         ];
-        final totalDebit = entries.fold<int>(0,
-            (sum, e) => sum + (e['debit'] as int));
-        final totalCredit = entries.fold<int>(0,
-            (sum, e) => sum + (e['credit'] as int));
+        final totalDebit =
+            entries.fold<int>(0, (sum, e) => sum + (e['debit'] as int));
+        final totalCredit =
+            entries.fold<int>(0, (sum, e) => sum + (e['credit'] as int));
         expect(totalDebit, equals(totalCredit));
       });
     });
@@ -111,7 +111,9 @@ void main() {
         };
         for (final entry in testCases.entries) {
           final account = Account(
-            nameAr: 'Test', nameEn: 'Test', accountCode: '0000',
+            nameAr: 'Test',
+            nameEn: 'Test',
+            accountCode: '0000',
             accountType: entry.key,
           );
           expect(account.effectiveBalanceType, equals(entry.value),
@@ -122,7 +124,8 @@ void main() {
       test('balance type affects account balance calculation', () {
         // For debit-balance accounts: balance = debit - credit (increases with debit)
         // For credit-balance accounts: balance = credit - debit (increases with credit)
-        double calculateBalance(String balanceType, double debit, double credit) {
+        double calculateBalance(
+            String balanceType, double debit, double credit) {
           if (balanceType == 'debit') {
             return debit - credit;
           } else {
@@ -167,7 +170,8 @@ void main() {
         // Regular double may drift: 9.99999999999983
         // Accounting should be exact: 10.00
         expect(MoneyHelper.isZero(accounting - 10.0), isTrue);
-        expect(regular, isNot(equals(10.0))); // Proves floating-point is imprecise
+        expect(
+            regular, isNot(equals(10.0))); // Proves floating-point is imprecise
       });
 
       test('percentage calculations maintain precision', () {
@@ -217,7 +221,8 @@ void main() {
       test('invoice with percentage discount', () {
         final subtotal = 2000.0;
         final discountRate = 10.0; // 10%
-        final discountAmount = MoneyHelper.multiply(subtotal, discountRate / 100);
+        final discountAmount =
+            MoneyHelper.multiply(subtotal, discountRate / 100);
         expect(discountAmount, closeTo(200.0, 0.01));
         final total = MoneyHelper.subtract(subtotal, discountAmount);
         expect(total, closeTo(1800.0, 0.01));
@@ -353,12 +358,14 @@ void main() {
     // ═══════════════════════════════════════════════════════════
     group('Invoice Effective Type', () {
       test('cash sale → effectiveType = sale', () {
-        final invoice = Invoice(id: '1', type: 'sale', paymentMechanism: 'cash');
+        final invoice =
+            Invoice(id: '1', type: 'sale', paymentMechanism: 'cash');
         expect(invoice.effectiveType, equals('sale'));
       });
 
       test('credit sale → effectiveType = sale', () {
-        final invoice = Invoice(id: '1', type: 'sale', paymentMechanism: 'credit');
+        final invoice =
+            Invoice(id: '1', type: 'sale', paymentMechanism: 'credit');
         expect(invoice.effectiveType, equals('sale'));
       });
 
@@ -427,16 +434,26 @@ void main() {
         // Credits: 5000 + 8000 + 5000 + 4000 + 0 + 5000 = 27000
         final accounts = [
           {'code': '1000', 'type': 'ASSET', 'debit': 15000.0, 'credit': 5000.0},
-          {'code': '2000', 'type': 'LIABILITY', 'debit': 2000.0, 'credit': 8000.0},
+          {
+            'code': '2000',
+            'type': 'LIABILITY',
+            'debit': 2000.0,
+            'credit': 8000.0
+          },
           {'code': '3000', 'type': 'EQUITY', 'debit': 0.0, 'credit': 5000.0},
           {'code': '4000', 'type': 'REVENUE', 'debit': 0.0, 'credit': 4000.0},
           {'code': '5000', 'type': 'COST', 'debit': 7000.0, 'credit': 0.0},
-          {'code': '5200', 'type': 'EXPENSE', 'debit': 3000.0, 'credit': 5000.0},
+          {
+            'code': '5200',
+            'type': 'EXPENSE',
+            'debit': 3000.0,
+            'credit': 5000.0
+          },
         ];
-        final totalDebit = accounts.fold<double>(0.0,
-            (sum, a) => sum + (a['debit'] as double));
-        final totalCredit = accounts.fold<double>(0.0,
-            (sum, a) => sum + (a['credit'] as double));
+        final totalDebit = accounts.fold<double>(
+            0.0, (sum, a) => sum + (a['debit'] as double));
+        final totalCredit = accounts.fold<double>(
+            0.0, (sum, a) => sum + (a['credit'] as double));
         expect(totalDebit, equals(totalCredit));
         expect(totalDebit, equals(27000.0));
         expect(totalCredit, equals(27000.0));
@@ -445,7 +462,9 @@ void main() {
       test('account balances computed correctly per type', () {
         double computeBalance(AccountType type, double debit, double credit) {
           final account = Account(
-            nameAr: 'Test', nameEn: 'Test', accountCode: '0000',
+            nameAr: 'Test',
+            nameEn: 'Test',
+            accountCode: '0000',
             accountType: type,
           );
           if (account.effectiveBalanceType == 'debit') {
@@ -615,8 +634,10 @@ void main() {
         // Journal entries must balance
         // Entry 1: Debit Cash 500, Credit Revenue 500
         // Entry 2: Debit COGS 300, Credit Inventory 300
-        final totalDebits = MoneyHelper.toCents(500.0) + MoneyHelper.toCents(300.0);
-        final totalCredits = MoneyHelper.toCents(500.0) + MoneyHelper.toCents(300.0);
+        final totalDebits =
+            MoneyHelper.toCents(500.0) + MoneyHelper.toCents(300.0);
+        final totalCredits =
+            MoneyHelper.toCents(500.0) + MoneyHelper.toCents(300.0);
         expect(totalDebits, equals(totalCredits));
 
         // Stock reduced
@@ -736,7 +757,10 @@ void main() {
         final paidInCapital = 30000.0;
         final retainedEarnings = 5000.0;
         final totalEquity = MoneyHelper.add(paidInCapital, retainedEarnings);
-        expect(MoneyHelper.compare(assets, MoneyHelper.add(liabilities, totalEquity)), equals(0));
+        expect(
+            MoneyHelper.compare(
+                assets, MoneyHelper.add(liabilities, totalEquity)),
+            equals(0));
       });
     });
   });
