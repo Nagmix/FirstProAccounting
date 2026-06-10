@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 /// Service responsible for journal-entry operations, account-balance updates,
 /// fiscal-period validation, and exchange-rate gain/loss accounting.
@@ -532,13 +534,8 @@ class JournalService {
     String currency,
   ) async {
     // Determine code offset based on currency
-    String codeOffset = '0';
-    if (currency == 'SAR') {
-      codeOffset = '1';
-    } else if (currency == 'USD') {
-      codeOffset = '2';
-    }
-    final actualCode = (int.parse(baseCode) + int.parse(codeOffset)).toString();
+    final offset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
+    final actualCode = (int.parse(baseCode) + offset).toString();
     final result = await txn.query(
       'accounts',
       where: 'account_code = ? AND currency = ?',

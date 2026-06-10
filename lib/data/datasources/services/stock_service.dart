@@ -3,7 +3,9 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class StockService {
   final DatabaseHelper _dbHelper;
@@ -201,8 +203,8 @@ class StockService {
 
       if (transferValue.abs() >= 0.005) {
         final journalId = generateUniqueJournalId();
-        final codeOffset =
-            transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>()
+            .getOffsetForCurrency(transferCurrency);
         final transferRate = await _getExchangeRate(txn, transferCurrency);
 
         // محاولة استخدام حساب المخزون المرتبط بالمستودع، أو الافتراضي
@@ -379,7 +381,8 @@ class StockService {
       // ── تحديد حسابات تعديل المخزون (إنشاء تلقائي إذا لم تكن موجودة) ──
       // العملة الافتراضية للجرد هي YER (المنتجات لا تحمل عملة)
       const stocktakingCurrency = 'YER';
-      const codeOffset = 0; // YER offset
+      final codeOffset = await locator<BaseCurrencyService>()
+          .getOffsetForCurrency(stocktakingCurrency);
 
       // حساب المخزون (1300+offset)
       final inventoryAccountRows = await txn.query(
@@ -772,7 +775,7 @@ class StockService {
 
         // ── C-05: استخدام حسابات تفاوت الجرد بدل COGS ──
         // COGS يجب أن يعكس تكلفة البضاعة المباعة فقط وليس فروقات الجرد
-        final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
 
         // حساب المخزون (1300+offset)
         final inventoryAccount = await _dbHelper.journal
@@ -1199,7 +1202,7 @@ class StockService {
       }
 
       // ── C-05: استخدام حسابات تفاوت الجرد بدل COGS في تأكيد السند ──
-      final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+      final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
 
       // حساب المخزون (1300+offset)
       final inventoryAccount = await _dbHelper.journal

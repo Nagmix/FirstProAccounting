@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
@@ -45,17 +46,6 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   // ── Last exchange result (for journal entry display) ──────────────
   Map<String, dynamic>? _lastExchange;
   bool _showJournalEntry = false;
-
-  // ── Currency display info ─────────────────────────────────────────
-  static const Map<String, Map<String, String>> _currencyInfo = {
-    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
-    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
-    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
-  };
-
-  // ── Account code offsets per currency ─────────────────────────────
-  // ignore: unused_field
-  static const Map<String, int> _codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2};
 
   @override
   void initState() {
@@ -241,10 +231,10 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
     return value.toStringAsFixed(2);
   }
 
-  String _currencySymbol(String code) => _currencyInfo[code]?['symbol'] ?? code;
+  String _currencySymbol(String code) => CurrencyConstants.currencyInfo[code]?['symbol'] ?? code;
 
   String _currencyLabel(String code) =>
-      '${_currencyInfo[code]?['label'] ?? code} ($code)';
+      '${CurrencyConstants.currencyInfo[code]?['label'] ?? code} ($code)';
 
   // ═══════════════════════════════════════════════════════════════════
   //  EXCHANGE SUBMISSION

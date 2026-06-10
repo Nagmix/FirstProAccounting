@@ -5,14 +5,14 @@ class CurrencyFormatter {
   CurrencyFormatter._();
 
   /// Formats [amount] with two decimal places and the given [symbol].
-  static String format(double amount, {String symbol = AppConstants.currency}) {
+  static String format(double amount, {String? symbol}) {
+    final effectiveSymbol = symbol ?? AppConstants.currency;
     final formatted = _addCommas(amount.toStringAsFixed(2));
-    return '$formatted $symbol';
+    return '$formatted $effectiveSymbol';
   }
 
   /// Formats [amount] with the currency symbol (alias for format).
-  static String formatWithSymbol(double amount,
-      {String symbol = AppConstants.currency}) {
+  static String formatWithSymbol(double amount, {String? symbol}) {
     return format(amount, symbol: symbol);
   }
 
@@ -35,9 +35,10 @@ class CurrencyFormatter {
   /// Formats [amount] as a compact string with the currency symbol.
   static String formatCompactWithSymbol(
     double amount, {
-    String symbol = AppConstants.currency,
+    String? symbol,
   }) {
-    return '${formatCompact(amount)} $symbol';
+    final effectiveSymbol = symbol ?? AppConstants.currency;
+    return '${formatCompact(amount)} $effectiveSymbol';
   }
 
   /// Parses a formatted currency string back to a double.
@@ -58,10 +59,11 @@ class CurrencyFormatter {
   /// Returns a signed display string.
   static String formatSigned(
     double amount, {
-    String symbol = AppConstants.currency,
+    String? symbol,
   }) {
+    final effectiveSymbol = symbol ?? AppConstants.currency;
     final prefix = amount >= 0 ? '+' : '';
-    return '$prefix${format(amount, symbol: symbol)}';
+    return '$prefix${format(amount, symbol: effectiveSymbol)}';
   }
 
   // ── Private helpers ────────────────────────────────────────────

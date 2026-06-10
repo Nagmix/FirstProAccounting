@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/extensions/context_extensions.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/invoice_pdf_generator.dart';
 import 'package:firstpro/core/services/bluetooth_printer_service.dart';
@@ -213,11 +214,9 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   fontWeight: FontWeight.w700,
                   color: AppColors.primary),
               borderRadius: BorderRadius.circular(8),
-              items: const [
-                DropdownMenuItem(value: 'YER', child: Text('YER')),
-                DropdownMenuItem(value: 'SAR', child: Text('SAR')),
-                DropdownMenuItem(value: 'USD', child: Text('USD')),
-              ],
+              items: CurrencyConstants.currencyOptions
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
               onChanged: (val) {
                 if (val != null) _vm.setSelectedCurrency(val);
               },

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 import 'package:firstpro/data/datasources/services/cash_box_service.dart';
 import 'package:firstpro/data/datasources/services/journal_service.dart';
 import 'package:firstpro/data/models/cash_box_model.dart';
@@ -25,24 +27,10 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
 
   String _type = 'cash_box'; // 'cash_box' or 'bank'
   String _balanceType = 'credit'; // 'debit' or 'credit'
-  String _currency = 'YER'; // 'YER', 'SAR', 'USD' — only for opening balance
+  String _currency = 'YER'; // only for opening balance
   bool _isSaving = false;
 
   bool get _isEdit => widget.existing != null;
-
-  /// Maps each currency to the account_code for "حساب الصناديق والبنوك".
-  static const Map<String, String> _cashBanksAccountCodes = {
-    'YER': '1100',
-    'SAR': '1101',
-    'USD': '1102',
-  };
-
-  /// Currency display info.
-  static const Map<String, Map<String, String>> _currencyInfo = {
-    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
-    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
-    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
-  };
 
   @override
   void initState() {
@@ -138,7 +126,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
           }
 
           final codeOffset =
-              _currency == 'SAR' ? 1 : (_currency == 'USD' ? 2 : 0);
+              await locator<BaseCurrencyService>().getOffsetForCurrency(_currency);
           final openingBalanceAccount =
               await locator<JournalService>().getAccountByCodeAndCurrency(
             (2901 + codeOffset).toString(),
@@ -333,7 +321,7 @@ class _AddCashBoxSheetState extends State<AddCashBoxSheet> {
                     labelText: 'عملة القيد',
                     prefixIcon: Icon(Icons.attach_money),
                   ),
-                  items: _currencyInfo.entries.map((entry) {
+                  items: CurrencyConstants.currencyInfo.entries.map((entry) {
                     return DropdownMenuItem<String>(
                       value: entry.key,
                       child: Text('${entry.value['label']} (${entry.key})'),

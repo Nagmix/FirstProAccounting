@@ -3,7 +3,9 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class SupplierRepository {
   final DatabaseHelper _dbHelper;
@@ -40,9 +42,8 @@ class SupplierRepository {
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
         final journalId = generateUniqueJournalId();
-        final codeOffset = openingBalanceCurrency == 'SAR'
-            ? 1
-            : (openingBalanceCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>()
+            .getOffsetForCurrency(openingBalanceCurrency);
         final openingBalanceExchangeRate =
             await _getExchangeRate(txn, openingBalanceCurrency);
         final openingBalanceIsYer = openingBalanceCurrency == 'YER';
@@ -343,8 +344,8 @@ class SupplierRepository {
         }
 
         // ── Same currency — simple adjustment ──
-        final codeOffset =
-            newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>()
+            .getOffsetForCurrency(newCurrency);
         final journalId = generateUniqueJournalId();
 
         final suppliersAccount = await db.query('accounts',

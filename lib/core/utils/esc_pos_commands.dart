@@ -227,7 +227,7 @@ class EscPosCommands {
     required double total,
     required double paid,
     required double remaining,
-    String currency = 'ر.ي',
+    String? currency,
     String? notes,
     int charsPerLine = 48,
     bool autoCut = true,
@@ -236,6 +236,8 @@ class EscPosCommands {
 
     // Initialize
     cmds.addAll(init());
+
+    final effectiveCurrency = currency ?? AppConstants.currency;
 
     // Select Arabic code page
     cmds.addAll(selectCodeTable(16)); // CP1256
@@ -307,25 +309,25 @@ class EscPosCommands {
     // Totals
     cmds.addAll(setAlignment(2)); // left (in RTL context)
     cmds.addAll(
-        printlnArabic('المجموع الفرعي: ${_formatAmount(subtotal)} $currency'));
+        printlnArabic('المجموع الفرعي: ${_formatAmount(subtotal)} $effectiveCurrency'));
 
     if (discount > 0) {
-      cmds.addAll(printlnArabic('الخصم: ${_formatAmount(discount)} $currency'));
+      cmds.addAll(printlnArabic('الخصم: ${_formatAmount(discount)} $effectiveCurrency'));
     }
     if (tax > 0) {
-      cmds.addAll(printlnArabic('الضريبة: ${_formatAmount(tax)} $currency'));
+      cmds.addAll(printlnArabic('الضريبة: ${_formatAmount(tax)} $effectiveCurrency'));
     }
 
     cmds.addAll(boldOn());
     cmds.addAll(setFontSize(true, false));
-    cmds.addAll(printlnArabic('الإجمالي: ${_formatAmount(total)} $currency'));
+    cmds.addAll(printlnArabic('الإجمالي: ${_formatAmount(total)} $effectiveCurrency'));
     cmds.addAll(normalFontSize());
     cmds.addAll(boldOff());
 
     if (paid > 0) {
-      cmds.addAll(printlnArabic('المدفوع: ${_formatAmount(paid)} $currency'));
+      cmds.addAll(printlnArabic('المدفوع: ${_formatAmount(paid)} $effectiveCurrency'));
       cmds.addAll(
-          printlnArabic('المتبقي: ${_formatAmount(remaining)} $currency'));
+          printlnArabic('المتبقي: ${_formatAmount(remaining)} $effectiveCurrency'));
     }
 
     if (notes != null && notes.isNotEmpty) {

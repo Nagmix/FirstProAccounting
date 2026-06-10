@@ -4,7 +4,9 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/entity_balance_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 /// خدمة التحويل التلقائي من الكيانات (عملاء/موردين/موظفين/مصروفات)
 /// إلى حسابات شجرة المحاسبة وإنشاء القيود المحاسبية تلقائياً
@@ -254,16 +256,8 @@ class VoucherAutoMappingService {
   // ══════════════════════════════════════════════════════════════
 
   /// حساب إزاحة كود الحساب حسب العملة
-  /// YER = 0, SAR = 1, USD = 2
-  int _getCodeOffset(String currency) {
-    switch (currency) {
-      case 'SAR':
-        return 1;
-      case 'USD':
-        return 2;
-      default:
-        return 0;
-    }
+  Future<int> _getOffset(String currency) async {
+    return await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
   }
 
   /// الكود الأساسي لكل نوع كيان في شجرة المحاسبة
@@ -296,7 +290,7 @@ class VoucherAutoMappingService {
 
     // وإلا نبحث بالكود والعملة
     final baseCode = _getBaseAccountCode(entityType);
-    final offset = _getCodeOffset(currency);
+    final offset = await _getOffset(currency);
     final accountCode = (baseCode + offset).toString();
 
     List<Map<String, dynamic>> results;
@@ -396,7 +390,7 @@ class VoucherAutoMappingService {
     }
 
     // افتراضي: كود 1100 + offset
-    final offset = _getCodeOffset(currency);
+    final offset = await _getOffset(currency);
     final accountCode = (1100 + offset).toString();
 
     List<Map<String, dynamic>> results;

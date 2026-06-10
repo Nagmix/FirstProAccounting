@@ -3,7 +3,9 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/models/customer_model.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class CustomerRepository {
   final DatabaseHelper _dbHelper;
@@ -53,8 +55,8 @@ class CustomerRepository {
       // ── Opening Balance Journal Entry ──
       if (openingBalance > 0) {
         final journalId = generateUniqueJournalId();
-        final codeOffset =
-            customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>()
+            .getOffsetForCurrency(customerCurrency);
         final referenceId = 'customer_$customerId';
 
         final customersAccount = await txn.query('accounts',
@@ -234,8 +236,8 @@ class CustomerRepository {
               : null;
 
           // Step 2: Create new opening balance in new currency
-          final newCodeOffset =
-              newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
+          final newCodeOffset = await locator<BaseCurrencyService>()
+              .getOffsetForCurrency(newCurrency);
           final newCustomersAccount = await db.query('accounts',
               where: 'account_code = ? AND currency = ?',
               whereArgs: [(1200 + newCodeOffset).toString(), newCurrency],
@@ -370,8 +372,8 @@ class CustomerRepository {
         }
 
         // ── Same currency — simple adjustment ──
-        final codeOffset =
-            newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>()
+            .getOffsetForCurrency(newCurrency);
         final journalId = generateUniqueJournalId();
 
         final customersAccount = await db.query('accounts',

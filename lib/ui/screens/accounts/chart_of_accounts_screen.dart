@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/repositories/account_repository.dart';
@@ -28,13 +29,12 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   /// Currency symbols loaded from DB: currency code → symbol
   final Map<String, String> _currencySymbols = {'YER': 'ر.ي'};
 
-  final _currencyOptions = ['الكل', 'YER', 'SAR', 'USD'];
-  final _currencyLabels = {
-    'الكل': 'الكل',
-    'YER': 'ريال يمني (ر.ي)',
-    'SAR': 'ريال سعودي (ر.س)',
-    'USD': 'دولار أمريكي (\$)'
-  };
+  List<String> get _currencyOptions => CurrencyConstants.currencyOptionsWithAll;
+  
+  String _currencyLabel(String code) {
+    if (code == 'الكل') return 'الكل';
+    return '${CurrencyConstants.currencyLabel(code)} (${CurrencyConstants.currencySymbol(code)})';
+  }
 
   final _accountTypes = [
     AccountType.ASSET,
@@ -327,7 +327,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               items: _currencyOptions
                   .map((c) => DropdownMenuItem<String>(
                         value: c,
-                        child: Text(_currencyLabels[c] ?? c,
+                        child: Text(_currencyLabel(c),
                             style: const TextStyle(fontSize: 12)),
                       ))
                   .toList(),
@@ -584,7 +584,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               Icon(Icons.currency_exchange, size: 14, color: AppColors.primary),
               const SizedBox(width: 6),
               Text(
-                _currencyLabels[currency] ?? currency,
+                _currencyLabel(currency),
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.primary,

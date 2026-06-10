@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/repositories/account_repository.dart';
 import 'package:firstpro/data/datasources/services/cash_box_service.dart';
@@ -26,13 +27,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   int? _selectedParentId;
   String _currency = 'YER';
   bool _isSaving = false;
-
-  /// Currency display info.
-  static const Map<String, Map<String, String>> _currencyInfo = {
-    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
-    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
-    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
-  };
 
   List<Map<String, dynamic>> _cashBoxes = [];
 
@@ -268,7 +262,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                   labelText: 'العملة',
                   prefixIcon: Icon(Icons.attach_money),
                 ),
-                items: _currencyInfo.entries.map((entry) {
+                items: CurrencyConstants.currencyInfo.entries.map((entry) {
                   return DropdownMenuItem<String>(
                     value: entry.key,
                     child: Text('${entry.value['label']} (${entry.key})'),

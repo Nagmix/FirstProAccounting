@@ -4,7 +4,9 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/entity_balance_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
 
 class ShiftService {
@@ -169,8 +171,8 @@ class ShiftService {
         final exchangeRate = await _getExchangeRate(txn, invoiceCurrency);
 
         // تحديد إزاحة كود الحساب حسب العملة
-        final codeOffset =
-            invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>()
+            .getOffsetForCurrency(invoiceCurrency);
 
         // جلب معرفات الحسابات (دفعة واحدة — H-10)
         final accountCodes = [
@@ -1144,7 +1146,8 @@ class ShiftService {
       }
 
       // ── 2. Create journal entries ──
-      final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+      final codeOffset =
+          await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
       final cashAccountCode = 1100 + codeOffset;
       final expenseAccountCode = 5000 + codeOffset;
 

@@ -11,11 +11,11 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 44; // Must match DatabaseHelper._databaseVersion
+  static const int dbVersion = 51; // Must match DatabaseHelper._databaseVersion
 
   // ── Locale & currency ─────────────────────────────────────────
-  static const String currency = 'ر.ي';
-  static const String currencyEn = 'YER';
+  static String currency = 'ر.ي';
+  static String currencyEn = 'YER';
   static const String defaultLanguage = 'ar';
   static const String localeAr = 'ar';
   static const String localeEn = 'en';

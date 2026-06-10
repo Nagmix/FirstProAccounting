@@ -455,7 +455,8 @@ class _CurrencyDropdown extends StatelessWidget {
           items: currencyOptions
               .map((c) => DropdownMenuItem(
                   value: c,
-                  child: Text(c, style: const TextStyle(fontSize: 11))))
+                  child: Text(CurrencyConstants.currencySymbol(c),
+                      style: const TextStyle(fontSize: 11))))
               .toList(),
           onChanged: (val) {
             if (val != null) onChanged(val);

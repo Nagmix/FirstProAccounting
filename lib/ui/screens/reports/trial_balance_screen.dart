@@ -20,7 +20,7 @@ class TrialBalanceScreen extends StatefulWidget {
 
 class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
   bool _isLoading = false;
-  String _selectedCurrency = 'ر.ي';
+  String _selectedCurrency = 'YER';
   DateTime? _dateFrom;
   DateTime? _dateTo;
 
@@ -28,20 +28,11 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
   double _totalDebit = 0;
   double _totalCredit = 0;
 
-  static const _currencyOptions = ['ر.ي', 'ر.س', r'$'];
+  List<String> get _currencyOptions => CurrencyConstants.currencyOptions;
 
-  String? _currencyCode() {
-    switch (_selectedCurrency) {
-      case 'ر.ي':
-        return 'YER';
-      case 'ر.س':
-        return 'SAR';
-      case r'$':
-        return 'USD';
-      default:
-        return null;
-    }
-  }
+  String? _currencyCode() => _selectedCurrency;
+
+  String _currentSymbol() => CurrencyConstants.currencySymbol(_selectedCurrency);
 
   String _accountTypeAr(String type) {
     switch (type) {
@@ -264,8 +255,8 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
                     items: _currencyOptions
                         .map((c) => DropdownMenuItem(
                               value: c,
-                              child:
-                                  Text(c, style: const TextStyle(fontSize: 13)),
+                              child: Text(CurrencyConstants.currencySymbol(c),
+                                  style: const TextStyle(fontSize: 13)),
                             ))
                         .toList(),
                     onChanged: (val) {
@@ -465,7 +456,7 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
               textAlign: TextAlign.center),
           const SizedBox(height: 4),
           Text(
-            CurrencyFormatter.format(value, symbol: _selectedCurrency),
+            CurrencyFormatter.format(value, symbol: _currentSymbol()),
             style: theme.textTheme.bodyMedium
                 ?.copyWith(fontWeight: FontWeight.w800, color: color),
             textAlign: TextAlign.center,

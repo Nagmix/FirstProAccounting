@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
 import 'package:firstpro/data/models/currency_model.dart';
@@ -53,6 +54,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
 
   Future<void> _setDefault(Currency currency) async {
     await locator<ReferenceDataRepository>().setDefaultCurrency(currency.id!);
+    await CurrencyConstants.refresh();
     _loadCurrencies();
   }
 
@@ -60,6 +62,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
     await locator<ReferenceDataRepository>().updateCurrency(currency.id!, {
       'is_active': currency.isActive ? 0 : 1,
     });
+    await CurrencyConstants.refresh();
     _loadCurrencies();
   }
 
@@ -194,6 +197,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
                               'is_active': 1,
                               'created_at': DateTime.now().toIso8601String(),
                             });
+                            await CurrencyConstants.refresh();
                           }
 
                           if (ctx.mounted) Navigator.pop(ctx);
@@ -265,6 +269,7 @@ class _CurrenciesScreenState extends State<CurrenciesScreen> {
     );
     if (confirmed == true) {
       await locator<ReferenceDataRepository>().deleteCurrency(currency.id!);
+      await CurrencyConstants.refresh();
       _loadCurrencies();
     }
   }

@@ -1,7 +1,9 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class ReportService {
   final DatabaseHelper _dbHelper;
@@ -1562,7 +1564,7 @@ class ReportService {
     DateTime? dateTo,
     String? accountType,
   }) async {
-    const String baseCurrency = 'YER';
+    final String baseCurrency = await locator<BaseCurrencyService>().getBaseCurrencyCode();
     final db = await _db;
 
     final args = <dynamic>[];

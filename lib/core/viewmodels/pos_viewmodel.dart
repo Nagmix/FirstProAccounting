@@ -391,25 +391,31 @@ class PosViewModel extends ChangeNotifier {
   //  CURRENCY STATE
   // ══════════════════════════════════════════════════════════════════
 
-  String _selectedCurrency = 'YER';
+  String _selectedCurrency = AppConstants.currencyEn;
   String get selectedCurrency => _selectedCurrency;
 
   double _exchangeRate = 1.0;
   double get exchangeRate => _exchangeRate;
 
-  void setSelectedCurrency(String currency) {
+  void setSelectedCurrency(String currency) async {
     _selectedCurrency = currency;
-    // Default exchange rates for common currencies
-    switch (currency) {
-      case 'SAR':
-        _exchangeRate = 140.0;
-        break; // 1 SAR ≈ 140 YER
-      case 'USD':
-        _exchangeRate = 530.0;
-        break; // 1 USD ≈ 530 YER
-      default:
-        _exchangeRate = 1.0;
+    
+    // Fetch exchange rate from DB
+    try {
+      final currencies = await _refData.getAllCurrencies();
+      final cRow = currencies.where((c) => c['code'] == currency).firstOrNull;
+      if (cRow != null) {
+        _exchangeRate = (cRow['exchange_rate'] as num).toDouble();
+      } else {
+        // Fallback for legacy support
+        if (currency == 'SAR') _exchangeRate = 140.0;
+        else if (currency == 'USD') _exchangeRate = 530.0;
+        else _exchangeRate = 1.0;
+      }
+    } catch (e) {
+      debugPrint('PosViewModel currency rate error: $e');
     }
+    
     notifyListeners();
   }
 
@@ -419,16 +425,7 @@ class PosViewModel extends ChangeNotifier {
   }
 
   /// Currency symbol for display.
-  String get currencySymbol {
-    switch (_selectedCurrency) {
-      case 'SAR':
-        return 'ر.س';
-      case 'USD':
-        return '\$';
-      default:
-        return 'ر.ي';
-    }
-  }
+  String get currencySymbol => CurrencyConstants.currencySymbol(_selectedCurrency);
 
   // ══════════════════════════════════════════════════════════════════
   //  TOP SELLERS

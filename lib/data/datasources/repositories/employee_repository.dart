@@ -3,7 +3,9 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/entity_balance_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class EmployeeRepository {
   final DatabaseHelper _dbHelper;
@@ -35,9 +37,8 @@ class EmployeeRepository {
     // as the stored default. It does NOT permanently bind the employee to that currency.
     // We set account_id to the employee account (5100+offset) for the opening
     // balance currency so vouchers can be linked back.
-    final codeOffset = openingBalanceCurrency == 'SAR'
-        ? 1
-        : (openingBalanceCurrency == 'USD' ? 2 : 0);
+    final codeOffset = await locator<BaseCurrencyService>()
+        .getOffsetForCurrency(openingBalanceCurrency);
     final employeeAccountCode = (5100 + codeOffset).toString();
 
     // Resolve employee account to get account_id
@@ -313,7 +314,8 @@ class EmployeeRepository {
     final employee = employeeRows.first;
 
     // Determine account codes based on currency
-    final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+    final codeOffset =
+        await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
     final employeeAccountCode = (5100 + codeOffset).toString();
     final cashAccountCode = (1100 + codeOffset).toString();
 

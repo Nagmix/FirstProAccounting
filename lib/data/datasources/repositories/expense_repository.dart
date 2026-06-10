@@ -2,7 +2,9 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class ExpenseRepository {
   final DatabaseHelper _dbHelper;
@@ -162,10 +164,8 @@ class ExpenseRepository {
     // This matches the pattern in invoice_repository.
     final bool needsYerConversion =
         expenseCurrency != 'YER' && exchangeRate > 0;
-    final int codeOffset = needsYerConversion
-        ? 0
-        : (expenseCurrency == 'SAR' ? 1 : (expenseCurrency == 'USD' ? 2 : 0));
-    final String journalCurrency = needsYerConversion ? 'YER' : expenseCurrency;
+    final int codeOffset = await locator<BaseCurrencyService>()
+        .getOffsetForCurrency(journalCurrency);
     // Journal amount: amountBase (YER) when converting, amount (native) otherwise
     final double journalAmount = needsYerConversion ? amountBase : amount;
 
@@ -549,10 +549,9 @@ class ExpenseRepository {
           (newExpenseMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       final bool needsYerConversion =
           newCurrency != 'YER' && newExchangeRate > 0;
-      final int codeOffset = needsYerConversion
-          ? 0
-          : (newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0));
       final String journalCurrency = needsYerConversion ? 'YER' : newCurrency;
+      final int codeOffset = await locator<BaseCurrencyService>()
+          .getOffsetForCurrency(journalCurrency);
       final double journalAmount =
           needsYerConversion ? newAmountBase : newAmount;
 

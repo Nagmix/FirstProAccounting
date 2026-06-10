@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
@@ -40,14 +41,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   final _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // ── Currency display info ─────────────────────────────────────────
-  static const Map<String, Map<String, String>> _currencyInfo = {
-    'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
-    'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
-    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
-  };
-
-  static const List<String> _currencyFilters = ['الكل', 'YER', 'SAR', 'USD'];
+  List<String> get _currencyFilters => CurrencyConstants.currencyOptionsWithAll;
 
   @override
   void initState() {
@@ -251,7 +245,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   // ═══════════════════════════════════════════════════════════════════
   //  HELPERS
   // ═══════════════════════════════════════════════════════════════════
-  String _currencySymbol(String code) => _currencyInfo[code]?['symbol'] ?? code;
+  String _currencySymbol(String code) => CurrencyConstants.currencyInfo[code]?['symbol'] ?? code;
 
   // ignore: unused_element
   String _formatWithSymbol(double amount, String currency) {
@@ -1403,7 +1397,7 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
   List<Map<String, dynamic>> _invoices = [];
   bool _isLoading = true;
 
-  static const Map<String, Map<String, String>> _currencyInfo = {
+  static const Map<String, Map<String, String>> CurrencyConstants.currencyInfo = {
     'YER': {'symbol': 'ر.ي'},
     'SAR': {'symbol': 'ر.س'},
     'USD': {'symbol': '\$'},
@@ -1435,7 +1429,7 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final symbol = _currencyInfo[widget.currency]?['symbol'] ?? widget.currency;
+    final symbol = CurrencyConstants.currencyInfo[widget.currency]?['symbol'] ?? widget.currency;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -1562,7 +1556,7 @@ class _CustomerInvoicesSheetState extends State<_CustomerInvoicesSheet> {
     final createdAt = invoice['created_at'] as String? ?? '';
     final isPaid = remaining <= 0;
     final invoiceCurrency = invoice['currency'] as String? ?? widget.currency;
-    final symbol = _currencyInfo[invoiceCurrency]?['symbol'] ?? invoiceCurrency;
+    final symbol = CurrencyConstants.currencyInfo[invoiceCurrency]?['symbol'] ?? invoiceCurrency;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1712,7 +1706,7 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
   List<Map<String, dynamic>> _invoices = [];
   bool _isLoading = true;
 
-  static const Map<String, Map<String, String>> _currencyInfo = {
+  static const Map<String, Map<String, String>> CurrencyConstants.currencyInfo = {
     'YER': {'symbol': 'ر.ي'},
     'SAR': {'symbol': 'ر.س'},
     'USD': {'symbol': '\$'},
@@ -1744,7 +1738,7 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final symbol = _currencyInfo[widget.currency]?['symbol'] ?? widget.currency;
+    final symbol = CurrencyConstants.currencyInfo[widget.currency]?['symbol'] ?? widget.currency;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -1871,7 +1865,7 @@ class _SupplierInvoicesSheetState extends State<_SupplierInvoicesSheet> {
     final createdAt = invoice['created_at'] as String? ?? '';
     final isPaid = remaining <= 0;
     final invoiceCurrency = invoice['currency'] as String? ?? widget.currency;
-    final symbol = _currencyInfo[invoiceCurrency]?['symbol'] ?? invoiceCurrency;
+    final symbol = CurrencyConstants.currencyInfo[invoiceCurrency]?['symbol'] ?? invoiceCurrency;
 
     return Container(
       padding: const EdgeInsets.all(12),

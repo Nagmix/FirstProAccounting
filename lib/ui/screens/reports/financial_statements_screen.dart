@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
@@ -23,7 +24,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
-  String _selectedCurrency = 'ر.ي';
+  String _selectedCurrency = 'YER';
   DateTime? _dateFrom;
   DateTime? _dateTo;
 
@@ -46,20 +47,11 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
   List<Map<String, dynamic>> _liabilityAccounts = [];
   List<Map<String, dynamic>> _equityAccounts = [];
 
-  static const _currencyOptions = ['ر.ي', 'ر.س', r'$'];
+  List<String> get _currencyOptions => CurrencyConstants.currencyOptions;
 
-  String? _currencyCode() {
-    switch (_selectedCurrency) {
-      case 'ر.ي':
-        return 'YER';
-      case 'ر.س':
-        return 'SAR';
-      case r'$':
-        return 'USD';
-      default:
-        return null;
-    }
-  }
+  String? _currencyCode() => _selectedCurrency;
+
+  String _currentSymbol() => CurrencyConstants.currencySymbol(_selectedCurrency);
 
   // ignore: unused_element
   String _accountTypeAr(String type) {
@@ -375,7 +367,8 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                 items: _currencyOptions
                     .map((c) => DropdownMenuItem(
                           value: c,
-                          child: Text(c, style: const TextStyle(fontSize: 12)),
+                          child: Text(CurrencyConstants.currencySymbol(c),
+                              style: const TextStyle(fontSize: 12)),
                         ))
                     .toList(),
                 onChanged: (val) {
@@ -559,7 +552,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                 const SizedBox(height: 4),
                 Text(
                   CurrencyFormatter.format(_netProfit.abs(),
-                      symbol: _selectedCurrency),
+                      symbol: _currentSymbol()),
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
                     color:
@@ -590,7 +583,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                   ?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center),
           const SizedBox(height: 4),
-          Text(CurrencyFormatter.format(value, symbol: _selectedCurrency),
+          Text(CurrencyFormatter.format(value, symbol: _currentSymbol()),
               style: theme.textTheme.bodySmall
                   ?.copyWith(fontWeight: FontWeight.w800, color: color),
               textAlign: TextAlign.center),
@@ -630,7 +623,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                 theme.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
           ),
           const SizedBox(width: 8),
-          Text(CurrencyFormatter.format(value, symbol: _selectedCurrency),
+          Text(CurrencyFormatter.format(value, symbol: _currentSymbol()),
               style: theme.textTheme.bodyMedium
                   ?.copyWith(fontWeight: FontWeight.w800, color: color)),
         ],
@@ -671,7 +664,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: AppColors.textHint)),
           const SizedBox(width: 8),
-          Text(CurrencyFormatter.format(_netProfit, symbol: _selectedCurrency),
+          Text(CurrencyFormatter.format(_netProfit, symbol: _currentSymbol()),
               style: theme.textTheme.bodyMedium
                   ?.copyWith(fontWeight: FontWeight.w800, color: color)),
         ],
@@ -831,7 +824,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: AppColors.textHint)),
           const SizedBox(width: 8),
-          Text(CurrencyFormatter.format(_equity, symbol: _selectedCurrency),
+          Text(CurrencyFormatter.format(_equity, symbol: _currentSymbol()),
               style: theme.textTheme.bodyMedium
                   ?.copyWith(fontWeight: FontWeight.w800, color: color)),
         ],
@@ -895,7 +888,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                       ?.copyWith(fontWeight: FontWeight.w700)),
               Text(
                   CurrencyFormatter.format(totalLiabilitiesEquity,
-                      symbol: _selectedCurrency),
+                      symbol: _currentSymbol()),
                   style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w800, color: AppColors.primary)),
             ],
@@ -942,7 +935,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
             child: Text(label,
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(fontWeight: FontWeight.w600))),
-        Text(CurrencyFormatter.format(value, symbol: _selectedCurrency),
+        Text(CurrencyFormatter.format(value, symbol: _currentSymbol()),
             style: theme.textTheme.bodyMedium
                 ?.copyWith(fontWeight: FontWeight.w800, color: color)),
       ],
@@ -985,7 +978,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                   child: Text(title,
                       style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700, color: color))),
-              Text(CurrencyFormatter.format(total, symbol: _selectedCurrency),
+              Text(CurrencyFormatter.format(total, symbol: _currentSymbol()),
                   style: theme.textTheme.bodyMedium
                       ?.copyWith(fontWeight: FontWeight.w800, color: color)),
             ],
@@ -1020,7 +1013,7 @@ class _FinancialStatementsScreenState extends State<FinancialStatementsScreen>
                       Text(
                           CurrencyFormatter.format(
                               account['balance'] as double? ?? 0.0,
-                              symbol: _selectedCurrency),
+                              symbol: _currentSymbol()),
                           style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w700, color: color)),
                     ],

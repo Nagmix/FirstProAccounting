@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -49,7 +50,7 @@ enum DatePreset {
 //  Constants
 // ═══════════════════════════════════════════════════════════════════
 
-const currencyOptions = ['ر.ي', 'ر.س', r'$'];
+List<String> get currencyOptions => CurrencyConstants.currencyOptions;
 
 const accountTypes = [
   MapEntry('الكل', 'الكل'),
@@ -106,6 +107,10 @@ String getReportDescription(String key) {
 // ═══════════════════════════════════════════════════════════════════
 
 String? currencyCode(String selectedCurrency) {
+  if (CurrencyConstants.currencyOptions.contains(selectedCurrency)) {
+    return selectedCurrency;
+  }
+  
   switch (selectedCurrency) {
     case 'ر.ي':
       return 'YER';

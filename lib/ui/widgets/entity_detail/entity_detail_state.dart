@@ -8,6 +8,7 @@ import 'package:firstpro/core/utils/excel_exporter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/data/datasources/services/voucher_auto_mapping_service.dart';
 import 'package:firstpro/ui/screens/settings/bluetooth_printer_settings_screen.dart';
 
@@ -62,11 +63,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
 
   List<Map<String, dynamic>> _cashBoxes = [];
 
-  static const List<MapEntry<String, String>> _currencyOptions = [
-    MapEntry('YER', 'YER'),
-    MapEntry('SAR', 'SAR'),
-    MapEntry('USD', 'USD'),
-  ];
+  List<MapEntry<String, String>> _currencyOptions =
+      CurrencyConstants.currencyMapEntries;
 
   // ─── Abstract Methods (must be implemented by subclasses) ──────────
 
@@ -184,7 +182,8 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
   set cashBoxes(List<Map<String, dynamic>> v) => _cashBoxes = v;
 
   TextEditingController get searchController => _searchController;
-  List<MapEntry<String, String>> get currencyOptions => _currencyOptions;
+  List<MapEntry<String, String>> get currencyOptions =>
+      CurrencyConstants.currencyMapEntries;
 
   // ─── Lifecycle ─────────────────────────────────────────────────────
 

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import 'package:firstpro/l10n/generated/app_localizations.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/license/license_models.dart';
@@ -74,6 +75,9 @@ class _FirstProAppState extends State<FirstProApp> {
     int themeMode = 2;
 
     try {
+      // Initialize dynamic currency constants
+      await CurrencyConstants.refresh();
+
       // Initialize license service alongside other inits
       final settingsResult = await _loadAppSettings().timeout(
         const Duration(seconds: 5),

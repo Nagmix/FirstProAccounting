@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
 import 'package:firstpro/data/models/customer_model.dart';
@@ -29,12 +30,6 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   String _balanceType = 'credit'; // 'credit' (له) or 'debit' (عليه)
   String _currency = 'YER';
   bool _isSaving = false;
-
-  static const _currencyInfo = {
-    'YER': {'symbol': 'ر.ي', 'label': 'ريال يمني'},
-    'SAR': {'symbol': 'ر.س', 'label': 'ريال سعودي'},
-    'USD': {'symbol': '\$', 'label': 'دولار أمريكي'},
-  };
 
   @override
   void dispose() {
@@ -255,7 +250,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                         decoration: InputDecoration(
                           labelText: 'الرصيد الافتتاحي',
                           prefixIcon: const Icon(Icons.calculate),
-                          suffixText: _currencyInfo[_currency]!['symbol'],
+                          suffixText: CurrencyConstants.currencySymbol(_currency),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -267,7 +262,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                           labelText: 'عملة القيد',
                           prefixIcon: Icon(Icons.currency_exchange),
                         ),
-                        items: _currencyInfo.entries
+                        items: CurrencyConstants.currencyInfo.entries
                             .map((e) => DropdownMenuItem(
                                   value: e.key,
                                   child: Text(

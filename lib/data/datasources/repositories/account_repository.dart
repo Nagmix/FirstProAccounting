@@ -3,7 +3,9 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/models/account_model.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class AccountRepository {
   final DatabaseHelper _dbHelper;
@@ -128,7 +130,7 @@ class AccountRepository {
     final now = DateTime.now().toIso8601String();
 
     // Get next account code for EXPENSE type
-    final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+    final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
     final currencySymbol =
         currency == 'SAR' ? 'ر.س' : (currency == 'USD' ? r'$' : 'ر.ي');
 
@@ -178,7 +180,7 @@ class AccountRepository {
         final journalId = generateUniqueJournalId();
 
         // Find the Opening Balance Equity account for this currency
-        final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[currency] ?? 0;
+        final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
         final obCode = (2901 + codeOffset).toString();
         final obAccounts = await txn.query(
           'accounts',

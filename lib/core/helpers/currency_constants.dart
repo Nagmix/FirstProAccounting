@@ -1,39 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 /// Centralized currency constants used across all screens.
-///
-/// Previously, [_currencyInfo], [_currencyOptions], [_currencySymbol()],
-/// and [_showCurrencyFilterPopup()] were duplicated in 7+ screen files.
-/// This class provides a single source of truth.
 class CurrencyConstants {
   CurrencyConstants._();
 
-  /// Currency display info: code → {label, symbol}.
-  static const Map<String, Map<String, String>> currencyInfo = {
+  /// Internal storage for dynamic currencies.
+  static Map<String, Map<String, String>> _currencyInfo = {
     'YER': {'label': 'ريال يمني', 'symbol': 'ر.ي'},
     'SAR': {'label': 'ريال سعودي', 'symbol': 'ر.س'},
-    'USD': {'label': 'دولار أمريكي', 'symbol': '\$'},
+    'USD': {'label': 'دولار أمريكي', 'symbol': r'$'},
   };
 
-  /// Currency filter options in display order.
-  static const List<String> currencyOptions = ['YER', 'SAR', 'USD'];
+  static List<String> _currencyOptions = ['YER', 'SAR', 'USD'];
+
+  /// Public getter for currency info.
+  static Map<String, Map<String, String>> get currencyInfo => _currencyInfo;
+
+  /// Public getter for currency options.
+  static List<String> get currencyOptions => _currencyOptions;
+
+  /// Get currency options with "All" (الكل) option.
+  static List<String> get currencyOptionsWithAll => ['الكل', ..._currencyOptions];
+
+  /// Get currency options as MapEntry list for dropdowns.
+  static List<MapEntry<String, String>> get currencyMapEntries => 
+    _currencyOptions.map((c) => MapEntry(c, c)).toList();
+
+  /// Initialize and refresh currency data from the database.
+  static Future<void> refresh() async {
+    try {
+      final refData = locator<ReferenceDataRepository>();
+      final currencies = await refData.getAllCurrencies();
+      
+      if (currencies.isNotEmpty) {
+        final Map<String, Map<String, String>> newInfo = {};
+        final List<String> newOptions = [];
+        
+        for (final c in currencies) {
+          final code = c['code'] as String;
+          newInfo[code] = {
+            'label': c['name_ar'] as String,
+            'symbol': c['symbol'] as String,
+          };
+          newOptions.add(code);
+        }
+        
+        _currencyInfo = newInfo;
+        _currencyOptions = newOptions;
+
+        // Update AppConstants with the base currency
+        final baseService = locator<BaseCurrencyService>();
+        baseService.clearCache(); // Force refresh from DB
+        final baseCode = await baseService.getBaseCurrencyCode();
+        final baseInfo = newInfo[baseCode];
+        if (baseInfo != null) {
+          AppConstants.currency = baseInfo['symbol']!;
+          AppConstants.currencyEn = baseCode;
+        }
+      }
+    } catch (e) {
+      // Fallback to defaults if DB fails
+      debugPrint('Error refreshing CurrencyConstants: $e');
+    }
+  }
 
   /// Returns the display symbol for a currency code.
   static String currencySymbol(String? code) {
-    switch (code) {
-      case 'SAR':
-        return 'ر.س';
-      case 'USD':
-        return r'$';
-      case 'YER':
-      default:
-        return 'ر.ي';
-    }
+    return _currencyInfo[code]?['symbol'] ?? 'ر.ي';
   }
 
   /// Returns the display label for a currency code.
   static String currencyLabel(String? code) {
-    return currencyInfo[code]?['label'] ?? code ?? 'ريال يمني';
+    return _currencyInfo[code]?['label'] ?? code ?? 'ريال يمني';
   }
 
   /// Shows a currency filter bottom sheet and returns the selected currency

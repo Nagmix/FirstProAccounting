@@ -15,6 +15,7 @@ import 'package:firstpro/data/datasources/repositories/account_repository.dart';
 import 'package:firstpro/data/datasources/repositories/product_repository.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
 import 'package:firstpro/data/datasources/repositories/supplier_repository.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 import 'package:firstpro/data/models/product_model.dart';
 import 'package:firstpro/data/models/unit_model.dart';
 import 'package:firstpro/ui/widgets/barcode_scanner_screen.dart';
@@ -230,7 +231,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
     if (defaultCurrency != null && !_isEditMode) {
       final currencyCode = defaultCurrency['code'] as String? ?? 'YER';
       _defaultCurrencyCode = currencyCode;
-      final codeOffset = {'YER': 0, 'SAR': 1, 'USD': 2}[currencyCode] ?? 0;
+      final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currencyCode);
 
       if (mounted) {
         setState(() {

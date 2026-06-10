@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 import 'package:firstpro/data/models/bank_reconciliation_model.dart';
 
 class BankReconciliationService {
@@ -279,7 +281,8 @@ class BankReconciliationService {
       if (linkedAccountId == null) return;
 
       final currency = cashBox.first['currency'] as String? ?? 'YER';
-      final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+      final codeOffset =
+          await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
       final exchangeRate = await _getExchangeRate(txn, currency);
 
       // Bank charges: Dr. Bank Charges Expense / Cr. Cash
